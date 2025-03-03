@@ -1,5 +1,5 @@
 import * as React from "react";
-import SignaturePad = require("signature_pad");
+import SignaturePad from "signature_pad";
 
 declare namespace ReactSignatureCanvas {
     interface ReactSignatureCanvasProps extends SignaturePad.SignaturePadOptions {

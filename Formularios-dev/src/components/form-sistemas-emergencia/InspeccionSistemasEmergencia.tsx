@@ -6,7 +6,6 @@ import { Box, Button, Typography, Paper, Container, TextField, Alert } from "@mu
 import {
   type FormularioInspeccion,
   type Mes,
-  type PeriodoFormulario,
   crearFormularioInicial,
 } from "../../types/formTypes";
 
@@ -86,6 +85,9 @@ export function InspeccionSistemasEmergencia() {
   const onSubmit = async (data: FormularioInspeccion) => {
     try {
       console.log("Formulario enviado:", data);
+      const mesSeleccionado: Mes = "JUNIO"
+      setCurrentMes(mesSeleccionado); // Actualizar el estado local
+      setValue("mesActual", mesSeleccionado); 
 
       // Actualizar fecha de última modificación
       data.fechaUltimaModificacion = new Date();
@@ -143,10 +145,6 @@ export function InspeccionSistemasEmergencia() {
     }
   };
 
-  const handleMesChange = (mes: Mes) => {
-    setCurrentMes(mes); // Actualizar el mes actual
-    setValue("mesActual", mes); // Actualizar el campo mesActual en el formulario
-  };
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>

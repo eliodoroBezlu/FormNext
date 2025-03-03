@@ -72,18 +72,9 @@ export const InspectionForm = ({
   setValue,
   documentCode,
   revisionNumber,
-  isSubmitting = false,
-  mode= "create" 
 }: IProps) => {
   const inspectorSigCanvasRef = useRef<SignatureCanvas | null>(null);
   const supervisorSigCanvasRef = useRef<SignatureCanvas | null>(null);
-
-  const clearSignature = (ref: React.RefObject<SignatureCanvas | null>) => {
-    if (ref.current) {
-      ref.current.clear();
-    }
-  };
-
   const handleSubmit = () => {
     if (inspectorSigCanvasRef.current && supervisorSigCanvasRef.current) {
       const inspectorSignature = inspectorSigCanvasRef.current

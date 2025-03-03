@@ -1,10 +1,7 @@
 import Image from "next/image";
 import styles from "./page.module.css";
-//import DownloadPdfButton from "@/components/DownloadPdfButton";
-//import { InspeccionDetalle } from "@/components/InspeccionPdfContent";
 
 export default function Home() {
-  const inspeccionId = '3863af65-966b-44e0-8335-3de74546df0f';
   return (
     <div className={styles.page}>
       <main className={styles.main}>

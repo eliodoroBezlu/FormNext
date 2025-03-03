@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import {
   Box,
   CssBaseline,
@@ -18,7 +18,6 @@ import { Typography } from "@/components/atoms/Typography";
 import { ThemeProvider } from "@mui/material/styles";
 import { lightTheme, darkTheme } from "../../styles/theme";
 import CloseIcon from "@mui/icons-material/Close";
-import { useRouter } from "next/navigation";
 
 const drawerWidth = 240;
 
@@ -29,7 +28,6 @@ export default function DashboardLayout({
 }) {
   const [open, setOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const router = useRouter();
 
   const handleDrawerToggle = () => {
     setOpen(!open);
@@ -37,17 +35,6 @@ export default function DashboardLayout({
 
   const handleThemeToggle = () => {
     setDarkMode(!darkMode);
-  };
-  const handleNavigation = useCallback(() => {
-    setOpen(false);
-  }, []);
-
-  const customRouter = {
-    ...router,
-    push: (href: string) => {
-      handleNavigation();
-      router.push(href);
-    },
   };
 
   return (

@@ -30,7 +30,7 @@ export const EditarInspeccion = ({ inspeccionId }: EditarInspeccionProps) => {
         setCurrentId(data._id)
 
         // Extraemos los datos del formulario omitiendo _id
-        const { _id, ...formData } = data
+        const {...formData } = data
         form.reset(formData)
       } catch (error) {
         console.error("Error al cargar la inspección:", error)
