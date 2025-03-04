@@ -1,12 +1,29 @@
-"use client"
+import React, { useState } from "react";
+import { List, Divider, ListSubheader, Collapse } from "@mui/material";
+import { NavigationItem } from "../molecules/navigation-item/NavigationItem";
+import { usePathname, useRouter } from "next/navigation";
+import { ExpandLess, ExpandMore } from "@mui/icons-material";
+import { IconName } from "../atoms/Icon";
 
-import React, { useState } from "react"
-import { List, Divider, ListSubheader, Collapse } from "@mui/material"
-import { NavigationItem } from "../molecules/navigation-item/NavigationItem"
-import { usePathname, useRouter } from "next/navigation"
-import { ExpandLess, ExpandMore } from "@mui/icons-material"
+type NavigationItemBase = {
+  kind?: "header" | "divider";
+  title?: string;
+  segment?: string;
+  icon?: IconName;
+  children?: NavigationItem[];
+};
 
-export const NAVIGATION = [
+export type NavigationItem =
+  | { kind: "header"; title: string }
+  | { kind: "divider" }
+  | (NavigationItemBase & {
+      segment: string;
+      title: string;
+      icon: IconName;
+      children?: NavigationItem[];
+    });
+
+export const NAVIGATION: NavigationItem[] = [
   {
     kind: "header",
     title: "Main items",
@@ -31,13 +48,11 @@ export const NAVIGATION = [
     title: "inspecciones",
     icon: "description",
   },
-
   {
     segment: "inspeccion-sistemas-emergencia",
     title: "Inspeccion sistemas de emergencia",
     icon: "description",
   },
-  
   {
     segment: "inspeccion-arnes",
     title: "Inspección de Arnés",
@@ -72,28 +87,29 @@ export const NAVIGATION = [
     title: "Integrations",
     icon: "layers",
   },
-]
+];
 
 export function Navigation({ onNavigate }: { onNavigate: () => void }) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const [open, setOpen] = useState<{ [key: string]: boolean }>({})
+  const router = useRouter();
+  const pathname = usePathname();
+  const [open, setOpen] = useState<{ [key: string]: boolean }>({});
 
   const handleClick = (segment: string) => {
-    setOpen((prevOpen) => ({ ...prevOpen, [segment]: !prevOpen[segment] }))
-  }
+    setOpen((prevOpen) => ({ ...prevOpen, [segment]: !prevOpen[segment] }));
+  };
 
-  const renderNavItems = (items: any[], parentSegment = "", level = 0) => {
+  const renderNavItems = (items: NavigationItem[], parentSegment = "", level = 0) => {
     return items.map((item, index) => {
       if (item.kind === "header") {
-        return <ListSubheader key={index}>{item.title}</ListSubheader>
+        return <ListSubheader key={index}>{item.title}</ListSubheader>;
       }
       if (item.kind === "divider") {
-        return <Divider key={index} />
+        return <Divider key={index} />;
       }
-      const fullSegment = parentSegment ? `${parentSegment}/${item.segment}` : item.segment
-      const fullPath = `/dashboard/${fullSegment}`
-      const hasChildren = item.children && item.children.length > 0
+
+      const fullSegment = parentSegment ? `${parentSegment}/${item.segment}` : item.segment;
+      const fullPath = `/dashboard/${fullSegment}`;
+      const hasChildren = item.children && item.children.length > 0;
 
       return (
         <React.Fragment key={index}>
@@ -103,9 +119,9 @@ export function Navigation({ onNavigate }: { onNavigate: () => void }) {
             selected={pathname === fullPath}
             onClick={() => {
               if (hasChildren) {
-                handleClick(fullSegment)
+                handleClick(fullSegment);
               } else {
-                router.push(fullPath)
+                router.push(fullPath);
                 onNavigate();
               }
             }}
@@ -115,14 +131,14 @@ export function Navigation({ onNavigate }: { onNavigate: () => void }) {
           {hasChildren && (
             <Collapse in={open[fullSegment]} timeout="auto" unmountOnExit>
               <List component="div" disablePadding>
-                {renderNavItems(item.children, fullSegment, level + 1)}
+                {renderNavItems(item.children!, fullSegment, level + 1)}
               </List>
             </Collapse>
           )}
         </React.Fragment>
-      )
-    })
-  }
+      );
+    });
+  };
 
-  return <List>{renderNavItems(NAVIGATION)}</List>
+  return <List>{renderNavItems(NAVIGATION)}</List>;
 }

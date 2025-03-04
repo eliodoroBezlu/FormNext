@@ -191,7 +191,7 @@ import { useEffect } from "react"
   
           {fields.length === 0 && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 2 }}>
-              No hay extintores registrados. Haga clic en "Agregar Extintor" para añadir uno.
+              No hay extintores registrados. Haga clic en &quot;Agregar Extintor&quot; para añadir uno.
             </Typography>
           )}
         </AccordionDetails>

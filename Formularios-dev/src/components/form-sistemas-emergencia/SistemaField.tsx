@@ -1,6 +1,6 @@
 import { Grid, Typography, TextField } from "@mui/material"
 import { type Control, Controller } from "react-hook-form"
-import type { FormularioInspeccion, Mes } from "../../types/formTypes"
+import type { FormularioInspeccion, Mes, SistemaPath } from "../../types/formTypes"
 import EstadoInspeccionSelect from "@/components/form-sistemas-emergencia/EstadoInspeccionSelect"
 
 interface SistemaFieldProps {
@@ -24,7 +24,7 @@ const SistemaField = ({ name, label, control, currentMes, type }: SistemaFieldPr
       </Grid>
       <Grid item xs={3}>
         <Controller
-          name={`${basePath}.cantidad` as any}
+          name={`${basePath}.cantidad` as SistemaPath}
           control={control}
           render={({ field }) => (
             <TextField {...field} type="number" size="small" fullWidth label="Cantidad" inputProps={{ min: 0 }} />
@@ -33,7 +33,7 @@ const SistemaField = ({ name, label, control, currentMes, type }: SistemaFieldPr
       </Grid>
       <Grid item xs={4}>
         <Controller
-          name={`${basePath}.estado` as any}
+          name={`${basePath}.estado` as SistemaPath}
           control={control}
           render={({ field }) => <EstadoInspeccionSelect value={field.value} onChange={field.onChange} />}
         />

@@ -2,6 +2,8 @@ import api from "../lib/axios";
 import type { FormData } from "../types/formTypes";
 import type { FormDataExport } from "../types/formTypes";
 
+import type { VerificarTagData, FormularioInspeccion, DatosMes, Mes } from "../types/formTypes";
+
 export const inspeccionService = {
   async crear(data: FormData) {
     const response = await api.post<FormData>("/inspecciones", data);
@@ -70,7 +72,7 @@ export const inspeccionService = {
   },
 
 
-  verificarTag: async (datos: any) => {
+  verificarTag: async (datos: VerificarTagData) => {
     try {
       const response = await api.post(`/inspecciones-emergencia/verificar-tag`, datos);
       return response.data; // Asume que el backend devuelve { existe: true/false, formulario: {} }
@@ -80,7 +82,7 @@ export const inspeccionService = {
   },
 
   // Crear un nuevo formulario
-  crearFormSistemasEmergencia: async (data: any) => {
+  crearFormSistemasEmergencia: async (data: FormularioInspeccion) => {
     try {
       const response = await api.post(`/inspecciones-emergencia/crear-formulario`, data);
       return response.data;
@@ -90,7 +92,7 @@ export const inspeccionService = {
   },
 
   // Actualizar un mes específico en un formulario existente
-  actualizarMesPorTag: async (tag: string, mes: string, datosMes: any) => {
+  actualizarMesPorTag: async (tag: string, mes: Mes, datosMes: DatosMes) => {
     try {
       const response = await api.put(`/inspecciones-emergencia/actualizar-mes/${tag}`, {
         mes,

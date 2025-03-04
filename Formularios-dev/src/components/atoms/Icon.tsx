@@ -6,7 +6,7 @@ import BarChartIcon from "@mui/icons-material/BarChart"
 import DescriptionIcon from "@mui/icons-material/Description"
 import LayersIcon from "@mui/icons-material/Layers"
 
-type IconName = "dashboard" | "shoppingCart" | "barChart" | "description" | "layers"
+export type IconName = "dashboard" | "shoppingCart" | "barChart" | "description" | "layers"
 
 interface IconProps extends SvgIconProps {
   name: IconName

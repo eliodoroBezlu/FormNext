@@ -13,7 +13,7 @@ export function NavigationItem({
   return (
     <ListItemButton selected={selected} onClick={onClick}>
       <ListItemIcon>
-        <Icon name={icon as any} />
+        <Icon name={icon} />
       </ListItemIcon>
       <ListItemText primary={title} />
       {children}

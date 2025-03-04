@@ -44,8 +44,7 @@ export const InspeccionPdfContent: React.FC<InspeccionPdfContentProps> = ({
           }}
         >
           <img
-            src="/MSC.png
-          "
+            src="/MSC.png"
             style={{
               width: "100%",
               height: "100%",
@@ -212,7 +211,11 @@ export const InspeccionPdfContent: React.FC<InspeccionPdfContentProps> = ({
               </Typography>
 
               <Typography sx={{ fontSize: "0.5rem" }}>
-              {inspeccion.informacionGeneral.fecha ? new Date(inspeccion.informacionGeneral.fecha).toLocaleDateString() : "Fecha no disponible"}
+                {inspeccion.informacionGeneral.fecha
+                  ? new Date(
+                      inspeccion.informacionGeneral.fecha
+                    ).toLocaleDateString()
+                  : "Fecha no disponible"}
               </Typography>
             </Box>
           </Grid>
@@ -465,6 +468,7 @@ export const InspeccionPdfContent: React.FC<InspeccionPdfContentProps> = ({
               backgroundColor: "#B0B0B0",
             }}
           >
+            {/* hasta aqui verifique */}
             <Typography
               align="left"
               sx={{
@@ -722,7 +726,7 @@ export const InspeccionPdfContent: React.FC<InspeccionPdfContentProps> = ({
           }}
         >
           <Typography sx={{ color: "#fcfafa" }}>
-            QUE DEBE HACER SI MARCO ALGUNA CASILLA ROJA "NO LO USE"
+            QUE DEBE HACER SI MARCO ALGUNA CASILLA ROJA &quot;NO LO USE&quot;
           </Typography>
         </Grid>
         <Grid size={{ xs: 2 }} container sx={{ height: "2rem" }}>
@@ -777,7 +781,7 @@ export const InspeccionPdfContent: React.FC<InspeccionPdfContentProps> = ({
             Si usted nota que el arnés, conector u otro de los dispositivos
             inspeccionados se encuentra EN MAL ESTADO O DEFECTUOSO, estos deben
             ser removidos cuanto antes del lugar de trabajo y dados de baja
-            cortándolos (coordine con su Supervisor). "NO LO USE"
+            cortándolos (coordine con su Supervisor). &quot;NO LO USE&quot;
           </Typography>
         </Grid>
         <Grid
@@ -798,7 +802,7 @@ export const InspeccionPdfContent: React.FC<InspeccionPdfContentProps> = ({
             textAlign: "center",
           }}
         >
-           {inspeccion.operativo === "NO" ? inspeccion.operativo : ""}
+          {inspeccion.operativo === "NO" ? inspeccion.operativo : ""}
         </Grid>
       </Grid>
 
@@ -868,15 +872,13 @@ export const InspeccionPdfContent: React.FC<InspeccionPdfContentProps> = ({
               fontWeight: "bold",
               borderBottom: "0.125rem solid",
               padding: "0.5rem 0rem 0.22rem 0rem",
-              background:"#a3c1e8"
+              background: "#a3c1e8",
             }}
           >
             Inspeccion realizada por
           </Typography>
 
-          <Typography>
-            {inspeccion.inspectionConductedBy}
-          </Typography>
+          <Typography>{inspeccion.inspectionConductedBy}</Typography>
         </Grid>
         <Grid
           size={{ xs: 2 }}
@@ -894,7 +896,7 @@ export const InspeccionPdfContent: React.FC<InspeccionPdfContentProps> = ({
               fontWeight: "bold",
               borderBottom: "0.125rem solid",
               padding: "0.5rem 0rem 0.22rem 0rem",
-              background:"#a3c1e8"
+              background: "#a3c1e8",
             }}
           >
             FIRMA
@@ -917,14 +919,12 @@ export const InspeccionPdfContent: React.FC<InspeccionPdfContentProps> = ({
               fontWeight: "bold",
               borderBottom: "0.125rem solid black",
               background: "#06fcfc",
-              color:"#ffff"
+              color: "#ffff",
             }}
           >
             INSPECCIÓN APROBADA POR (Supervisor de Área):
           </Typography>
-          <Typography>
-            {inspeccion.inspectionApprovedBy}
-          </Typography>
+          <Typography>{inspeccion.inspectionApprovedBy}</Typography>
         </Grid>
         <Grid
           size={{ xs: 1 }}
@@ -942,7 +942,7 @@ export const InspeccionPdfContent: React.FC<InspeccionPdfContentProps> = ({
               borderBottom: "0.125rem solid black",
               padding: "0.5rem 0rem 0.22rem 0rem",
               background: "#06fcfc",
-              color:"#ffff"
+              color: "#ffff",
             }}
           >
             FIRMA
@@ -966,14 +966,16 @@ export const InspeccionPdfContent: React.FC<InspeccionPdfContentProps> = ({
               borderBottom: "0.125rem solid black",
               padding: "0.5rem 0rem 0.22rem 0rem",
               background: "#06fcfc",
-              color:"#ffff"
+              color: "#ffff",
             }}
           >
             FECHA
           </Typography>
 
           <Typography>
-          {inspeccion.informacionGeneral.fecha ? new Date(inspeccion.reviewDate).toLocaleDateString() : "Fecha no disponible"}
+            {inspeccion.informacionGeneral.fecha
+              ? new Date(inspeccion.reviewDate).toLocaleDateString()
+              : "Fecha no disponible"}
           </Typography>
         </Grid>
       </Grid>

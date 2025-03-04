@@ -1,4 +1,4 @@
-import type { Control } from "react-hook-form";
+import type { Control,UseFormSetValue  } from "react-hook-form";
 import type {
   FormData,
   InspectionTitle
@@ -10,7 +10,7 @@ export interface IProps {
   titles: InspectionTitle[];
   documentCode: string;
   revisionNumber: number;
-  setValue: (name: keyof FormData, value: any) => void;
+  setValue: UseFormSetValue<FormData>;
   isSubmitting?: boolean
   mode?: "create" | "edit"
 }

@@ -212,3 +212,17 @@ export const crearFormularioInicial = (
   }
 }
 
+export interface VerificarTagData {
+  tag: string;
+  periodo: "ENERO-JUNIO" | "JULIO-DICIEMBRE";
+  año: number;
+}
+
+export interface DatosMes {
+  inspeccionesActivos: InspeccionSistemasMensual;
+  inspeccionesExtintor: InspeccionExtintor[];
+  inspector: Inspector;
+}
+export type SistemaPath =
+  | `meses.${Mes}.inspeccionesActivos.sistemasPasivos.${string}`
+  | `meses.${Mes}.inspeccionesActivos.sistemasActivos.${string}`;

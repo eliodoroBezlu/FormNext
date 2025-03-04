@@ -10,60 +10,14 @@ import {
 import { FormTextField } from "@/components/atoms/form-text-field/FormTextField";
 import { InspectionSection } from "@/components/organisms/inspection-section/InspectionSection";
 import SignatureCanvas from "react-signature-canvas";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef } from "react";
 import type { IProps } from "./types/IProps";
 import Image from "next/image";
 import Grid from "@mui/material/Grid2";
 import { OperativoOption } from "@/types/formTypes";
 import { Controller } from "react-hook-form";
-
-const DynamicSignatureCanvas = React.forwardRef<
-  SignatureCanvas,
-  {  onClear: () => void; heightPercentage?: number }
->(({  onClear, heightPercentage = 100 }, ref) => {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
-
-  useEffect(() => {
-    const updateDimensions = () => {
-      if (containerRef.current) {
-        const { width } = containerRef.current.getBoundingClientRect()
-        setDimensions({ width, height: width * (heightPercentage / 100) })
-      }
-    }
-
-    updateDimensions()
-    window.addEventListener("resize", updateDimensions)
-    return () => window.removeEventListener("resize", updateDimensions)
-  }, [heightPercentage])
-
-  return (
-    <div ref={containerRef} style={{ width: "100%"}}>
-      <Box
-        sx={{
-          border: "1px solid #ccc",
-          borderRadius: 2,
-          width: "100%",
-          height: "25%",
-          mb: 2,
-        }}
-      >
-        <SignatureCanvas
-          ref={ref}
-          canvasProps={{
-            width: dimensions.width,
-            height: dimensions.height,
-            className: "sigCanvas",
-          }}
-        />
-      </Box>
-      <Button onClick={onClear} variant="outlined" color="secondary">
-        Limpiar Firma
-      </Button>
-    </div>
-  );
-});
-DynamicSignatureCanvas.displayName = "DynamicSignatureCanvas";
+// Importamos el componente DynamicSignatureCanvas externo
+import DynamicSignatureCanvas from "@/components/molecules/signature-canvas/SigantureCanvas";
 
 export const InspectionForm = ({
   control,
@@ -72,23 +26,30 @@ export const InspectionForm = ({
   setValue,
   documentCode,
   revisionNumber,
+  isSubmitting = false,
 }: IProps) => {
   const inspectorSigCanvasRef = useRef<SignatureCanvas | null>(null);
   const supervisorSigCanvasRef = useRef<SignatureCanvas | null>(null);
-  const handleSubmit = () => {
-    if (inspectorSigCanvasRef.current && supervisorSigCanvasRef.current) {
+  
+  const saveInspectorSignature = () => {
+    if (inspectorSigCanvasRef.current) {
       const inspectorSignature = inspectorSigCanvasRef.current
         .getTrimmedCanvas()
         .toDataURL("image/png");
+      setValue("firmaInspector", inspectorSignature);
+    }
+  };
+
+  const saveSupervisorSignature = () => {
+    if (supervisorSigCanvasRef.current) {
       const supervisorSignature = supervisorSigCanvasRef.current
         .getTrimmedCanvas()
         .toDataURL("image/png");
-
-      setValue("firmaInspector", inspectorSignature);
       setValue("firmaSupervisor", supervisorSignature);
     }
-    onSubmit();
   };
+
+  
 
   return (
     <Grid container spacing={2}>
@@ -278,10 +239,11 @@ export const InspectionForm = ({
           />
         </Grid>
 
-        <Grid size={{ xs: 6 }} >
+        <Grid size={{ xs: 6 }}>
           <DynamicSignatureCanvas
             ref={inspectorSigCanvasRef}
             onClear={() => inspectorSigCanvasRef.current?.clear()}
+            onSave={saveInspectorSignature}
             heightPercentage={10}
           />
         </Grid>
@@ -290,6 +252,7 @@ export const InspectionForm = ({
           <DynamicSignatureCanvas
             ref={supervisorSigCanvasRef}
             onClear={() => supervisorSigCanvasRef.current?.clear()}
+            onSave={saveSupervisorSignature}
             heightPercentage={10}
           />
         </Grid>
@@ -308,12 +271,13 @@ export const InspectionForm = ({
       <Grid size={{ xs: 12 }}>
         <Box display="flex" justifyContent="center">
           <Button
-            onClick={handleSubmit}
+            onClick={onSubmit}
             variant="contained"
             color="primary"
             sx={{ mt: 2, width: "25%" }}
+            disabled={isSubmitting}
           >
-            Enviar
+            {isSubmitting ? "Enviando..." : "Enviar"}
           </Button>
         </Box>
       </Grid>

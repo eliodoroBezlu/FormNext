@@ -42,10 +42,8 @@ export default function InspeccionArnesPage() {
 
   const onSubmit = async (data: FormData) => {
     try {
-      if (!data.firmaInspector || !data.firmaSupervisor) {
-        alert("Por favor, complete ambas firmas antes de enviar el formulario");
-        return;
-      }
+      console.log("Datos enviados:", data);
+      
       await inspeccionService.crear(data);
       router.push("/dashboard/Otro-form");
       console.log("Datos enviados:", data);
