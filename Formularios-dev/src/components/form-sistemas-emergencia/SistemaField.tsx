@@ -1,7 +1,8 @@
-import { Grid, Typography, TextField } from "@mui/material"
+import { Typography, TextField } from "@mui/material"
 import { type Control, Controller } from "react-hook-form"
 import type { FormularioInspeccion, Mes, SistemaPath } from "../../types/formTypes"
 import EstadoInspeccionSelect from "@/components/form-sistemas-emergencia/EstadoInspeccionSelect"
+import Grid from "@mui/material/Grid2";
 
 interface SistemaFieldProps {
   name: string
@@ -19,10 +20,10 @@ const SistemaField = ({ name, label, control, currentMes, type }: SistemaFieldPr
 
   return (
     <Grid container spacing={2} sx={{ mb: 2 }}>
-      <Grid item xs={5}>
+      <Grid size={{ xs: 12, sm: 4}}>
         <Typography variant="body2">{label}</Typography>
       </Grid>
-      <Grid item xs={3}>
+      <Grid size={{ xs: 12, sm: 4}}>
         <Controller
           name={`${basePath}.cantidad` as SistemaPath}
           control={control}
@@ -31,7 +32,7 @@ const SistemaField = ({ name, label, control, currentMes, type }: SistemaFieldPr
           )}
         />
       </Grid>
-      <Grid item xs={4}>
+      <Grid size={{ xs: 12, sm: 4}}>
         <Controller
           name={`${basePath}.estado` as SistemaPath}
           control={control}

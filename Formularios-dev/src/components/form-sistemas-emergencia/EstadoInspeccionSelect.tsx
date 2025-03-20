@@ -11,9 +11,9 @@ const EstadoInspeccionSelect = ({ value, onChange, disabled = false }: EstadoIns
   <FormControl fullWidth size="small">
     <Select value={value || ""} onChange={onChange} disabled={disabled} displayEmpty>
       <MenuItem value="">Seleccionar</MenuItem>
-      <MenuItem value="✓">✓ (Conforme)</MenuItem>
-      <MenuItem value="X">X (No Conforme)</MenuItem>
-      <MenuItem value="N/A">N/A (No Aplica)</MenuItem>
+      <MenuItem value="✓">✓</MenuItem>
+      <MenuItem value="X">X</MenuItem>
+      <MenuItem value="N/A">N/A</MenuItem>
     </Select>
   </FormControl>
 )

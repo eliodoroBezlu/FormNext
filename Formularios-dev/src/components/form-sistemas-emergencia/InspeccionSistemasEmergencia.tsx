@@ -1,8 +1,17 @@
-"use client"
+"use client";
 
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Box, Button, Typography, Paper, Container, TextField, Alert } from "@mui/material";
+import {
+  Box,
+  Button,
+  Typography,
+  Paper,
+  Container,
+  TextField,
+  Alert,
+  Grid,
+} from "@mui/material";
 import {
   type FormularioInspeccion,
   type Mes,
@@ -51,12 +60,13 @@ const getAñoActual = (): number => {
 
 export function InspeccionSistemasEmergencia() {
   const router = useRouter();
-  const [currentMes, setCurrentMes] = useState<Mes>(obtenerMesActual());
+  const [currentMes] = useState<Mes>(obtenerMesActual());
   const [loading, setLoading] = useState<boolean>(false);
   const [showForm, setShowForm] = useState<boolean>(false); // Controla la visibilidad del formulario
   const [tag, setTag] = useState<string>(""); // Almacena el valor del tag
   const [error, setError] = useState<string | null>(null); // Manejo de errores
-  const [formularioExistente, setFormularioExistente] = useState<FormularioInspeccion | null>(null);
+  const [esFormularioExistente, setEsFormularioExistente] = useState<boolean>(false);
+
 
   const {
     control,
@@ -73,7 +83,7 @@ export function InspeccionSistemasEmergencia() {
       "", // edificio
       getPeriodoActual(),
       getAñoActual(),
-      obtenerMesActual(),
+      obtenerMesActual()
     ),
   });
 
@@ -82,30 +92,7 @@ export function InspeccionSistemasEmergencia() {
     setValue("mesActual", currentMes);
   }, [currentMes, setValue]);
 
-  const onSubmit = async (data: FormularioInspeccion) => {
-    try {
-      console.log("Formulario enviado:", data);
-      const mesSeleccionado: Mes = "JUNIO"
-      setCurrentMes(mesSeleccionado); // Actualizar el estado local
-      setValue("mesActual", mesSeleccionado); 
-
-      // Actualizar fecha de última modificación
-      data.fechaUltimaModificacion = new Date();
-
-      if (formularioExistente) {
-        // Si el formulario ya existe, actualizar solo el mes actual
-        await inspeccionService.actualizarMesPorTag(tag, currentMes, data.meses[currentMes]);
-      } else {
-        // Si no existe, crear un nuevo formulario
-        await inspeccionService.crearFormSistemasEmergencia(data);
-      }
-
-      router.push("/dashboard/inspeccion-sistemas-emergencia");
-    } catch (error) {
-      console.error("Error al enviar el formulario:", error);
-    }
-  };
-
+  
   const handleTagSubmit = async () => {
     if (tag.trim() === "") {
       setError("Por favor, ingresa un valor para el TAG.");
@@ -116,27 +103,60 @@ export function InspeccionSistemasEmergencia() {
       setLoading(true);
       setError(null);
 
-      // Datos a enviar al backend
       const datosIniciales = {
         tag,
         periodo: getPeriodoActual(),
         año: getAñoActual(),
+        mesActual: obtenerMesActual(),
       };
 
-      // Verificar si existe el formulario en el backend
+
       const response = await inspeccionService.verificarTag(datosIniciales);
+      console.log("Respuesta del backend:", response);
 
       if (response.existe) {
-        // Si existe, cargar los datos del formulario existente
-        setFormularioExistente(response.formulario);
-        reset(response.formulario); // Prellenar el formulario con los datos existentes
-      } else {
-        // Si no existe, inicializar un nuevo formulario
-        reset(crearFormularioInicial("", "", tag, "", "", getPeriodoActual(), getAñoActual(), currentMes));
-      }
+        setEsFormularioExistente(true);
+        const mesAlmacenado = response.formulario.mesActual;
 
-      // Mostrar el formulario principal
-      setShowForm(true);
+        if (mesAlmacenado === obtenerMesActual()) {
+          console.log("Los meses coinciden. Mostrando mensaje de error.");
+          setError(
+            "El formulario ya existe para este mes. No es necesario realizar cambios."
+          );
+          return; // No continúa con la carga del formulario
+        }
+
+        // Si el mes no coincide, prellenar solo TAG, superintendencia y área
+        reset(
+          crearFormularioInicial(
+            response.formulario.superintendencia || "",
+            response.formulario.area || "",
+            tag,
+            "",
+            "",
+            getPeriodoActual(),
+            getAñoActual(),
+            obtenerMesActual()
+          )
+        );
+        setShowForm(true);
+      } else {
+        setEsFormularioExistente(false);
+        // Si el TAG no existe, prellenar solo el TAG y valores iniciales
+        reset(
+          crearFormularioInicial(
+            "",
+            "",
+            tag,
+            "",
+            "",
+            getPeriodoActual(),
+            getAñoActual(),
+            obtenerMesActual()
+          )
+        );
+        setShowForm(true);
+      }
     } catch (error) {
       console.error("Error al verificar el TAG:", error);
       setError("Ocurrió un error al comunicarse con el servidor. Por favor, intenta más tarde.");
@@ -145,7 +165,42 @@ export function InspeccionSistemasEmergencia() {
     }
   };
 
-
+  const onSubmit = async (data: FormularioInspeccion) => {
+    try {
+      console.log("Formulario enviado:", data);
+  
+  
+      // Obtener el mes actual
+      const mesActual = obtenerMesActual();
+  
+      // Preparar los datos del mes actual
+      const datosMesActual = data.meses[mesActual];
+  
+      // Enviar los datos al backend para actualizar el mes
+      if (esFormularioExistente) {
+        const response = await inspeccionService.actualizarMesPorTag(
+          tag, // El tag del formulario
+          mesActual, // El mes actual
+          datosMesActual // Los datos del mes actual
+        );
+  
+        console.log("Respuesta del backend (actualización):", response);
+      } else {
+        // Si no existe, crear un nuevo formulario
+        await inspeccionService.crearFormSistemasEmergencia(data);
+      }
+  
+      // Resetear el formulario y mostrar el campo de búsqueda del TAG
+      reset(crearFormularioInicial("", "", "", "", "", getPeriodoActual(), getAñoActual(), obtenerMesActual()));
+      setShowForm(false); // Ocultar el formulario
+      setTag(""); // Limpiar el campo del TAG
+      setError(null); // Limpiar cualquier mensaje de error
+  
+      router.push("/dashboard/inspeccion-sistemas-emergencia");
+    } catch (error) {
+      console.error("Error al enviar el formulario:", error);
+    }
+  };
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Paper elevation={3} sx={{ p: 3 }}>
@@ -158,7 +213,7 @@ export function InspeccionSistemasEmergencia() {
 
         {/* Mensaje de error */}
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="info" key={error} sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
@@ -213,13 +268,30 @@ export function InspeccionSistemasEmergencia() {
               errors={errors}
             />
 
-            <Box sx={{ mt: 4, display: "flex", justifyContent: "space-between" }}>
-              <Button variant="outlined" color="secondary" size="large">
-                Cancelar
-              </Button>
-              <Button type="submit" variant="contained" color="primary" size="large">
-                Guardar Inspección
-              </Button>
+            <Box sx={{ mt: 4 }}>
+              <Grid container spacing={2} justifyContent="space-between">
+                <Grid item xs={12} sm={6} md={4}>
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    size="large"
+                    fullWidth
+                  >
+                    Cancelar
+                  </Button>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    size="large"
+                    fullWidth
+                  >
+                    Guardar Inspección
+                  </Button>
+                </Grid>
+              </Grid>
             </Box>
           </form>
         )}

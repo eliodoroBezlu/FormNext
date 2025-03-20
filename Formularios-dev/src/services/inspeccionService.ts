@@ -1,5 +1,5 @@
 import api from "../lib/axios";
-import type { FormData } from "../types/formTypes";
+import type { FormData, Trabajador } from "../types/formTypes";
 import type { FormDataExport } from "../types/formTypes";
 
 import type { VerificarTagData, FormularioInspeccion, DatosMes, Mes } from "../types/formTypes";
@@ -104,5 +104,12 @@ export const inspeccionService = {
     }
   },
 
+  // Buscar trabajadores por nombre
+  async buscarTrabajadores(query: string): Promise<Trabajador[]> {
+    const response = await api.get<Trabajador[]>("/trabajadores/buscar", {
+      params: { query },
+    });
+    return response.data;
+  },
   
 };

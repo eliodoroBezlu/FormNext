@@ -5,7 +5,6 @@ import {
     Typography,
     Button,
     Paper,
-    Grid,
     IconButton,
     TextField,
     FormControl,
@@ -18,6 +17,7 @@ import {
   import type { FormularioInspeccion, Mes } from "../../types/formTypes"
   import EstadoInspeccionSelect from "@/components/form-sistemas-emergencia/EstadoInspeccionSelect"
 import { useEffect } from "react"
+import Grid from "@mui/material/Grid2";
   
   interface InspeccionExtintoresProps {
     control: Control<FormularioInspeccion>
@@ -57,23 +57,21 @@ import { useEffect } from "react"
           <Typography variant="h6">Inspección de Extintores</Typography>
         </AccordionSummary>
         <AccordionDetails>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={agregarExtintor} sx={{ mb: 2 }}>
-            Agregar Extintor
-          </Button>
+          
   
           {fields.map((field, index) => (
             <Paper key={field.id} elevation={2} sx={{ p: 2, mb: 2 }}>
               <Grid container spacing={2} alignItems="center">
-                <Grid item xs={10}>
+                <Grid  size={{ xs: 10 }}>
                   <Typography variant="subtitle1">Extintor #{index + 1}</Typography>
                 </Grid>
-                <Grid item xs={2} sx={{ textAlign: "right" }}>
+                <Grid  size={{ xs: 2}} sx={{ textAlign: "right" }}>
                   <IconButton onClick={() => remove(index)} color="error">
                     <DeleteIcon />
                   </IconButton>
                 </Grid>
   
-                <Grid item xs={12} md={6}>
+                <Grid  size={{ xs: 12, md: 6 }}>
                   <Controller
                     name={`meses.${currentMes}.inspeccionesExtintor.${index}.fechaInspeccion`}
                     control={control}
@@ -83,13 +81,12 @@ import { useEffect } from "react"
                         type="date"
                         label="Fecha Inspección"
                         fullWidth
-                        InputLabelProps={{ shrink: true }}
                       />
                     )}
                   />
                 </Grid>
   
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Controller
                     name={`meses.${currentMes}.inspeccionesExtintor.${index}.codigo`}
                     control={control}
@@ -97,7 +94,7 @@ import { useEffect } from "react"
                   />
                 </Grid>
   
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <Controller
                     name={`meses.${currentMes}.inspeccionesExtintor.${index}.ubicacion`}
                     control={control}
@@ -105,12 +102,12 @@ import { useEffect } from "react"
                   />
                 </Grid>
   
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <Typography variant="subtitle2" gutterBottom>
                     Estado de los Componentes
                   </Typography>
                   <Grid container spacing={2}>
-                    <Grid item xs={6} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                       <FormControl fullWidth size="small">
                         <FormLabel component="legend">Inspección Mensual</FormLabel>
                         <Controller
@@ -121,7 +118,7 @@ import { useEffect } from "react"
                       </FormControl>
                     </Grid>
   
-                    <Grid item xs={6} md={4}>
+                    <Grid size={{ xs: 12 , md: 4 }}>
                       <FormControl fullWidth size="small">
                         <FormLabel component="legend">Manguera</FormLabel>
                         <Controller
@@ -132,7 +129,7 @@ import { useEffect } from "react"
                       </FormControl>
                     </Grid>
   
-                    <Grid item xs={6} md={4}>
+                    <Grid size={{ xs: 12 , md: 4 }}>
                       <FormControl fullWidth size="small">
                         <FormLabel component="legend">Cilindro</FormLabel>
                         <Controller
@@ -143,7 +140,7 @@ import { useEffect } from "react"
                       </FormControl>
                     </Grid>
   
-                    <Grid item xs={6} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                       <FormControl fullWidth size="small">
                         <FormLabel component="legend">Indicador Presión</FormLabel>
                         <Controller
@@ -154,7 +151,7 @@ import { useEffect } from "react"
                       </FormControl>
                     </Grid>
   
-                    <Grid item xs={6} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                       <FormControl fullWidth size="small">
                         <FormLabel component="legend">Gatillo/Chaveta/Precinto</FormLabel>
                         <Controller
@@ -165,7 +162,7 @@ import { useEffect } from "react"
                       </FormControl>
                     </Grid>
   
-                    <Grid item xs={6} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                       <FormControl fullWidth size="small">
                         <FormLabel component="legend">Señalización/Soporte</FormLabel>
                         <Controller
@@ -178,7 +175,7 @@ import { useEffect } from "react"
                   </Grid>
                 </Grid>
   
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12}}>
                   <Controller
                     name={`meses.${currentMes}.inspeccionesExtintor.${index}.observaciones`}
                     control={control}
@@ -188,7 +185,9 @@ import { useEffect } from "react"
               </Grid>
             </Paper>
           ))}
-  
+          <Button variant="contained" startIcon={<AddIcon />} onClick={agregarExtintor} sx={{ mb: 2 }}>
+            Agregar Extintor
+          </Button>
           {fields.length === 0 && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 2 }}>
               No hay extintores registrados. Haga clic en &quot;Agregar Extintor&quot; para añadir uno.

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, forwardRef } from "react";
-import { Box, Button } from "@mui/material";
+import { Box, Button, Grid } from "@mui/material";
 import SignatureCanvas from "react-signature-canvas";
 
 // Interfaz para las opciones del contexto 2D
@@ -46,21 +46,28 @@ const DynamicSignatureCanvas = forwardRef<
   useEffect(() => {
     if (sigCanvasRef.current) {
       const canvas = sigCanvasRef.current.getCanvas();
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        Object.defineProperty(canvas, "getContext", {
-          value: (
-            contextId: string,
-            options?: CanvasRenderingContext2DSettings
-          ) => {
-            if (contextId === "2d") {
-              return canvas.getContext(contextId, { ...options, willReadFrequently: true });
-            }
-            return canvas.getContext(contextId, options);
-          },
-          configurable: true,
-        });
-      }
+
+      // Guardar una referencia al método original de getContext
+      const originalGetContext = canvas.getContext;
+
+      // Sobrescribir getContext para incluir willReadFrequently
+      Object.defineProperty(canvas, "getContext", {
+        value: (
+          contextId: string,
+          options?: CanvasRenderingContext2DSettings
+        ) => {
+          if (contextId === "2d") {
+            // Llamar al método original con las opciones modificadas
+            return originalGetContext.call(canvas, contextId, {
+              ...options,
+              willReadFrequently: true,
+            });
+          }
+          // Para otros contextos, simplemente llamamos al método original
+          return originalGetContext.call(canvas, contextId, options);
+        },
+        configurable: true,
+      });
     }
   }, [sigCanvasRef]);
 
@@ -94,14 +101,28 @@ const DynamicSignatureCanvas = forwardRef<
       </Box>
 
       {/* Botones para limpiar y guardar la firma */}
-      <Box sx={{ display: "flex", gap: 2 }}>
-        <Button onClick={onClear} variant="outlined" color="secondary">
-          Limpiar Firma
-        </Button>
-        <Button onClick={onSave} variant="contained" color="primary">
-          Guardar Firma
-        </Button>
-      </Box>
+      <Grid container spacing={2} justifyContent="center">
+        <Grid item xs={12} sm={6} md={4}>
+          <Button
+            onClick={onClear}
+            variant="outlined"
+            color="secondary"
+            fullWidth
+          >
+            Limpiar Firma
+          </Button>
+        </Grid>
+        <Grid item xs={12} sm={6} md={4}>
+          <Button
+            onClick={onSave}
+            variant="contained"
+            color="primary"
+            fullWidth
+          >
+            Guardar Firma
+          </Button>
+        </Grid>
+      </Grid>
     </div>
   );
 });

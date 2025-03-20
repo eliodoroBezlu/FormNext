@@ -16,7 +16,6 @@ import Image from "next/image";
 import Grid from "@mui/material/Grid2";
 import { OperativoOption } from "@/types/formTypes";
 import { Controller } from "react-hook-form";
-// Importamos el componente DynamicSignatureCanvas externo
 import DynamicSignatureCanvas from "@/components/molecules/signature-canvas/SigantureCanvas";
 
 export const InspectionForm = ({

@@ -216,6 +216,7 @@ export interface VerificarTagData {
   tag: string;
   periodo: "ENERO-JUNIO" | "JULIO-DICIEMBRE";
   año: number;
+  mesActual: Mes;
 }
 
 export interface DatosMes {
@@ -226,3 +227,13 @@ export interface DatosMes {
 export type SistemaPath =
   | `meses.${Mes}.inspeccionesActivos.sistemasPasivos.${string}`
   | `meses.${Mes}.inspeccionesActivos.sistemasActivos.${string}`;
+
+
+  export interface Trabajador {
+    _id: string;
+    ci: string;
+    nomina: string;
+    puesto: string;
+    fecha_ingreso: Date;
+    superintendencia: string;
+  }
