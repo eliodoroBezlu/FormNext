@@ -37,12 +37,12 @@ import Grid from "@mui/material/Grid2";
         fechaInspeccion: new Date().toISOString().split("T")[0],
         codigo: "",
         ubicacion: "",
-        inspeccionMensual: null,
-        manguera: null,
-        cilindro: null,
-        indicadorPresion: null,
-        gatilloChavetaPrecinto: null,
-        senalizacionSoporte: null,
+        inspeccionMensual: "✓",
+        manguera: "✓",
+        cilindro: "✓",
+        indicadorPresion: "✓",
+        gatilloChavetaPrecinto: "✓",
+        senalizacionSoporte: "✓",
         observaciones: "",
       })
     }
@@ -57,8 +57,6 @@ import Grid from "@mui/material/Grid2";
           <Typography variant="h6">Inspección de Extintores</Typography>
         </AccordionSummary>
         <AccordionDetails>
-          
-  
           {fields.map((field, index) => (
             <Paper key={field.id} elevation={2} sx={{ p: 2, mb: 2 }}>
               <Grid container spacing={2} alignItems="center">

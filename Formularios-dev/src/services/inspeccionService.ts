@@ -1,5 +1,5 @@
 import api from "../lib/axios";
-import type { FormData, Trabajador } from "../types/formTypes";
+import type { FormData, InspeccionServiceExport, Trabajador } from "../types/formTypes";
 import type { FormDataExport } from "../types/formTypes";
 
 import type { VerificarTagData, FormularioInspeccion, DatosMes, Mes } from "../types/formTypes";
@@ -104,6 +104,13 @@ export const inspeccionService = {
     }
   },
 
+  //para devolver todas de las inspecciones de sistemas de emergencia 
+
+  async sistemasEmergenciaReport() {
+    const response = await api.get<InspeccionServiceExport[]>("/inspecciones-emergencia")
+    return response.data
+  },
+
   // Buscar trabajadores por nombre
   async buscarTrabajadores(query: string): Promise<Trabajador[]> {
     const response = await api.get<Trabajador[]>("/trabajadores/buscar", {
@@ -111,5 +118,26 @@ export const inspeccionService = {
     });
     return response.data;
   },
+
+  async descargarExcelInspeccionesEmergencia(id: string) {
+    try {
+      const response = await api.get(`/inspecciones-emergencia/${id}/excel`, {
+        responseType: "blob",
+      })
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `inspeccion-${id}.xlsx`
+      link.click()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error("Error al descargar el Excel:", error)
+      throw error
+    }
+  },
+
   
 };

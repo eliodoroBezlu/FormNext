@@ -71,8 +71,8 @@ export const NAVIGATION: NavigationItem[] = [
     icon: "barChart",
     children: [
       {
-        segment: "sales",
-        title: "Sales",
+        segment: "sistemas-de-emergencia",
+        title: "Sistemas de emrgencia",
         icon: "description",
       },
       {

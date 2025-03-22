@@ -8,6 +8,8 @@ import {
 } from "@mui/material";
 import { type Control, Controller, type FieldErrors } from "react-hook-form";
 import type { FormularioInspeccion } from "../../types/formTypes";
+import { inspeccionService } from "@/services/inspeccionService";
+import { useState } from "react";
 
 // Array de meses
 const MESES = [
@@ -84,6 +86,26 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
   const periodoActual = getPeriodoActual(); // Calcula el período actual
   const añoActual = getAñoActual(); // Calcula el año actual
   
+  const [opciones, setOpciones] = useState<string[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  // Función para buscar opciones (reutiliza buscarTrabajadores)
+  const buscarOpciones = async (query: string): Promise<void> => {
+    if (query.length < 3) {
+      setOpciones([]); // Limpiar el estado si la consulta tiene menos de 3 caracteres
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await inspeccionService.buscarTrabajadores(query); // Reutiliza la función existente
+      setOpciones(response.map((item: { nomina: string }) => item.nomina)); // Extrae los nombres de los trabajadores
+    } catch (error) {
+      console.error("Error al buscar opciones:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   return (
     <Box sx={{ mb: 4 }}>
@@ -175,8 +197,24 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
           <Controller
             name="responsableEdificio"
             control={control}
+            rules={{ required: "Este campo es obligatorio" }}
             render={({ field }) => (
-              <TextField {...field} label="Responsable del Edificio" fullWidth />
+              <Autocomplete
+                options={opciones}
+                onInputChange={(_, value) => buscarOpciones(value)} // Busca responsables
+                onBlur={() => setOpciones([])} // Limpia el estado cuando el campo pierde el foco
+                loading={loading} // Muestra un indicador de carga
+                onChange={(_, data) => field.onChange(data)} // Actualiza el valor del campo
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Buscar Responsable del Edificio"
+                    fullWidth
+                    error={!!errors.responsableEdificio}
+                    helperText={errors.responsableEdificio?.message}
+                  />
+                )}
+              />
             )}
           />
         </Grid>

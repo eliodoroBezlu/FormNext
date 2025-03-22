@@ -186,19 +186,19 @@ export const crearFormularioInicial = (
       [mesActual]: {
         inspeccionesActivos: {
           sistemasPasivos: {
-            puertasEmergencia: { cantidad: "", estado: null },
-            senaleticaViasEvacuacion: { cantidad: "", estado: null },
-            planosEvacuacion: { cantidad: "", estado: null },
-            registroPersonalEvacuacion: { cantidad: "", estado: null },
-            numerosEmergencia: { cantidad: "", estado: null },
-            luzEmergencia: { cantidad: "", estado: null },
-            puntoReunion: { cantidad: "", estado: null },
+            puertasEmergencia: { cantidad: "", estado: "✓" },
+            senaleticaViasEvacuacion: { cantidad: "", estado: "✓" },
+            planosEvacuacion: { cantidad: "", estado: "✓" },
+            registroPersonalEvacuacion: { cantidad: "", estado: "✓" },
+            numerosEmergencia: { cantidad: "", estado: "✓" },
+            luzEmergencia: { cantidad: "", estado: "✓" },
+            puntoReunion: { cantidad: "", estado: "✓" },
           },
           sistemasActivos: {
-            kitDerrame: { cantidad: "", estado: null },
-            lavaOjos: { cantidad: "", estado: null },
-            duchasEmergencia: { cantidad: "", estado: null },
-            desfibriladorAutomatico: { cantidad: "", estado: null },
+            kitDerrame: { cantidad: "", estado: "✓" },
+            lavaOjos: { cantidad: "", estado: "✓" },
+            duchasEmergencia: { cantidad: "", estado: "✓" },
+            desfibriladorAutomatico: { cantidad: "", estado: "✓" },
           },
           observaciones: "",
         },
@@ -236,4 +236,8 @@ export type SistemaPath =
     puesto: string;
     fecha_ingreso: Date;
     superintendencia: string;
+  }
+
+  export interface InspeccionServiceExport extends FormularioInspeccion {
+    _id: string
   }
