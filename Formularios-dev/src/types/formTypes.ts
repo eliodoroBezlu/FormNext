@@ -89,7 +89,7 @@ export interface Inspector {
 
 // Interfaz para los sistemas (pasivos y activos)
 export interface SistemaInspeccion {
-  cantidad: string
+  cantidad: number
   estado: EstadoInspeccion
   observaciones?: string
 }
@@ -186,19 +186,19 @@ export const crearFormularioInicial = (
       [mesActual]: {
         inspeccionesActivos: {
           sistemasPasivos: {
-            puertasEmergencia: { cantidad: "", estado: "✓" },
-            senaleticaViasEvacuacion: { cantidad: "", estado: "✓" },
-            planosEvacuacion: { cantidad: "", estado: "✓" },
-            registroPersonalEvacuacion: { cantidad: "", estado: "✓" },
-            numerosEmergencia: { cantidad: "", estado: "✓" },
-            luzEmergencia: { cantidad: "", estado: "✓" },
-            puntoReunion: { cantidad: "", estado: "✓" },
+            puertasEmergencia: { cantidad: 0, estado: "✓" },
+            senaleticaViasEvacuacion: { cantidad: 0, estado: "✓" },
+            planosEvacuacion: { cantidad: 0, estado: "✓" },
+            registroPersonalEvacuacion: { cantidad: 0, estado: "✓" },
+            numerosEmergencia: { cantidad: 0, estado: "✓" },
+            luzEmergencia: { cantidad: 0, estado: "✓" },
+            puntoReunion: { cantidad: 0, estado: "✓" },
           },
           sistemasActivos: {
-            kitDerrame: { cantidad: "", estado: "✓" },
-            lavaOjos: { cantidad: "", estado: "✓" },
-            duchasEmergencia: { cantidad: "", estado: "✓" },
-            desfibriladorAutomatico: { cantidad: "", estado: "✓" },
+            kitDerrame: { cantidad: 0, estado: "✓" },
+            lavaOjos: { cantidad: 0, estado: "✓" },
+            duchasEmergencia: { cantidad: 0, estado: "✓" },
+            desfibriladorAutomatico: { cantidad: 0, estado: "✓" },
           },
           observaciones: "",
         },
@@ -240,4 +240,11 @@ export type SistemaPath =
 
   export interface InspeccionServiceExport extends FormularioInspeccion {
     _id: string
+  }
+
+  export interface ExtintorBackend {
+    _id: string;
+    Area: string;
+    CodigoExtintor: string;
+    Ubicacion: string;
   }

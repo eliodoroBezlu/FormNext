@@ -88,6 +88,7 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
   
   const [opciones, setOpciones] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  
 
   // Función para buscar opciones (reutiliza buscarTrabajadores)
   const buscarOpciones = async (query: string): Promise<void> => {

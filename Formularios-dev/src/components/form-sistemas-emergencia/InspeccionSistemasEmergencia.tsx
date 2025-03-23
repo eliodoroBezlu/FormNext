@@ -8,11 +8,15 @@ import {
   Typography,
   Paper,
   Container,
-  TextField,
   Alert,
   Grid,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import {
+  ExtintorBackend,
   type FormularioInspeccion,
   type Mes,
   crearFormularioInicial,
@@ -47,6 +51,24 @@ const obtenerMesActual = (): Mes => {
   return meses[new Date().getMonth()];
 };
 
+const tagOptions = [
+  "710BL713",
+  "710BL718",
+  "710BL712",
+  "710BL723",
+  "710BL724",
+  "710BL725",
+  "710BL726",
+  "710BL727",
+  "710BL728",
+  "710BL729",
+  "710BL741",
+  "780BL001",
+  "710BL721",
+  "710BL711",
+  "710BL740", // Added as requested
+];
+
 // Función para obtener el período actual
 const getPeriodoActual = (): "ENERO-JUNIO" | "JULIO-DICIEMBRE" => {
   const mesActual = new Date().getMonth();
@@ -66,6 +88,11 @@ export function InspeccionSistemasEmergencia() {
   const [tag, setTag] = useState<string>(""); // Almacena el valor del tag
   const [error, setError] = useState<string | null>(null); // Manejo de errores
   const [esFormularioExistente, setEsFormularioExistente] = useState<boolean>(false);
+  const [area, setArea] = useState<string>("");
+  //const [areas, setAreas] = useState<string[]>([]); // Estado para las áreas
+  const [areaOptions, setAreaOptions] = useState<string[]>([]);
+  const [extintores, setExtintores] = useState<ExtintorBackend[]>([]);  // Estado para los extintores
+  
 
 
   const {
@@ -108,11 +135,14 @@ export function InspeccionSistemasEmergencia() {
         periodo: getPeriodoActual(),
         año: getAñoActual(),
         mesActual: obtenerMesActual(),
-      };
-
+        area: area
+      };  
+      console.log(datosIniciales)
 
       const response = await inspeccionService.verificarTag(datosIniciales);
       console.log("Respuesta del backend:", response);
+      
+      
 
       if (response.existe) {
         setEsFormularioExistente(true);
@@ -129,8 +159,8 @@ export function InspeccionSistemasEmergencia() {
         // Si el mes no coincide, prellenar solo TAG, superintendencia y área
         reset(
           crearFormularioInicial(
-            response.formulario.superintendencia || "",
-            response.formulario.area || "",
+            response.superintendencia || "",
+            area,
             tag,
             "",
             "",
@@ -139,14 +169,18 @@ export function InspeccionSistemasEmergencia() {
             obtenerMesActual()
           )
         );
+        setExtintores(response.extintores || []);
+        
+        console.log("Extintores recibidos:", response.extintores);
+
         setShowForm(true);
       } else {
         setEsFormularioExistente(false);
         // Si el TAG no existe, prellenar solo el TAG y valores iniciales
         reset(
           crearFormularioInicial(
-            "",
-            "",
+            response.superintendencia || "",
+            area,
             tag,
             "",
             "",
@@ -155,6 +189,8 @@ export function InspeccionSistemasEmergencia() {
             obtenerMesActual()
           )
         );
+        setExtintores(response.extintores || []); 
+        console.log("Extintores recibidos:", response.extintores);
         setShowForm(true);
       }
     } catch (error) {
@@ -194,6 +230,7 @@ export function InspeccionSistemasEmergencia() {
       reset(crearFormularioInicial("", "", "", "", "", getPeriodoActual(), getAñoActual(), obtenerMesActual()));
       setShowForm(false); // Ocultar el formulario
       setTag(""); // Limpiar el campo del TAG
+      setArea(""); // Limpiar el campo del área
       setError(null); // Limpiar cualquier mensaje de error
   
       router.push("/dashboard/inspeccion-sistemas-emergencia");
@@ -201,6 +238,19 @@ export function InspeccionSistemasEmergencia() {
       console.error("Error al enviar el formulario:", error);
     }
   };
+
+  useEffect(() => {
+    const cargarAreas = async () => {
+      try {
+        const areas = await inspeccionService.buscarAreas(""); // Obtener todas las áreas
+        setAreaOptions(areas);
+      } catch (error) {
+        console.error("Error al cargar áreas:", error);
+      }
+    };
+
+    cargarAreas();
+  }, []);
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Paper elevation={3} sx={{ p: 3 }}>
@@ -222,16 +272,46 @@ export function InspeccionSistemasEmergencia() {
         {!showForm && (
           <Box sx={{ mb: 4 }}>
             <Typography variant="h6" gutterBottom>
-              Ingresa el TAG para continuar:
+              Ingresa el TAG y Área para continuar:
             </Typography>
-            <TextField
-              fullWidth
-              label="TAG"
-              value={tag || ""}
-              onChange={(e) => setTag(e.target.value)}
-              variant="outlined"
-              sx={{ mb: 2 }}
-            />
+            <Grid container spacing={2} sx={{ mb: 2 }}>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel id="tag-label">TAG</InputLabel>
+                <Select
+                  labelId="tag-label"
+                  id="tag-select"
+                  value={tag || ""}
+                  label="TAG"
+                  onChange={(e) => setTag(e.target.value as string)}
+                >
+                  {tagOptions.map((tagOption) => (
+                    <MenuItem key={tagOption} value={tagOption}>
+                      {tagOption}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel id="area-label">Área</InputLabel>
+                  <Select
+                    labelId="area-label"
+                    id="area-select"
+                    value={area || ""}
+                    label="Área"
+                    onChange={(e) => setArea(e.target.value as string)} // Actualizar el estado del área
+                  >
+                    {areaOptions.map((areaOption) => (
+                      <MenuItem key={areaOption} value={areaOption}>
+                        {areaOption}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
             <Button
               variant="contained"
               color="primary"
@@ -258,7 +338,7 @@ export function InspeccionSistemasEmergencia() {
             <SistemasActivos control={control} currentMes={currentMes} />
 
             {/* Extintores */}
-            <InspeccionExtintores control={control} currentMes={currentMes} />
+            <InspeccionExtintores control={control} currentMes={currentMes}  extintores={extintores}/>
 
             {/* Información del Inspector */}
             <InformacionInspector

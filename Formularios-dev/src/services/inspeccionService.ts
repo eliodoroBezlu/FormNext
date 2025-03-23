@@ -138,6 +138,28 @@ export const inspeccionService = {
       throw error
     }
   },
+  async buscarAreas(query: string): Promise<string[]> {
+    try {
+      const response = await api.get<string[]>("/area/buscar", {
+        params: { query },
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error al buscar áreas:", error);
+      throw error;
+    }
+  },
+
+
+  async obtenerAreas(): Promise<string[]> {
+    try {
+      const response = await api.get<string[]>("/area");
+      return response.data;
+    } catch (error) {
+      console.error("Error al obtener áreas:", error);
+      throw error;
+    }
+  },
 
   
 };
