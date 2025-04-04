@@ -128,6 +128,7 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
                   renderInput={(params) => (
                     <TextField
                       {...params}
+                      id="superintendencia"
                       label="Seleccionar Superintendencia"
                       error={!!errors.superintendencia}
                       helperText={errors.superintendencia?.message}
@@ -154,6 +155,7 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
                   renderInput={(params) => (
                     <TextField
                       {...params}
+                      id="area"
                       label="Seleccionar Área"
                       error={!!errors.area}
                       helperText={errors.area?.message}
@@ -184,6 +186,7 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
             render={({ field }) => (
               <TextField
                 {...field}
+                id="edificio"
                 label="Edificio"
                 fullWidth
                 error={!!errors.edificio}
@@ -209,6 +212,7 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
                 renderInput={(params) => (
                   <TextField
                     {...params}
+                    id="responsable"
                     label="Buscar Responsable del Edificio"
                     fullWidth
                     error={!!errors.responsableEdificio}

@@ -161,5 +161,25 @@ export const inspeccionService = {
     }
   },
 
+  // Agrega este método a tu inspeccionService
+  async obtenerTagPorArea(area: string): Promise<string | null> {
+    try {
+      const response = await api.get('/tag/por-area', { 
+        params: { area },
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.data && response.data.tag) {
+        return response.data.tag;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error en obtenerTagPorArea:', error);
+      return null;
+    }
+  }
+
   
 };

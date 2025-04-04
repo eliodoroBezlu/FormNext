@@ -14,15 +14,15 @@ export type InspectionSection = {
   items: InspectionItem[]
 }
 
-export type InspectionTitle ={
+export type InspectionTitle = {
   id: string
   title: string
   items: InspectionSection[]
 }
 
 export type FormData = {
-  documentCode:string 
-  revisionNumber:number 
+  documentCode: string
+  revisionNumber: number
   informacionGeneral: {
     superintendencia: string
     trabajador: string
@@ -34,7 +34,7 @@ export type FormData = {
     fecha: Date
   }
   resultados: InspectionTitle[]
-  operativo:  OperativoOption | null
+  operativo: OperativoOption | null
   observacionesComplementarias: string
   inspectionConductedBy: string
   firmaInspector: string
@@ -54,17 +54,12 @@ export type FormFieldName =
   | "firmaInspector"
   | "firmaSupervisor"
 
-
-
-  // Crear FormDataExport extendiendo FormData
+// Crear FormDataExport extendiendo FormData
 export interface FormDataExport extends FormData {
   _id: string
 }
 
-
-
-// form sistemas de emergencia 
-
+// form sistemas de emergencia
 export type Mes =
   | "ENERO"
   | "FEBRERO"
@@ -186,19 +181,19 @@ export const crearFormularioInicial = (
       [mesActual]: {
         inspeccionesActivos: {
           sistemasPasivos: {
-            puertasEmergencia: { cantidad: 0, estado: "✓" },
-            senaleticaViasEvacuacion: { cantidad: 0, estado: "✓" },
-            planosEvacuacion: { cantidad: 0, estado: "✓" },
-            registroPersonalEvacuacion: { cantidad: 0, estado: "✓" },
-            numerosEmergencia: { cantidad: 0, estado: "✓" },
-            luzEmergencia: { cantidad: 0, estado: "✓" },
-            puntoReunion: { cantidad: 0, estado: "✓" },
+            puertasEmergencia: { cantidad: 0, estado: "✓", observaciones:"" },
+            senaleticaViasEvacuacion: { cantidad: 0, estado: "✓", observaciones:"" },
+            planosEvacuacion: { cantidad: 0, estado: "✓", observaciones:"" },
+            registroPersonalEvacuacion: { cantidad: 0, estado: "✓",observaciones:"" },
+            numerosEmergencia: { cantidad: 0, estado: "✓", observaciones:"" },
+            luzEmergencia: { cantidad: 0, estado: "✓", observaciones:"" },
+            puntoReunion: { cantidad: 0, estado: "✓", observaciones:"" },
           },
           sistemasActivos: {
-            kitDerrame: { cantidad: 0, estado: "✓" },
-            lavaOjos: { cantidad: 0, estado: "✓" },
-            duchasEmergencia: { cantidad: 0, estado: "✓" },
-            desfibriladorAutomatico: { cantidad: 0, estado: "✓" },
+            kitDerrame: { cantidad: 0, estado: "✓", observaciones:"" },
+            lavaOjos: { cantidad: 0, estado: "✓", observaciones:"" },
+            duchasEmergencia: { cantidad: 0, estado: "✓", observaciones:"" },
+            desfibriladorAutomatico: { cantidad: 0, estado: "✓", observaciones:"" },
           },
           observaciones: "",
         },
@@ -213,38 +208,39 @@ export const crearFormularioInicial = (
 }
 
 export interface VerificarTagData {
-  tag: string;
-  periodo: "ENERO-JUNIO" | "JULIO-DICIEMBRE";
-  año: number;
-  mesActual: Mes;
+  tag: string
+  periodo: "ENERO-JUNIO" | "JULIO-DICIEMBRE"
+  año: number
+  mesActual: Mes
 }
 
 export interface DatosMes {
-  inspeccionesActivos: InspeccionSistemasMensual;
-  inspeccionesExtintor: InspeccionExtintor[];
-  inspector: Inspector;
+  inspeccionesActivos: InspeccionSistemasMensual
+  inspeccionesExtintor: InspeccionExtintor[]
+  inspector: Inspector
 }
 export type SistemaPath =
   | `meses.${Mes}.inspeccionesActivos.sistemasPasivos.${string}`
-  | `meses.${Mes}.inspeccionesActivos.sistemasActivos.${string}`;
+  | `meses.${Mes}.inspeccionesActivos.sistemasActivos.${string}`
+  | `meses.${Mes}.inspeccionesActivos.sistemasActivos.${string}`
 
+export interface Trabajador {
+  _id: string
+  ci: string
+  nomina: string
+  puesto: string
+  fecha_ingreso: Date
+  superintendencia: string
+}
 
-  export interface Trabajador {
-    _id: string;
-    ci: string;
-    nomina: string;
-    puesto: string;
-    fecha_ingreso: Date;
-    superintendencia: string;
-  }
+export interface InspeccionServiceExport extends FormularioInspeccion {
+  _id: string
+}
 
-  export interface InspeccionServiceExport extends FormularioInspeccion {
-    _id: string
-  }
+export interface ExtintorBackend {
+  _id: string
+  Area: string
+  CodigoExtintor: string
+  Ubicacion: string
+}
 
-  export interface ExtintorBackend {
-    _id: string;
-    Area: string;
-    CodigoExtintor: string;
-    Ubicacion: string;
-  }

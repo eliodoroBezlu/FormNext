@@ -80,6 +80,11 @@ const getAñoActual = (): number => {
   return new Date().getFullYear();
 };
 
+
+
+
+
+
 export function InspeccionSistemasEmergencia() {
   const router = useRouter();
   const [currentMes] = useState<Mes>(obtenerMesActual());
@@ -92,7 +97,9 @@ export function InspeccionSistemasEmergencia() {
   //const [areas, setAreas] = useState<string[]>([]); // Estado para las áreas
   const [areaOptions, setAreaOptions] = useState<string[]>([]);
   const [extintores, setExtintores] = useState<ExtintorBackend[]>([]);  // Estado para los extintores
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
+ 
 
 
   const {
@@ -118,6 +125,25 @@ export function InspeccionSistemasEmergencia() {
     // Actualizar el formulario cuando cambie el mes
     setValue("mesActual", currentMes);
   }, [currentMes, setValue]);
+
+  useEffect(() => {
+    const obtenerTagPorArea = async () => {
+      if (area) {
+        try {
+          const tagEncontrado = await inspeccionService.obtenerTagPorArea(area);
+          if (tagEncontrado) {
+            setTag(tagEncontrado);
+            setValue('tag', tagEncontrado); // Actualiza el valor en react-hook-form
+          }
+        } catch (error) {
+          console.error('Error al obtener tag:', error);
+        }
+      }
+    };
+
+    obtenerTagPorArea();
+  }, [area, setValue]);
+
 
   
   const handleTagSubmit = async () => {
@@ -171,7 +197,6 @@ export function InspeccionSistemasEmergencia() {
         );
         setExtintores(response.extintores || []);
         
-        console.log("Extintores recibidos:", response.extintores);
 
         setShowForm(true);
       } else {
@@ -202,6 +227,7 @@ export function InspeccionSistemasEmergencia() {
   };
 
   const onSubmit = async (data: FormularioInspeccion) => {
+    
     try {
       console.log("Formulario enviado:", data);
   
@@ -211,6 +237,7 @@ export function InspeccionSistemasEmergencia() {
   
       // Preparar los datos del mes actual
       const datosMesActual = data.meses[mesActual];
+      
   
       // Enviar los datos al backend para actualizar el mes
       if (esFormularioExistente) {
@@ -225,6 +252,17 @@ export function InspeccionSistemasEmergencia() {
         // Si no existe, crear un nuevo formulario
         await inspeccionService.crearFormSistemasEmergencia(data);
       }
+       // Mostrar mensaje de éxito
+       setSuccessMessage("¡Inspección guardada correctamente!");
+        
+       // Resetear después de 3 segundos
+       setTimeout(() => {
+         setSuccessMessage(null);
+         reset(crearFormularioInicial("", "", "", "", "", getPeriodoActual(), getAñoActual(), obtenerMesActual()));
+         setShowForm(false);
+         setTag("");
+         setArea("");
+       }, 3000);
   
       // Resetear el formulario y mostrar el campo de búsqueda del TAG
       reset(crearFormularioInicial("", "", "", "", "", getPeriodoActual(), getAñoActual(), obtenerMesActual()));
@@ -260,6 +298,12 @@ export function InspeccionSistemasEmergencia() {
         <Typography variant="subtitle1" gutterBottom>
           Código: 3.02.P01.F17 - Rev. 2
         </Typography>
+        {/* Mensaje de éxito */}
+        {successMessage && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            {successMessage}
+          </Alert>
+        )}
 
         {/* Mensaje de error */}
         {error && (
@@ -267,11 +311,13 @@ export function InspeccionSistemasEmergencia() {
             {error}
           </Alert>
         )}
+        
 
         {/* Campo para el tag */}
         {!showForm && (
           <Box sx={{ mb: 4 }}>
             <Typography variant="h6" gutterBottom>
+              Ingrese primero el area y por defecto le llenara el tag
               Ingresa el TAG y Área para continuar:
             </Typography>
             <Grid container spacing={2} sx={{ mb: 2 }}>
@@ -301,7 +347,21 @@ export function InspeccionSistemasEmergencia() {
                     id="area-select"
                     value={area || ""}
                     label="Área"
-                    onChange={(e) => setArea(e.target.value as string)} // Actualizar el estado del área
+                    onChange={async (e) => {
+                      const selectedArea = e.target.value as string;
+                      setArea(selectedArea);
+                      
+                      // Obtener el tag automáticamente
+                      try {
+                        const tagEncontrado = await inspeccionService.obtenerTagPorArea(selectedArea);
+                        if (tagEncontrado) {
+                          setTag(tagEncontrado);
+                          setValue('tag', tagEncontrado);
+                        }
+                      } catch (error) {
+                        console.error('Error al obtener tag:', error);
+                      }
+                    }}
                   >
                     {areaOptions.map((areaOption) => (
                       <MenuItem key={areaOption} value={areaOption}>

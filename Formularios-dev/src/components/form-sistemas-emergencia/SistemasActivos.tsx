@@ -38,14 +38,6 @@ const SistemasActivos = ({ control, currentMes }: SistemasActivosProps) => {
           currentMes={currentMes}
           type="activos"
         />
-
-        <Controller
-          name={`meses.${currentMes}.inspeccionesActivos.observaciones`}
-          control={control}
-          render={({ field }) => (
-            <TextField {...field} label="Observaciones" multiline rows={3} fullWidth sx={{ mt: 2 }} />
-          )}
-        />
       </AccordionDetails>
     </Accordion>
   )
