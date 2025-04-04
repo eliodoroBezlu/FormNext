@@ -1,6 +1,6 @@
-import { Accordion, AccordionSummary, AccordionDetails, Typography, TextField } from "@mui/material"
+import { Accordion, AccordionSummary, AccordionDetails, Typography } from "@mui/material"
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore"
-import { type Control, Controller } from "react-hook-form"
+import { type Control } from "react-hook-form"
 import type { FormularioInspeccion, Mes } from "../../types/formTypes"
 import SistemaField from "./SistemaField"
 
