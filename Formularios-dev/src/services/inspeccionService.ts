@@ -1,5 +1,5 @@
 import api from "../lib/axios";
-import type { FormData, InspeccionServiceExport, Trabajador } from "../types/formTypes";
+import type { ExtintoresUpdateData, FormData, InspeccionServiceExport, Trabajador } from "../types/formTypes";
 import type { FormDataExport } from "../types/formTypes";
 
 import type { VerificarTagData, FormularioInspeccion, DatosMes, Mes } from "../types/formTypes";
@@ -166,9 +166,7 @@ export const inspeccionService = {
     try {
       const response = await api.get('/tag/por-area', { 
         params: { area },
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        
       });
       
       if (response.data && response.data.tag) {
@@ -178,6 +176,30 @@ export const inspeccionService = {
     } catch (error) {
       console.error('Error en obtenerTagPorArea:', error);
       return null;
+    }
+  },
+
+  async obtenerExtintoresPorArea(area: string) {
+    try {
+      // Cambia 'extintores' a 'extintor' para que coincida con tu controlador
+      const response = await api.get(`/extintor/area/${encodeURIComponent(area)}`);
+      console.log("Respuesta completa:", response.data);
+      
+      // Ajusta según la estructura de respuesta de tu controlador
+      return response.data.extintores || [];
+    } catch (error) {
+      console.error("Error fetching extintores:", error);
+      return [];
+    }
+  },
+
+  async actualizarExtintoresPorTag (tag: string, datosExtintores: ExtintoresUpdateData) {
+    try {
+      const response = await api.put(`/inspecciones-emergencia/actualizar-extintores/${tag}`, datosExtintores);
+      return response.data;
+    } catch (error) {
+      console.error("Error al actualizar extintores:", error);
+      throw error;
     }
   }
 

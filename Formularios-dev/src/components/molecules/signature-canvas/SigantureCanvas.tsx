@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, forwardRef } from "react";
-import { Box, Button, Grid } from "@mui/material";
+import { Box, Button, Grid, Typography } from "@mui/material";
 import SignatureCanvas from "react-signature-canvas";
 
 // Interfaz para las opciones del contexto 2D
@@ -13,12 +13,14 @@ interface DynamicSignatureCanvasProps {
   onClear: () => void;
   onSave: () => void;
   heightPercentage?: number;
+  error?: boolean;
+  helperText?: string;
 }
 
 const DynamicSignatureCanvas = forwardRef<
   SignatureCanvas, // Usamos el tipo implícito del componente SignatureCanvas
   DynamicSignatureCanvasProps
->(({ onClear, onSave, heightPercentage = 100 }, ref) => {
+>(({ onClear, onSave, heightPercentage = 100, error = false, helperText }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
@@ -76,7 +78,7 @@ const DynamicSignatureCanvas = forwardRef<
       {/* Contenedor del canvas */}
       <Box
         sx={{
-          border: "1px solid #ccc",
+          border: error ? "1px solid #d32f2f" : "1px solid #ccc",
           borderRadius: 2,
           width: "100%",
           height: "25%",
@@ -99,6 +101,13 @@ const DynamicSignatureCanvas = forwardRef<
           }}
         />
       </Box>
+
+      {/* Mensaje de error */}
+      {error && helperText && (
+        <Typography variant="caption" color="error" sx={{ mb: 2, display: 'block' }}>
+          {helperText}
+        </Typography>
+      )}
 
       {/* Botones para limpiar y guardar la firma */}
       <Grid container spacing={2} justifyContent="center">

@@ -242,5 +242,10 @@ export interface ExtintorBackend {
   Area: string
   CodigoExtintor: string
   Ubicacion: string
+  inspeccionado: boolean
 }
 
+export interface ExtintoresUpdateData {
+  tag: string;
+  extintores: InspeccionExtintor[];
+}

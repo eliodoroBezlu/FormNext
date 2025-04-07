@@ -21,7 +21,7 @@ import type {
   FormularioInspeccion,
   Mes,
   Trabajador,
-} from "../../types/formTypes"; // Importa el tipo Trabajador
+} from "../../types/formTypes";
 import type SignatureCanvas from "react-signature-canvas";
 import DynamicSignatureCanvas from "../molecules/signature-canvas/SigantureCanvas";
 import { inspeccionService } from "@/services/inspeccionService";
@@ -40,19 +40,19 @@ const InformacionInspector = ({
   errors,
 }: InformacionInspectorProps) => {
   const sigCanvasRef = useRef<SignatureCanvas>(null);
-  const [loading, setLoading] = useState(false); // Estado para manejar la carga
-  const [trabajadores, setTrabajadores] = useState<Trabajador[]>([]); // Estado para almacenar los trabajadores
+  const [loading, setLoading] = useState(false);
+  const [trabajadores, setTrabajadores] = useState<Trabajador[]>([]);
 
   // Función para buscar trabajadores en la API
   const buscarTrabajadores = async (query: string): Promise<void> => {
     if (query.length < 3) {
-      setTrabajadores([]); // Limpiar el estado si la consulta tiene menos de 3 caracteres
+      setTrabajadores([]);
       return;
     }
     setLoading(true);
     try {
       const response = await inspeccionService.buscarTrabajadores(query);
-      setTrabajadores(response); // response debe ser de tipo Trabajador[]
+      setTrabajadores(response);
     } catch (error) {
       console.error("Error al buscar trabajadores:", error);
     } finally {
@@ -92,12 +92,11 @@ const InformacionInspector = ({
               render={({ field }) => (
                 <Autocomplete
                   options={trabajadores}
-                  getOptionLabel={(option) => option.nomina || ""} // Proporciona un valor por defecto si nomina es undefined
-                  onInputChange={(_, value) => buscarTrabajadores(value)} // Busca al escribir
-                  onBlur={() => setTrabajadores([])} // Limpiar el estado cuando el campo pierde el foco
-                  loading={loading} // Muestra un indicador de carga
+                  getOptionLabel={(option) => option.nomina || ""}
+                  onInputChange={(_, value) => buscarTrabajadores(value)}
+                  onBlur={() => setTrabajadores([])}
+                  loading={loading}
                   onChange={(_, data) => {
-                    // Actualiza el valor del campo con el nombre del trabajador
                     field.onChange(data?.nomina || "");
                     setValue(
                       `meses.${currentMes}.inspector.nombre`,
@@ -122,14 +121,28 @@ const InformacionInspector = ({
 
           {/* Campo de firma del inspector */}
           <Grid item xs={12}>
-            <Typography variant="subtitle1" gutterBottom>
-              Firma del Inspector
-            </Typography>
-            <DynamicSignatureCanvas
-              ref={sigCanvasRef}
-              onClear={limpiarFirma}
-              heightPercentage={40}
-              onSave={guardarFirma}
+            <Controller
+              name={`meses.${currentMes}.inspector.firma`}
+              control={control}
+              rules={{ 
+                required: "La firma del inspector es obligatoria",
+                validate: (value) => value !== null && value !== "" || "Debe firmar el inspector"
+              }}
+              render={({ field }) => (
+                <>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Firma del Inspector
+                  </Typography>
+                  <DynamicSignatureCanvas
+                    ref={sigCanvasRef}
+                    onClear={limpiarFirma}
+                    heightPercentage={40}
+                    onSave={guardarFirma}
+                    error={!!errors.meses?.[currentMes]?.inspector?.firma}
+                    helperText={errors.meses?.[currentMes]?.inspector?.firma?.message}
+                  />
+                </>
+              )}
             />
           </Grid>
         </Grid>
