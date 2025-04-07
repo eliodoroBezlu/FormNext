@@ -128,7 +128,7 @@ const InformacionInspector = ({
                 required: "La firma del inspector es obligatoria",
                 validate: (value) => value !== null && value !== "" || "Debe firmar el inspector"
               }}
-              render={({ field }) => (
+              render={({field }) => (
                 <>
                   <Typography variant="subtitle1" gutterBottom>
                     Firma del Inspector
@@ -137,7 +137,11 @@ const InformacionInspector = ({
                     ref={sigCanvasRef}
                     onClear={limpiarFirma}
                     heightPercentage={40}
-                    onSave={guardarFirma}
+                    onSave={() => {
+                      guardarFirma();
+                      // Esto conecta el onChange del field con la acción de guardar firma
+                      field.onChange(sigCanvasRef.current?.toDataURL() || null);
+                    }}
                     error={!!errors.meses?.[currentMes]?.inspector?.firma}
                     helperText={errors.meses?.[currentMes]?.inspector?.firma?.message}
                   />

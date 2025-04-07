@@ -185,10 +185,10 @@ export function InspeccionSistemasEmergencia() {
       !todosExtintoresSinInspeccionar() &&
       response.formulario.meses?.[currentMes]?.inspeccionesExtintor?.length > 0;
 
-      const formularioExiste = response.existe;
-      const tieneDatosMesActual = formularioExiste && 
-                           response.formulario.meses?.[currentMes] && 
-                           Object.keys(response.formulario.meses[currentMes]).length > 0;
+       const formularioExiste = response.existe;
+      // const tieneDatosMesActual = formularioExiste && 
+      //                      response.formulario.meses?.[currentMes] && 
+      //                      Object.keys(response.formulario.meses[currentMes]).length > 0;
       setExtintores(response.extintores || []);
       
       const formularioInicial = crearFormularioInicial(
@@ -349,7 +349,8 @@ export function InspeccionSistemasEmergencia() {
                   ) : (
                     <Paper elevation={2} sx={{ p: 2, height: '100%', minHeight: '56px' }}>
                       <Alert severity="info">
-                        Para el área "{area}" no es necesario seleccionar extintores.
+                      Para el área &quot;{area}&quot; no es necesario seleccionar extintores.
+
                       </Alert>
                     </Paper>
                   )
