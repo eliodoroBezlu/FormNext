@@ -182,13 +182,13 @@ export function InspeccionSistemasEmergencia() {
       const response = await inspeccionService.verificarTag(datosIniciales);
       
       const mostrarSoloExtintores = response.existe && 
-      !todosExtintoresSinInspeccionar() &&
-      response.formulario.meses?.[currentMes]?.inspeccionesExtintor?.length > 0;
+          !todosExtintoresSinInspeccionar() &&
+          response.formulario.meses?.[currentMes]?.inspeccionesExtintor?.length > 0;
 
        const formularioExiste = response.existe;
-      // const tieneDatosMesActual = formularioExiste && 
-      //                      response.formulario.meses?.[currentMes] && 
-      //                      Object.keys(response.formulario.meses[currentMes]).length > 0;
+       const tieneDatosMesActual = formularioExiste && 
+                            response.formulario.meses?.[currentMes] && 
+                            Object.keys(response.formulario.meses[currentMes]).length > 0;
       setExtintores(response.extintores || []);
       
       const formularioInicial = crearFormularioInicial(
@@ -202,7 +202,7 @@ export function InspeccionSistemasEmergencia() {
         currentMes
       );
       if (response.existe) {
-        setEsFormularioExistente(formularioExiste);
+        setEsFormularioExistente(tieneDatosMesActual);
         const mesAlmacenado = response.formulario.mesActual;
 
         if (mesAlmacenado === currentMes && (extintores.length == 0)) {
