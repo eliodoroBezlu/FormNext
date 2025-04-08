@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useForm } from "react-hook-form";
 import {
   Box,
@@ -48,16 +48,15 @@ const AREAS_CON_SELECCION_EXTINTORES = ["Electrico", "Generacion"];
 
 // Helper functions
 const obtenerMesActual = (): Mes => MESES[new Date().getMonth()];
-
 const getPeriodoActual = (): "ENERO-JUNIO" | "JULIO-DICIEMBRE" => {
   return new Date().getMonth() < 6 ? "ENERO-JUNIO" : "JULIO-DICIEMBRE";
 };
-
 const getAñoActual = (): number => new Date().getFullYear();
 
 export function InspeccionSistemasEmergencia() {
   const router = useRouter();
   const currentMes = obtenerMesActual();
+  const submitInProgress = useRef(false);
   
   // Form state
   const {
@@ -73,26 +72,36 @@ export function InspeccionSistemasEmergencia() {
   });
 
   // Component state
-  const [loading, setLoading] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [tag, setTag] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [esFormularioExistente, setEsFormularioExistente] = useState(false);
-  const [area, setArea] = useState("");
-  const [areaOptions, setAreaOptions] = useState<string[]>([]);
-  const [extintores, setExtintores] = useState<ExtintorBackend[]>([]);
-  const [extintoresSeleccionados, setExtintoresSeleccionados] = useState<ExtintorBackend[]>([]);
-  const [soloExtintores, setSoloExtintores] = useState(false);
+  const [formState, setFormState] = useState({
+    loading: false,
+    submitting: false,  // Estado específico para controlar el envío del formulario
+    showForm: false,
+    error: null as string | null,
+    successMessage: null as string | null,
+    esFormularioExistente: false,
+    soloExtintores: false
+  });
+  
+  const [areaData, setAreaData] = useState({
+    tag: "",
+    area: "",
+    areaOptions: [] as string[],
+    extintores: [] as ExtintorBackend[],
+    extintoresSeleccionados: [] as ExtintorBackend[]
+  });
 
   // Load areas on component mount
   useEffect(() => {
     const cargarAreas = async () => {
       try {
         const areas = await inspeccionService.buscarAreas("");
-        setAreaOptions(areas);
+        setAreaData(prev => ({ ...prev, areaOptions: areas }));
       } catch (error) {
         console.error("Error al cargar áreas:", error);
+        setFormState(prev => ({ 
+          ...prev, 
+          error: "Error al cargar áreas. Por favor, recargue la página." 
+        }));
       }
     };
 
@@ -104,173 +113,214 @@ export function InspeccionSistemasEmergencia() {
     setValue("mesActual", currentMes);
   }, [currentMes, setValue]);
 
-  // Set tag based on area
-  useEffect(() => {
-    const obtenerTagPorArea = async () => {
-      if (!area) return;
-      
-      try {
-        const tagEncontrado = await inspeccionService.obtenerTagPorArea(area);
-        if (tagEncontrado) {
-          setTag(tagEncontrado);
-          setValue('tag', tagEncontrado);
-        }
-      } catch (error) {
-        console.error('Error al obtener tag:', error);
-      }
-    };
-
-    obtenerTagPorArea();
-  }, [area, setValue]);
-
   // Handle extintores based on area
   useEffect(() => {
-    if (!area) return;
+    if (!areaData.area) return;
     
-    if (!AREAS_CON_SELECCION_EXTINTORES.includes(area)) {
-      setExtintoresSeleccionados(extintores);
-    } else {
-      setExtintoresSeleccionados([]);
+    if (!AREAS_CON_SELECCION_EXTINTORES.includes(areaData.area)) {
+      setAreaData(prev => ({ ...prev, extintoresSeleccionados: prev.extintores }));
     }
-  }, [area, extintores]);
+  }, [areaData.area, areaData.extintores]);
 
   // Handlers
   const handleExtintoresSeleccionados = useCallback((seleccionados: ExtintorBackend[]) => {
-    setExtintoresSeleccionados(seleccionados);
+    setAreaData(prev => ({ ...prev, extintoresSeleccionados: seleccionados }));
   }, []);
 
   const handleAreaChange = useCallback(async (selectedArea: string) => {
-    setArea(selectedArea);
-    
     try {
+      setFormState(prev => ({ ...prev, loading: true, error: null }));
+      
       const tagEncontrado = await inspeccionService.obtenerTagPorArea(selectedArea);
+      const areaExtintores = await inspeccionService.obtenerExtintoresPorArea(selectedArea);
+      
+      setAreaData(prev => ({ 
+        ...prev, 
+        area: selectedArea,
+        tag: tagEncontrado || "",
+        extintores: areaExtintores
+      }));
+      
       if (tagEncontrado) {
-        setTag(tagEncontrado);
         setValue('tag', tagEncontrado);
       }
-      
-      const areaExtintores = await inspeccionService.obtenerExtintoresPorArea(selectedArea);
-      setExtintores(areaExtintores);
     } catch (error) {
       console.error('Error al obtener datos del área:', error);
+      setFormState(prev => ({ 
+        ...prev, 
+        error: "Error al obtener datos del área. Intente nuevamente." 
+      }));
+    } finally {
+      setFormState(prev => ({ ...prev, loading: false }));
     }
   }, [setValue]);
 
   const todosExtintoresSinInspeccionar = useCallback(() => {
-    if (!extintores || extintores.length === 0) return true;
-    return extintores.every(ext => ext.inspeccionado === false);
-  }, [extintores]);
+    return !areaData.extintores.length || 
+           areaData.extintores.every(ext => ext.inspeccionado === false);
+  }, [areaData.extintores]);
 
   const handleTagSubmit = async () => {
-    if (tag.trim() === "") {
-      setError("Por favor, ingresa un valor para el TAG.");
+    if (!areaData.tag.trim()) {
+      setFormState(prev => ({ 
+        ...prev, 
+        error: "Por favor, ingresa un valor para el TAG." 
+      }));
       return;
     }
 
     try {
-      setLoading(true);
-      setError(null);
+      setFormState(prev => ({ ...prev, loading: true, error: null }));
 
       const datosIniciales = {
-        tag,
+        tag: areaData.tag,
         periodo: getPeriodoActual(),
         año: getAñoActual(),
         mesActual: currentMes,
-        area
+        area: areaData.area
       };
 
       const response = await inspeccionService.verificarTag(datosIniciales);
       
-      const mostrarSoloExtintores = response.existe && 
+      const formularioExiste = response.existe;
+      const tieneDatosMesActual = formularioExiste && 
+                          response.formulario.meses?.[currentMes] && 
+                          Object.keys(response.formulario.meses[currentMes]).length > 0;
+      
+      const mostrarSoloExtintores = formularioExiste && 
           !todosExtintoresSinInspeccionar() &&
           response.formulario.meses?.[currentMes]?.inspeccionesExtintor?.length > 0;
-
-       const formularioExiste = response.existe;
-       const tieneDatosMesActual = formularioExiste && 
-                            response.formulario.meses?.[currentMes] && 
-                            Object.keys(response.formulario.meses[currentMes]).length > 0;
-      setExtintores(response.extintores || []);
+      
+      setAreaData(prev => ({ 
+        ...prev, 
+        extintores: response.extintores || [] 
+      }));
       
       const formularioInicial = crearFormularioInicial(
         response.superintendencia || "",
-        area,
-        tag,
+        areaData.area,
+        areaData.tag,
         "",
         "",
         getPeriodoActual(),
         getAñoActual(),
         currentMes
       );
-      if (response.existe) {
-        setEsFormularioExistente(tieneDatosMesActual);
+      
+      if (formularioExiste) {
         const mesAlmacenado = response.formulario.mesActual;
 
-        if (mesAlmacenado === currentMes && (extintores.length == 0)) {
-          setError("El formulario ya existe para este mes. No es necesario realizar cambios.");
+        if (mesAlmacenado === currentMes && !response.extintores.length) {
+          setFormState(prev => ({ 
+            ...prev, 
+            error: "El formulario ya existe para este mes. No es necesario realizar cambios.",
+            loading: false
+          }));
           return;
         }
 
-          // Si existe el formulario pero faltan inspeccionar extintores
-        if (mesAlmacenado === currentMes && (extintores.length > 0)) {
-          setSoloExtintores(mostrarSoloExtintores);
-        }
-
-        reset(formularioInicial);
-        setShowForm(true);
+        setFormState(prev => ({ 
+          ...prev, 
+          esFormularioExistente: tieneDatosMesActual,
+          soloExtintores: mostrarSoloExtintores,
+          showForm: true,
+          loading: false
+        }));
       } else {
-        setEsFormularioExistente(false);
-        reset(formularioInicial);
-        setShowForm(true);
+        setFormState(prev => ({ 
+          ...prev, 
+          esFormularioExistente: false,
+          showForm: true,
+          loading: false
+        }));
       }
+      
+      reset(formularioInicial);
     } catch (error) {
       console.error("Error al verificar el TAG:", error);
-      setError("Ocurrió un error al comunicarse con el servidor. Por favor, intenta más tarde.");
-    } finally {
-      setLoading(false);
+      setFormState(prev => ({ 
+        ...prev, 
+        error: "Ocurrió un error al comunicarse con el servidor. Por favor, intenta más tarde.",
+        loading: false
+      }));
     }
   };
 
   const onSubmit = async (data: FormularioInspeccion) => {
+    if (formState.submitting) return;
+    
     try {
-      if (soloExtintores) {
+      setFormState(prev => ({ 
+        ...prev, 
+        loading: true, 
+        submitting: true,  // Marcar como enviando
+        error: null 
+      }));
+      
+      if (formState.soloExtintores) {
         // Solo enviar datos de extintores
         const extintoresData = {
-          tag: tag,
+          tag: areaData.tag,
           extintores: data.meses[currentMes].inspeccionesExtintor
         };
         
-        await inspeccionService.actualizarExtintoresPorTag(tag, extintoresData);
-        console.log("Datos a enviar (extintores):", extintoresData);
-      } else if (esFormularioExistente) {
+        await inspeccionService.actualizarExtintoresPorTag(areaData.tag, extintoresData);
+      } else if (formState.esFormularioExistente) {
         // Actualizar todo el mes
-        await inspeccionService.actualizarMesPorTag(tag, currentMes, data.meses[currentMes]);
+        await inspeccionService.actualizarMesPorTag(areaData.tag, currentMes, data.meses[currentMes]);
       } else {
         // Crear nuevo formulario completo
         await inspeccionService.crearFormSistemasEmergencia(data);
       }
       
-      setSuccessMessage("¡Inspección guardada correctamente!");
+      setFormState(prev => ({ 
+        ...prev, 
+        successMessage: "¡Inspección guardada correctamente!",
+        loading: false
+      }));
       
       setTimeout(() => {
         resetForm();
         router.push("/dashboard/inspeccion-sistemas-emergencia");
-      }, 3000);
+      }, 2000);
     } catch (error) {
       console.error("Error al enviar el formulario:", error);
-      setError("Error al guardar la inspección. Intente nuevamente.");
+      setFormState(prev => ({ 
+        ...prev, 
+        error: "Error al guardar la inspección. Intente nuevamente.",
+        loading: false,
+        submitting: false 
+      }));
+    } finally {
+      submitInProgress.current = false;
     }
   };
 
   const resetForm = () => {
-    setSuccessMessage(null);
+    setFormState({
+      loading: false,
+      submitting: false,  // Asegurarse de reiniciar estado de envío
+      showForm: false,
+      error: null,
+      successMessage: null,
+      esFormularioExistente: false,
+      soloExtintores: false
+    });
+    
+    setAreaData({
+      tag: "",
+      area: "",
+      areaOptions: areaData.areaOptions,
+      extintores: [],
+      extintoresSeleccionados: []
+    });
+    
     reset(crearFormularioInicial("", "", "", "", "", getPeriodoActual(), getAñoActual(), currentMes));
-    setShowForm(false);
-    setTag("");
-    setArea("");
-    setError(null);
-    setExtintores([]);
-    setExtintoresSeleccionados([]);
+    submitInProgress.current = false;
   };
+
+  const { loading, showForm, error, successMessage, esFormularioExistente, soloExtintores } = formState;
+  const { tag, area, areaOptions, extintores, extintoresSeleccionados } = areaData;
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -289,7 +339,7 @@ export function InspeccionSistemasEmergencia() {
         )}
 
         {error && (
-          <Alert severity="info" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
@@ -308,7 +358,7 @@ export function InspeccionSistemasEmergencia() {
                     id="tag-select"
                     value={tag}
                     label="TAG"
-                    onChange={(e) => setTag(e.target.value as string)}
+                    onChange={(e) => setAreaData(prev => ({ ...prev, tag: e.target.value as string }))}
                   >
                     {TAG_OPTIONS.map((option) => (
                       <MenuItem key={option} value={option}>
@@ -349,8 +399,7 @@ export function InspeccionSistemasEmergencia() {
                   ) : (
                     <Paper elevation={2} sx={{ p: 2, height: '100%', minHeight: '56px' }}>
                       <Alert severity="info">
-                      Para el área &quot;{area}&quot; no es necesario seleccionar extintores.
-
+                        Para el área &quot;{area}&quot; no es necesario seleccionar extintores.
                       </Alert>
                     </Paper>
                   )
@@ -374,11 +423,8 @@ export function InspeccionSistemasEmergencia() {
               <InformacionGeneral control={control} errors={errors} />
             )}
 
-            {/* Mostrar SistemasPasivos y Activos si:
-                - Es formulario nuevo O
-                - No hay datos para el mes actual
-            */}
-            {(!esFormularioExistente || !soloExtintores) && (
+            {/* Mostrar SistemasPasivos y Activos si no es solo extintores */}
+            {!soloExtintores && (
               <>
                 <SistemasPasivos control={control} currentMes={currentMes} />
                 <SistemasActivos control={control} currentMes={currentMes} />
@@ -392,11 +438,8 @@ export function InspeccionSistemasEmergencia() {
               extintores={AREAS_CON_SELECCION_EXTINTORES.includes(area) ? extintoresSeleccionados : extintores}
             />
 
-            {/* Mostrar InformacionInspector si:
-                - Es formulario nuevo O
-                - No hay datos para el mes actual
-            */}
-            {(!esFormularioExistente || !soloExtintores) && (
+            {/* Mostrar InformacionInspector si no es solo extintores */}
+            {!soloExtintores && (
               <InformacionInspector
                 control={control}
                 currentMes={currentMes}
@@ -414,21 +457,24 @@ export function InspeccionSistemasEmergencia() {
                     size="large"
                     fullWidth
                     onClick={resetForm}
+                    disabled={loading}
                   >
                     Cancelar
                   </Button>
                 </Grid>
                 <Grid item xs={12} sm={6} md={4}>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    color="primary"
-                    size="large"
-                    fullWidth
-                    disabled={loading}
-                  >
-                    {soloExtintores ? "Guardar Inspección de Extintores" : "Guardar Inspección"}
-                  </Button>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                  size="large"
+                  fullWidth
+                  disabled={formState.loading || formState.submitting}
+                >
+                  {formState.loading || formState.submitting
+                    ? "Guardando..." 
+                    : (formState.soloExtintores ? "Guardar Inspección de Extintores" : "Guardar Inspección")}
+                </Button>
                 </Grid>
               </Grid>
             </Box>
