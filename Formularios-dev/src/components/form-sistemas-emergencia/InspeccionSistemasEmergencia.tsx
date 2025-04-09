@@ -14,6 +14,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  TextField,
 } from "@mui/material";
 import {
   ExtintorBackend,
@@ -36,12 +37,6 @@ import ExtintoresChecklist from "./ExtintoresChecklist";
 const MESES: Mes[] = [
   "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO",
   "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"
-];
-
-const TAG_OPTIONS = [
-  "710BL713", "710BL718", "710BL712", "710BL723", "710BL724",
-  "710BL725", "710BL726", "710BL727", "710BL728", "710BL729",
-  "710BL741", "780BL001", "710BL721", "710BL711", "710BL740"
 ];
 
 const AREAS_CON_SELECCION_EXTINTORES = ["Electrico", "Generacion"];
@@ -347,26 +342,17 @@ export function InspeccionSistemasEmergencia() {
         {!showForm ? (
           <Box sx={{ mb: 4 }}>
             <Typography variant="h6" gutterBottom>
-              Ingrese primero el área y por defecto se completará el TAG
+              Seleccione primero el área y el TAG se completará automáticamente
             </Typography>
             <Grid container spacing={2} sx={{ mb: 2 }}>
               <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel id="tag-label">TAG</InputLabel>
-                  <Select
-                    labelId="tag-label"
-                    id="tag-select"
-                    value={tag}
-                    label="TAG"
-                    onChange={(e) => setAreaData(prev => ({ ...prev, tag: e.target.value as string }))}
-                  >
-                    {TAG_OPTIONS.map((option) => (
-                      <MenuItem key={option} value={option}>
-                        {option}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <TextField
+                  fullWidth
+                  label="TAG"
+                  value={tag}
+                  
+                  helperText={tag ? "TAG asignado al área seleccionada" : "Seleccione un área para obtener el TAG"}
+                />
               </Grid>
               
               <Grid item xs={12} sm={6}>
