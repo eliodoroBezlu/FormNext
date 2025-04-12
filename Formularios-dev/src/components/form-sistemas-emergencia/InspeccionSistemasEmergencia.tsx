@@ -46,11 +46,13 @@ const getPeriodoActual = (): "ENERO-JUNIO" | "JULIO-DICIEMBRE" => {
   return new Date().getMonth() < 6 ? "ENERO-JUNIO" : "JULIO-DICIEMBRE";
 };
 const getAñoActual = (): number => new Date().getFullYear();
+const getDiaActual = (): number => new Date().getDate();
 
 export function InspeccionSistemasEmergencia() {
   const router = useRouter();
   const currentMes = obtenerMesActual();
   const submitInProgress = useRef(false);
+  const [dentroPeriodoValido, setDentroPeriodoValido] = useState(true);
   
   // Form state
   const {
@@ -85,6 +87,19 @@ export function InspeccionSistemasEmergencia() {
     extintoresSeleccionados: [] as ExtintorBackend[]
   });
 
+
+  useEffect(() => {
+    const diaActual = getDiaActual();
+    if (diaActual > 10) {
+      setDentroPeriodoValido(false);
+      setFormState(prev => ({ 
+        ...prev, 
+        error: "No es posible realizar inspecciones después del día 10 del mes actual." 
+      }));
+    } else {
+      setDentroPeriodoValido(true);
+    }
+  }, []);
   // Load areas on component mount
   useEffect(() => {
     const cargarAreas = async () => {
@@ -348,7 +363,21 @@ export function InspeccionSistemasEmergencia() {
           </Alert>
         )}
 
-        {!showForm ? (
+        {!dentroPeriodoValido ? (
+          <Box sx={{ mb: 4 }}>
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Las inspecciones solo están habilitadas hasta el día 10 de cada mes. 
+              Por favor, espere hasta el próximo mes para realizar una nueva inspección.
+            </Alert>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => router.push("/dashboard/inspeccion-sistemas-emergencia")}
+            >
+              Volver al Panel
+            </Button>
+          </Box>
+        ) :!showForm ? (
           <Box sx={{ mb: 4 }}>
             <Typography variant="h6" gutterBottom>
               Seleccione primero el área y el TAG se completará automáticamente
