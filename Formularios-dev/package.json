@@ -24,7 +24,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.54.2",
-    "react-signature-canvas": "^1.0.7"
+    "react-signature-canvas": "^1.0.7",
+    "react-to-pdf": "^2.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

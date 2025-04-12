@@ -111,7 +111,7 @@ const DynamicSignatureCanvas = forwardRef<
 
       {/* Botones para limpiar y guardar la firma */}
       <Grid container spacing={2} justifyContent="center">
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid size={{ xs: 12, sm: 6, md: 4  }}>
           <Button
             onClick={onClear}
             variant="outlined"
@@ -121,7 +121,7 @@ const DynamicSignatureCanvas = forwardRef<
             Limpiar Firma
           </Button>
         </Grid>
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid size={{ xs: 12, sm: 6, md: 4  }}>
           <Button
             onClick={onSave}
             variant="contained"

@@ -21,10 +21,10 @@ export const InspectionItem = ({
 
   return (
     <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
-      <Grid item xs={6}>
+      <Grid size={{ xs: 6}}>
         <Typography>{description}</Typography>
       </Grid>
-      <Grid item xs={4}>
+      <Grid size={{ xs: 4}}>
         <Controller
           name={`${fieldName}.response`}
           control={control}
@@ -51,7 +51,7 @@ export const InspectionItem = ({
           )}
         />
       </Grid>
-      <Grid item xs={2}>
+      <Grid size={{ xs: 2}}>
         <FormTextField
           name={`${fieldName}.observation`}
           control={control}
