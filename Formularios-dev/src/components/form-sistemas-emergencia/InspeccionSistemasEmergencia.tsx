@@ -14,7 +14,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  TextField,
 } from "@mui/material";
 import {
   ExtintorBackend,
@@ -81,6 +80,7 @@ export function InspeccionSistemasEmergencia() {
     tag: "",
     area: "",
     areaOptions: [] as string[],
+    tagOptions: [] as string[],
     extintores: [] as ExtintorBackend[],
     extintoresSeleccionados: [] as ExtintorBackend[]
   });
@@ -126,18 +126,21 @@ export function InspeccionSistemasEmergencia() {
     try {
       setFormState(prev => ({ ...prev, loading: true, error: null }));
       
-      const tagEncontrado = await inspeccionService.obtenerTagPorArea(selectedArea);
+      const tagsDelArea = await inspeccionService.obtenerTagsPorArea(selectedArea);
       const areaExtintores = await inspeccionService.obtenerExtintoresPorArea(selectedArea);
       
       setAreaData(prev => ({ 
         ...prev, 
         area: selectedArea,
-        tag: tagEncontrado || "",
+        tag: tagsDelArea.length > 0 ? tagsDelArea[0] : "",
+        tagOptions: tagsDelArea,
         extintores: areaExtintores
       }));
       
-      if (tagEncontrado) {
-        setValue('tag', tagEncontrado);
+      if (tagsDelArea.length > 0) {
+        setValue('tag', tagsDelArea[0]);
+      } else {
+        setValue('tag', "");
       }
     } catch (error) {
       console.error('Error al obtener datos del área:', error);
@@ -148,6 +151,11 @@ export function InspeccionSistemasEmergencia() {
     } finally {
       setFormState(prev => ({ ...prev, loading: false }));
     }
+  }, [setValue]);
+
+  const handleTagChange = useCallback((selectedTag: string) => {
+    setAreaData(prev => ({ ...prev, tag: selectedTag }));
+    setValue('tag', selectedTag);
   }, [setValue]);
 
   const todosExtintoresSinInspeccionar = useCallback(() => {
@@ -307,6 +315,7 @@ export function InspeccionSistemasEmergencia() {
       area: "",
       areaOptions: areaData.areaOptions,
       extintores: [],
+      tagOptions: [],
       extintoresSeleccionados: []
     });
     
@@ -315,7 +324,7 @@ export function InspeccionSistemasEmergencia() {
   };
 
   const { loading, showForm, error, successMessage, esFormularioExistente, soloExtintores } = formState;
-  const { tag, area, areaOptions, extintores, extintoresSeleccionados } = areaData;
+  const { tag, area, areaOptions, extintores, tagOptions, extintoresSeleccionados } = areaData;
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -345,17 +354,27 @@ export function InspeccionSistemasEmergencia() {
               Seleccione primero el área y el TAG se completará automáticamente
             </Typography>
             <Grid container spacing={2} sx={{ mb: 2 }}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="TAG"
-                  value={tag}
-                  
-                  helperText={tag ? "TAG asignado al área seleccionada" : "Seleccione un área para obtener el TAG"}
-                />
+            
+              <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControl fullWidth disabled={tagOptions.length === 0}>
+                  <InputLabel id="tag-label">TAG</InputLabel>
+                  <Select
+                    labelId="tag-label"
+                    id="tag-select"
+                    value={tag}
+                    label="TAG"
+                    onChange={(e) => handleTagChange(e.target.value as string)}
+                  >
+                    {tagOptions.map((option) => (
+                      <MenuItem key={option} value={option}>
+                        {option}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
               
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth>
                   <InputLabel id="area-label">Área</InputLabel>
                   <Select
@@ -374,7 +393,7 @@ export function InspeccionSistemasEmergencia() {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 {area && (
                   AREAS_CON_SELECCION_EXTINTORES.includes(area) ? (
                     <ExtintoresChecklist 
@@ -436,7 +455,7 @@ export function InspeccionSistemasEmergencia() {
 
             <Box sx={{ mt: 4 }}>
               <Grid container spacing={2} justifyContent="space-between">
-                <Grid item xs={12} sm={6} md={4}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Button
                     variant="outlined"
                     color="secondary"
@@ -448,7 +467,7 @@ export function InspeccionSistemasEmergencia() {
                     Cancelar
                   </Button>
                 </Grid>
-                <Grid item xs={12} sm={6} md={4}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                 <Button
                   type="submit"
                   variant="contained"

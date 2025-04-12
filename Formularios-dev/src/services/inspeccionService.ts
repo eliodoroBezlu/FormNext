@@ -162,20 +162,19 @@ export const inspeccionService = {
   },
 
   // Agrega este método a tu inspeccionService
-  async obtenerTagPorArea(area: string): Promise<string | null> {
+  async obtenerTagsPorArea(area: string): Promise<string[]> {
     try {
-      const response = await api.get('/tag/por-area', { 
+      const response = await api.get('/tag/por-area', {
         params: { area },
-        
       });
       
-      if (response.data && response.data.tag) {
-        return response.data.tag;
+      if (response.data && Array.isArray(response.data)) {
+        return response.data;
       }
-      return null;
+      return [];
     } catch (error) {
       console.error('Error en obtenerTagPorArea:', error);
-      return null;
+      return [];
     }
   },
 

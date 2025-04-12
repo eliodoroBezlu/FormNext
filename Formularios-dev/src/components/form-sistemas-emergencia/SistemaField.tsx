@@ -2,7 +2,7 @@ import { Typography, FormControl, InputLabel, Select, MenuItem, TextField } from
 import { type Control, Controller } from "react-hook-form"
 import type { FormularioInspeccion, Mes, SistemaPath } from "../../types/formTypes"
 import EstadoInspeccionSelect from "@/components/form-sistemas-emergencia/EstadoInspeccionSelect"
-import Grid from "@mui/material/Grid2";
+import Grid from "@mui/material/Grid";
 
 interface SistemaFieldProps {
   name: string

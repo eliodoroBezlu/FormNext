@@ -243,6 +243,7 @@ export interface ExtintorBackend {
   CodigoExtintor: string
   Ubicacion: string
   inspeccionado: boolean
+  // actvivo: boolean
 }
 
 export interface ExtintoresUpdateData {

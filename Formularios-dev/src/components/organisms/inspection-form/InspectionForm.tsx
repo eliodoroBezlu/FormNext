@@ -13,7 +13,7 @@ import SignatureCanvas from "react-signature-canvas";
 import React, { useRef } from "react";
 import type { IProps } from "./types/IProps";
 import Image from "next/image";
-import Grid from "@mui/material/Grid2";
+import Grid from "@mui/material/Grid";
 import { OperativoOption } from "@/types/formTypes";
 import { Controller } from "react-hook-form";
 import DynamicSignatureCanvas from "@/components/molecules/signature-canvas/SigantureCanvas";

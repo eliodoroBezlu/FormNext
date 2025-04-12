@@ -115,7 +115,7 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
       </Typography>
       <Grid container spacing={2}>
         {/* Campo Superintendencia */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Controller
             name="superintendencia"
             control={control}
@@ -142,7 +142,7 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
         </Grid>
 
         {/* Campo Área */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Controller
             name="area"
             control={control}
@@ -169,7 +169,7 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
         </Grid>
 
         {/* Campo TAG */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <Controller
             name="tag"
             control={control}
@@ -178,7 +178,7 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
         </Grid>
 
         {/* Campo Edificio */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <Controller
             name="edificio"
             control={control}
@@ -197,7 +197,7 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
         </Grid>
 
         {/* Campo Responsable del Edificio */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <Controller
             name="responsableEdificio"
             control={control}
@@ -225,7 +225,7 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
         </Grid>
 
         {/* Mes Actual (Estático) */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Box>
             <Typography variant="subtitle1">
               Mes: <strong>{mesActual}</strong>
@@ -234,7 +234,7 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
         </Grid>
 
         {/* Período Actual (Estático) */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Box>
             <Typography variant="subtitle1">
               Período: <strong>{periodoActual}</strong>
@@ -243,7 +243,7 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
         </Grid>
 
         {/* Año Actual (Estático) */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Box>
             <Typography variant="subtitle1">
               Año: <strong>{añoActual}</strong>

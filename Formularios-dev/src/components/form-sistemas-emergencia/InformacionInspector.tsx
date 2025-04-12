@@ -84,7 +84,7 @@ const InformacionInspector = ({
       <AccordionDetails>
         <Grid container spacing={3}>
           {/* Campo de búsqueda de trabajadores */}
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Controller
               name={`meses.${currentMes}.inspector.nombre`}
               control={control}
@@ -120,7 +120,7 @@ const InformacionInspector = ({
           </Grid>
 
           {/* Campo de firma del inspector */}
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Controller
               name={`meses.${currentMes}.inspector.firma`}
               control={control}

@@ -17,7 +17,7 @@ import { type Control, Controller, useFieldArray } from "react-hook-form"
 import type { ExtintorBackend, FormularioInspeccion, Mes, InspeccionExtintor } from "../../types/formTypes"
 import EstadoInspeccionSelect from "@/components/form-sistemas-emergencia/EstadoInspeccionSelect"
 import { useEffect, useMemo } from "react"
-import Grid from "@mui/material/Grid2";
+import Grid from "@mui/material/Grid";
 
 interface InspeccionExtintoresProps {
   control: Control<FormularioInspeccion>
