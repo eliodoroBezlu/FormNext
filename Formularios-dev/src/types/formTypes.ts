@@ -214,6 +214,8 @@ export interface VerificarTagData {
   mesActual: Mes
 }
 
+
+
 export interface DatosMes {
   inspeccionesActivos: InspeccionSistemasMensual
   inspeccionesExtintor: InspeccionExtintor[]

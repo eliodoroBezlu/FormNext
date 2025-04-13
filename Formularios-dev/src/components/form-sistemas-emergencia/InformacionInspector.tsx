@@ -24,8 +24,7 @@ import type {
 } from "../../types/formTypes";
 import type SignatureCanvas from "react-signature-canvas";
 import DynamicSignatureCanvas from "../molecules/signature-canvas/SigantureCanvas";
-import { inspeccionService } from "@/services/inspeccionService";
-
+import { buscarTrabajadores } from "@/app/actions/inspeccion";
 interface InformacionInspectorProps {
   control: Control<FormularioInspeccion>;
   currentMes: Mes;
@@ -44,14 +43,14 @@ const InformacionInspector = ({
   const [trabajadores, setTrabajadores] = useState<Trabajador[]>([]);
 
   // Función para buscar trabajadores en la API
-  const buscarTrabajadores = async (query: string): Promise<void> => {
+  const buscarTrabajadoresOpcion = async (query: string): Promise<void> => {
     if (query.length < 3) {
       setTrabajadores([]);
       return;
     }
     setLoading(true);
     try {
-      const response = await inspeccionService.buscarTrabajadores(query);
+      const response = await buscarTrabajadores(query);
       setTrabajadores(response);
     } catch (error) {
       console.error("Error al buscar trabajadores:", error);
@@ -93,7 +92,7 @@ const InformacionInspector = ({
                 <Autocomplete
                   options={trabajadores}
                   getOptionLabel={(option) => option.nomina || ""}
-                  onInputChange={(_, value) => buscarTrabajadores(value)}
+                  onInputChange={(_, value) => buscarTrabajadoresOpcion(value)}
                   onBlur={() => setTrabajadores([])}
                   loading={loading}
                   onChange={(_, data) => {

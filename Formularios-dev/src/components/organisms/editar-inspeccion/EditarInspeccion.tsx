@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react"
 import { Box, CircularProgress, Typography, Paper } from "@mui/material"
 import { useRouter } from "next/navigation"
-import { inspeccionService } from "@/services/inspeccionService"
 import type { FormData, FormDataExport } from "@/types/formTypes"
 import { InspectionForm } from "@/components/organisms/inspection-form/InspectionForm"
 import { useForm } from "react-hook-form"
+import { actualizarInspeccion, obtenerInspeccionPorId } from "@/app/actions/inspeccion"
 
 interface EditarInspeccionProps {
   inspeccionId: string
@@ -23,7 +23,7 @@ export const EditarInspeccion = ({ inspeccionId }: EditarInspeccionProps) => {
     const cargarInspeccion = async () => {
       try {
         // Explícitamente tipamos la respuesta como FormDataExport
-        const response = await inspeccionService.obtenerPorId(inspeccionId)
+        const response = await obtenerInspeccionPorId(inspeccionId)
         const data = response as FormDataExport
 
         // Ahora TypeScript reconoce _id
@@ -48,7 +48,7 @@ export const EditarInspeccion = ({ inspeccionId }: EditarInspeccionProps) => {
 
     setIsSubmitting(true)
     try {
-      await inspeccionService.actualizar(currentId, data)
+      await actualizarInspeccion(currentId, data)
       router.push("/dashboard/inspecciones")
     } catch (error) {
       console.error("Error al actualizar la inspección:", error)

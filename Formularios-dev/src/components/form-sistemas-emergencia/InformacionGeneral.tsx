@@ -8,8 +8,8 @@ import {
 } from "@mui/material";
 import { type Control, Controller, type FieldErrors } from "react-hook-form";
 import type { FormularioInspeccion } from "../../types/formTypes";
-import { inspeccionService } from "@/services/inspeccionService";
 import { useState } from "react";
+import { buscarTrabajadores } from "@/app/actions/inspeccion";
 
 // Array de meses
 const MESES = [
@@ -98,7 +98,7 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
     }
     setLoading(true);
     try {
-      const response = await inspeccionService.buscarTrabajadores(query); // Reutiliza la función existente
+      const response = await buscarTrabajadores(query); // Reutiliza la función existente
       setOpciones(response.map((item: { nomina: string }) => item.nomina)); // Extrae los nombres de los trabajadores
     } catch (error) {
       console.error("Error al buscar opciones:", error);

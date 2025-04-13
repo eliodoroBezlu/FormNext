@@ -19,8 +19,9 @@ import {
 } from "@mui/material"
 import { Visibility as VisibilityIcon, PictureAsPdf as PdfIcon, TableChart as ExcelIcon, Edit as EditIcon, } from "@mui/icons-material"
 import { useRouter } from "next/navigation"
-import { inspeccionService } from "@/services/inspeccionService"
 import type { FormDataExport } from "@/types/formTypes"
+import { obtenerTodasInspecciones } from "@/app/actions/inspeccion"
+import { descargarExcelCliente, descargarPdfCliente } from "@/app/actions/client"
 
 export default function ListaInspecciones (){
   const [inspecciones, setInspecciones] = useState<FormDataExport[]>([])
@@ -37,7 +38,7 @@ export default function ListaInspecciones (){
   const cargarInspecciones = async () => {
     try {
       setLoading(true)
-      const data = await inspeccionService.obtenerTodas()
+      const data = await obtenerTodasInspecciones()
       setInspecciones(data)
     } catch (error) {
       console.error("Error al cargar las inspecciones:", error)
@@ -67,7 +68,7 @@ export default function ListaInspecciones (){
 
   const handleDescargarPdf = async (id: string) => {
     try {
-      await inspeccionService.descargarPdf(id)
+      await descargarPdfCliente(id)
     } catch (error) {
       console.error("Error al descargar el PDF:", error)
     }
@@ -75,7 +76,7 @@ export default function ListaInspecciones (){
 
   const handleDescargarExcel = async (id: string) => {
     try {
-      await inspeccionService.descargarExcel(id)
+      await descargarExcelCliente(id)
     } catch (error) {
       console.error("Error al descargar el Excel:", error)
     }

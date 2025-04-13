@@ -4,9 +4,9 @@ import { useForm } from "react-hook-form";
 import { Box } from "@mui/material";
 import { InspectionForm } from "@/components/organisms/inspection-form/InspectionForm";
 import type { FormData} from "../../../types/formTypes";
-import { inspeccionService } from "../../../services/inspeccionService";
 import { useRouter } from "next/navigation";
 import {titles} from "../../../types/titles-data"
+import { crearInspeccion} from "@/app/actions/inspeccion";
 
 
 
@@ -44,7 +44,7 @@ export default function InspeccionArnesPage() {
     try {
       console.log("Datos enviados:", data);
       
-      await inspeccionService.crear(data);
+      await crearInspeccion(data);
       router.push("/dashboard/Otro-form");
       console.log("Datos enviados:", data);
     } catch (error) {

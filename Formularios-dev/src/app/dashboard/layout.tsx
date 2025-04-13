@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
 import type React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   CssBaseline,
@@ -9,13 +9,13 @@ import {
   Toolbar,
   AppBar,
   IconButton,
+  ThemeProvider, // Seguiremos necesitando ThemeProvider
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
 import { Navigation } from "@/components/organisms/Navigation";
 import { Typography } from "@/components/atoms/Typography";
-import { ThemeProvider } from "@mui/material/styles";
 import { lightTheme, darkTheme } from "../../styles/theme";
 import CloseIcon from "@mui/icons-material/Close";
 
@@ -27,15 +27,33 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+
+  // Efecto para cargar la preferencia de tema guardada
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('darkMode');
+    if (savedTheme) {
+      setDarkMode(savedTheme === 'true');
+    }
+    setMounted(true);
+  }, []);
 
   const handleDrawerToggle = () => {
     setOpen(!open);
   };
 
   const handleThemeToggle = () => {
-    setDarkMode(!darkMode);
+    const newMode = !darkMode;
+    setDarkMode(newMode);
+    localStorage.setItem('darkMode', String(newMode));
   };
+
+  // Devuelve un div vacío hasta que el componente esté montado
+  // Esto evita inconsistencias durante la hidratación
+  if (!mounted) {
+    return <div style={{ visibility: 'hidden' }}>{children}</div>;
+  }
 
   return (
     <ThemeProvider theme={darkMode ? darkTheme : lightTheme}>

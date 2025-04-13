@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect } from "react"
 import { Button, Typography, Box, CircularProgress, Snackbar, LinearProgress } from "@mui/material"
-import { inspeccionService } from "../services/inspeccionService"
+
 import type { FormData } from "../types/formTypes"
 import { InspeccionPdfContent } from "./InspeccionPdfContent"
 import { usePDF } from "react-to-pdf"
+import { obtenerInspeccionPorId } from "@/app/actions/inspeccion"
 
 interface InspeccionDetalleProps {
   inspeccionId: string
@@ -37,7 +38,7 @@ export const InspeccionDetalle: React.FC<InspeccionDetalleProps> = ({ inspeccion
   useEffect(() => {
     const fetchInspeccion = async () => {
       try {
-        const data = await inspeccionService.obtenerPorId(inspeccionId)
+        const data = await obtenerInspeccionPorId(inspeccionId)
         setInspeccion(data)
       } catch (error) {
         console.error("Error al cargar la inspección:", error)
