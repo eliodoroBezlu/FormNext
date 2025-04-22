@@ -31,7 +31,7 @@ const InspeccionExtintores = ({ control, currentMes, extintores }: InspeccionExt
     control,
     name: `meses.${currentMes}.inspeccionesExtintor`,
   })
-
+  console.log(extintores)
   
 
   // Agregar nuevo extintor con tipado correcto

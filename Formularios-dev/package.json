@@ -16,7 +16,6 @@
     "@mui/material": "^7.0.2",
     "@react-pdf/renderer": "^4.2.1",
     "@types/react-signature-canvas": "^1.0.6",
-    "axios": "^1.7.9",
     "html2canvas": "^1.4.1",
     "jspdf-autotable": "^3.8.4",
     "next": "^15.3.0",

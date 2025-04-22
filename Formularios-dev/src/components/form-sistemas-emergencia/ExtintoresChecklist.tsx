@@ -13,7 +13,7 @@ import { ExtintorBackend } from "../../types/formTypes";
 
 // Definición de props para el componente
 interface ExtintoresChecklistProps {
-  area: string;
+  tag: string;
   extintores: ExtintorBackend[];
   onExtintoresSeleccionados: (extintores: ExtintorBackend[]) => void;
 }
@@ -23,28 +23,40 @@ interface ExtintoresSeleccionadosState {
   [key: string]: boolean;
 }
 
-const AREAS_CON_SELECCION_EXTINTORES = [
-    "Electrico", 
-    "Generacion", 
-    // Añade aquí las áreas específicas donde quieras que se seleccionen extintores
-  ];
+const TAGS_CON_SELECCION_EXTINTORES = [
+  "710BL723-E1", 
+  "710BL723-E2",
+  "710BL723-E3",
+  "710BL723-E4", 
+  "710BL723-E5", 
+  "710BL723-E6", 
+  "710BL723-E7", 
+  "710BL723-E8", 
+  "710BL723-E9",
+  "780BL001",
+  "710BL740-OM1",
+  "710BL740-OM2", 
+  "Generacion",
+  "Electrico"
+];
+
 
 // Función para mostrar los extintores con checkbox
 const ExtintoresChecklist = ({ 
-  area, 
+  tag, 
   extintores, 
   onExtintoresSeleccionados 
 }:ExtintoresChecklistProps) => {
   const [extintoresSeleccionados, setExtintoresSeleccionados] = useState<ExtintoresSeleccionadosState>({});
 
-  const requiereSeleccion = AREAS_CON_SELECCION_EXTINTORES.includes(area);
+  const requiereSeleccion = TAGS_CON_SELECCION_EXTINTORES.includes(tag);
 
   // Inicializar el estado cuando cambian los extintores
   useEffect(() => {
-    // Si el área no requiere selección, limpiar la selección
+    // Si el tag no requiere selección, limpiar la selección
     if (!requiereSeleccion) {
       setExtintoresSeleccionados({});
-      // Solo llamar a esto cuando realmente cambie el área o el requisito de selección
+      // Solo llamar a esto cuando realmente cambie el tag o el requisito de selección
       onExtintoresSeleccionados([]);
       return;
     }
@@ -55,7 +67,7 @@ const ExtintoresChecklist = ({
       initialState[extintor._id] = false;
     });
     setExtintoresSeleccionados(initialState);
-  }, [extintores, area, requiereSeleccion]); // Remove onExtintoresSeleccionados from here
+  }, [extintores, tag, requiereSeleccion]); // Remove onExtintoresSeleccionados from here
 
   // Manejar el cambio en la selección de un extintor
   const handleCheckboxChange = (event: React.ChangeEvent<HTMLInputElement>, extintorId: string) => {
@@ -94,11 +106,11 @@ const ExtintoresChecklist = ({
 
   return (
     <Paper elevation={2} sx={{ p: 2, height: '100%', minHeight: '56px' }}>
-      {area ? (
+      {tag ? (
         extintores.length > 0 ? (
           <Box>
             <Typography variant="subtitle2" gutterBottom>
-              Extintores en {area}:
+              Extintores en {tag}:
             </Typography>
             
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>

@@ -57,7 +57,19 @@ const MESES: Mes[] = [
   "DICIEMBRE",
 ];
 
-const AREAS_CON_SELECCION_EXTINTORES = ["Electrico", "Generacion"];
+const TAGS_CON_SELECCION_EXTINTORES  = [
+    "710BL723-E1", 
+    "710BL723-E2",
+    "710BL723-E3",
+    "710BL723-E4", 
+    "710BL723-E5", 
+    "710BL723-E6", 
+    "710BL723-E7", 
+    "710BL723-E8", 
+    "710BL723-E9",
+    "710BL740-OM1",
+    "710BL740-OM2", 
+  ];
 
 // Helper functions
 const obtenerMesActual = (): Mes => MESES[new Date().getMonth()];
@@ -116,7 +128,7 @@ export function InspeccionSistemasEmergencia() {
   useEffect(() => {
     const diaActual = getDiaActual();
     if (diaActual > 10) {
-      setDentroPeriodoValido(false);
+      setDentroPeriodoValido(true);
       setFormState((prev) => ({
         ...prev,
         error:
@@ -151,15 +163,15 @@ export function InspeccionSistemasEmergencia() {
 
   // Handle extintores based on area
   useEffect(() => {
-    if (!areaData.area) return;
+    if (!areaData.tag) return;
 
-    if (!AREAS_CON_SELECCION_EXTINTORES.includes(areaData.area)) {
+    if (!TAGS_CON_SELECCION_EXTINTORES .includes(areaData.tag)) {
       setAreaData((prev) => ({
         ...prev,
         extintoresSeleccionados: prev.extintores,
       }));
     }
-  }, [areaData.area, areaData.extintores]);
+  }, [areaData.tag, areaData.extintores]);
 
   // Handlers
   const handleExtintoresSeleccionados = useCallback(
@@ -176,23 +188,24 @@ export function InspeccionSistemasEmergencia() {
     async (selectedArea: string) => {
       try {
         setFormState((prev) => ({ ...prev, loading: true, error: null }));
-
+  
         const tagsDelArea = await obtenerTagsPorArea(selectedArea);
-        const areaExtintores = await obtenerExtintoresPorArea(selectedArea);
 
+        
+        const primerTag = tagsDelArea.length > 0 ? tagsDelArea[0] : "";
+        const areaExtintores = await obtenerExtintoresPorArea(primerTag);
+  
+        // Seleccionamos el primer tag automáticamente
+  
         setAreaData((prev) => ({
           ...prev,
           area: selectedArea,
-          tag: tagsDelArea.length > 0 ? tagsDelArea[0] : "",
+          tag: primerTag,
           tagOptions: tagsDelArea,
           extintores: areaExtintores,
         }));
-
-        if (tagsDelArea.length > 0) {
-          setValue("tag", tagsDelArea[0]);
-        } else {
-          setValue("tag", "");
-        }
+  
+        setValue("tag", primerTag);
       } catch (error) {
         console.error("Error al obtener datos del área:", error);
         setFormState((prev) => ({
@@ -205,11 +218,31 @@ export function InspeccionSistemasEmergencia() {
     },
     [setValue]
   );
+  
 
   const handleTagChange = useCallback(
-    (selectedTag: string) => {
-      setAreaData((prev) => ({ ...prev, tag: selectedTag }));
-      setValue("tag", selectedTag);
+    async (selectedTag: string) => {
+      try {
+        setFormState((prev) => ({ ...prev, loading: true, error: null }));
+        
+        // Obtener extintores por tag
+        const tagExtintores = await obtenerExtintoresPorArea(selectedTag);
+        
+        setAreaData((prev) => ({ 
+          ...prev, 
+          tag: selectedTag,
+          extintores: tagExtintores
+        }));
+        setValue("tag", selectedTag);
+      } catch (error) {
+        console.error("Error al obtener extintores del tag:", error);
+        setFormState((prev) => ({
+          ...prev,
+          error: "Error al obtener extintores del tag. Intente nuevamente.",
+        }));
+      } finally {
+        setFormState((prev) => ({ ...prev, loading: false }));
+      }
     },
     [setValue]
   );
@@ -252,8 +285,7 @@ export function InspeccionSistemasEmergencia() {
       const mostrarSoloExtintores =
         formularioExiste &&
         !todosExtintoresSinInspeccionar() &&
-        response.formulario.meses?.[currentMes]?.inspeccionesExtintor?.length >
-          0;
+        response.formulario.meses?.[currentMes]?.inspeccionesExtintor?.length > 0;
 
       setAreaData((prev) => ({
         ...prev,
@@ -502,10 +534,10 @@ export function InspeccionSistemasEmergencia() {
               </Grid>
 
               <Grid size={{ xs: 12, sm: 6 }}>
-                {area &&
-                  (AREAS_CON_SELECCION_EXTINTORES.includes(area) ? (
+                {area && tag && (
+                  TAGS_CON_SELECCION_EXTINTORES .includes(tag) ? (
                     <ExtintoresChecklist
-                      area={area}
+                      tag={tag}  // Asegura que el tag se pasa como área
                       extintores={extintores}
                       onExtintoresSeleccionados={handleExtintoresSeleccionados}
                     />
@@ -515,11 +547,12 @@ export function InspeccionSistemasEmergencia() {
                       sx={{ p: 2, height: "100%", minHeight: "56px" }}
                     >
                       <Alert severity="info">
-                        Para el área &quot;{area}&quot; no es necesario
+                        Para el TAG &quot;{tag}&quot; no es necesario
                         seleccionar extintores.
                       </Alert>
                     </Paper>
-                  ))}
+                  )
+                )}
               </Grid>
             </Grid>
 
@@ -527,7 +560,7 @@ export function InspeccionSistemasEmergencia() {
               variant="contained"
               color="primary"
               onClick={handleTagSubmit}
-              disabled={loading || !area}
+              disabled={loading || !tag}
             >
               {loading ? "Verificando..." : "Continuar"}
             </Button>
@@ -552,7 +585,7 @@ export function InspeccionSistemasEmergencia() {
               control={control}
               currentMes={currentMes}
               extintores={
-                AREAS_CON_SELECCION_EXTINTORES.includes(area)
+                TAGS_CON_SELECCION_EXTINTORES .includes(tag)
                   ? extintoresSeleccionados
                   : extintores
               }
