@@ -248,101 +248,114 @@ export function InspeccionSistemasEmergencia() {
   );
 
   const todosExtintoresSinInspeccionar = useCallback(() => {
-    return (
-      !areaData.extintores.length ||
-      areaData.extintores.every((ext) => ext.inspeccionado === false)
-    );
+    
+    if (!areaData.extintores.length) {
+      return true;
+    }
+    
+    // Verificar si hay al menos un extintor inspeccionado
+    const hayAlgunoInspeccionado = areaData.extintores.some((ext) => ext.inspeccionado === true);
+    
+    // Si hay alguno inspeccionado, no todos están sin inspeccionar
+    return !hayAlgunoInspeccionado;
   }, [areaData.extintores]);
 
   const handleTagSubmit = async () => {
-    if (!areaData.tag.trim()) {
-      setFormState((prev) => ({
-        ...prev,
-        error: "Por favor, ingresa un valor para el TAG.",
-      }));
-      return;
-    }
+  if (!areaData.tag.trim()) {
+    setFormState((prev) => ({
+      ...prev,
+      error: "Por favor, ingresa un valor para el TAG.",
+    }));
+    return;
+  }
 
-    try {
-      setFormState((prev) => ({ ...prev, loading: true, error: null }));
+  try {
+    setFormState((prev) => ({ ...prev, loading: true, error: null }));
 
-      const datosIniciales = {
-        tag: areaData.tag,
-        periodo: getPeriodoActual(),
-        año: getAñoActual(),
-        mesActual: currentMes,
-        area: areaData.area,
-      };
+    const datosIniciales = {
+      tag: areaData.tag,
+      periodo: getPeriodoActual(),
+      año: getAñoActual(),
+      mesActual: currentMes,
+      area: areaData.area,
+    };
 
-      const response = await verificarTag(datosIniciales);
+    const response = await verificarTag(datosIniciales);
 
-      const formularioExiste = response.existe;
-      const tieneDatosMesActual =
-        formularioExiste &&
-        response.formulario.meses?.[currentMes] &&
-        Object.keys(response.formulario.meses[currentMes]).length > 0;
+    const formularioExiste = response.existe;
 
-      const mostrarSoloExtintores =
-        formularioExiste &&
-        !todosExtintoresSinInspeccionar() &&
-        response.formulario.meses?.[currentMes]?.inspeccionesExtintor?.length > 0;
+   
+    // const tieneDatosMesActual =
+    //   formularioExiste &&
+    //   response.formulario.meses?.[currentMes] &&
+    //   Object.keys(response.formulario.meses[currentMes]).length > 0;
 
-      setAreaData((prev) => ({
-        ...prev,
-        extintores: response.extintores || [],
-      }));
+    const mostrarSoloExtintores =
+      formularioExiste &&
+      todosExtintoresSinInspeccionar() &&
+      response.formulario.meses?.[currentMes]?.inspeccionesExtintor?.length > 0;
+    
 
-      const formularioInicial = crearFormularioInicial(
-        response.superintendencia || "",
-        areaData.area,
-        areaData.tag,
-        "",
-        "",
-        getPeriodoActual(),
-        getAñoActual(),
-        currentMes
-      );
+    setAreaData((prev) => ({
+      ...prev,
+      extintores: response.extintores || [],
+    }));
 
-      if (formularioExiste) {
-        const mesAlmacenado = response.formulario.mesActual;
+    const formularioInicial = crearFormularioInicial(
+      response.superintendencia || "",
+      areaData.area,
+      areaData.tag,
+      "",
+      "",
+      getPeriodoActual(),
+      getAñoActual(),
+      currentMes
+    );
 
-        if (mesAlmacenado === currentMes && !response.extintores.length) {
-          setFormState((prev) => ({
-            ...prev,
-            error:
-              "El formulario ya existe para este mes. No es necesario realizar cambios.",
-            loading: false,
-          }));
-          return;
-        }
+    if (formularioExiste) {
+      const mesAlmacenado = response.formulario.mesActual;
 
+      if (mesAlmacenado === currentMes && !response.extintores.length) {
         setFormState((prev) => ({
           ...prev,
-          esFormularioExistente: tieneDatosMesActual,
-          soloExtintores: mostrarSoloExtintores,
-          showForm: true,
+          error:
+            "El formulario ya existe para este mes. No es necesario realizar cambios.",
           loading: false,
         }));
-      } else {
-        setFormState((prev) => ({
-          ...prev,
-          esFormularioExistente: false,
-          showForm: true,
-          loading: false,
-        }));
+        return;
       }
 
-      reset(formularioInicial);
-    } catch (error) {
-      console.error("Error al verificar el TAG:", error);
+      // Guardamos estos estados explícitamente
+      const newFormState = {
+        ...formState,
+        esFormularioExistente: formularioExiste,
+        soloExtintores: mostrarSoloExtintores,
+        showForm: true,
+        loading: false,
+      };
+      
+      setFormState(newFormState);
+    } else {
       setFormState((prev) => ({
         ...prev,
-        error:
-          "Ocurrió un error al comunicarse con el servidor. Por favor, intenta más tarde.",
+        esFormularioExistente: false,
+        soloExtintores: false,
+        showForm: true,
         loading: false,
       }));
     }
-  };
+
+    reset(formularioInicial);
+  } catch (error) {
+    console.error("Error al verificar el TAG:", error);
+    setFormState((prev) => ({
+      ...prev,
+      error:
+        "Ocurrió un error al comunicarse con el servidor. Por favor, intenta más tarde.",
+      loading: false,
+    }));
+  }
+};
 
   const onSubmit = async (data: FormularioInspeccion) => {
     if (formState.submitting) return;
@@ -355,15 +368,16 @@ export function InspeccionSistemasEmergencia() {
         error: null,
       }));
 
-      if (formState.soloExtintores) {
+      if (soloExtintores) {
         // Solo enviar datos de extintores
         const extintoresData = {
           tag: areaData.tag,
           extintores: data.meses[currentMes].inspeccionesExtintor,
+          
         };
 
         await actualizarExtintoresPorTag(areaData.tag, extintoresData);
-      } else if (formState.esFormularioExistente) {
+      } else if (esFormularioExistente) {
         // Actualizar todo el mes
         await actualizarMesPorTag(
           areaData.tag,
