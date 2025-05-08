@@ -305,8 +305,8 @@ export function InspeccionSistemasEmergencia() {
       response.superintendencia || "",
       areaData.area,
       areaData.tag,
-      "",
-      "",
+      response.formulario?.edificio || "",
+      response.formulario?.responsableEdificio || "",
       getPeriodoActual(),
       getAñoActual(),
       currentMes
@@ -582,9 +582,11 @@ export function InspeccionSistemasEmergencia() {
         ) : (
           <form onSubmit={handleSubmit(onSubmit)}>
             {/* Mostrar InformacionGeneral solo si es formulario nuevo */}
-            {!esFormularioExistente && (
-              <InformacionGeneral control={control} errors={errors} />
-            )}
+            <InformacionGeneral 
+              control={control} 
+              errors={errors} 
+              soloLectura={esFormularioExistente} // Pasar prop soloLectura como true si es formulario existente
+            />
 
             {/* Mostrar SistemasPasivos y Activos si no es solo extintores */}
             {!soloExtintores && (

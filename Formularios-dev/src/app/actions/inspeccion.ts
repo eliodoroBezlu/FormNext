@@ -152,7 +152,7 @@ export async function descargarExcel(id: string): Promise<Blob> {
 
 export async function verificarTag(datos: VerificarTagData): Promise<{
   existe: boolean;
-  formulario: FormularioInspeccion;
+  formulario: FormularioInspeccion ;
   extintores: ExtintorBackend [];
   superintendencia: string;
 }> {

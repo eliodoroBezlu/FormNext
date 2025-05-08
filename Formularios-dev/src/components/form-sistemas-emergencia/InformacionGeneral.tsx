@@ -79,9 +79,10 @@ const getAñoActual = (): number => {
 interface InformacionGeneralProps {
   control: Control<FormularioInspeccion>;
   errors: FieldErrors<FormularioInspeccion>;
+  soloLectura?: boolean;
 }
 
-const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
+const InformacionGeneral = ({ control, errors, soloLectura }: InformacionGeneralProps) => {
   const mesActual = getMesActual(); // Calcula el mes actual
   const periodoActual = getPeriodoActual(); // Calcula el período actual
   const añoActual = getAñoActual(); // Calcula el año actual
@@ -111,7 +112,7 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
   return (
     <Box sx={{ mb: 4 }}>
       <Typography variant="h6" sx={{ mb: 2 }}>
-        Información General
+        Información General {soloLectura && "(Solo lectura)"}
       </Typography>
       <Grid container spacing={2}>
         {/* Campo Superintendencia */}
@@ -119,23 +120,32 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
           <Controller
             name="superintendencia"
             control={control}
-            rules={{ required: "Este campo es obligatorio" }}
+            rules={{ required: !soloLectura && "Este campo es obligatorio" }}
             render={({ field }) => (
               <FormControl fullWidth error={!!errors.superintendencia}>
-                <Autocomplete
-                  {...field}
-                  options={SUPERINTENDENCIAS}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      id="superintendencia"
-                      label="Seleccionar Superintendencia"
-                      error={!!errors.superintendencia}
-                      helperText={errors.superintendencia?.message}
-                    />
-                  )}
-                  onChange={(_, data) => field.onChange(data)} // Actualiza el valor del campo
-                />
+                {soloLectura ? (
+                  <TextField
+                    label="Superintendencia"
+                    value={field.value || ""}
+                    InputProps={{ readOnly: true }}
+                    variant="filled"
+                  />
+                ) : (
+                  <Autocomplete
+                    {...field}
+                    options={SUPERINTENDENCIAS}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        id="superintendencia"
+                        label="Seleccionar Superintendencia"
+                        error={!!errors.superintendencia}
+                        helperText={errors.superintendencia?.message}
+                      />
+                    )}
+                    onChange={(_, data) => field.onChange(data)} // Actualiza el valor del campo
+                  />
+                )}
               </FormControl>
             )}
           />
@@ -146,23 +156,32 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
           <Controller
             name="area"
             control={control}
-            rules={{ required: "Este campo es obligatorio" }}
+            rules={{ required: !soloLectura && "Este campo es obligatorio" }}
             render={({ field }) => (
               <FormControl fullWidth error={!!errors.area}>
-                <Autocomplete
-                  {...field}
-                  options={AREAS}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      id="area"
-                      label="Seleccionar Área"
-                      error={!!errors.area}
-                      helperText={errors.area?.message}
-                    />
-                  )}
-                  onChange={(_, data) => field.onChange(data)} // Actualiza el valor del campo
-                />
+                {soloLectura ? (
+                  <TextField
+                    label="Área"
+                    value={field.value || ""}
+                    InputProps={{ readOnly: true }}
+                    variant="filled"
+                  />
+                ) : (
+                  <Autocomplete
+                    {...field}
+                    options={AREAS}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        id="area"
+                        label="Seleccionar Área"
+                        error={!!errors.area}
+                        helperText={errors.area?.message}
+                      />
+                    )}
+                    onChange={(_, data) => field.onChange(data)} // Actualiza el valor del campo
+                  />
+                )}
               </FormControl>
             )}
           />
@@ -173,7 +192,15 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
           <Controller
             name="tag"
             control={control}
-            render={({ field }) => <TextField {...field} label="TAG" fullWidth />}
+            render={({ field }) => (
+              <TextField 
+                {...field} 
+                label="TAG" 
+                fullWidth 
+                InputProps={{ readOnly: soloLectura }}
+                variant={soloLectura ? "filled" : "outlined"}
+              />
+            )}
           />
         </Grid>
 
@@ -182,15 +209,17 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
           <Controller
             name="edificio"
             control={control}
-            rules={{ required: "Este campo es obligatorio" }}
+            rules={{ required: !soloLectura && "Este campo es obligatorio" }}
             render={({ field }) => (
               <TextField
                 {...field}
                 id="edificio"
                 label="Edificio"
                 fullWidth
-                error={!!errors.edificio}
-                helperText={errors.edificio?.message}
+                error={!soloLectura && !!errors.edificio}
+                helperText={!soloLectura && errors.edificio?.message}
+                InputProps={{ readOnly: soloLectura }}
+                variant={soloLectura ? "filled" : "outlined"}
               />
             )}
           />
@@ -201,25 +230,36 @@ const InformacionGeneral = ({ control, errors }: InformacionGeneralProps) => {
           <Controller
             name="responsableEdificio"
             control={control}
-            rules={{ required: "Este campo es obligatorio" }}
+            rules={{ required: !soloLectura && "Este campo es obligatorio" }}
             render={({ field }) => (
-              <Autocomplete
-                options={opciones}
-                onInputChange={(_, value) => buscarOpciones(value)} // Busca responsables
-                onBlur={() => setOpciones([])} // Limpia el estado cuando el campo pierde el foco
-                loading={loading} // Muestra un indicador de carga
-                onChange={(_, data) => field.onChange(data)} // Actualiza el valor del campo
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    id="responsable"
-                    label="Buscar Responsable del Edificio"
-                    fullWidth
-                    error={!!errors.responsableEdificio}
-                    helperText={errors.responsableEdificio?.message}
-                  />
-                )}
-              />
+              soloLectura ? (
+                <TextField
+                  label="Responsable del Edificio"
+                  value={field.value || ""}
+                  fullWidth
+                  InputProps={{ readOnly: true }}
+                  variant="filled"
+                />
+              ) : (
+                <Autocomplete
+                  options={opciones}
+                  onInputChange={(_, value) => buscarOpciones(value)} // Busca responsables
+                  onBlur={() => setOpciones([])} // Limpia el estado cuando el campo pierde el foco
+                  loading={loading} // Muestra un indicador de carga
+                  onChange={(_, data) => field.onChange(data)} // Actualiza el valor del campo
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      id="responsable"
+                      label="Buscar Responsable del Edificio"
+                      fullWidth
+                      error={!!errors.responsableEdificio}
+                      helperText={errors.responsableEdificio?.message}
+                    />
+                  )}
+                  value={field.value || null}
+                />
+              )
             )}
           />
         </Grid>
