@@ -305,8 +305,8 @@ export function InspeccionSistemasEmergencia() {
       response.superintendencia || "",
       areaData.area,
       areaData.tag,
-      response.formulario?.edificio || "",
       response.formulario?.responsableEdificio || "",
+      response.formulario?.edificio || "",
       getPeriodoActual(),
       getAñoActual(),
       currentMes
