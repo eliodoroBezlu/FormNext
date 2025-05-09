@@ -373,7 +373,6 @@ export function InspeccionSistemasEmergencia() {
         const extintoresData = {
           tag: areaData.tag,
           extintores: data.meses[currentMes].inspeccionesExtintor,
-          
         };
 
         await actualizarExtintoresPorTag(areaData.tag, extintoresData);

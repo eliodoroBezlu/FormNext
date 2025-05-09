@@ -281,3 +281,15 @@ export async function actualizarExtintoresPorTag(
   revalidatePath('/inspecciones-emergencia');
   return result;
 }
+
+export async function desactivarExtintor(codigo: string): Promise<{exito: boolean; mensaje: string}> {
+  const response = await fetch(`${API_URL}/extintor/desactivar/${encodeURIComponent(codigo)}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    cache: 'no-store',
+  });
+  
+  const result = await handleResponse<{exito: boolean; mensaje: string}>(response);
+  revalidatePath('/inspecciones-emergencia');
+  return result;
+}

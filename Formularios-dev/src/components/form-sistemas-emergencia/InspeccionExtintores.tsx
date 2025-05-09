@@ -9,6 +9,13 @@ import {
   TextField,
   FormControl,
   FormLabel,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Snackbar,
+  Alert
 } from "@mui/material"
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore"
 import AddIcon from "@mui/icons-material/Add"
@@ -16,8 +23,9 @@ import DeleteIcon from "@mui/icons-material/Delete"
 import { type Control, Controller, useFieldArray } from "react-hook-form"
 import type { ExtintorBackend, FormularioInspeccion, Mes, InspeccionExtintor } from "../../types/formTypes"
 import EstadoInspeccionSelect from "@/components/form-sistemas-emergencia/EstadoInspeccionSelect"
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Grid from "@mui/material/Grid";
+import { desactivarExtintor } from "../../app/actions/inspeccion"; // Importamos la nueva función
 
 interface InspeccionExtintoresProps {
   control: Control<FormularioInspeccion>
@@ -32,6 +40,54 @@ const InspeccionExtintores = ({ control, currentMes, extintores }: InspeccionExt
     name: `meses.${currentMes}.inspeccionesExtintor`,
   })
   
+  // Estados para diálogo de confirmación y notificaciones
+  const [confirmarEliminar, setConfirmarEliminar] = useState(false);
+  const [extintorAEliminar, setExtintorAEliminar] = useState<{ index: number, codigo: string }>({ index: -1, codigo: "" });
+  const [notificacion, setNotificacion] = useState({ open: false, mensaje: "", tipo: "success" as "success" | "error" });
+
+  // Función para iniciar el proceso de eliminación
+  const iniciarEliminacion = (index: number, codigo: string) => {
+    setExtintorAEliminar({ index, codigo });
+    setConfirmarEliminar(true);
+  };
+
+  // Función para confirmar la eliminación
+  const confirmarEliminacionExtintor = async () => {
+    try {
+      if (extintorAEliminar.codigo) {
+        // Desactivar el extintor en el backend
+        const resultado = await desactivarExtintor(extintorAEliminar.codigo);
+        
+        if (resultado.exito) {
+          // Eliminar del formulario
+          remove(extintorAEliminar.index);
+          setNotificacion({
+            open: true,
+            mensaje: "Extintor desactivado correctamente",
+            tipo: "success"
+          });
+        } else {
+          setNotificacion({
+            open: true,
+            mensaje: resultado.mensaje || "Error al desactivar el extintor",
+            tipo: "error"
+          });
+        }
+      } else {
+        // Si no tiene código, simplemente eliminarlo del formulario
+        remove(extintorAEliminar.index);
+      }
+    } catch (error) {
+      setNotificacion({
+        open: true,
+        mensaje: "Error al desactivar el extintor",
+        tipo: "error"
+      });
+      console.error("Error al desactivar extintor:", error);
+    } finally {
+      setConfirmarEliminar(false);
+    }
+  };
 
   // Agregar nuevo extintor con tipado correcto
   const agregarExtintor = () => {
@@ -80,147 +136,189 @@ const InspeccionExtintores = ({ control, currentMes, extintores }: InspeccionExt
   }, [nuevosExtintores, fields.length, replace]);
 
   return (
-    <Accordion defaultExpanded>
-      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-        <Typography variant="h6">Inspección de Extintores</Typography>
-      </AccordionSummary>
-      <AccordionDetails>
-        {fields.map((field, index) => (
-          <Paper key={field.id} elevation={2} sx={{ p: 2, mb: 2 }}>
-            <Grid container spacing={2} alignItems="center">
-              <Grid size={{ xs: 10 }}>
-                <Typography variant="subtitle1">Extintor #{index + 1}</Typography>
-              </Grid>
-              <Grid size={{ xs: 2 }} sx={{ textAlign: "right" }}>
-                <IconButton onClick={() => remove(index)} color="error">
-                  <DeleteIcon />
-                </IconButton>
-              </Grid>
+    <>
+      <Accordion defaultExpanded>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="h6">Inspección de Extintores</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          {fields.map((field, index) => (
+            <Paper key={field.id} elevation={2} sx={{ p: 2, mb: 2 }}>
+              <Grid container spacing={2} alignItems="center">
+                <Grid size={{ xs: 10 }}>
+                  <Typography variant="subtitle1">Extintor #{index + 1}</Typography>
+                </Grid>
+                <Grid size={{ xs: 2 }} sx={{ textAlign: "right" }}>
+                  <IconButton 
+                    onClick={() => iniciarEliminacion(index, field.codigo)} 
+                    color="error"
+                    title="Desactivar extintor"
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Grid>
 
-              <Grid size={{ xs: 12, md: 6}}>
-                <Controller
-                  name={`meses.${currentMes}.inspeccionesExtintor.${index}.fechaInspeccion`}
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      type="date"
-                      label="Fecha Inspección"
-                      fullWidth
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid size={{ xs: 12, md: 6}}>
-                <Controller
-                  name={`meses.${currentMes}.inspeccionesExtintor.${index}.codigo`}
-                  control={control}
-                  render={({ field }) => <TextField {...field} label="Código" fullWidth />}
-                />
-              </Grid>
-
-              <Grid size={{ xs: 12}}>
-                <Controller
-                  name={`meses.${currentMes}.inspeccionesExtintor.${index}.ubicacion`}
-                  control={control}
-                  render={({ field }) => <TextField {...field} label="Ubicación" fullWidth />}
-                />
-              </Grid>
-
-              <Grid size={{ xs: 12}}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Estado de los Componentes
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid size={{ xs: 4}}>
-                    <FormControl fullWidth size="small">
-                      <FormLabel component="legend">Inspección Mensual</FormLabel>
-                      <Controller
-                        name={`meses.${currentMes}.inspeccionesExtintor.${index}.inspeccionMensual`}
-                        control={control}
-                        render={({ field }) => <EstadoInspeccionSelect value={field.value} onChange={field.onChange} />}
+                <Grid size={{ xs: 12, md: 6}}>
+                  <Controller
+                    name={`meses.${currentMes}.inspeccionesExtintor.${index}.fechaInspeccion`}
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        type="date"
+                        label="Fecha Inspección"
+                        fullWidth
                       />
-                    </FormControl>
-                  </Grid>
+                    )}
+                  />
+                </Grid>
 
-                  <Grid size={{ xs: 12, md: 4}}>
-                    <FormControl fullWidth size="small">
-                      <FormLabel component="legend">Manguera</FormLabel>
-                      <Controller
-                        name={`meses.${currentMes}.inspeccionesExtintor.${index}.manguera`}
-                        control={control}
-                        render={({ field }) => <EstadoInspeccionSelect value={field.value} onChange={field.onChange} />}
-                      />
-                    </FormControl>
-                  </Grid>
+                <Grid size={{ xs: 12, md: 6}}>
+                  <Controller
+                    name={`meses.${currentMes}.inspeccionesExtintor.${index}.codigo`}
+                    control={control}
+                    render={({ field }) => <TextField {...field} label="Código" fullWidth />}
+                  />
+                </Grid>
 
-                  <Grid size={{ xs: 12, md: 4}}>
-                    <FormControl fullWidth size="small">
-                      <FormLabel component="legend">Cilindro</FormLabel>
-                      <Controller
-                        name={`meses.${currentMes}.inspeccionesExtintor.${index}.cilindro`}
-                        control={control}
-                        render={({ field }) => <EstadoInspeccionSelect value={field.value} onChange={field.onChange} />}
-                      />
-                    </FormControl>
-                  </Grid>
+                <Grid size={{ xs: 12}}>
+                  <Controller
+                    name={`meses.${currentMes}.inspeccionesExtintor.${index}.ubicacion`}
+                    control={control}
+                    render={({ field }) => <TextField {...field} label="Ubicación" fullWidth />}
+                  />
+                </Grid>
 
-                  <Grid size={{ xs: 12, md: 4}}>
-                    <FormControl fullWidth size="small">
-                      <FormLabel component="legend">Indicador Presión</FormLabel>
-                      <Controller
-                        name={`meses.${currentMes}.inspeccionesExtintor.${index}.indicadorPresion`}
-                        control={control}
-                        render={({ field }) => <EstadoInspeccionSelect value={field.value} onChange={field.onChange} />}
-                      />
-                    </FormControl>
-                  </Grid>
+                <Grid size={{ xs: 12}}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Estado de los Componentes
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid size={{ xs: 4}}>
+                      <FormControl fullWidth size="small">
+                        <FormLabel component="legend">Inspección Mensual</FormLabel>
+                        <Controller
+                          name={`meses.${currentMes}.inspeccionesExtintor.${index}.inspeccionMensual`}
+                          control={control}
+                          render={({ field }) => <EstadoInspeccionSelect value={field.value} onChange={field.onChange} />}
+                        />
+                      </FormControl>
+                    </Grid>
 
-                  <Grid size={{ xs: 12, md: 4}}>
-                    <FormControl fullWidth size="small">
-                      <FormLabel component="legend">Gatillo/Chaveta/Precinto</FormLabel>
-                      <Controller
-                        name={`meses.${currentMes}.inspeccionesExtintor.${index}.gatilloChavetaPrecinto`}
-                        control={control}
-                        render={({ field }) => <EstadoInspeccionSelect value={field.value} onChange={field.onChange} />}
-                      />
-                    </FormControl>
-                  </Grid>
+                    <Grid size={{ xs: 12, md: 4}}>
+                      <FormControl fullWidth size="small">
+                        <FormLabel component="legend">Manguera</FormLabel>
+                        <Controller
+                          name={`meses.${currentMes}.inspeccionesExtintor.${index}.manguera`}
+                          control={control}
+                          render={({ field }) => <EstadoInspeccionSelect value={field.value} onChange={field.onChange} />}
+                        />
+                      </FormControl>
+                    </Grid>
 
-                  <Grid size={{ xs: 12, md: 4}}>
-                    <FormControl fullWidth size="small">
-                      <FormLabel component="legend">Señalización/Soporte</FormLabel>
-                      <Controller
-                        name={`meses.${currentMes}.inspeccionesExtintor.${index}.senalizacionSoporte`}
-                        control={control}
-                        render={({ field }) => <EstadoInspeccionSelect value={field.value} onChange={field.onChange} />}
-                      />
-                    </FormControl>
+                    <Grid size={{ xs: 12, md: 4}}>
+                      <FormControl fullWidth size="small">
+                        <FormLabel component="legend">Cilindro</FormLabel>
+                        <Controller
+                          name={`meses.${currentMes}.inspeccionesExtintor.${index}.cilindro`}
+                          control={control}
+                          render={({ field }) => <EstadoInspeccionSelect value={field.value} onChange={field.onChange} />}
+                        />
+                      </FormControl>
+                    </Grid>
+
+                    <Grid size={{ xs: 12, md: 4}}>
+                      <FormControl fullWidth size="small">
+                        <FormLabel component="legend">Indicador Presión</FormLabel>
+                        <Controller
+                          name={`meses.${currentMes}.inspeccionesExtintor.${index}.indicadorPresion`}
+                          control={control}
+                          render={({ field }) => <EstadoInspeccionSelect value={field.value} onChange={field.onChange} />}
+                        />
+                      </FormControl>
+                    </Grid>
+
+                    <Grid size={{ xs: 12, md: 4}}>
+                      <FormControl fullWidth size="small">
+                        <FormLabel component="legend">Gatillo/Chaveta/Precinto</FormLabel>
+                        <Controller
+                          name={`meses.${currentMes}.inspeccionesExtintor.${index}.gatilloChavetaPrecinto`}
+                          control={control}
+                          render={({ field }) => <EstadoInspeccionSelect value={field.value} onChange={field.onChange} />}
+                        />
+                      </FormControl>
+                    </Grid>
+
+                    <Grid size={{ xs: 12, md: 4}}>
+                      <FormControl fullWidth size="small">
+                        <FormLabel component="legend">Señalización/Soporte</FormLabel>
+                        <Controller
+                          name={`meses.${currentMes}.inspeccionesExtintor.${index}.senalizacionSoporte`}
+                          control={control}
+                          render={({ field }) => <EstadoInspeccionSelect value={field.value} onChange={field.onChange} />}
+                        />
+                      </FormControl>
+                    </Grid>
                   </Grid>
                 </Grid>
-              </Grid>
 
-              <Grid size={{ xs: 12}}>
-                <Controller
-                  name={`meses.${currentMes}.inspeccionesExtintor.${index}.observaciones`}
-                  control={control}
-                  render={({ field }) => <TextField {...field} label="Observaciones" fullWidth multiline rows={2} />}
-                />
+                <Grid size={{ xs: 12}}>
+                  <Controller
+                    name={`meses.${currentMes}.inspeccionesExtintor.${index}.observaciones`}
+                    control={control}
+                    render={({ field }) => <TextField {...field} label="Observaciones" fullWidth multiline rows={2} />}
+                  />
+                </Grid>
               </Grid>
-            </Grid>
-          </Paper>
-        ))}
-        <Button variant="contained" startIcon={<AddIcon />} onClick={agregarExtintor} sx={{ mb: 2 }}>
-          Agregar Extintor
-        </Button>
-        {fields.length === 0 && (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 2 }}>
-            No hay extintores registrados. Haga clic en &quot;Agregar Extintor&quot; para añadir uno.
-          </Typography>
-        )}
-      </AccordionDetails>
-    </Accordion>
+            </Paper>
+          ))}
+          <Button variant="contained" startIcon={<AddIcon />} onClick={agregarExtintor} sx={{ mb: 2 }}>
+            Agregar Extintor
+          </Button>
+          {fields.length === 0 && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 2 }}>
+              No hay extintores registrados. Haga clic en &quot;Agregar Extintor&quot; para añadir uno.
+            </Typography>
+          )}
+        </AccordionDetails>
+      </Accordion>
+
+      {/* Diálogo de confirmación de eliminación */}
+      <Dialog
+        open={confirmarEliminar}
+        onClose={() => setConfirmarEliminar(false)}
+      >
+        <DialogTitle>Confirmar desactivación</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            ¿Está seguro de que desea desactivar este extintor? El extintor se marcará como inactivo en el sistema.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmarEliminar(false)} color="primary">
+            Cancelar
+          </Button>
+          <Button onClick={confirmarEliminacionExtintor} color="error" autoFocus>
+            Desactivar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Notificación de resultado */}
+      <Snackbar 
+        open={notificacion.open} 
+        autoHideDuration={6000} 
+        onClose={() => setNotificacion({...notificacion, open: false})}
+      >
+        <Alert 
+          onClose={() => setNotificacion({...notificacion, open: false})} 
+          severity={notificacion.tipo}
+          sx={{ width: '100%' }}
+        >
+          {notificacion.mensaje}
+        </Alert>
+      </Snackbar>
+    </>
   )
 }
 
