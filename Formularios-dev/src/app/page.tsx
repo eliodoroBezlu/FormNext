@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 import { Button } from "@mui/material";
-import LoginButton from "@/components/atoms/login-button/LoginButton";
+//import LoginButton from "@/components/atoms/login-button/LoginButton";
 
 export default function Home() {
   const router = useRouter();
