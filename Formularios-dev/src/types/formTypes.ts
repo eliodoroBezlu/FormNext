@@ -252,3 +252,11 @@ export interface ExtintoresUpdateData {
   tag: string;
   extintores: InspeccionExtintor[];
 }
+
+
+export interface FiltrosInspeccion {
+  area?: string;
+  superintendencia?: string;
+  mesActual?: string;
+  documentCode?: string;
+}

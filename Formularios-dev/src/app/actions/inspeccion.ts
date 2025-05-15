@@ -13,6 +13,7 @@ import type {
   Mes,
   FormDataExport,
   ExtintorBackend,
+  FiltrosInspeccion,
 } from '../../types/formTypes';
 
 // URL base para la API
@@ -201,8 +202,21 @@ export async function actualizarMesPorTag(
   return result;
 }
 
-export async function obtenerSistemasEmergenciaReport(): Promise<InspeccionServiceExport[]> {
-  const response = await fetch(`${API_URL}/inspecciones-emergencia`, {
+export async function obtenerSistemasEmergenciaReport(filtros?: FiltrosInspeccion): Promise<InspeccionServiceExport[]> {
+  // Construir los parámetros de consulta
+  const params = new URLSearchParams();
+  
+  if (filtros) {
+    if (filtros.area) params.append('area', filtros.area);
+    if (filtros.superintendencia) params.append('superintendencia', filtros.superintendencia);
+    if (filtros.mesActual) params.append('mesActual', filtros.mesActual);
+    if (filtros.documentCode) params.append('documentCode', filtros.documentCode);
+  }
+  
+  const queryString = params.toString();
+  const url = `${API_URL}/inspecciones-emergencia${queryString ? `?${queryString}` : ''}`;
+  
+  const response = await fetch(url, {
     headers: getHeaders(),
     cache: 'no-store',
   });
