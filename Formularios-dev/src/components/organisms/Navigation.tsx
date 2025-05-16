@@ -34,28 +34,50 @@ export const NAVIGATION: NavigationItem[] = [
     icon: "dashboard",
   },
   {
-    segment: "orders",
-    title: "Orders",
-    icon: "shoppingCart",
-  },
-  {
-    segment: "Otro-form",
-    title: "otro formulario",
-    icon: "description",
-  },
-  {
-    segment: "inspecciones",
-    title: "inspecciones",
-    icon: "description",
-  },
-  {
     segment: "inspeccion-sistemas-emergencia",
-    title: "Inspeccion sistemas de emergencia",
+    title: "Formularios de Inspección de Seguridad",
     icon: "description",
+    children: [
+      {
+        segment: "formulario-insp-herr-equi",
+        title: "Formularios de Inspeccion de herramientas y equipos",
+        icon: "description",
+        children: [
+      {
+        segment: "form-sistemas-de-emergencia",
+        title: "Formularios Sistemas de emergencia",
+        icon: "description",
+      },
+      {
+        segment: "inspeccion-arnes",
+        title: "Formulario de Chequeo de Arnés y Conectores",
+        icon: "description",
+      },
+    ],
+      },
+      {
+        segment: "formularios-IRO-ISOP",
+        title: "Formularios IRO - ISOP",
+        icon: "description",
+        children: [
+      {
+        segment: "sistemas-de-emergencia",
+        title: "Sistemas de emrgencia",
+        icon: "description",
+      },
+      {
+        segment: "traffic",
+        title: "Traffic",
+        icon: "description",
+      },
+    ],
+      },
+    ],
   },
+  
   {
-    segment: "inspeccion-arnes",
-    title: "Inspección de Arnés",
+    segment: "form-med-amb",
+    title: "Formulario de Inspección de Medio Ambiente",
     icon: "description",
   },
   {
@@ -72,20 +94,15 @@ export const NAVIGATION: NavigationItem[] = [
     children: [
       {
         segment: "sistemas-de-emergencia",
-        title: "Sistemas de emrgencia",
+        title: "Sistemas de emergencia",
         icon: "description",
       },
       {
-        segment: "traffic",
-        title: "Traffic",
+        segment: "report-iro-isop",
+        title: "IRO-ISOP",
         icon: "description",
       },
     ],
-  },
-  {
-    segment: "integrations",
-    title: "Integrations",
-    icon: "layers",
   },
 ];
 
@@ -96,6 +113,10 @@ export function Navigation({ onNavigate }: { onNavigate: () => void }) {
 
   const handleClick = (segment: string) => {
     setOpen((prevOpen) => ({ ...prevOpen, [segment]: !prevOpen[segment] }));
+  };
+
+  const resetOpenMenus = () => {
+    setOpen({});
   };
 
   const renderNavItems = (items: NavigationItem[], parentSegment = "", level = 0) => {
@@ -122,6 +143,7 @@ export function Navigation({ onNavigate }: { onNavigate: () => void }) {
                 handleClick(fullSegment);
               } else {
                 router.push(fullPath);
+                resetOpenMenus(); 
                 onNavigate();
               }
             }}
@@ -130,7 +152,7 @@ export function Navigation({ onNavigate }: { onNavigate: () => void }) {
           </NavigationItem>
           {hasChildren && (
             <Collapse in={open[fullSegment]} timeout="auto" unmountOnExit>
-              <List component="div" disablePadding>
+              <List component="div" disablePadding sx={{paddingLeft:level>0 ? 2 : 3}}>
                 {renderNavItems(item.children!, fullSegment, level + 1)}
               </List>
             </Collapse>

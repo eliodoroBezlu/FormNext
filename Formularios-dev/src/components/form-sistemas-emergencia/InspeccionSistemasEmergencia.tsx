@@ -396,7 +396,7 @@ export function InspeccionSistemasEmergencia() {
 
       setTimeout(() => {
         resetForm();
-        router.push("/dashboard/inspeccion-sistemas-emergencia");
+        router.push("/dashboard/inspeccion-sistemas-emergencia/formulario-insp-herr-equi/form-sistemas-de-emergencia");
       }, 2000);
     } catch (error) {
       console.error("Error al enviar el formulario:", error);
@@ -496,7 +496,7 @@ export function InspeccionSistemasEmergencia() {
               variant="contained"
               color="primary"
               onClick={() =>
-                router.push("/dashboard/inspeccion-sistemas-emergencia")
+                router.push("/dashboard/inspeccion-sistemas-emergencia/formulario-insp-herr-equi/form-sistemas-de-emergencia")
               }
             >
               Volver al Panel

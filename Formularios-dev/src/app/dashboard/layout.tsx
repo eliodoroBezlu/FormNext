@@ -19,7 +19,7 @@ import { Typography } from "@/components/atoms/Typography";
 import { lightTheme, darkTheme } from "../../styles/theme";
 import CloseIcon from "@mui/icons-material/Close";
 
-const drawerWidth = 240;
+const drawerWidth = 350;
 
 export default function DashboardLayout({
   children,
