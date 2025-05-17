@@ -26,7 +26,7 @@ export type NavigationItem =
 export const NAVIGATION: NavigationItem[] = [
   {
     kind: "header",
-    title: "Main items",
+    title: "Mantenimiento Planta",
   },
   {
     segment: "",
@@ -57,17 +57,65 @@ export const NAVIGATION: NavigationItem[] = [
       },
       {
         segment: "formularios-IRO-ISOP",
-        title: "Formularios IRO - ISOP",
+        title: "Formularios IRO's - ISOP",
         icon: "description",
         children: [
       {
-        segment: "sistemas-de-emergencia",
-        title: "Sistemas de emrgencia",
+        segment: "aislamiento",
+        title: "Aislamiento(|)",
         icon: "description",
       },
       {
-        segment: "traffic",
-        title: "Traffic",
+        segment: "izaje",
+        title: "Izaje(|)",
+        icon: "description",
+      },
+      {
+        segment: "sustancias",
+        title: "Sustancias Peligrosas(|)",
+        icon: "description",
+      },
+      {
+        segment: "talFreBan",
+        title: "Taludes, Frentes de Carguio, Banquinas(|)",
+        icon: "description",
+      },
+      {
+        segment: "actos",
+        title: "Trabajo Eléctrico - Actos(|)",
+        icon: "description",
+      },
+      {
+        segment: "condiciones",
+        title: "Trabajo Eléctrico - Condiciones(|)",
+        icon: "description",
+      },
+      {
+        segment: "altura",
+        title: "Trabajo en Altura(|)",
+        icon: "description",
+      },
+      {
+        segment: "confinado",
+        title: "Trabajo en espacios confinados(|)",
+        icon: "description",
+      },
+      
+      {
+        segment: "excavaciones",
+        title: "Trabajo en excavaciones(|)",
+        icon: "description",
+      },
+      
+      {
+        segment: "caliente",
+        title: "Trabajo en caliente(|)",
+        icon: "description",
+      },
+      
+      {
+        segment: "isop",
+        title: "Inspeccion de Seguridad Operativas(|)",
         icon: "description",
       },
     ],
@@ -99,7 +147,7 @@ export const NAVIGATION: NavigationItem[] = [
       },
       {
         segment: "report-iro-isop",
-        title: "IRO-ISOP",
+        title: "IRO's-ISOP",
         icon: "description",
       },
     ],
