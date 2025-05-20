@@ -11,7 +11,7 @@ export function NavigationItem({
   children,
 }: IProps) {
   return (
-    <ListItemButton selected={selected} onClick={onClick}>
+    <ListItemButton selected={selected} onClick={onClick} className="custom-nav-item">
       <ListItemIcon>
         <Icon name={icon} />
       </ListItemIcon>

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { List, Divider, ListSubheader, Collapse } from "@mui/material";
+import { List, Divider, ListSubheader, Collapse, Box } from "@mui/material";
 import { NavigationItem } from "../molecules/navigation-item/NavigationItem";
 import { usePathname, useRouter } from "next/navigation";
 import { ExpandLess, ExpandMore } from "@mui/icons-material";
@@ -43,86 +43,86 @@ export const NAVIGATION: NavigationItem[] = [
         title: "Formularios de Inspeccion de herramientas y equipos",
         icon: "description",
         children: [
-      {
-        segment: "form-sistemas-de-emergencia",
-        title: "Formularios Sistemas de emergencia",
-        icon: "description",
-      },
-      {
-        segment: "inspeccion-arnes",
-        title: "Formulario de Chequeo de Arnés y Conectores",
-        icon: "description",
-      },
-    ],
+          {
+            segment: "form-sistemas-de-emergencia",
+            title: "Formularios Sistemas de emergencia",
+            icon: "description",
+          },
+          {
+            segment: "inspeccion-arnes",
+            title: "Formulario de Chequeo de Arnés y Conectores",
+            icon: "description",
+          },
+        ],
       },
       {
         segment: "formularios-IRO-ISOP",
         title: "Formularios IRO's - ISOP",
         icon: "description",
         children: [
-      {
-        segment: "aislamiento",
-        title: "Aislamiento(|)",
-        icon: "description",
-      },
-      {
-        segment: "izaje",
-        title: "Izaje(|)",
-        icon: "description",
-      },
-      {
-        segment: "sustancias",
-        title: "Sustancias Peligrosas(|)",
-        icon: "description",
-      },
-      {
-        segment: "talFreBan",
-        title: "Taludes, Frentes de Carguio, Banquinas(|)",
-        icon: "description",
-      },
-      {
-        segment: "actos",
-        title: "Trabajo Eléctrico - Actos(|)",
-        icon: "description",
-      },
-      {
-        segment: "condiciones",
-        title: "Trabajo Eléctrico - Condiciones(|)",
-        icon: "description",
-      },
-      {
-        segment: "altura",
-        title: "Trabajo en Altura(|)",
-        icon: "description",
-      },
-      {
-        segment: "confinado",
-        title: "Trabajo en espacios confinados(|)",
-        icon: "description",
-      },
-      
-      {
-        segment: "excavaciones",
-        title: "Trabajo en excavaciones(|)",
-        icon: "description",
-      },
-      
-      {
-        segment: "caliente",
-        title: "Trabajo en caliente(|)",
-        icon: "description",
-      },
-      
-      {
-        segment: "isop",
-        title: "Inspeccion de Seguridad Operativas(|)",
-        icon: "description",
-      },
-    ],
+          {
+            segment: "aislamiento",
+            title: "Aislamiento(|)",
+            icon: "description",
+          },
+          {
+            segment: "izaje",
+            title: "Izaje(|)",
+            icon: "description",
+          },
+          {
+            segment: "sustancias",
+            title: "Sustancias Peligrosas(|)",
+            icon: "description",
+          },
+          {
+            segment: "talFreBan",
+            title: "Taludes, Frentes de Carguio, Banquinas(|)",
+            icon: "description",
+          },
+          {
+            segment: "actos",
+            title: "Trabajo Eléctrico - Actos(|)",
+            icon: "description",
+          },
+          {
+            segment: "condiciones",
+            title: "Trabajo Eléctrico - Condiciones(|)",
+            icon: "description",
+          },
+          {
+            segment: "altura",
+            title: "Trabajo en Altura(|)",
+            icon: "description",
+          },
+          {
+            segment: "confinado",
+            title: "Trabajo en espacios confinados(|)",
+            icon: "description",
+          },
+
+          {
+            segment: "excavaciones",
+            title: "Trabajo en excavaciones(|)",
+            icon: "description",
+          },
+
+          {
+            segment: "caliente",
+            title: "Trabajo en caliente(|)",
+            icon: "description",
+          },
+
+          {
+            segment: "isop",
+            title: "Inspeccion de Seguridad Operativas(|)",
+            icon: "description",
+          },
+        ],
       },
     ],
   },
-  
+
   {
     segment: "form-med-amb",
     title: "Formulario de Inspección de Medio Ambiente",
@@ -167,7 +167,11 @@ export function Navigation({ onNavigate }: { onNavigate: () => void }) {
     setOpen({});
   };
 
-  const renderNavItems = (items: NavigationItem[], parentSegment = "", level = 0) => {
+  const renderNavItems = (
+    items: NavigationItem[],
+    parentSegment = "",
+    level = 0
+  ) => {
     return items.map((item, index) => {
       if (item.kind === "header") {
         return <ListSubheader key={index}>{item.title}</ListSubheader>;
@@ -176,7 +180,9 @@ export function Navigation({ onNavigate }: { onNavigate: () => void }) {
         return <Divider key={index} />;
       }
 
-      const fullSegment = parentSegment ? `${parentSegment}/${item.segment}` : item.segment;
+      const fullSegment = parentSegment
+        ? `${parentSegment}/${item.segment}`
+        : item.segment;
       const fullPath = `/dashboard/${fullSegment}`;
       const hasChildren = item.children && item.children.length > 0;
 
@@ -191,16 +197,21 @@ export function Navigation({ onNavigate }: { onNavigate: () => void }) {
                 handleClick(fullSegment);
               } else {
                 router.push(fullPath);
-                resetOpenMenus(); 
+                resetOpenMenus();
                 onNavigate();
               }
             }}
           >
-            {hasChildren && (open[fullSegment] ? <ExpandLess /> : <ExpandMore />)}
+            {hasChildren &&
+              (open[fullSegment] ? <ExpandLess /> : <ExpandMore />)}
           </NavigationItem>
           {hasChildren && (
             <Collapse in={open[fullSegment]} timeout="auto" unmountOnExit>
-              <List component="div" disablePadding sx={{paddingLeft:level>0 ? 2 : 3}}>
+              <List
+                component="div"
+                disablePadding
+                sx={{ paddingLeft: level > 0 ? 2 : 3 }}
+              >
                 {renderNavItems(item.children!, fullSegment, level + 1)}
               </List>
             </Collapse>
@@ -210,5 +221,9 @@ export function Navigation({ onNavigate }: { onNavigate: () => void }) {
     });
   };
 
-  return <List>{renderNavItems(NAVIGATION)}</List>;
+  return (
+    <Box className="navigation-container">
+      <List>{renderNavItems(NAVIGATION)}</List>
+    </Box>
+  );
 }

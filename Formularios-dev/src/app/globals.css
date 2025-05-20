@@ -68,3 +68,25 @@ a {
   box-shadow: 0 0 5px rgba(0,0,0,0.1);
 }
 
+.navigation-container {
+  background-color: #d7dbdd ; /* Color gris pálido para el fondo */
+  height: 100%;
+}
+
+
+.navigation-container .MuiListSubheader-root {
+  background-color: #d7dbdd; /* Mantener el mismo color de fondo para los encabezados */
+}
+
+.custom-nav-item.MuiListItemButton-root:hover {
+  background-color: #1976d2 !important; /* Color azul para el hover */
+  color: white !important;
+}
+
+.custom-nav-item.MuiListItemButton-root:hover .MuiListItemIcon-root {
+  color: white !important;
+}
+
+.custom-nav-item.MuiListItemButton-root:hover .MuiListItemText-primary {
+  color: white !important;
+}
