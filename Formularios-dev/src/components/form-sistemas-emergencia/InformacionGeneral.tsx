@@ -54,6 +54,9 @@ const AREAS = [
   "Taller Soldadura",
   // ... (agrega más áreas hasta 100)
 ];
+const inputProps = {
+  readOnly: true
+}
 
 // Función para obtener el mes actual
 const getMesActual = (): string => {
@@ -127,7 +130,9 @@ const InformacionGeneral = ({ control, errors, soloLectura }: InformacionGeneral
                   <TextField
                     label="Superintendencia"
                     value={field.value || ""}
-                    InputProps={{ readOnly: true }}
+                    slotProps= {{
+                      input: inputProps
+                    }}
                     variant="filled"
                   />
                 ) : (
@@ -163,7 +168,9 @@ const InformacionGeneral = ({ control, errors, soloLectura }: InformacionGeneral
                   <TextField
                     label="Área"
                     value={field.value || ""}
-                    InputProps={{ readOnly: true }}
+                    slotProps= {{
+                      input: inputProps
+                    }}
                     variant="filled"
                   />
                 ) : (
@@ -197,7 +204,10 @@ const InformacionGeneral = ({ control, errors, soloLectura }: InformacionGeneral
                 {...field} 
                 label="TAG" 
                 fullWidth 
-                InputProps={{ readOnly: soloLectura }}
+ //               InputProps={{ readOnly: soloLectura }}
+                slotProps= {{
+                      input: inputProps
+                    }}
                 variant={soloLectura ? "filled" : "outlined"}
               />
             )}
@@ -237,7 +247,9 @@ const InformacionGeneral = ({ control, errors, soloLectura }: InformacionGeneral
                   label="Responsable del Edificio"
                   value={field.value || ""}
                   fullWidth
-                  InputProps={{ readOnly: true }}
+                  slotProps= {{
+                      input: inputProps
+                    }}
                   variant="filled"
                 />
               ) : (

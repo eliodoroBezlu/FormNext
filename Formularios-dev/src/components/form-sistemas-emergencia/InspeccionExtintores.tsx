@@ -32,7 +32,9 @@ interface InspeccionExtintoresProps {
   currentMes: Mes
   extintores: ExtintorBackend[];
 }
-
+const inputProps = {
+  readOnly: true
+}
 const InspeccionExtintores = ({ control, currentMes, extintores }: InspeccionExtintoresProps) => {
   // Field array para gestionar extintores
   const { fields, append, remove, replace } = useFieldArray({
@@ -168,6 +170,9 @@ const InspeccionExtintores = ({ control, currentMes, extintores }: InspeccionExt
                         type="date"
                         label="Fecha Inspección"
                         fullWidth
+                        slotProps= {{
+                          input: inputProps
+                        }}
                       />
                     )}
                   />
