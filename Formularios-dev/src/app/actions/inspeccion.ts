@@ -3,7 +3,6 @@
 import { revalidatePath } from 'next/cache';
 //import { cookies } from 'next/headers';
 import type { 
-  ExtintoresUpdateData, 
   FormData, 
   InspeccionServiceExport, 
   Trabajador,
@@ -36,6 +35,8 @@ async function handleResponse<T>(response: Response): Promise<T> {
   const blob = await response.blob();
   return blob as unknown as T;
 }
+
+// for submit changes
 
 // Función para obtener headers 
 // Versión simplificada sin autenticación por ahora
