@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
-        source: '/api/:path*',
+        source: '/api/forms/:path*',
         destination: `${apiUrl}/:path*`, // Proxy al API externo
       },
     ];
@@ -26,7 +26,7 @@ const nextConfig: NextConfig = {
           // Cabecera CSP (Content Security Policy)
           {
             key: 'Content-Security-Policy',
-            value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'  ${apiUrl}; frame-ancestors 'self';`
+            value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'  ${apiUrl} http://localhost:8080; frame-ancestors 'self';`
           },
           // Anti-Clickjacking
           {

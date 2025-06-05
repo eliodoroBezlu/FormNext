@@ -14,6 +14,7 @@ import type {
   FormDataExport,
   ExtintorBackend,
   FiltrosInspeccion,
+  InspeccionExtintor,
 } from '../../types/formTypes';
 
 // URL base para la API
@@ -188,12 +189,13 @@ export async function crearFormSistemasEmergencia(data: FormularioInspeccion): P
 export async function actualizarMesPorTag(
   tag: string, 
   mes: Mes, 
-  datosMes: DatosMes
+  datosMes: DatosMes,
+  area: string
 ): Promise<FormularioInspeccion> {
   const response = await fetch(`${API_URL}/inspecciones-emergencia/actualizar-mes/${tag}`, {
     method: 'PUT',
     headers: getHeaders(),
-    body: JSON.stringify({ mes, datosMes }),
+    body: JSON.stringify({ mes, datosMes, area }),
     cache: 'no-store',
   });
   
@@ -281,13 +283,13 @@ export async function obtenerExtintoresPorArea(area: string): Promise<ExtintorBa
 }
 
 export async function actualizarExtintoresPorTag(
-  tag: string, 
-  datosExtintores: ExtintoresUpdateData
+  tag: string,
+  data: { extintores: InspeccionExtintor[]; area: string }
 ): Promise<{success: boolean; message: string}> {
   const response = await fetch(`${API_URL}/inspecciones-emergencia/actualizar-extintores/${tag}`, {
     method: 'PUT',
     headers: getHeaders(),
-    body: JSON.stringify(datosExtintores),
+    body: JSON.stringify(data),
     cache: 'no-store',
   });
   

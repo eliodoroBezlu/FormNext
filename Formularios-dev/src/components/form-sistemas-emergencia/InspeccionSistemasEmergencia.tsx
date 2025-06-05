@@ -373,6 +373,7 @@ export function InspeccionSistemasEmergencia() {
         const extintoresData = {
           tag: areaData.tag,
           extintores: data.meses[currentMes].inspeccionesExtintor,
+          area: areaData.area,
         };
 
         await actualizarExtintoresPorTag(areaData.tag, extintoresData);
@@ -381,7 +382,8 @@ export function InspeccionSistemasEmergencia() {
         await actualizarMesPorTag(
           areaData.tag,
           currentMes,
-          data.meses[currentMes]
+          data.meses[currentMes],
+          areaData.area
         );
       } else {
         // Crear nuevo formulario completo

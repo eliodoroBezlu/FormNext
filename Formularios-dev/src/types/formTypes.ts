@@ -241,16 +241,18 @@ export interface InspeccionServiceExport extends FormularioInspeccion {
 
 export interface ExtintorBackend {
   _id: string
-  Area: string
+  tag: string
   CodigoExtintor: string
   Ubicacion: string
   inspeccionado: boolean
-  // actvivo: boolean
+  actvivo: boolean
+  area: string
 }
 
 export interface ExtintoresUpdateData {
   tag: string;
   extintores: InspeccionExtintor[];
+  area: string;
 }
 
 
