@@ -10,23 +10,6 @@ import { type Control, Controller, type FieldErrors } from "react-hook-form";
 import type { FormularioInspeccion } from "../../types/formTypes";
 import { useState } from "react";
 import { buscarTrabajadores } from "@/app/actions/inspeccion";
-
-// Array de meses
-const MESES = [
-  "ENERO",
-  "FEBRERO",
-  "MARZO",
-  "ABRIL",
-  "MAYO",
-  "JUNIO",
-  "JULIO",
-  "AGOSTO",
-  "SEPTIEMBRE",
-  "OCTUBRE",
-  "NOVIEMBRE",
-  "DICIEMBRE",
-];
-
 // Array de superintendencias
 const SUPERINTENDENCIAS = [
   "Superintendencia de Mantenimiento - Eléctrico e Instrumentación Planta",
@@ -60,20 +43,24 @@ const inputProps = {
 
 // Función para obtener el mes actual
 const getMesActual = (): string => {
-  const fechaActual = new Date();
-  const mesIndex = fechaActual.getMonth(); // 0-11
-  return MESES[mesIndex];
+  // Para testing, puedes hardcodear un mes específico
+  return "AGOSTO"; // Fuerza julio
+  
+  // Para producción, usar el mes real
+  //const fechaActual = new Date();
+  //const mesIndex = fechaActual.getMonth(); // 0-11
+  //return MESES[mesIndex];
 };
 
 const PERIODOS = ["ENERO-JUNIO", "JULIO-DICIEMBRE"];
 
 // Función para obtener el período actual
 const getPeriodoActual = (): string => {
-  const fechaActual = new Date();
-  const mesActual = fechaActual.getMonth(); // 0-11
-  return mesActual < 6 ? PERIODOS[0] : PERIODOS[1]; // ENERO-JUNIO o JULIO-DICIEMBRE
+  const mesActual = getMesActual();
+  const mesesPrimerSemestre = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO"];
+  
+  return mesesPrimerSemestre.includes(mesActual) ? PERIODOS[0] : PERIODOS[1];
 };
-
 // Función para obtener el año actual
 const getAñoActual = (): number => {
   return new Date().getFullYear();

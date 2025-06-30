@@ -10,7 +10,6 @@ export default function LoginButton() {
     // Asegurarnos de usar 'redirect' como parámetro para coincidir con lo que espera LoginForm
     const loginUrl = `http://localhost:3003/login?redirect=${encodeURIComponent(callbackUrl)}`;
     
-    console.log("Redirigiendo a:", loginUrl);
     window.location.href = loginUrl; // redirección real fuera del dominio
   };
   

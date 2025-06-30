@@ -34,6 +34,11 @@ export const NAVIGATION: NavigationItem[] = [
     icon: "dashboard",
   },
   {
+    segment: "qr-generator",
+    title: "Generador de QR",
+    icon: "description",
+  },
+  {
     segment: "inspeccion-sistemas-emergencia",
     title: "Formularios de Inspección de Seguridad",
     icon: "description",

@@ -245,9 +245,22 @@ export interface ExtintorBackend {
   CodigoExtintor: string
   Ubicacion: string
   inspeccionado: boolean
-  actvivo: boolean
+  activo: boolean
   area: string
+  totalActivos: number
 }
+
+export interface ExtintorAreaResponse {
+  success: boolean;
+  extintores: {
+    extintores: ExtintorBackend[];
+    totalActivosArea: number;
+  };
+  count: number;
+  totalExtintoresActivos: number;
+}
+
+
 
 export interface ExtintoresUpdateData {
   tag: string;
@@ -261,4 +274,55 @@ export interface FiltrosInspeccion {
   superintendencia?: string;
   mesActual?: string;
   documentCode?: string;
+}
+
+export interface TagConEstado {
+  tag: string;
+  extintoresPendientes: number;
+  totalActivos: number;
+  inspeccionado: boolean; 
+}
+
+
+export interface QROptions {
+  width?: number;
+  height?: number;
+  margin?: number;
+  color?: {
+    dark?: string;
+    light?: string;
+  };
+  errorCorrectionLevel?: 'L' | 'M' | 'Q' | 'H';
+}
+
+export interface QRGenerateRequest {
+  text: string;
+  width?: number;
+  height?: number;
+  margin?: number;
+  color?: {
+    dark?: string;
+    light?: string;
+  };
+  errorCorrectionLevel?: 'L' | 'M' | 'Q' | 'H';
+}
+
+export interface QRGenerateResponse {
+  success: boolean;
+  data: {
+    text: string;
+    qrCode: string; // base64
+    timestamp: string;
+  };
+}
+
+export interface QRCompleteResponse {
+  success: boolean;
+  data: {
+    text: string;
+    dataUrl: string;
+    buffer: Buffer;
+    svg: string;
+    timestamp: string;
+  };
 }

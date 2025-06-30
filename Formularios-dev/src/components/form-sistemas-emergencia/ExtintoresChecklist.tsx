@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -10,11 +10,12 @@ import {
   Divider
 } from "@mui/material";
 import { ExtintorBackend } from "../../types/formTypes";
+import { TAGS_CON_SELECCION_EXTINTORES } from "@/lib/constants";
 
 // Definición de props para el componente
 interface ExtintoresChecklistProps {
   tag: string;
-  extintores: ExtintorBackend[];
+  extintores: ExtintorBackend[] | { extintores: ExtintorBackend[] };
   onExtintoresSeleccionados: (extintores: ExtintorBackend[]) => void;
 }
 
@@ -23,31 +24,36 @@ interface ExtintoresSeleccionadosState {
   [key: string]: boolean;
 }
 
-const TAGS_CON_SELECCION_EXTINTORES = [
-  "710BL723-E1", 
-  "710BL723-E2",
-  "710BL723-E3",
-  "710BL723-E4", 
-  "710BL723-E5", 
-  "710BL723-E6", 
-  "710BL723-E7", 
-  "710BL723-E8", 
-  "710BL723-E9",
-  "780BL001",
-  "710BL740-OM1",
-  "710BL740-OM2", 
-  "Generacion",
-  "Electrico"
-];
-
-
 // Función para mostrar los extintores con checkbox
 const ExtintoresChecklist = ({ 
   tag, 
   extintores, 
   onExtintoresSeleccionados 
-}:ExtintoresChecklistProps) => {
+}: ExtintoresChecklistProps) => {
   const [extintoresSeleccionados, setExtintoresSeleccionados] = useState<ExtintoresSeleccionadosState>({});
+
+  // Usar useMemo para procesar los extintores igual que en ExtintoresVisualizacion
+  const extintoresArray = useMemo(() => {
+    if (!extintores) {
+      return [];
+    }
+
+    // Si es un objeto con propiedad extintores
+    if (
+      typeof extintores === "object" &&
+      !Array.isArray(extintores) &&
+      "extintores" in extintores
+    ) {
+      return extintores.extintores || [];
+    }
+
+    // Si ya es un array
+    if (Array.isArray(extintores)) {
+      return extintores;
+    }
+
+    return [];
+  }, [extintores]);
 
   const requiereSeleccion = TAGS_CON_SELECCION_EXTINTORES.includes(tag);
 
@@ -63,11 +69,11 @@ const ExtintoresChecklist = ({
     
     // Crear un objeto con todos los extintores establecidos como no seleccionados
     const initialState: ExtintoresSeleccionadosState = {};
-    extintores.forEach((extintor: ExtintorBackend) => {
+    extintoresArray.forEach((extintor: ExtintorBackend) => {
       initialState[extintor._id] = false;
     });
     setExtintoresSeleccionados(initialState);
-  }, [extintores, tag, requiereSeleccion]); // Remove onExtintoresSeleccionados from here
+  }, [extintoresArray, tag, requiereSeleccion]); // Usar extintoresArray en lugar de extintores
 
   // Manejar el cambio en la selección de un extintor
   const handleCheckboxChange = (event: React.ChangeEvent<HTMLInputElement>, extintorId: string) => {
@@ -78,7 +84,7 @@ const ExtintoresChecklist = ({
     setExtintoresSeleccionados(newSeleccionados);
     
     // Enviar los extintores seleccionados al componente padre
-    const seleccionados = extintores.filter(extintor => 
+    const seleccionados = extintoresArray.filter(extintor => 
       newSeleccionados[extintor._id]
     );
     onExtintoresSeleccionados(seleccionados);
@@ -87,17 +93,17 @@ const ExtintoresChecklist = ({
   // Seleccionar todos los extintores
   const seleccionarTodos = () => {
     const newSeleccionados: ExtintoresSeleccionadosState = {};
-    extintores.forEach((extintor: ExtintorBackend) => {
+    extintoresArray.forEach((extintor: ExtintorBackend) => {
       newSeleccionados[extintor._id] = true;
     });
     setExtintoresSeleccionados(newSeleccionados);
-    onExtintoresSeleccionados([...extintores]);
+    onExtintoresSeleccionados([...extintoresArray]);
   };
 
   // Deseleccionar todos los extintores
   const deseleccionarTodos = () => {
     const newSeleccionados: ExtintoresSeleccionadosState = {};
-    extintores.forEach((extintor: ExtintorBackend) => {
+    extintoresArray.forEach((extintor: ExtintorBackend) => {
       newSeleccionados[extintor._id] = false;
     });
     setExtintoresSeleccionados(newSeleccionados);
@@ -107,7 +113,7 @@ const ExtintoresChecklist = ({
   return (
     <Paper elevation={2} sx={{ p: 2, height: '100%', minHeight: '56px' }}>
       {tag ? (
-        extintores.length > 0 ? (
+        extintoresArray.length > 0 ? (
           <Box>
             <Typography variant="subtitle2" gutterBottom>
               Extintores en {tag}:
@@ -134,7 +140,7 @@ const ExtintoresChecklist = ({
             
             <Box sx={{ maxHeight: '200px', overflowY: 'auto' }}>
               <FormGroup>
-                {extintores.map((extintor: ExtintorBackend) => (
+                {extintoresArray.map((extintor: ExtintorBackend) => (
                   <FormControlLabel
                     key={extintor._id}
                     control={

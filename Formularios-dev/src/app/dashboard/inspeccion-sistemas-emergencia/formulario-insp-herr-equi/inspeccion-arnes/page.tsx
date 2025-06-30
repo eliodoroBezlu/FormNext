@@ -42,11 +42,9 @@ export default function InspeccionArnesPage() {
 
   const onSubmit = async (data: FormData) => {
     try {
-      console.log("Datos enviados:", data);
       
       await crearInspeccion(data);
       router.push("/dashboard");
-      console.log("Datos enviados:", data);
     } catch (error) {
       console.error("Error al enviar el formulario:", error);
       // Aquí podrías mostrar un mensaje de error al usuario

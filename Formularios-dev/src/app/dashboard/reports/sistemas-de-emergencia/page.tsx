@@ -1,4 +1,3 @@
-
 "use client"
 
 import type React from "react"
@@ -25,6 +24,7 @@ import {
   Select,
   Button,
   Container,
+  Chip,
 } from "@mui/material"
 import { 
   Visibility as VisibilityIcon, 
@@ -33,15 +33,19 @@ import {
   Edit as EditIcon,
   Search as SearchIcon,
   Clear as ClearIcon,
+  FireExtinguisher as ExtintorIcon,
+  ArrowBack as ArrowBackIcon,
 } from "@mui/icons-material"
 import { useRouter } from "next/navigation"
 import { 
   descargarPdfCliente, 
   descargarExcelInspeccionesEmergenciaCliente 
 } from "@/app/actions/client"
-import { buscarAreas, obtenerSistemasEmergenciaReport } from "@/app/actions/inspeccion"
-import type { FiltrosInspeccion, InspeccionServiceExport } from "@/types/formTypes"
+import { buscarAreas, obtenerExtintoresPorArea, obtenerSistemasEmergenciaReport } from "@/app/actions/inspeccion"
 
+import type { ExtintorBackend, FiltrosInspeccion, InspeccionServiceExport } from "@/types/formTypes"
+
+// Interfaces para extintores
 // Lista de meses para el filtro
 const MESES = [
   "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO",
@@ -65,14 +69,21 @@ export default function ListaInspecciones() {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   
-  // Estado para controlar la visibilidad de la tabla de resultados
+  // Estado para controlar la visibilidad de las tablas
   const [mostrarResultados, setMostrarResultados] = useState(false)
+  const [mostrarExtintores, setMostrarExtintores] = useState(false)
   
   // Estados para los filtros
   const [areaFilter, setAreaFilter] = useState("")
   const [superintendenciaFilter, setSuperintendenciaFilter] = useState("")
   const [mesFilter, setMesFilter] = useState("")
   const [documentCodeFilter, setDocumentCodeFilter] = useState("")
+  
+  // Estados para extintores
+  const [extintores, setExtintores] = useState<ExtintorBackend[]>([])
+  const [loadingExtintores, setLoadingExtintores] = useState(false)
+  const [pageExtintores, setPageExtintores] = useState(0)
+  const [rowsPerPageExtintores, setRowsPerPageExtintores] = useState(10)
   
   // Lista para el desplegable de áreas
   const [areas, setAreas] = useState<string[]>([])
@@ -116,6 +127,7 @@ export default function ListaInspecciones() {
       setInspecciones(data)
       setPage(0) // Resetear a la primera página cuando se filtran resultados
       setMostrarResultados(true) // Mostrar resultados después de buscar
+      setMostrarExtintores(false) // Ocultar extintores si están visibles
     } catch (error) {
       console.error("Error al filtrar las inspecciones:", error)
       setError("No se pudieron cargar las inspecciones con los filtros seleccionados")
@@ -124,13 +136,52 @@ export default function ListaInspecciones() {
     }
   }
 
-  const limpiarFiltros = () => {
+  const mostrarExtintoresPorArea = async () => {
+    if (!areaFilter) {
+      setError("Por favor selecciona un área para ver los extintores")
+      return
+    }
+
+    try {
+      setLoadingExtintores(true)
+      setError(null)
+      const response = await obtenerExtintoresPorArea(areaFilter)
+      setExtintores(response.extintores.extintores)
+
+      
+      setPageExtintores(0)
+      setMostrarExtintores(true)
+      setMostrarResultados(false) // Ocultar inspecciones si están visibles
+    } catch (error) {
+      console.error("Error al cargar extintores:", error)
+      setError("No se pudieron cargar los extintores del área seleccionada")
+    } finally {
+      setLoadingExtintores(false)
+    }
+  }
+
+ 
+
+  const limpiarTodo = () => {
+    // Limpiar filtros de inspecciones
     setAreaFilter("")
     setSuperintendenciaFilter("")
     setMesFilter("")
     setDocumentCodeFilter("")
     setInspecciones([])
-    setMostrarResultados(false) // Ocultar resultados al limpiar filtros
+    setMostrarResultados(false)
+    
+    // Limpiar filtros de extintores
+    setExtintores([])
+    setMostrarExtintores(false)
+    
+    // Limpiar errores
+    setError(null)
+  }
+
+  const volverAInspecciones = () => {
+    setMostrarExtintores(false)
+    setMostrarResultados(true)
   }
 
   const handleChangePage = (event: unknown, newPage: number) => {
@@ -140,6 +191,15 @@ export default function ListaInspecciones() {
   const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(Number.parseInt(event.target.value, 10))
     setPage(0)
+  }
+
+  const handleChangePageExtintores = (event: unknown, newPage: number) => {
+    setPageExtintores(newPage)
+  }
+
+  const handleChangeRowsPerPageExtintores = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPageExtintores(Number.parseInt(event.target.value, 10))
+    setPageExtintores(0)
   }
 
   const handleVerDetalle = (id: string) => {
@@ -172,6 +232,40 @@ export default function ListaInspecciones() {
       filtrarInspecciones()
     }
   }
+
+  const obtenerMesesInspeccionados = (inspeccion: InspeccionServiceExport, mesFiltrando?: string): string => {
+    if (!inspeccion.meses || Object.keys(inspeccion.meses).length === 0) {
+      return 'Sin inspecciones';
+    }
+    
+    // Si hay un filtro de mes activo, mostrar ese mes específicamente
+    if (mesFiltrando && inspeccion.meses[mesFiltrando]) {
+      return mesFiltrando;
+    }
+    
+    // Si no hay filtro o es vacío, mostrar el último mes inspeccionado
+    const mesesConInspeccion = Object.keys(inspeccion.meses);
+    
+    // Definir el orden de los meses para encontrar el más reciente
+    const ordenMeses = [
+      "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO",
+      "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"
+    ];
+    
+    // Encontrar el mes más reciente según el orden
+    let ultimoMes = mesesConInspeccion[0];
+    let ultimoIndice = ordenMeses.indexOf(ultimoMes);
+    
+    for (const mes of mesesConInspeccion) {
+      const indiceMes = ordenMeses.indexOf(mes);
+      if (indiceMes > ultimoIndice) {
+        ultimoMes = mes;
+        ultimoIndice = indiceMes;
+      }
+    }
+    
+    return ultimoMes;
+  };
 
   return (
     <Container maxWidth="lg">
@@ -260,10 +354,10 @@ export default function ListaInspecciones() {
             <Button 
               variant="outlined" 
               startIcon={<ClearIcon />} 
-              onClick={limpiarFiltros}
+              onClick={limpiarTodo}
               sx={{ mr: 1 }}
             >
-              Limpiar
+              Limpiar Todo
             </Button>
             <Button 
               variant="contained" 
@@ -271,15 +365,25 @@ export default function ListaInspecciones() {
               onClick={filtrarInspecciones}
               color="primary"
               disabled={loading}
+              sx={{ mr: 1 }}
             >
-              {loading ? "Buscando..." : "Buscar"}
+              {loading ? "Buscando..." : "Buscar Inspecciones"}
+            </Button>
+            <Button 
+              variant="contained" 
+              startIcon={<ExtintorIcon />} 
+              onClick={mostrarExtintoresPorArea}
+              color="secondary"
+              disabled={loadingExtintores || !areaFilter}
+            >
+              {loadingExtintores ? "Cargando..." : "Mostrar Extintores"}
             </Button>
           </Grid>
         </Grid>
       </Paper>
       
       {/* Estado de carga */}
-      {loading && (
+      {(loading || loadingExtintores) && (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
           <CircularProgress />
         </Box>
@@ -290,6 +394,91 @@ export default function ListaInspecciones() {
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="100px">
           <Typography color="error">{error}</Typography>
         </Box>
+      )}
+      
+      {/* TABLA DE EXTINTORES */}
+      {mostrarExtintores && !loadingExtintores && (
+        <Paper elevation={2} sx={{ borderRadius: '8px', mb: 4 }}>
+          <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">
+              Extintores del Área: {areaFilter} ({extintores.length})
+            </Typography>
+            {mostrarResultados && (
+              <Button
+                variant="outlined"
+                startIcon={<ArrowBackIcon />}
+                onClick={volverAInspecciones}
+                size="small"
+              >
+                Volver a Inspecciones
+              </Button>
+            )}
+          </Box>
+          
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableCell>Área</TableCell>
+                  <TableCell>Tag</TableCell>
+                  <TableCell>Código Extintor</TableCell>
+                  <TableCell>Ubicación</TableCell>
+                  <TableCell align="center">Estado Inspección</TableCell>
+                  <TableCell align="center">Estado Activo</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {extintores.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                      <Typography variant="body1" color="textSecondary">
+                        No se encontraron extintores en el área seleccionada
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  extintores
+                    .slice(pageExtintores * rowsPerPageExtintores, pageExtintores * rowsPerPageExtintores + rowsPerPageExtintores)
+                    .map((extintor, index) => (
+                      <TableRow 
+                        key={`${extintor._id}-${pageExtintores * rowsPerPageExtintores + index}`}
+                        sx={{ '&:hover': { backgroundColor: '#f9f9f9' } }}
+                      >
+                        <TableCell>{extintor.area}</TableCell>
+                        <TableCell>{extintor.tag}</TableCell>
+                        <TableCell>{extintor.CodigoExtintor}</TableCell>
+                        <TableCell>{extintor.Ubicacion}</TableCell>
+                        <TableCell align="center">
+                          <Chip 
+                            label={extintor.inspeccionado ? "Inspeccionado" : "No Inspeccionado"} 
+                            color={extintor.inspeccionado ? "success" : "error"}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip 
+                            label={extintor.activo ? "Activo" : "Inactivo"} 
+                            color={extintor.activo ? "primary" : "default"}
+                            size="small"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25]}
+            component="div"
+            count={extintores.length}
+            rowsPerPage={rowsPerPageExtintores}
+            page={pageExtintores}
+            onPageChange={handleChangePageExtintores}
+            onRowsPerPageChange={handleChangeRowsPerPageExtintores}
+            labelRowsPerPage="Filas por página"
+          />
+        </Paper>
       )}
       
       {/* RESULTADOS DE BÚSQUEDA - Solo se muestra cuando mostrarResultados es true y no hay loading */}
@@ -338,7 +527,7 @@ export default function ListaInspecciones() {
                         <TableCell>{inspeccion.tag}</TableCell>
                         <TableCell>{inspeccion.responsableEdificio}</TableCell>
                         <TableCell>{inspeccion.documentCode}</TableCell>
-                        <TableCell>{inspeccion.mesActual}</TableCell>
+                        <TableCell>{obtenerMesesInspeccionados(inspeccion, mesFilter)}</TableCell>
                         <TableCell align="center">
                           <Tooltip title="Ver detalle">
                             <IconButton
@@ -398,5 +587,3 @@ export default function ListaInspecciones() {
     </Container>
   )
 }
-
-
