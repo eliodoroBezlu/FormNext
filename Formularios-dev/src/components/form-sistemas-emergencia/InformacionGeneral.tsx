@@ -10,6 +10,7 @@ import { type Control, Controller, type FieldErrors } from "react-hook-form";
 import type { FormularioInspeccion } from "../../types/formTypes";
 import { useState } from "react";
 import { buscarTrabajadores } from "@/app/actions/inspeccion";
+import { MESES } from "@/lib/constants";
 // Array de superintendencias
 const SUPERINTENDENCIAS = [
   "Superintendencia de Mantenimiento - Eléctrico e Instrumentación Planta",
@@ -44,12 +45,12 @@ const inputProps = {
 // Función para obtener el mes actual
 const getMesActual = (): string => {
   // Para testing, puedes hardcodear un mes específico
-  return "AGOSTO"; // Fuerza julio
+  //return "AGOSTO"; // Fuerza julio
   
   // Para producción, usar el mes real
-  //const fechaActual = new Date();
-  //const mesIndex = fechaActual.getMonth(); // 0-11
-  //return MESES[mesIndex];
+  const fechaActual = new Date();
+  const mesIndex = fechaActual.getMonth(); // 0-11
+  return MESES[mesIndex];
 };
 
 const PERIODOS = ["ENERO-JUNIO", "JULIO-DICIEMBRE"];

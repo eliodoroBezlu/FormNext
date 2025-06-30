@@ -190,16 +190,9 @@ export function InspeccionSistemasEmergencia() {
           await obtenerExtintoresPorTag(primerTag);
 
 
-        if (
-          !areaExtintores ||
-          !areaExtintores.extintores ||
-          !areaExtintores.extintores.extintores ||
-          !Array.isArray(areaExtintores.extintores.extintores)
-        ) {
+        if (!areaExtintores || !areaExtintores.extintores || !Array.isArray(areaExtintores.extintores)) {
           console.error("Estructura de datos inválida:", areaExtintores);
-          throw new Error(
-            "La respuesta de la API no tiene la estructura esperada"
-          );
+          throw new Error("La respuesta de la API no tiene la estructura esperada");
         }
 
         const tagsConEstado = await Promise.all(
@@ -217,14 +210,15 @@ export function InspeccionSistemasEmergencia() {
 
             return {
               tag,
-              extintoresPendientes: extintores.extintores.extintores.length,
+              extintoresPendientes: extintores.extintores?.extintores?.length,
               totalActivos: totalActivos,
               inspeccionado: estaInspeccionado,
             };
           })
         );
 
-        const extintoresArray = areaExtintores.extintores?.extintores || [];
+        const extintoresArray = areaExtintores.extintores || [];
+
         // Seleccionamos el primer tag automáticamente
         setAreaData((prev) => ({
           ...prev,
