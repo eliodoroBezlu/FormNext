@@ -204,10 +204,6 @@ export function InspeccionSistemasEmergencia() {
             const estaInspeccionado = tagsInspeccionados.some(
               (t: TagConEstado) => t.tag === tag
             );
-            //const extintoresPendientes = extintores.filter(ext => !ext.inspeccionado).length;
-            console.log("cantidad de extintores" , areaExtintores.extintores?.length )
-            console.log("extintores ", areaExtintores )
-            console.log("atributo de cantidad de extintores activos", areaExtintores.totalExtintoresActivosArea )
             return {
               tag,
               extintoresPendientes: extintores.extintores?.length || 0,
