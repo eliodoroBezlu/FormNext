@@ -146,7 +146,15 @@ export default function ListaInspecciones() {
       setLoadingExtintores(true)
       setError(null)
       const response = await obtenerExtintoresPorArea(areaFilter)
-      setExtintores(response.extintores.extintores)
+      console.log("respuesta :", response)
+       if (response && response.extintores && Array.isArray(response.extintores)) {
+        setExtintores(response.extintores)
+      } else {
+        // Manejar el caso donde la respuesta no tiene la estructura esperada
+        console.error("Estructura de respuesta inesperada:", response)
+        setExtintores([])
+        setError("La respuesta del servidor no tiene el formato esperado")
+      }
 
       
       setPageExtintores(0)
@@ -401,7 +409,7 @@ export default function ListaInspecciones() {
         <Paper elevation={2} sx={{ borderRadius: '8px', mb: 4 }}>
           <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6">
-              Extintores del Área: {areaFilter} ({extintores.length})
+              Extintores del Área: {areaFilter} ({extintores?.length || 0})
             </Typography>
             {mostrarResultados && (
               <Button
@@ -428,7 +436,7 @@ export default function ListaInspecciones() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {extintores.length === 0 ? (
+                {extintores?.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                       <Typography variant="body1" color="textSecondary">
