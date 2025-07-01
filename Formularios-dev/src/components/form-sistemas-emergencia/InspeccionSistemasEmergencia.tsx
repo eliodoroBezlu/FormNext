@@ -199,18 +199,18 @@ export function InspeccionSistemasEmergencia() {
           tagsDelArea.map(async (tag) => {
             const extintores = await obtenerExtintoresPorTag(tag);
 
-            const totalActivos =
-              extintores.extintores?.extintores?.length > 0
-                ? extintores.extintores.totalActivosArea || 0
-                : 0;
+            const totalActivos = extintores.totalExtintoresActivosArea || 0;
+          
             const estaInspeccionado = tagsInspeccionados.some(
               (t: TagConEstado) => t.tag === tag
             );
             //const extintoresPendientes = extintores.filter(ext => !ext.inspeccionado).length;
-
+            console.log("cantidad de extintores" , areaExtintores.extintores?.length )
+            console.log("extintores ", areaExtintores )
+            console.log("atributo de cantidad de extintores activos", areaExtintores.totalExtintoresActivosArea )
             return {
               tag,
-              extintoresPendientes: extintores.extintores?.extintores?.length,
+              extintoresPendientes: extintores.extintores?.length || 0,
               totalActivos: totalActivos,
               inspeccionado: estaInspeccionado,
             };
@@ -227,7 +227,7 @@ export function InspeccionSistemasEmergencia() {
           tagOptions: tagsDelArea,
           tagsConEstado: tagsConEstado,
           extintores: extintoresArray,
-          totalExtintoresActivos: areaExtintores.extintores?.totalActivosArea || 0,
+          totalExtintoresActivos: areaExtintores.totalExtintoresActivosArea || 0,
         }));
 
         setValue("tag", primerTag);
@@ -255,7 +255,7 @@ export function InspeccionSistemasEmergencia() {
         setAreaData((prev) => ({
           ...prev,
           tag: selectedTag,
-          extintores: tagExtintores.extintores?.extintores || [],
+          extintores: tagExtintores.extintores || [],
         }));
         setValue("tag", selectedTag);
       } catch (error) {

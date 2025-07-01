@@ -252,12 +252,9 @@ export interface ExtintorBackend {
 
 export interface ExtintorAreaResponse {
   success: boolean;
-  extintores: {
-    extintores: ExtintorBackend[];
-    totalActivosArea: number;
-  };
+  extintores: ExtintorBackend[]; // <- Directamente el array, no anidado
   count: number;
-  totalExtintoresActivos: number;
+  totalExtintoresActivosArea: number;
 }
 
 
