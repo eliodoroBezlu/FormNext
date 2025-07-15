@@ -23,7 +23,7 @@ export function UserInfo() {
     switch (role) {
       case 'admin': return 'Administrador';
       case 'supervisor': return 'Supervisor';
-      case 'operator': return 'Operador';
+      case 'tecnico': return 'tecnico';
       case 'viewer': return 'Visualizador';
       default: return role;
     }

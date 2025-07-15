@@ -1,23 +1,12 @@
-// components/ProtectedRoute.tsx - Componente para proteger rutas
+"use client";
+
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { Box, CircularProgress, Alert } from "@mui/material";
-import { useUserRole, UserRole } from "@/hooks/useUserRole";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-  requiredRoles?: UserRole[];
-  fallbackComponent?: React.ReactNode;
-}
-
-export function ProtectedRoute({ 
-  children, 
-  requiredRoles = [], 
-  fallbackComponent 
-}: ProtectedRouteProps) {
+export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
-  const { hasAnyRole, isLoading } = useUserRole();
   const router = useRouter();
 
   useEffect(() => {
@@ -26,7 +15,7 @@ export function ProtectedRoute({
     }
   }, [status, router]);
 
-  if (status === "loading" || isLoading) {
+  if (status === "loading") {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
         <CircularProgress />
@@ -34,15 +23,11 @@ export function ProtectedRoute({
     );
   }
 
-  if (!session) {
-    return null;
-  }
-
-  if (requiredRoles.length > 0 && !hasAnyRole(requiredRoles)) {
-    return fallbackComponent || (
+  if (status === "unauthenticated") {
+    return (
       <Box p={3}>
         <Alert severity="error">
-          No tienes permisos para acceder a esta sección.
+          No tienes permisos para acceder a esta sección. Redirigiendo...
         </Alert>
       </Box>
     );
