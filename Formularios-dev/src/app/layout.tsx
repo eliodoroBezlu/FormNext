@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeContextProvider } from "@/styles/ThemeContext";
 import { Providers } from "./providers";
+import { LocalizationWrapper } from "@/components/LocalizationWrapper";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -16,10 +17,14 @@ export default function RootLayout({
 }>) {
   
   return (
-    <html lang="en">
+    <html lang="es">
       <body>
         <Providers>
-            <ThemeContextProvider>{children}</ThemeContextProvider>
+            <ThemeContextProvider>
+              <LocalizationWrapper >
+                {children}
+              </LocalizationWrapper>
+            </ThemeContextProvider>
         </Providers>
       </body>
     </html>

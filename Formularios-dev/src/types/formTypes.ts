@@ -323,3 +323,161 @@ export interface QRCompleteResponse {
     timestamp: string;
   };
 }
+
+
+/// iro isop 
+
+// types/form-types.ts
+export interface Question {
+  _id?: string
+  text: string
+}
+
+export interface Section {
+  _id?: string
+  title: string
+  maxPoints: number
+  questions: Question[]
+}
+
+
+
+export interface VerificationField {
+  _id?: string
+  label: string
+  type: "text" | "date" | "number" | "select"
+  options?: string[] // Para campos select
+  required?: boolean
+}
+
+export interface FormBuilderData {
+  _id?: string
+  name: string
+  code: string
+  revision: string
+  type: "interna" | "externa"
+  verificationFields: VerificationField[]
+  sections: Section[]
+}
+
+export interface FormTemplate {
+  _id: string
+  name: string // Ej: "AISLAMIENTO", "TRABAJO EN ALTURA"
+  code: string
+  revision: string // Número de revisión
+  type: "interna" | "externa" // Tipo de inspección
+  verificationFields: VerificationField[] // Campos configurables
+  sections: Section[]
+}
+
+export interface VerificationList {
+  [key: string]: string // Datos dinámicos basados en los campos configurables
+}
+
+export interface InspectionTeamMember {
+  _id?: string
+  nombre: string
+  cargo: string
+  firma: string
+}
+
+export interface ValoracionCriterio {
+  _id?: string
+  valoracion: number | "N/A"
+  criterio: string
+}
+
+export interface QuestionResponse {
+  _id?: string
+  questionText: string // Texto completo de la pregunta (snapshot histórico)
+  response: string | number // 0, 1, 2, 3, o "N/A"
+  points: number // Puntaje obtenido: 0 si N/A, sino igual al response numérico
+  comment?: string // Comentario específico de esta pregunta
+}
+
+export interface SectionResponse {
+  _id?: string
+  sectionId: string // ID de la sección del template
+  questions: QuestionResponse[]
+  
+  // Campos calculados para la sección
+  maxPoints: number // Máximo teórico de puntos posibles (copiado del template)
+  obtainedPoints: number // Puntos realmente obtenidos (suma de points donde response != "N/A")
+  applicablePoints: number // Puntos aplicables (maxPoints - puntos de preguntas "N/A")
+  naCount: number // Cantidad de preguntas marcadas como "N/A"
+  compliancePercentage: number // Porcentaje de cumplimiento: (obtainedPoints/applicablePoints) × 100 (0-100)
+  sectionComment?: string // Comentario general de la sección
+}
+
+export interface FormInstance {
+  _id: string
+  templateId: string
+  verificationList: VerificationList
+  inspectionTeam: InspectionTeamMember[]
+  valoracionCriterio: ValoracionCriterio[]
+  
+  // Cambio principal: respuestas organizadas por secciones
+  sections: SectionResponse[]
+  
+  aspectosPositivos?: string
+  aspectosAdicionales?: string
+  
+  // Campos calculados automáticamente para toda la instancia
+  totalObtainedPoints: number // Suma de obtainedPoints de todas las secciones
+  totalApplicablePoints: number // Suma de applicablePoints de todas las secciones
+  totalMaxPoints: number // Suma de maxPoints de todas las secciones
+  totalNaCount: number // Total de preguntas "N/A" en toda la instancia
+  overallCompliancePercentage: number // Porcentaje general: (totalObtainedPoints/totalApplicablePoints) × 100 (0-100)
+  
+  status?: "borrador" | "completado" | "revisado" | "aprobado"
+  createdBy?: string
+  updatedBy?: string
+  reviewedBy?: string
+  approvedBy?: string
+  reviewedAt?: Date
+  approvedAt?: Date
+  createdAt?: Date
+  updatedAt?: Date
+}
+
+export interface ApiResponse<T> {
+  success: boolean
+  data?: T
+  error?: string
+  message?: string
+}
+
+export type FormBuilderPath = 
+  | "name"
+  | "code" 
+  | "revision"
+  | "type"
+  | "verificationFields"
+  | "sections"
+  | `verificationFields.${number}`
+  | `verificationFields.${number}.label`
+  | `verificationFields.${number}.type`
+  | `verificationFields.${number}.id`
+  | `verificationFields.${number}._id`
+  | `verificationFields.${number}.options`
+  | `verificationFields.${number}.required`
+  | `sections.${number}`
+  | `sections.${number}.id`
+  | `sections.${number}.title`
+  | `sections.${number}.maxPoints`
+  | `sections.${number}.questions`
+  | `sections.${number}.questions.${number}`;
+
+
+
+  export interface CustomForm {
+  id: string
+  title: string
+  description?: string
+  category: string
+  createdBy: string
+  createdAt: Date
+  status: 'draft' | 'published' | 'archived'
+  tags?: string[]
+  type: 'manual' | 'imported' | 'copied'
+}

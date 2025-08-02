@@ -46,109 +46,11 @@ export const NAVIGATION: NavigationItem[] = [
     requiredRoles: ['admin'],
   },
   {
-    segment: "inspeccion-sistemas-emergencia",
+    segment: "formularios-de-inspeccion",
     title: "Formularios de Inspección de Seguridad",
     icon: "description",
     requiredRoles: ['supervisor'],
-    children: [
-      {
-        segment: "formulario-insp-herr-equi",
-        title: "Formularios de Inspeccion de herramientas y equipos",
-        icon: "description",
-        requiredRoles: ['supervisor'],
-        children: [
-          {
-            segment: "form-sistemas-de-emergencia",
-            title: "Formularios Sistemas de emergencia",
-            icon: "description",
-            requiredRoles: ['supervisor'],
-          },
-          {
-            segment: "inspeccion-arnes",
-            title: "Formulario de Chequeo de Arnés y Conectores",
-            icon: "description",
-            requiredRoles: ['supervisor'],
-          },
-        ],
-      },
-      {
-        segment: "formularios-IRO-ISOP",
-        title: "Formularios IRO's - ISOP",
-        icon: "description",
-        requiredRoles: ['tecnico'],
-        children: [
-          {
-            segment: "aislamiento",
-            title: "Aislamiento(|)",
-            icon: "description",
-            requiredRoles: ['tecnico'],
-          },
-          {
-            segment: "izaje",
-            title: "Izaje(|)",
-            icon: "description",
-            requiredRoles: ['tecnico'],
-          },
-          {
-            segment: "sustancias",
-            title: "Sustancias Peligrosas(|)",
-            icon: "description",
-            requiredRoles: ['tecnico'],
-          },
-          {
-            segment: "talFreBan",
-            title: "Taludes, Frentes de Carguio, Banquinas(|)",
-            icon: "description",
-            requiredRoles: ['tecnico'],
-          },
-          {
-            segment: "actos",
-            title: "Trabajo Eléctrico - Actos(|)",
-            icon: "description",
-            requiredRoles: ['tecnico'],
-          },
-          {
-            segment: "condiciones",
-            title: "Trabajo Eléctrico - Condiciones(|)",
-            icon: "description",
-            requiredRoles: ['tecnico'],
-          },
-          {
-            segment: "altura",
-            title: "Trabajo en Altura(|)",
-            icon: "description",
-            requiredRoles: ['tecnico'],
-          },
-          {
-            segment: "confinado",
-            title: "Trabajo en espacios confinados(|)",
-            icon: "description",
-            requiredRoles: ['tecnico'],
-          },
-
-          {
-            segment: "excavaciones",
-            title: "Trabajo en excavaciones(|)",
-            icon: "description",
-            requiredRoles: ['tecnico'],
-          },
-
-          {
-            segment: "caliente",
-            title: "Trabajo en caliente(|)",
-            icon: "description",
-            requiredRoles: ['tecnico'],
-          },
-
-          {
-            segment: "isop",
-            title: "Inspeccion de Seguridad Operativas(|)",
-            icon: "description",
-            requiredRoles: ['tecnico'],
-          },
-        ],
-      },
-    ],
+    
   },
 
   {

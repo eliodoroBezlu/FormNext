@@ -28,6 +28,7 @@ import { lightTheme, darkTheme } from "../../styles/theme";
 import { signOut } from "next-auth/react";
 import CloseIcon from "@mui/icons-material/Close";
 
+
 const drawerWidth = 350;
 
 export default function DashboardLayout({

@@ -57,7 +57,7 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, account, trigger: _ }) {
+    async jwt({ token, account, /* trigger */ }) {
       // ✅ Configuración inicial del token (primera vez)
       if (account) {
         console.log('Initial token setup');

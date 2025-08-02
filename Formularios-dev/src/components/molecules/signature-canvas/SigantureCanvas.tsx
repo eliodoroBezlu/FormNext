@@ -4,11 +4,6 @@ import { useRef, useState, useEffect, forwardRef } from "react";
 import { Box, Button, Grid, Typography } from "@mui/material";
 import SignatureCanvas from "react-signature-canvas";
 
-// Interfaz para las opciones del contexto 2D
-interface CanvasRenderingContext2DSettings {
-  willReadFrequently?: boolean;
-}
-
 interface DynamicSignatureCanvasProps {
   onClear: () => void;
   onSave: () => void;
@@ -18,16 +13,14 @@ interface DynamicSignatureCanvasProps {
 }
 
 const DynamicSignatureCanvas = forwardRef<
-  SignatureCanvas, // Usamos el tipo implícito del componente SignatureCanvas
+  SignatureCanvas,
   DynamicSignatureCanvasProps
 >(({ onClear, onSave, heightPercentage = 100, error = false, helperText }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-
-  // Referencia al componente SignatureCanvas
   const sigCanvasRef = useRef<SignatureCanvas | null>(null);
 
-  // Actualiza las dimensiones del canvas cuando cambia el tamaño de la ventana o el porcentaje de altura
+  // Actualiza las dimensiones del canvas
   useEffect(() => {
     const updateDimensions = () => {
       if (containerRef.current) {
@@ -39,43 +32,20 @@ const DynamicSignatureCanvas = forwardRef<
       }
     };
 
-    updateDimensions(); // Calcula las dimensiones iniciales
-    window.addEventListener("resize", updateDimensions); // Escucha cambios en el tamaño de la ventana
-    return () => window.removeEventListener("resize", updateDimensions); // Limpia el listener
+    updateDimensions();
+    window.addEventListener("resize", updateDimensions);
+    return () => window.removeEventListener("resize", updateDimensions);
   }, [heightPercentage]);
 
-  // Configura willReadFrequently después de que el canvas se haya inicializado
-  useEffect(() => {
+  const handleClear = () => {
     if (sigCanvasRef.current) {
-      const canvas = sigCanvasRef.current.getCanvas();
-
-      // Guardar una referencia al método original de getContext
-      const originalGetContext = canvas.getContext;
-
-      // Sobrescribir getContext para incluir willReadFrequently
-      Object.defineProperty(canvas, "getContext", {
-        value: (
-          contextId: string,
-          options?: CanvasRenderingContext2DSettings
-        ) => {
-          if (contextId === "2d") {
-            // Llamar al método original con las opciones modificadas
-            return originalGetContext.call(canvas, contextId, {
-              ...options,
-              willReadFrequently: true,
-            });
-          }
-          // Para otros contextos, simplemente llamamos al método original
-          return originalGetContext.call(canvas, contextId, options);
-        },
-        configurable: true,
-      });
+      sigCanvasRef.current.clear();
     }
-  }, [sigCanvasRef]);
+    onClear();
+  };
 
   return (
     <div ref={containerRef} style={{ width: "100%" }}>
-      {/* Contenedor del canvas */}
       <Box
         sx={{
           border: error ? "1px solid #d32f2f" : "1px solid #ccc",
@@ -87,7 +57,7 @@ const DynamicSignatureCanvas = forwardRef<
       >
         <SignatureCanvas
           ref={(instance) => {
-            sigCanvasRef.current = instance; // Guarda la referencia al canvas
+            sigCanvasRef.current = instance;
             if (typeof ref === "function") {
               ref(instance);
             } else if (ref) {
@@ -98,22 +68,28 @@ const DynamicSignatureCanvas = forwardRef<
             width: dimensions.width,
             height: dimensions.height,
             className: "sigCanvas",
+            style: { 
+              touchAction: 'none',
+              userSelect: 'none'
+            }
           }}
+          // Configuraciones optimizadas
+          throttle={16}
+          minWidth={0.5}
+          maxWidth={2.5}
         />
       </Box>
 
-      {/* Mensaje de error */}
       {error && helperText && (
         <Typography variant="caption" color="error" sx={{ mb: 2, display: 'block' }}>
           {helperText}
         </Typography>
       )}
 
-      {/* Botones para limpiar y guardar la firma */}
       <Grid container spacing={2} justifyContent="center">
-        <Grid size={{ xs: 12, sm: 6, md: 4  }}>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <Button
-            onClick={onClear}
+            onClick={handleClear}
             variant="outlined"
             color="secondary"
             fullWidth
@@ -121,7 +97,7 @@ const DynamicSignatureCanvas = forwardRef<
             Limpiar Firma
           </Button>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 4  }}>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <Button
             onClick={onSave}
             variant="contained"

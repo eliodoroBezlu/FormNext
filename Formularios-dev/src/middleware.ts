@@ -1,7 +1,6 @@
 // middleware.ts
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 import { getRoutePermission, getUserRole, hasPermission } from "@/lib/routePermissions";
 
 export default withAuth(
