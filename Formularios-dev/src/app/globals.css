@@ -90,3 +90,7 @@ a {
 .custom-nav-item.MuiListItemButton-root:hover .MuiListItemText-primary {
   color: white !important;
 }
+
+.sigCanvas {
+  will-change: contents;
+}

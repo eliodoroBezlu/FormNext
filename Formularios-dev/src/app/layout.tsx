@@ -2,7 +2,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeContextProvider } from "@/styles/ThemeContext";
-//import { Providers } from "./providers";
+import { Providers } from "./providers";
+import { LocalizationWrapper } from "@/components/LocalizationWrapper";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -14,11 +15,17 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  
   return (
-    <html lang="en">
+    <html lang="es">
       <body>
-          <ThemeContextProvider>{children}</ThemeContextProvider>
-        
+        <Providers>
+            <ThemeContextProvider>
+              <LocalizationWrapper >
+                {children}
+              </LocalizationWrapper>
+            </ThemeContextProvider>
+        </Providers>
       </body>
     </html>
   );

@@ -43,29 +43,48 @@ import SistemasActivos from "./SistemasActivos";
 import InspeccionExtintores from "./InspeccionExtintores";
 import InformacionInspector from "./InformacionInspector";
 import ExtintoresChecklist from "./ExtintoresChecklist";
-import { Autorenew, CheckCircle, LockClock } from "@mui/icons-material";
+import {
+  ArrowBack,
+  Autorenew,
+  CheckCircle,
+  LockClock,
+} from "@mui/icons-material";
 import { MESES, TAGS_CON_SELECCION_EXTINTORES } from "@/lib/constants";
 import ExtintoresVisualizacion from "./ExtintoresVisualizacion";
 
 // Helper functions
 
+export interface InspectionFormProps {
+  onCancel: () => void;
+}
 const obtenerMesActual = (): Mes => {
   // Para testing, puedes hardcodear un mes específico
   // return "FEBRERO"; // Fuerza febrero
-  
+
   // Para producción, usar el mes real
   return MESES[new Date().getMonth()];
 };
 const getPeriodoActual = (): "ENERO-JUNIO" | "JULIO-DICIEMBRE" => {
   const mesActual = obtenerMesActual();
-  const mesesPrimerSemestre = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO"];
-  
-  return mesesPrimerSemestre.includes(mesActual) ? "ENERO-JUNIO" : "JULIO-DICIEMBRE";
+  const mesesPrimerSemestre = [
+    "ENERO",
+    "FEBRERO",
+    "MARZO",
+    "ABRIL",
+    "MAYO",
+    "JUNIO",
+  ];
+
+  return mesesPrimerSemestre.includes(mesActual)
+    ? "ENERO-JUNIO"
+    : "JULIO-DICIEMBRE";
 };
 const getAñoActual = (): number => new Date().getFullYear();
 const getDiaActual = (): number => new Date().getDate();
 
-export function InspeccionSistemasEmergencia() {
+export const InspeccionSistemasEmergencia = ({
+  onCancel,
+}: InspectionFormProps) => {
   const router = useRouter();
   const currentMes = obtenerMesActual();
   const submitInProgress = useRef(false);
@@ -112,6 +131,7 @@ export function InspeccionSistemasEmergencia() {
     extintoresSeleccionados: [] as ExtintorBackend[],
     tagsData: [] as TagConEstado[],
     totalExtintoresActivos: 0,
+    tagUbicaciones: {} as Record<string, string>,
   });
 
   useEffect(() => {
@@ -184,15 +204,47 @@ export function InspeccionSistemasEmergencia() {
           currentMes
         );
 
+        console.log("Tags del área:", tagsDelArea);
+
         const primerTag = tagsDelArea.length > 0 ? tagsDelArea[0] : "";
 
         const areaExtintores: ExtintorAreaResponse =
           await obtenerExtintoresPorTag(primerTag);
 
+        console.log("Extintores del área:", areaExtintores);
 
-        if (!areaExtintores || !areaExtintores.extintores || !Array.isArray(areaExtintores.extintores)) {
+        if (
+          !areaExtintores ||
+          !areaExtintores.extintores ||
+          !Array.isArray(areaExtintores.extintores)
+        ) {
           console.error("Estructura de datos inválida:", areaExtintores);
-          throw new Error("La respuesta de la API no tiene la estructura esperada");
+          throw new Error(
+            "La respuesta de la API no tiene la estructura esperada"
+          );
+        }
+
+        const tagUbicacionesMap: Record<string, string> = {};
+
+        for (const tag of tagsDelArea) {
+          try {
+            const extintoresDelTag = await obtenerExtintoresPorTag(tag);
+            if (
+              extintoresDelTag.extintores &&
+              extintoresDelTag.extintores.length > 0
+            ) {
+              // Tomar la ubicación del primer extintor de este TAG
+              const primeraUbicacion =
+                extintoresDelTag.extintores[0].Ubicacion || "";
+              tagUbicacionesMap[tag] = primeraUbicacion;
+            }
+          } catch (error) {
+            console.error(
+              `Error al obtener extintores para TAG ${tag}:`,
+              error
+            );
+            tagUbicacionesMap[tag] = ""; // Ubicación vacía si hay error
+          }
         }
 
         const tagsConEstado = await Promise.all(
@@ -200,7 +252,7 @@ export function InspeccionSistemasEmergencia() {
             const extintores = await obtenerExtintoresPorTag(tag);
 
             const totalActivos = extintores.totalExtintoresActivosArea || 0;
-          
+
             const estaInspeccionado = tagsInspeccionados.some(
               (t: TagConEstado) => t.tag === tag
             );
@@ -214,6 +266,7 @@ export function InspeccionSistemasEmergencia() {
         );
 
         const extintoresArray = areaExtintores.extintores || [];
+        console.log("Extintores del área:", extintoresArray);
 
         // Seleccionamos el primer tag automáticamente
         setAreaData((prev) => ({
@@ -223,7 +276,9 @@ export function InspeccionSistemasEmergencia() {
           tagOptions: tagsDelArea,
           tagsConEstado: tagsConEstado,
           extintores: extintoresArray,
-          totalExtintoresActivos: areaExtintores.totalExtintoresActivosArea || 0,
+          totalExtintoresActivos:
+            areaExtintores.totalExtintoresActivosArea || 0,
+          tagUbicaciones: tagUbicacionesMap,
         }));
 
         setValue("tag", primerTag);
@@ -269,7 +324,6 @@ export function InspeccionSistemasEmergencia() {
 
   const determinarEstadoTag = (tag: string) => {
     const tagInfo = areaData.tagsConEstado.find((item) => item.tag === tag);
-    
 
     if (!tagInfo) return "pendiente";
 
@@ -335,9 +389,8 @@ export function InspeccionSistemasEmergencia() {
       const mostrarSoloExtintores =
         formularioExiste &&
         todosExtintoresSinInspeccionar() &&
-        response.formulario.meses?.[currentMes]?.inspeccionesExtintor?.length > 0;
-
-     
+        response.formulario.meses?.[currentMes]?.inspeccionesExtintor?.length >
+          0;
 
       setAreaData((prev) => ({
         ...prev,
@@ -358,7 +411,10 @@ export function InspeccionSistemasEmergencia() {
       if (formularioExiste) {
         const mesAlmacenado = response.formulario.mesActual;
 
-        if (mesAlmacenado === currentMes && !(response.extintores?.extintores?.length)) {
+        if (
+          mesAlmacenado === currentMes &&
+          !response.extintores?.extintores?.length
+        ) {
           setFormState((prev) => ({
             ...prev,
             error:
@@ -442,7 +498,7 @@ export function InspeccionSistemasEmergencia() {
       setTimeout(() => {
         resetForm();
         router.push(
-          "/dashboard/inspeccion-sistemas-emergencia/formulario-insp-herr-equi/form-sistemas-de-emergencia"
+          "/dashboard/formularios-de-inspeccion"
         );
       }, 2000);
     } catch (error) {
@@ -479,6 +535,7 @@ export function InspeccionSistemasEmergencia() {
       extintoresSeleccionados: [],
       tagsData: [],
       totalExtintoresActivos: 0,
+      tagUbicaciones: {} as Record<string, string>,
     });
 
     reset(
@@ -515,6 +572,17 @@ export function InspeccionSistemasEmergencia() {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Button
+        variant="outlined"
+        startIcon={<ArrowBack />}
+        onClick={onCancel}
+        sx={{
+          fontSize: { xs: "0.8rem", sm: "0.875rem" },
+          padding: { xs: "6px 12px", sm: "8px 16px" },
+        }}
+      >
+        Volver
+      </Button>
       <Paper elevation={3} sx={{ p: 3 }}>
         <Typography variant="h4" gutterBottom>
           Formulario de Inspección de Seguridad
@@ -572,6 +640,7 @@ export function InspeccionSistemasEmergencia() {
                   >
                     {tagOptions.map((option) => {
                       const estado = determinarEstadoTag(option);
+                      const ubicacion = areaData.tagUbicaciones[option] || "";
 
                       return (
                         <MenuItem key={option} value={option}>
@@ -582,9 +651,27 @@ export function InspeccionSistemasEmergencia() {
                               width: "100%",
                             }}
                           >
-                            <Typography sx={{ flexGrow: 1 }}>
-                              {option}
-                            </Typography>
+                            <Box sx={{ flexGrow: 1 }}>
+                              <Typography
+                                component="span"
+                                sx={{ fontWeight: "bold" }}
+                              >
+                                {option}
+                              </Typography>
+                              {ubicacion && (
+                                <Typography
+                                  component="span"
+                                  sx={{
+                                    ml: 1,
+                                    color: "text.secondary",
+                                    fontSize: "0.875rem",
+                                    fontStyle: "italic",
+                                  }}
+                                >
+                                  ({ubicacion})
+                                </Typography>
+                              )}
+                            </Box>
 
                             {estado === "completado" ? (
                               <CheckCircle
@@ -749,4 +836,4 @@ export function InspeccionSistemasEmergencia() {
       </Paper>
     </Container>
   );
-}
+};

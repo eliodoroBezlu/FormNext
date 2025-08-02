@@ -5,8 +5,9 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart"
 import BarChartIcon from "@mui/icons-material/BarChart"
 import DescriptionIcon from "@mui/icons-material/Description"
 import LayersIcon from "@mui/icons-material/Layers"
+import SettingsIcon from '@mui/icons-material/Settings';
 
-export type IconName = "dashboard" | "shoppingCart" | "barChart" | "description" | "layers"
+export type IconName = "dashboard" | "shoppingCart" | "barChart" | "description" | "layers" | "settings"
 
 interface IconProps extends SvgIconProps {
   name: IconName
@@ -18,6 +19,7 @@ const iconMap: Record<IconName, React.ElementType> = {
   barChart: BarChartIcon,
   description: DescriptionIcon,
   layers: LayersIcon,
+  settings: SettingsIcon, // Assuming 'config' uses the same icon as 'layers'
 }
 
 export function Icon({ name, ...props }: IconProps) {
