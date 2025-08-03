@@ -95,10 +95,10 @@ export default function HomePage() {
     setCurrentView("create")
   }
 
-  const handleCreateCustomForm = () => {
-    setSelectedCustomForm(null)
-    setCurrentView("create-custom")
-  }
+  // const handleCreateCustomForm = () => {
+  //   setSelectedCustomForm(null)
+  //   setCurrentView("create-custom")
+  // }
 
   const handleEditTemplate = (template: FormTemplate) => {
     setSelectedTemplate(template)
