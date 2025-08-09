@@ -30,10 +30,11 @@ import {
   SimpleSection,
 } from "@/types/formTypes";
 import { createInstance } from "@/lib/actions/instance-actions";
-import { startTransition, useState } from "react";
+import { startTransition, useState, useCallback, useMemo } from "react";
 import { valoracionCriterio, valoracionOptions } from "@/lib/constants";
 import { SignatureField } from "@/components/molecules/team-member-signature/SigantureField";
 
+// Tipos más específicos
 interface InspectionFormData {
   verificationList: VerificationList;
   inspectionTeam: InspectionTeamMember[];
@@ -44,6 +45,21 @@ interface InspectionFormData {
 }
 
 type ValoracionValue = "0" | "1" | "2" | "3" | "N/A" | "";
+
+interface SectionMetrics {
+  obtainedPoints: number;
+  applicablePoints: number;
+  naCount: number;
+  compliancePercentage: number;
+}
+
+interface OverallMetrics {
+  totalObtainedPoints: number;
+  totalApplicablePoints: number;
+  totalMaxPoints: number;
+  totalNaCount: number;
+  overallCompliancePercentage: number;
+}
 
 export interface InspectionFormProps {
   template: FormTemplate;
@@ -57,10 +73,42 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
   onCancel,
 }) => {
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null); // Estado para controlar secciones expandidas
+  const [success, setSuccess] = useState<string | null>(null);
 
-  // Crear valores iniciales para la nueva estructura de secciones
-  const createInitialSections = (): SectionResponse[] => {
+  // Función para calcular métricas de una sección (memoizada)
+  const calculateSectionMetrics = useCallback((
+    sectionIndex: number,
+    questions: QuestionResponse[]
+  ): SectionMetrics => {
+    const section = template.sections[sectionIndex];
+    let obtainedPoints = 0;
+    let naCount = 0;
+
+    questions.forEach((question) => {
+      if (question.response === "N/A") {
+        naCount++;
+      } else if (question.response !== "" && question.response !== undefined) {
+        const points = Number(question.response);
+        if (!isNaN(points)) {
+          obtainedPoints += points;
+        }
+      }
+    });
+
+    const applicablePoints = section.maxPoints;
+    const compliancePercentage =
+      section.maxPoints > 0 ? (obtainedPoints / section.maxPoints) * 100 : 0;
+
+    return {
+      obtainedPoints,
+      applicablePoints: Number(applicablePoints.toFixed(2)),
+      naCount,
+      compliancePercentage: Number(compliancePercentage.toFixed(2)),
+    };
+  }, [template.sections]);
+
+  // Crear valores iniciales para las secciones
+  const createInitialSections = useCallback((): SectionResponse[] => {
     return template.sections.map((section) => {
       if (!section._id) {
         throw new Error(
@@ -69,7 +117,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
       }
 
       return {
-        sectionId: section._id, // ✅ Ahora TypeScript sabe que no es undefined
+        sectionId: section._id,
         maxPoints: section.maxPoints,
         questions: section.questions.map((question) => ({
           questionText: question.text,
@@ -84,19 +132,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
         sectionComment: "",
       };
     });
-  };
-
-  // const createInitialSimpleSections = (): SimpleSection[] => {
-  //   return template.simpleSections?.map((section) => ({
-  //     _id: section._id,
-  //     title: section.title,
-  //     questions: section.questions.map((question) => ({
-  //       _id: question._id,
-  //       text: question.text,
-  //       image: question.image,
-  //     })),
-  //   })) || [];
-  // };
+  }, [template.sections]);
 
   const {
     control,
@@ -111,7 +147,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
           (field): field is VerificationField & { _id: string } => !!field._id
         )
         .reduce((acc, field) => {
-          acc[field._id] = ""; // ✅ Ahora field._id es string
+          acc[field.label] = "";
           return acc;
         }, {} as VerificationList),
       inspectionTeam: [
@@ -120,7 +156,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
         { nombre: "", cargo: "", firma: "" },
       ],
       sections: createInitialSections(),
-      // simpleSections: createInitialSimpleSections(),
       aspectosPositivos: "",
       aspectosAdicionales: "",
     },
@@ -137,69 +172,32 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
 
   const watchedSections = watch("sections");
 
-  const markSectionAsNotApplicable = (sectionIndex: number) => {
+  // Marcar sección como no aplicable (optimizada)
+  const markSectionAsNotApplicable = useCallback((sectionIndex: number) => {
     const currentSections = watchedSections;
     const updatedSections = [...currentSections];
 
-    // Marcar todas las preguntas de la sección como "N/A"
-    updatedSections[sectionIndex].questions = updatedSections[
-      sectionIndex
-    ].questions.map((question) => ({
+    // Marcar todas las preguntas como "N/A"
+    const updatedQuestions = updatedSections[sectionIndex].questions.map((question) => ({
       ...question,
       response: "N/A" as ValoracionValue,
       points: 0,
     }));
 
-    // Recalcular métricas de la sección
-    const metrics = calculateSectionMetrics(
-      sectionIndex,
-      updatedSections[sectionIndex].questions
-    );
+    // Calcular métricas una sola vez
+    const metrics = calculateSectionMetrics(sectionIndex, updatedQuestions);
+    
     updatedSections[sectionIndex] = {
       ...updatedSections[sectionIndex],
+      questions: updatedQuestions,
       ...metrics,
     };
 
     setValue("sections", updatedSections);
-  };
+  }, [watchedSections, setValue, calculateSectionMetrics]);
 
-  // Función para calcular los valores de una sección específica
-  const calculateSectionMetrics = (
-    sectionIndex: number,
-    questions: QuestionResponse[]
-  ) => {
-    const section = template.sections[sectionIndex];
-    let obtainedPoints = 0;
-    let naCount = 0;
-
-    questions.forEach((question) => {
-      if (question.response === "N/A") {
-        naCount++;
-      } else if (question.response !== "" && question.response !== undefined) {
-        const points = Number(question.response);
-        if (!isNaN(points)) {
-          obtainedPoints += points;
-        }
-      }
-    });
-
-    // Calcular puntos aplicables considerando las preguntas N/A
-    const applicablePoints = section.maxPoints; // Siempre el máximo, sin reducir por N/A
-
-    // Calcular porcentaje de cumplimiento sobre el puntaje máximo
-    const compliancePercentage =
-      section.maxPoints > 0 ? (obtainedPoints / section.maxPoints) * 100 : 0;
-
-    return {
-      obtainedPoints,
-      applicablePoints: Number(applicablePoints.toFixed(2)),
-      naCount,
-      compliancePercentage: Number(compliancePercentage.toFixed(2)),
-    };
-  };
-
-  // Función para actualizar métricas de una sección cuando cambia una respuesta
-  const updateSectionMetrics = (
+  // Actualizar métricas de sección solo cuando cambia la respuesta (no en comentarios)
+  const updateSectionMetrics = useCallback((
     sectionIndex: number,
     questionIndex: number,
     newResponse: string
@@ -207,68 +205,62 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
     const currentSections = watchedSections;
     const updatedSections = [...currentSections];
 
-    // Validar que newResponse sea uno de los valores permitidos
+    // Validar respuesta
     const validResponses = ["0", "1", "2", "3", "N/A", ""];
-    const sanitizedResponse = validResponses.includes(newResponse)
-      ? newResponse
-      : "";
+    const sanitizedResponse = validResponses.includes(newResponse) ? newResponse : "";
 
-    // Actualizar la respuesta y puntos de la pregunta específica
+    // Solo actualizar si realmente cambió la respuesta
+    const currentResponse = updatedSections[sectionIndex].questions[questionIndex].response;
+    if (currentResponse === sanitizedResponse) return;
+
+    // Actualizar respuesta y puntos
     updatedSections[sectionIndex].questions[questionIndex] = {
       ...updatedSections[sectionIndex].questions[questionIndex],
       response: sanitizedResponse,
-      points:
-        sanitizedResponse === "N/A" || sanitizedResponse === ""
-          ? 0
-          : Number(sanitizedResponse) || 0,
+      points: sanitizedResponse === "N/A" || sanitizedResponse === "" 
+        ? 0 
+        : Number(sanitizedResponse) || 0,
     };
 
-    // Recalcular métricas de la sección
+    // Recalcular métricas solo cuando cambia la respuesta
     const metrics = calculateSectionMetrics(
       sectionIndex,
       updatedSections[sectionIndex].questions
     );
+    
     updatedSections[sectionIndex] = {
       ...updatedSections[sectionIndex],
       ...metrics,
     };
 
     setValue("sections", updatedSections);
-  };
+  }, [watchedSections, setValue, calculateSectionMetrics]);
 
-  // Función para actualizar comentario de una pregunta
-  const updateQuestionComment = (
-  sectionIndex: number,
-  questionIndex: number,
-  comment: string
-) => {
-  setValue(
-    `sections.${sectionIndex}.questions.${questionIndex}.comment`,
-    comment,
-    { shouldValidate: false, shouldDirty: true, shouldTouch: true }
-  );
-};
+  // Actualizar comentario de pregunta sin recalcular métricas
+  const updateQuestionComment = useCallback((
+    sectionIndex: number,
+    questionIndex: number,
+    comment: string
+  ) => {
+    // Usar setValue directo sin recalcular métricas
+    setValue(
+      `sections.${sectionIndex}.questions.${questionIndex}.comment`,
+      comment,
+      { shouldValidate: false, shouldDirty: true, shouldTouch: true }
+    );
+  }, [setValue]);
 
-  // Función para actualizar comentario de sección
-  const updateSectionComment = (sectionIndex: number, comment: string) => {
-    const currentSections = watchedSections;
-    const updatedSections = [...currentSections];
+  // Actualizar comentario de sección sin recalcular métricas
+  const updateSectionComment = useCallback((sectionIndex: number, comment: string) => {
+    setValue(`sections.${sectionIndex}.sectionComment`, comment);
+  }, [setValue]);
 
-    updatedSections[sectionIndex] = {
-      ...updatedSections[sectionIndex],
-      sectionComment: comment,
-    };
-
-    setValue("sections", updatedSections);
-  };
-
-  // Calcular métricas generales
-  const calculateOverallMetrics = () => {
+  // Calcular métricas generales (memoizado)
+  const overallMetrics = useMemo((): OverallMetrics => {
     const totalObtainedPoints = watchedSections.reduce(
       (sum, section) => sum + section.obtainedPoints,
       0
     );
-    // CORRECCIÓN: Usar siempre los puntos máximos, no los aplicables
     const totalMaxPoints = watchedSections.reduce(
       (sum, section) => sum + section.maxPoints,
       0
@@ -278,30 +270,25 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
       0
     );
 
-    // Cumplimiento sobre el total máximo, no sobre aplicables
     const overallCompliancePercentage =
       totalMaxPoints > 0 ? (totalObtainedPoints / totalMaxPoints) * 100 : 0;
 
     return {
       totalObtainedPoints,
-      totalApplicablePoints: totalMaxPoints, // Cambiar nombre para clarity, pero usar maxPoints
+      totalApplicablePoints: totalMaxPoints,
       totalMaxPoints,
       totalNaCount,
-      overallCompliancePercentage: Number(
-        overallCompliancePercentage.toFixed(2)
-      ),
+      overallCompliancePercentage: Number(overallCompliancePercentage.toFixed(2)),
     };
-  };
+  }, [watchedSections]);
 
-  const onSubmit = (data: InspectionFormData) => {
+  // Envío del formulario
+  const onSubmit = useCallback((data: InspectionFormData) => {
     startTransition(async () => {
       setError(null);
       setSuccess(null);
 
       try {
-        const overallMetrics = calculateOverallMetrics();
-
-        // Datos para enviar al API
         const instanceData = {
           templateId: template._id.toString(),
           verificationList: data.verificationList,
@@ -319,10 +306,8 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
         if (result.success) {
           setSuccess(result.message || "Formulario guardado exitosamente");
 
-          // Crear la instancia completa con los datos del resultado del API
-          // o usar los datos que enviamos más los campos adicionales
           const formInstance: FormInstance = {
-            _id: result.data?._id || "", // ID viene del resultado del API
+            _id: result.data?._id || "",
             templateId: template._id,
             verificationList: data.verificationList,
             inspectionTeam: data.inspectionTeam,
@@ -338,7 +323,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
           };
 
           setTimeout(() => {
-            onSave(formInstance); // Aquí estaba el error: usabas instanceData en lugar de formInstance
+            onSave(formInstance);
           }, 1500);
         } else {
           setError(result.error || "Error al guardar el formulario");
@@ -351,13 +336,11 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
         );
       }
     });
-  };
+  }, [template._id, valoracionCriterio, overallMetrics, onSave]);
 
-  const addTeamMember = () => {
+  const addTeamMember = useCallback(() => {
     appendTeamMember({ nombre: "", cargo: "", firma: "" });
-  };
-
-  const overallMetrics = calculateOverallMetrics();
+  }, [appendTeamMember]);
 
   return (
     <Box p={{ xs: 1, sm: 2, md: 3 }}>
@@ -474,7 +457,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
               {template.verificationFields.map((field) => (
                 <Grid size={{ xs: 12, sm: 6 }} key={field._id}>
                   <FormField
-                    name={`verificationList.${field._id}`}
+                    name={`verificationList.${field.label}`}
                     control={control}
                     type={field.type}
                     label={field.label}
@@ -516,8 +499,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
             </Typography>
           </AccordionSummary>
           <AccordionDetails sx={{ p: { xs: 2, sm: 3 } }}>
-            {/* Botón Agregar Miembro - Ahora fuera del AccordionSummary */}
-
             {/* Header para desktop */}
             <Box display={{ xs: "none", md: "block" }} mb={2}>
               <Grid container spacing={2}>
@@ -1022,7 +1003,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
           );
         })}
 
-
+        {/* Secciones Simples (Informativas) */}
         {template.simpleSections && template.simpleSections.length > 0 && (
           <Box mb={2}>
             {template.simpleSections.map((section, index) => (
@@ -1126,6 +1107,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
             ))}
           </Box>
         )}
+
         {/* Conclusiones - Accordion */}
         <Accordion elevation={2} sx={{ mb: 2 }} defaultExpanded>
           <AccordionSummary
@@ -1194,7 +1176,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
             </Grid>
           </AccordionDetails>
         </Accordion>
-
 
         {/* Resumen General - Siempre visible */}
         <Paper
