@@ -459,11 +459,14 @@ export const InspeccionSistemasEmergencia = ({
   const onSubmit = async (data: FormularioInspeccion) => {
     if (formState.submitting) return;
 
+    
+      console.log("Formulario enviado exitosamente", data);
+
     try {
       setFormState((prev) => ({
         ...prev,
         loading: true,
-        submitting: true, // Marcar como enviando
+        submitting: true, // Marcar como enviando 
         error: null,
       }));
 
@@ -488,6 +491,7 @@ export const InspeccionSistemasEmergencia = ({
         // Crear nuevo formulario completo
         await crearFormSistemasEmergencia(data);
       }
+      console.log("Formulario enviado exitosamente", data);
 
       setFormState((prev) => ({
         ...prev,

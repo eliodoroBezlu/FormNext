@@ -329,17 +329,29 @@ export interface QRCompleteResponse {
 
 // types/form-types.ts
 export interface Question {
-  _id?: string
-  text: string
+  _id?: string;
+  text: string;
+  obligatorio: boolean;
 }
 
 export interface Section {
-  _id?: string
-  title: string
-  maxPoints: number
-  questions: Question[]
+  _id?: string;
+  title: string;
+  maxPoints: number;
+  questions: Question[];
 }
 
+export interface SimpleQuestion {
+  _id?: string;
+  text: string;
+  image?: string;
+}
+
+export interface SimpleSection {
+  _id?: string;
+  title: string;
+  questions: SimpleQuestion[];
+}
 
 
 export interface VerificationField {
@@ -358,6 +370,7 @@ export interface FormBuilderData {
   type: "interna" | "externa"
   verificationFields: VerificationField[]
   sections: Section[]
+  simpleSections?: SimpleSection[]
 }
 
 export interface FormTemplate {
@@ -368,6 +381,7 @@ export interface FormTemplate {
   type: "interna" | "externa" // Tipo de inspección
   verificationFields: VerificationField[] // Campos configurables
   sections: Section[]
+  simpleSections?: SimpleSection[]
 }
 
 export interface VerificationList {

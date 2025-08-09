@@ -63,28 +63,7 @@ export default function HomePage() {
   const loadCustomForms = async () => {
     // Datos de ejemplo - reemplaza con tu API call
     const mockCustomForms: CustomForm[] = [
-      // {
-      //   id: "CF-001",
-      //   title: "Evaluación de Desempeño Anual",
-      //   description: "Formulario personalizado para evaluaciones anuales",
-      //   category: "Recursos Humanos",
-      //   createdBy: "María García",
-      //   createdAt: new Date("2024-01-15"),
-      //   status: "published",
-      //   tags: ["HR", "Anual", "Evaluación"],
-      //   type: "manual"
-      // },
-      // {
-      //   id: "CF-002", 
-      //   title: "Checklist de Seguridad",
-      //   description: "Lista de verificación personalizada para auditorías",
-      //   category: "Seguridad",
-      //   createdBy: "Carlos López",
-      //   createdAt: new Date("2024-02-20"),
-      //   status: "draft",
-      //   tags: ["Seguridad", "Checklist"],
-      //   type: "manual"
-      // }
+      
     ]
     
     setCustomForms(mockCustomForms)
@@ -95,10 +74,7 @@ export default function HomePage() {
     setCurrentView("create")
   }
 
-  // const handleCreateCustomForm = () => {
-  //   setSelectedCustomForm(null)
-  //   setCurrentView("create-custom")
-  // }
+  //    
 
   const handleEditTemplate = (template: FormTemplate) => {
     setSelectedTemplate(template)
@@ -327,7 +303,8 @@ export default function HomePage() {
       <FormBuilder 
         template={selectedTemplate} 
         onSave={handleSaveTemplate} 
-        onCancel={() => setCurrentView("list")} 
+        onCancel={() => setCurrentView("list")}
+        mode={currentView} 
       />
     )
   }
@@ -356,7 +333,8 @@ export default function HomePage() {
       <InspectionFormIroIsop 
         template={selectedTemplate} 
         onSave={handleSaveInstance} 
-        onCancel={() => setCurrentView("list")} 
+        onCancel={() => setCurrentView("list")}
+         
       />
     )
   }

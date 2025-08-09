@@ -44,18 +44,21 @@ export async function createTemplate(templateData: Omit<FormTemplate, "_id">) {
 // Actualizar template
 export async function updateTemplate(_id: string, templateData: Partial<FormTemplate>) {
   try {
+    // Agregar logs para debug
+    console.log('Updating template:', _id, templateData);
+
     const response = await fetch(`${API_BASE_URL}/templates/${_id}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(templateData),
+      body: JSON.stringify({
+        ...templateData,
+        updatedBy: "current-user", // Aquí puedes agregar el usuario actual
+      }),
     })
 
     const result = await handleApiResponse(response)
-
-    //revalidatePath("/templates")
-    //revalidatePath(`/templates/${id}`)
 
     return {
       success: true,

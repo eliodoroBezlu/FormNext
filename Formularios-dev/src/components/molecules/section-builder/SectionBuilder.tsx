@@ -1,7 +1,8 @@
 "use client";
 
 import type React from "react";
-import { Control, useFieldArray } from "react-hook-form";
+import { Control, useFieldArray, useWatch } from "react-hook-form";
+import { useEffect } from "react";
 import {
   Box,
   Typography,
@@ -19,6 +20,8 @@ import {
 } from "../../molecules/form-field/FormField";
 import { FormBuilderData, Question, Section } from "@/types/formTypes";
 
+// Interfaces actualizadas
+
 // Tipado específico para el SectionBuilder
 export interface SectionBuilderProps {
   sectionIndex: number;
@@ -32,6 +35,7 @@ export interface SectionBuilderProps {
   showRemoveButton?: boolean;
   minQuestions?: number;
   maxQuestions?: number;
+  pointsPerQuestion?: number;
 }
 
 export const SectionBuilder: React.FC<SectionBuilderProps> = ({
@@ -45,16 +49,35 @@ export const SectionBuilder: React.FC<SectionBuilderProps> = ({
   disabled = false,
   showRemoveButton = true,
   minQuestions = 1,
-  maxQuestions = 100,
+  maxQuestions = 300,
 }) => {
   const {
     fields: questions,
     append: appendQuestion,
     remove: removeQuestion,
+    update: updateQuestion,
   } = useFieldArray({
     control,
     name: `sections.${sectionIndex}.questions` as const,
   });
+
+  const watchedQuestions = useWatch({
+    control,
+    name: `sections.${sectionIndex}.questions`,
+  });
+
+  // Asegurarse de que todas las preguntas tengan el campo obligatorio inicializado
+  useEffect(() => {
+    questions.forEach((question, index) => {
+      const currentQuestion = watchedQuestions?.[index];
+      if (currentQuestion && currentQuestion.obligatorio === undefined) {
+        updateQuestion(index, {
+          ...currentQuestion,
+          obligatorio: false,
+        });
+      }
+    });
+  }, [questions, watchedQuestions, updateQuestion]);
 
   const addQuestion = () => {
     if (questions.length >= maxQuestions) {
@@ -64,6 +87,7 @@ export const SectionBuilder: React.FC<SectionBuilderProps> = ({
     const newQuestion: Question = {
       //_id: generateId(), // o usa un UUID si prefieres
       text: "",
+      obligatorio: false, // Valor por defecto
     };
 
     appendQuestion(newQuestion);
@@ -213,7 +237,7 @@ export const SectionBuilder: React.FC<SectionBuilderProps> = ({
               }}
             >
               <Grid container spacing={2} alignItems="center">
-                <Grid size={{ xs: 10, sm: 11 }}>
+                <Grid size={{ xs: 12, sm: 7 }}>
                   <FormField
                     name={`sections.${sectionIndex}.questions.${questionIndex}.text`}
                     control={control}
@@ -233,7 +257,16 @@ export const SectionBuilder: React.FC<SectionBuilderProps> = ({
                     disabled={disabled}
                   />
                 </Grid>
-                <Grid size={{ xs: 2, sm: 1 }}>
+                <Grid size={{ xs: 8, sm: 3 }}>
+                  <FormField
+                    name={`sections.${sectionIndex}.questions.${questionIndex}.obligatorio`}
+                    control={control}
+                    type="checkbox"
+                    label="¿Obligatorio?"
+                    disabled={disabled}
+                  />
+                </Grid>
+                <Grid size={{ xs: 4, sm: 2 }}>
                   <Box
                     display="flex"
                     flexDirection="column"
@@ -267,11 +300,11 @@ export const SectionBuilder: React.FC<SectionBuilderProps> = ({
           <Typography variant="caption" color="info.main">
             💡 Consejos: Las preguntas deben ser claras y específicas. El
             puntaje máximo se distribuirá equitativamente entre todas las
-            preguntas.
+            preguntas. Las preguntas marcadas como obligatorias requerirán
+            respuesta.
           </Typography>
         </Box>
       </AccordionDetails>
     </Accordion>
   );
 };
-

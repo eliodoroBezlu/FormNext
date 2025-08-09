@@ -8,20 +8,25 @@ import {
 import { Input, type InputProps } from "../../atoms/input/Input";
 import { Select, type SelectProps } from "../../atoms/select/Select";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { FormControl } from "@mui/material";
+import { 
+  FormControl, 
+  FormControlLabel, 
+  Checkbox,
+  Typography
+} from "@mui/material";
 import dayjs from "dayjs";
 
-export type FormFieldValue = string | number | Date | null | undefined;
+export type FormFieldValue = string | number | Date | boolean | null | undefined;
 
 export interface FormFieldProps<T extends FieldValues> {
   name: FieldPath<T>;
   control: Control<T>;
-  type?: "text" | "number" | "date" | "select";
+  type?: "text" | "number" | "date" | "select" | "checkbox";
   label: string;
   options?: SelectProps["options"];
   inputProps?: Partial<InputProps>;
   rules?: RegisterOptions<T, FieldPath<T>>;
-  disabled?: boolean; // ✅ Soporte para disabled
+  disabled?: boolean;
   onChange?: (value: FormFieldValue) => void;
 }
 
@@ -33,7 +38,7 @@ export function FormField<T extends FieldValues>({
   options = [],
   inputProps = {},
   rules = {},
-  disabled = false, // ✅ Valor por defecto
+  disabled = false,
   onChange,
 }: FormFieldProps<T>) {
   return (
@@ -50,6 +55,33 @@ export function FormField<T extends FieldValues>({
         };
 
         switch (type) {
+          case "checkbox":
+            return (
+              <FormControl error={!!error}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={Boolean(field.value)}
+                      onChange={(e) => handleChange(e.target.checked)}
+                      disabled={disabled}
+                    />
+                  }
+                  label={label}
+                  sx={{
+                    color: error ? 'error.main' : 'inherit',
+                    '& .MuiFormControlLabel-label': {
+                      fontSize: '0.875rem'
+                    }
+                  }}
+                />
+                {error && (
+                  <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>
+                    {error.message}
+                  </Typography>
+                )}
+              </FormControl>
+            );
+
           case "select":
             return (
               <Select
@@ -58,7 +90,7 @@ export function FormField<T extends FieldValues>({
                 options={options}
                 error={!!error}
                 helperText={error?.message}
-                disabled={disabled} // ✅ Pasar disabled al Select
+                disabled={disabled}
                 onChange={(e) => handleChange(e.target.value as FormFieldValue)}
               />
             );
@@ -69,21 +101,20 @@ export function FormField<T extends FieldValues>({
                 <DatePicker
                   value={field.value ? dayjs(field.value) : null}
                   onChange={(newValue) => {
-                    // ✅ Convertir Day.js a Date nativo para serialización
                     if (newValue && newValue.isValid()) {
-                      handleChange(newValue.toDate()); // Convertir a Date nativo
+                      handleChange(newValue.toDate());
                     } else {
-                      handleChange(null); // Mantener null si no hay valor
+                      handleChange(null);
                     }
                   }}
                   label={label}
-                  disabled={disabled} // ✅ Pasar disabled al DatePicker
+                  disabled={disabled}
                   slotProps={{
                     textField: {
                       error: !!error,
                       helperText: error?.message,
                       fullWidth: true,
-                      disabled: disabled, // ✅ También al TextField interno
+                      disabled: disabled,
                     },
                   }}
                 />
@@ -98,7 +129,7 @@ export function FormField<T extends FieldValues>({
                 label={label}
                 error={!!error}
                 helperText={error?.message}
-                disabled={disabled} // ✅ Pasar disabled al Input
+                disabled={disabled}
                 onChange={(e) => handleChange(e.target.value)}
                 {...inputProps}
               />
@@ -111,7 +142,7 @@ export function FormField<T extends FieldValues>({
                 label={label}
                 error={!!error}
                 helperText={error?.message}
-                disabled={disabled} // ✅ Pasar disabled al Input
+                disabled={disabled}
                 onChange={(e) => handleChange(e.target.value)}
                 {...inputProps}
               />
