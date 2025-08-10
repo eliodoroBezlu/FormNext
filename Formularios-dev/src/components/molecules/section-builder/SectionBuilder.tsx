@@ -144,7 +144,7 @@ export const SectionBuilder: React.FC<SectionBuilderProps> = ({
               size="small"
               title="Eliminar sección"
               disabled={disabled}
-            >
+            > 
               <Delete />
             </IconButton>
           </Box>

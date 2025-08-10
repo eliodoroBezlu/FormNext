@@ -25,7 +25,7 @@ import type {
 const API_URL = process.env.API_URL || "";
 
 // Función auxiliar para manejar respuestas
-async function handleResponse<T>(response: Response): Promise<T> {
+export async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`Error en la solicitud: ${response.status} - ${errorText}`);

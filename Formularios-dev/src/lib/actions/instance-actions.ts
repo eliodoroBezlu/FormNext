@@ -63,7 +63,7 @@ export async function createInstance(instanceData: CreateInstanceData): Promise<
 }
 
 // Obtener todas las instancias
-interface GetInstancesFilters {
+export interface GetInstancesFilters {
   templateId?: string
   status?: string
   createdBy?: string
@@ -206,6 +206,8 @@ export async function updateInstance(id: string, updateData: UpdateInstanceData)
     }
   }
 }
+
+
 
 export async function updateInstanceStatus(
   id: string, 

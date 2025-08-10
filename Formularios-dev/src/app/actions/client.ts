@@ -75,3 +75,20 @@ export async function descargarExcelInspeccionesEmergenciaCliente(id: string): P
     throw error;
   }
 }
+
+export async function descargarExcelIroIsopCliente(id: string): Promise<void> {
+  try {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    const response = await fetch(`${apiUrl}/instances/${id}/excel`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error al descargar el Excel: ${response.status} - ${errorText}`);
+    }
+    
+    const blob = await response.blob();
+    descargarArchivo(blob, `inspeccion-emergencia-${id}.xlsx`);
+  } catch (error) {
+    console.error("Error al descargar el Excel:", error);
+    throw error;
+  }
+}

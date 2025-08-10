@@ -1159,7 +1159,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                     <TextField
                       {...field}
                       value={field.value || ""}
-                      label="2. Aspectos adicionales encontrados:"
+                      label="2. Ítems Críticos encontrados::"
                       multiline
                       rows={4}
                       fullWidth
@@ -1236,6 +1236,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                   color="primary"
                   sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
                 >
+                  
                   {overallMetrics.overallCompliancePercentage}%
                 </Typography>
               </Grid>
