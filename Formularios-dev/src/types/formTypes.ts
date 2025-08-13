@@ -247,7 +247,9 @@ export interface ExtintorBackend {
   inspeccionado: boolean
   activo: boolean
   area: string
-  totalActivos: number
+  totalActivos?: number
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface ExtintorAreaResponse {
@@ -494,4 +496,37 @@ export type FormBuilderPath =
   status: 'draft' | 'published' | 'archived'
   tags?: string[]
   type: 'manual' | 'imported' | 'copied'
+}
+
+
+
+//for extintores
+
+export interface GetExtintoresFilters {
+  area?: string;
+  tag?: string;
+  activo?: boolean;
+  inspeccionado?: boolean;
+  codigoExtintor?: string;
+  page?: number;
+  limit?: number;
+}
+
+// Para crear/actualizar extintores
+export interface CreateExtintorData {
+  area: string;
+  tag: string;
+  CodigoExtintor: string;
+  Ubicacion: string;
+  activo?: boolean;
+  inspeccionado?: boolean;
+}
+
+export interface UpdateExtintorData {
+  area?: string;
+  tag?: string;
+  CodigoExtintor?: string;
+  Ubicacion?: string;
+  activo?: boolean;
+  inspeccionado?: boolean;
 }

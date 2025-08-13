@@ -38,6 +38,8 @@ export const TAGS_CON_SELECCION_EXTINTORES = [
   "710BL001-GE6",
   "710BL712-TS1",
   "710BL712-TS2",
+  "710BL718",
+  "710BL718-RH2"
 ];
 
 export const valoracionOptions = [

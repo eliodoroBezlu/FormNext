@@ -9,7 +9,7 @@ import {
     // Visibility as VisibilityIcon,
     // FlashOn as FlashOnIcon,
     // Language as LanguageIcon,
-    // Settings as SettingsIcon,
+     Settings as SettingsIcon,
   EditDocument as EditDocumentIcon,  
 } from '@mui/icons-material';
 
@@ -30,14 +30,14 @@ const SettingsPage: React.FC = () => {
       color: "#2196f3",
       items: ["Crear", "Editar", "Eliminar"],
     },
-    // {
-    //   id: "security",
-    //   title: "Seguridad",
-    //   description: "Contraseñas, autenticación de dos factores y configuración de seguridad",
-    //   icon: SecurityIcon,
-    //   color: "#4caf50",
-    //   items: ["Crear", "editar", "eliminar"],
-    // },
+     {
+       id: "Extintores",
+       title: "Configuración de Extintores",
+       description: "Gestiona tipos, ubicaciones y mantenimientos de extintores",
+       icon: SettingsIcon,
+       color: "#4caf50",
+       items: ["Crear", "editar", "eliminar"],
+     },
     // {
     //   id: "notifications",
     //   title: "Notificaciones",
