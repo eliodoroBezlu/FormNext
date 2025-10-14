@@ -2,10 +2,10 @@
 
 import { API_BASE_URL } from "@/lib/constants"; 
 import {  handleApiResponse } from "./helpers";
-import { FormBuilderData } from "@/components/herra_equipos/QuestionBuilder";
+import { FormBuilderDataHerraEquipos } from "@/components/herra_equipos/QuestionBuilder";
 
 // Tipos de respuesta
-export type TemplateHerraEquipo = FormBuilderData & {
+export type TemplateHerraEquipo = FormBuilderDataHerraEquipos & {
   _id: string;
   createdAt: string;
   updatedAt: string;
@@ -15,7 +15,7 @@ export type TemplateHerraEquipo = FormBuilderData & {
 // CREATE
 // ========================
 export async function createTemplateHerraEquipo(
-  data: FormBuilderData
+  data: FormBuilderDataHerraEquipos
 ): Promise<{ success: true; data: TemplateHerraEquipo } | { success: false; error: string }> {
   try {
     
@@ -104,7 +104,7 @@ export async function getTemplateHerraEquipoById(
 // ========================
 export async function updateTemplateHerraEquipo(
   id: string,
-  data: Partial<FormBuilderData>
+  data: Partial<FormBuilderDataHerraEquipos>
 ): Promise<{ success: true; data: TemplateHerraEquipo } | { success: false; error: string }> {
   try {
     
