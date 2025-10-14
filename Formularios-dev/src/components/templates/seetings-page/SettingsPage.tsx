@@ -1,23 +1,21 @@
-"use client"
+"use client";
 
-import React from 'react';
-import { Container } from '@mui/material';
+import React from "react";
+import { Container } from "@mui/material";
 import {
-    // Security as SecurityIcon,
-    // Notifications as NotificationsIcon,
-    // Palette as PaletteIcon,
-    // Visibility as VisibilityIcon,
-    // FlashOn as FlashOnIcon,
-    // Language as LanguageIcon,
-     Settings as SettingsIcon,
-  EditDocument as EditDocumentIcon,  
-} from '@mui/icons-material';
+  FireExtinguisher as FireExtinguisherIcon,
+  LocalOffer as TagIcon,
+  EditDocument as EditDocumentIcon,
+  Domain as DomanIcon,
+  Accessibility as AccessibilityIcon
+} from "@mui/icons-material";
 
-import { SettingCardData } from '@/components/molecules/seeting-card/SettingCard';
+
+import { SettingCardData } from "@/components/molecules/seeting-card/SettingCard";
 //import QuickActionsSection, { QuickActionData } from '@/components/organisms/quick-actin-section/QuickActionsSection';
-import PageHeader from '@/components/organisms/page-header.tsx/PageHeader';
-import SettingsGrid from '@/components/organisms/settings-grid/SettingsGrid';
-import { useRouter } from 'next/navigation';
+import PageHeader from "@/components/organisms/page-header.tsx/PageHeader";
+import SettingsGrid from "@/components/organisms/settings-grid/SettingsGrid";
+import { useRouter } from "next/navigation";
 
 const SettingsPage: React.FC = () => {
   const router = useRouter();
@@ -30,38 +28,54 @@ const SettingsPage: React.FC = () => {
       color: "#2196f3",
       items: ["Crear", "Editar", "Eliminar"],
     },
-     {
-       id: "Extintores",
-       title: "Configuración de Extintores",
-       description: "Gestiona tipos, ubicaciones y mantenimientos de extintores",
-       icon: SettingsIcon,
-       color: "#4caf50",
-       items: ["Crear", "editar", "eliminar"],
-     },
-    // {
-    //   id: "notifications",
-    //   title: "Notificaciones",
-    //   description: "Controla cómo y cuándo recibes notificaciones por email y push",
-    //   icon: NotificationsIcon,
-    //   color: "#ff9800",
-    //   items: ["Email", "Push", "SMS", "Frecuencia"],
-    // },
-    // {
-    //   id: "appearance",
-    //   title: "Apariencia",
-    //   description: "Personaliza el tema, colores y diseño de tu dashboard",
-    //   icon: PaletteIcon,
-    //   color: "#9c27b0",
-    //   items: ["Tema claro/oscuro", "Colores", "Fuentes", "Layout"],
-    // },
-    // {
-    //   id: "privacy",
-    //   title: "Privacidad",
-    //   description: "Configuración de privacidad, visibilidad del perfil y datos personales",
-    //   icon: VisibilityIcon,
-    //   color: "#f44336",
-    //   items: ["Perfil público", "Datos personales", "Cookies", "Analíticas"],
-    // },
+    {
+      id: "Extintores",
+      title: "Configuración de Extintores",
+      description: "Gestiona tipos, ubicaciones y mantenimientos de extintores",
+      icon: FireExtinguisherIcon,
+      color: "#4caf50",
+      items: ["Crear", "editar", "eliminar"],
+    },
+    {
+      id: "Tag",
+      title: "Tag",
+      description: "Configura y administra los tags ",
+      icon: TagIcon,
+      color: "#ff9800",
+      items: ["Crear", "editar", "eliminar"],
+    },
+    {
+      id: "area",
+      title: "Area",
+      description: "Configura y administra las areas ",
+      icon: DomanIcon,
+      color: "#9c27b0",
+      items: ["Crear", "editar", "eliminar"],
+    },
+    {
+      id: "superintendencia",
+      title: "Superintendencia",
+      description: "Configura y administra las superintendencias ",
+      icon: DomanIcon,
+      color: "#f44336",
+      items: ["Crear", "editar", "eliminar"],
+    },
+    {
+      id: "trabajador",
+      title: "Trabajador y Usuario",
+      description: "Configura al trabajador y el usuario",
+      icon: AccessibilityIcon,
+      color: "#9c27b0",
+      items: ["Tema claro/oscuro", "Colores", "Fuentes", "Layout"],
+    },
+    {
+      id: "herramientas",
+      title: "Configuracion herramientas y equipos",
+      description: "Configura el template de las herramientas y equipos",
+      icon: TagIcon,
+      color: "#f44336",
+      items: ["Crear", "editar", "eliminar"],
+    },
     // {
     //   id: "integrations",
     //   title: "Integraciones",
@@ -88,26 +102,26 @@ const SettingsPage: React.FC = () => {
     // },
   ];
 
-//   const quickActionsData: QuickActionData[] = [
-//     {
-//       title: "Cambiar Contraseña",
-//       description: "Última actualización hace 3 meses",
-//       buttonText: "Cambiar",
-//       onButtonClick: () => console.log("Cambiar contraseña"),
-//     },
-//     {
-//       title: "Descargar Datos",
-//       description: "Exporta toda tu información",
-//       buttonText: "Descargar",
-//       onButtonClick: () => console.log("Descargar datos"),
-//     },
-//     {
-//       title: "Soporte",
-//       description: "¿Necesitas ayuda?",
-//       buttonText: "Contactar",
-//       onButtonClick: () => console.log("Contactar soporte"),
-//     },
-//   ];
+  //   const quickActionsData: QuickActionData[] = [
+  //     {
+  //       title: "Cambiar Contraseña",
+  //       description: "Última actualización hace 3 meses",
+  //       buttonText: "Cambiar",
+  //       onButtonClick: () => console.log("Cambiar contraseña"),
+  //     },
+  //     {
+  //       title: "Descargar Datos",
+  //       description: "Exporta toda tu información",
+  //       buttonText: "Descargar",
+  //       onButtonClick: () => console.log("Descargar datos"),
+  //     },
+  //     {
+  //       title: "Soporte",
+  //       description: "¿Necesitas ayuda?",
+  //       buttonText: "Contactar",
+  //       onButtonClick: () => console.log("Contactar soporte"),
+  //     },
+  //   ];
 
   const handleSettingClick = (settingId: string) => {
     console.log(`Clicked setting: ${settingId}`);
@@ -121,9 +135,12 @@ const SettingsPage: React.FC = () => {
         title="Configuración"
         description="Administra todas las configuraciones de tu cuenta y aplicación desde un solo lugar"
       />
-      
-      <SettingsGrid settings={settingsData} onSettingClick={handleSettingClick} />
-      
+
+      <SettingsGrid
+        settings={settingsData}
+        onSettingClick={handleSettingClick}
+      />
+
       {/* <QuickActionsSection actions={quickActionsData} /> */}
     </Container>
   );

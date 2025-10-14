@@ -94,3 +94,20 @@ a {
 .sigCanvas {
   will-change: contents;
 }
+
+.imageContainerSection {
+  position: relative;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+
+@media (max-width: 768px) {
+  .imageContainer {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+.imageSection {
+  object-fit: contain;
+}

@@ -19,6 +19,7 @@ import {
   Save,
   Expand,
   Image,
+  FolderOpen,
 } from "@mui/icons-material";
 import { Button } from "../../atoms/button/Button";
 import { FormField } from "../../molecules/form-field/FormField";
@@ -35,6 +36,17 @@ export interface FormBuilderProps {
   mode?: "create" | "edit" | "view";
 }
 
+const DATA_SOURCES = [
+  { value: "area", label: "Área" },
+  { value: "superintendencia", label: "Superintendencia" },
+  { value: "trabajador", label: "Trabajador" },
+  { value: "gerencia", label: "Gerencia" },
+  { value: "cargo", label: "Cargo" },
+  { value: "equipo", label: "Equipo" },
+  { value: "vicepresidencia", label: "Vicepresidencia" },
+  { value: "supervisor", label: "Supervisor" },
+];
+
 export const FormBuilder: React.FC<FormBuilderProps> = ({
   template,
   onSave,
@@ -47,9 +59,9 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
   const [expandedSections, setExpandedSections] = useState<Set<number>>(
     new Set([0])
   );
-  const [expandedImageSections, setExpandedImageSections] = useState<Set<number>>(
-    new Set([0])
-  );
+  const [expandedImageSections, setExpandedImageSections] = useState<
+    Set<number>
+  >(new Set([0]));
 
   const isReadOnly = mode === "view";
   const isEditing = mode === "edit" && template;
@@ -69,16 +81,16 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
       revision: "Rev. 1",
       type: "interna",
       verificationFields: [
-        { label: "Gerencia", type: "text" },
-        { label: "Supervisor", type: "text" },
-        { label: "Inspección N°", type: "text" },
-        { label: "Superintendencia", type: "text" },
-        { label: "Lugar", type: "text" },
-        { label: "Fecha Inspección", type: "date" },
-        { label: "Área", type: "text" },
+        { label: "Gerencia", type: "text", dataSource: "" }, 
+        { label: "Supervisor", type: "text", dataSource: "" },
+        { label: "Inspección N°", type: "text", dataSource: "" },
+        { label: "Superintendencia", type: "text", dataSource: "" },
+        { label: "Lugar", type: "text", dataSource: "" },
+        { label: "Fecha Inspección", type: "date", dataSource: "" },
+        { label: "Área", type: "text", dataSource: "" },
       ],
       sections: [],
-      simpleSections: []
+      simpleSections: [],
     },
   });
 
@@ -89,7 +101,13 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
         code: template.code || "",
         revision: template.revision || "Rev. 1",
         type: template.type || "interna",
-        verificationFields: template.verificationFields || [],
+        verificationFields: (template.verificationFields || []).map(
+          (field) => ({
+            label: field.label || "",
+            type: field.type || "text",
+            dataSource: field.dataSource || "", 
+          })
+        ),
         sections: template.sections || [],
         simpleSections: template.simpleSections || [],
       });
@@ -123,23 +141,24 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
     name: "simpleSections",
   });
 
-  // Watch para obtener datos actuales
   const watchedSections = watch("sections");
   const watchedSimpleSections = watch("simpleSections");
+  const watchedVerificationFields = watch("verificationFields");
 
   const onSubmit = async (data: FormBuilderData) => {
-    // Validación básica
-    if (data.sections.length === 0 ) {
+    if (data.sections.length === 0) {
       setError("Debe agregar al menos una sección");
       return;
     }
 
     // Validar secciones regulares
-    const invalidSections = data.sections.filter(section => {
-      return !section.questions ||
-        section.questions.length === 0 ||
-        !section.questions.some(q => q.text?.trim());
-    });
+    // const invalidSections = data.sections.filter((section) => {
+    //   return (
+    //     !section.questions ||
+    //     section.questions.length === 0 ||
+    //     !section.questions.some((q) => q.text?.trim())
+    //   );
+    // });
 
     // Validar secciones con imágenes
     // const invalidSimpleSections = (data.simpleSections || []).filter(section => {
@@ -148,10 +167,10 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
     //     !section.questions.some(q => q.text?.trim());
     // });
 
-    if (invalidSections.length > 0 ) {
-      setError("Todas las secciones deben tener al menos una pregunta válida");
-      return;
-    }
+    // if (invalidSections.length > 0) {
+    //   setError("Todas las secciones deben tener al menos una pregunta válida");
+    //   return;
+    // }
 
     startTransition(async () => {
       setError(null);
@@ -159,14 +178,16 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
 
       try {
         // Validar que todas las imágenes ya estén en base64
-        const hasInvalidImages = (data.simpleSections || []).some(section => 
-          section.questions?.some(question => 
-            question.image && question.image.startsWith('blob:')
+        const hasInvalidImages = (data.simpleSections || []).some((section) =>
+          section.questions?.some(
+            (question) => question.image && question.image.startsWith("blob:")
           )
         );
 
         if (hasInvalidImages) {
-          setError("Hay imágenes que aún se están procesando. Por favor, espera a que terminen.");
+          setError(
+            "Hay imágenes que aún se están procesando. Por favor, espera a que terminen."
+          );
           return;
         }
 
@@ -177,7 +198,9 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
 
             if (isNaN(maxPoints) || maxPoints < 0) {
               throw new Error(
-                `Sección ${index + 1}: El puntaje máximo debe ser un número mayor o igual a 0`
+                `Sección ${
+                  index + 1
+                }: El puntaje máximo debe ser un número mayor o igual a 0`
               );
             }
 
@@ -196,24 +219,32 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
               .map((q) => q),
           })),
         };
-        // Verificar tamaños de base64 antes de enviar
-        const imageStats = (transformedData.simpleSections || []).flatMap(section => 
-          (section.questions || [])
-            .filter(q => q.image && q.image.startsWith('data:image/'))
-            .map(q => {
-              const sizeInBytes = (q.image!.length * 3) / 4;
-              const sizeInKB = Math.round(sizeInBytes / 1024);
-              return sizeInKB;
-            })
+        const imageStats = (transformedData.simpleSections || []).flatMap(
+          (section) =>
+            (section.questions || [])
+              .filter((q) => q.image && q.image.startsWith("data:image/"))
+              .map((q) => {
+                const sizeInBytes = (q.image!.length * 3) / 4;
+                const sizeInKB = Math.round(sizeInBytes / 1024);
+                return sizeInKB;
+              })
         );
 
         if (imageStats.length > 0) {
-          const totalImageSize = imageStats.reduce((sum, size) => sum + size, 0);
-          console.log(`Total de imágenes: ${imageStats.length}, Tamaño total: ${totalImageSize}KB`);
-          
-          // Advertencia si el tamaño total es muy grande
-          if (totalImageSize > 5000) { // 5MB total
-            console.warn('⚠️ Tamaño total de imágenes muy grande:', totalImageSize, 'KB');
+          const totalImageSize = imageStats.reduce(
+            (sum, size) => sum + size,
+            0
+          );
+          console.log(
+            `Total de imágenes: ${imageStats.length}, Tamaño total: ${totalImageSize}KB`
+          );
+
+          if (totalImageSize > 5000) {
+            console.warn(
+              "⚠️ Tamaño total de imágenes muy grande:",
+              totalImageSize,
+              "KB"
+            );
           }
         }
         console.log("Datos transformados para envío:", transformedData);
@@ -224,7 +255,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
 
         if (result.success) {
           setSuccess(result.message || "Operación completada exitosamente");
-          onSave(result.data);
+          onSave(result.data as FormTemplate);
         } else {
           setError(result.error || "Error desconocido");
         }
@@ -238,19 +269,27 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
     appendVerificationField({
       label: "",
       type: "text",
+      dataSource: "",
     });
   }, [appendVerificationField]);
 
-  const addSection = () => {
-    const newIndex = sections.length;
-    appendSection({
-      title: "",
-      maxPoints: 0,
-      questions: [{ text: "", obligatorio: false }],
-    });
+  const addSection = (isParent: boolean = false) => {
+  const newIndex = sections.length;
 
-    setExpandedSections((prev) => new Set([...prev, newIndex]));
+  const newSection = {
+    title: isParent ? "Nueva Sección Padre" : "Nueva Sección",
+    description: "",
+    maxPoints: isParent ? 0 : 0, 
+    questions: [],
+    isParent: isParent, 
+    parentId: null,
+    subsections: isParent ? [] : undefined,
+    order: newIndex,
   };
+
+  appendSection(newSection);
+  setExpandedSections((prev) => new Set([...prev, newIndex]));
+};
 
   const addImageSection = () => {
     const newIndex = simpleSections.length;
@@ -300,11 +339,14 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
     const regularQuestions = watchedSections.reduce((total, section) => {
       return total + (section.questions?.length || 0);
     }, 0);
-    
-    const imageQuestions = (watchedSimpleSections || []).reduce((total, section) => {
-      return total + (section.questions?.length || 0);
-    }, 0);
-    
+
+    const imageQuestions = (watchedSimpleSections || []).reduce(
+      (total, section) => {
+        return total + (section.questions?.length || 0);
+      },
+      0
+    );
+
     return regularQuestions + imageQuestions;
   };
 
@@ -318,7 +360,11 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
     return sections.length + simpleSections.length;
   };
 
-  // Función para obtener estadísticas de imágenes
+  const getAutocompleteFields = () => {
+    return watchedVerificationFields.filter((f) => f.type === "autocomplete")
+      .length;
+  };
+
   const getImageStats = () => {
     const stats = {
       total: 0,
@@ -327,15 +373,15 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
       totalSizeKB: 0,
     };
 
-    (watchedSimpleSections || []).forEach(section => {
-      (section.questions || []).forEach(question => {
+    (watchedSimpleSections || []).forEach((section) => {
+      (section.questions || []).forEach((question) => {
         if (question.image) {
           stats.total++;
-          if (question.image.startsWith('data:image/')) {
+          if (question.image.startsWith("data:image/")) {
             stats.base64++;
             const sizeInBytes = (question.image.length * 3) / 4;
             stats.totalSizeKB += Math.round(sizeInBytes / 1024);
-          } else if (question.image.startsWith('blob:')) {
+          } else if (question.image.startsWith("blob:")) {
             stats.processing++;
           }
         }
@@ -345,22 +391,19 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
     return stats;
   };
 
-  // Verificar si hay imágenes pendientes de procesamiento
   const hasProcessingImages = () => {
-    return (watchedSimpleSections || []).some(section =>
-      (section.questions || []).some(question =>
-        question.image && question.image.startsWith('blob:')
+    return (watchedSimpleSections || []).some((section) =>
+      (section.questions || []).some(
+        (question) => question.image && question.image.startsWith("blob:")
       )
     );
   };
 
-  // Limpiar URLs blob cuando se desmonte el componente
   useEffect(() => {
     return () => {
-      // Cleanup blob URLs on unmount
-      watchedSimpleSections?.forEach(section => {
-        section.questions?.forEach(question => {
-          if (question.image && question.image.startsWith('blob:')) {
+      watchedSimpleSections?.forEach((section) => {
+        section.questions?.forEach((question) => {
+          if (question.image && question.image.startsWith("blob:")) {
             URL.revokeObjectURL(question.image);
           }
         });
@@ -392,16 +435,15 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
             de Formulario
           </Typography>
           {isEditing && (
-            <Chip 
-              label={`Editando: ${template?.name}`} 
-              color="primary" 
+            <Chip
+              label={`Editando: ${template?.name}`}
+              color="primary"
               variant="outlined"
               size="small"
             />
           )}
         </Box>
 
-        {/* Estadísticas del formulario */}
         <Box display="flex" gap={1}>
           <Chip
             label={`${getTotalSections()} secciones`}
@@ -430,10 +472,18 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
               icon={<Image />}
             />
           )}
+
+          {getAutocompleteFields() > 0 && (
+            <Chip
+              label={`${getAutocompleteFields()} autocomplete`}
+              color="info"
+              variant="outlined"
+              size="small"
+            />
+          )}
         </Box>
       </Box>
 
-      {/* Mensajes de estado */}
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
@@ -449,7 +499,6 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
         </Alert>
       )}
 
-      {/* Indicador de procesamiento de imágenes */}
       {isProcessingImages && (
         <Alert severity="info" sx={{ mb: 2 }}>
           <Box display="flex" alignItems="center" gap={2}>
@@ -462,7 +511,6 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
       )}
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        {/* Información General */}
         <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
           <Typography variant="h6" gutterBottom>
             Información General
@@ -512,7 +560,6 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
           </Grid>
         </Paper>
 
-        {/* Campos de Lista de Verificación */}
         <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
           <Box
             display="flex"
@@ -537,7 +584,15 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
           {verificationFields.map((field, index) => (
             <Box key={field.id} mb={2}>
               <Grid container spacing={2} alignItems="center">
-                <Grid size={{ xs: 5, sm: 4 }}>
+                <Grid
+                  size={{
+                    xs: 12,
+                    sm:
+                      watchedVerificationFields[index]?.type === "autocomplete"
+                        ? 3
+                        : 4,
+                  }}
+                >
                   <FormField
                     name={`verificationFields.${index}.label`}
                     control={control}
@@ -546,7 +601,15 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
                     disabled={isReadOnly}
                   />
                 </Grid>
-                <Grid size={{ xs: 6, sm: 5 }}>
+                <Grid
+                  size={{
+                    xs: 12,
+                    sm:
+                      watchedVerificationFields[index]?.type === "autocomplete"
+                        ? 3
+                        : 5,
+                  }}
+                >
                   <FormField
                     name={`verificationFields.${index}.type`}
                     control={control}
@@ -557,11 +620,32 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
                       { value: "date", label: "Fecha" },
                       { value: "number", label: "Número" },
                       { value: "select", label: "Selección" },
+                      { value: "autocomplete", label: "Autocompletar" },
                     ]}
                     rules={{ required: "Tipo es requerido" }}
                     disabled={isReadOnly}
                   />
                 </Grid>
+
+                {watchedVerificationFields[index]?.type === "autocomplete" && (
+                  <Grid size={{ xs: 12, sm: 3 }}>
+                    <FormField
+                      name={`verificationFields.${index}.dataSource`}
+                      control={control}
+                      type="select"
+                      label="Origen de Datos"
+                      options={[
+                        { value: "", label: "Seleccionar..." },
+                        ...DATA_SOURCES.map((source) => ({
+                          value: source.value,
+                          label: source.label,
+                        })),
+                      ]}
+                      disabled={isReadOnly}
+                      rules={{ required: "Origen de datos es requerido" }}
+                    />
+                  </Grid>
+                )}
                 {!isReadOnly && (
                   <Grid size={{ xs: 1 }}>
                     <IconButton
@@ -572,12 +656,29 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
                     </IconButton>
                   </Grid>
                 )}
+
+                {watchedVerificationFields[index]?.type === "autocomplete" &&
+                  watchedVerificationFields[index]?.dataSource && (
+                    <Box mt={1} ml={2}>
+                      <Chip
+                        size="small"
+                        label={`Fuente: ${
+                          DATA_SOURCES.find(
+                            (s) =>
+                              s.value ===
+                              watchedVerificationFields[index]?.dataSource
+                          )?.label
+                        }`}
+                        color="info"
+                        variant="outlined"
+                      />
+                    </Box>
+                  )}
               </Grid>
             </Box>
           ))}
         </Paper>
 
-        {/* Secciones */}
         <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
           <Box
             display="flex"
@@ -614,17 +715,26 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
                   <Button
                     variant="outlined"
                     startIcon={<Add />}
-                    onClick={addSection}
+                    onClick={() => addSection(false)}
                     size="small"
                   >
-                    Sección Regular
+                    Sección Simple
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<FolderOpen />}
+                    onClick={() => addSection(true)}
+                    size="small"
+                    color="secondary"
+                  >
+                    Sección Padre
                   </Button>
                   <Button
                     variant="outlined"
                     startIcon={<Image />}
                     onClick={addImageSection}
                     size="small"
-                    color="secondary"
+                    color="info"
                   >
                     Sección con Imágenes
                   </Button>
@@ -652,19 +762,30 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
                 Las secciones organizan las preguntas de tu formulario
               </Typography>
               {!isReadOnly && (
-                <Box display="flex" gap={2} justifyContent="center">
+                <Box display="flex" gap={1}>
                   <Button
-                    variant="contained"
+                    variant="outlined"
                     startIcon={<Add />}
-                    onClick={addSection}
+                    onClick={() => addSection(false)}
+                    size="small"
                   >
-                    Sección Regular
+                    Sección Simple
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<FolderOpen />}
+                    onClick={() => addSection(true)}
+                    size="small"
+                    color="secondary"
+                  >
+                    Sección Padre
                   </Button>
                   <Button
                     variant="outlined"
                     startIcon={<Image />}
                     onClick={addImageSection}
-                    color="secondary"
+                    size="small"
+                    color="info"
                   >
                     Sección con Imágenes
                   </Button>
@@ -673,16 +794,18 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
             </Box>
           ) : (
             <>
-              {/* Secciones regulares */}
               {sections.map((section, sectionIndex) => (
                 <Box key={section.id} position="relative">
                   <SectionBuilder
                     sectionIndex={sectionIndex}
                     section={watchedSections[sectionIndex]}
                     control={control}
+                    setValue={setValue}
                     onRemove={() => removeSection(sectionIndex)}
                     expanded={expandedSections.has(sectionIndex)}
-                    onToggleExpanded={() => toggleSectionExpansion(sectionIndex)}
+                    onToggleExpanded={() =>
+                      toggleSectionExpansion(sectionIndex)
+                    }
                     disabled={isReadOnly}
                     showRemoveButton={!isReadOnly && getTotalSections() > 1}
                   />
@@ -699,7 +822,9 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
                     setValue={setValue}
                     onRemove={() => removeSimpleSection(sectionIndex)}
                     expanded={expandedImageSections.has(sectionIndex)}
-                    onToggleExpanded={() => toggleImageSectionExpansion(sectionIndex)}
+                    onToggleExpanded={() =>
+                      toggleImageSectionExpansion(sectionIndex)
+                    }
                     disabled={isReadOnly}
                     showRemoveButton={!isReadOnly && getTotalSections() > 1}
                   />
@@ -709,7 +834,6 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
           )}
         </Paper>
 
-        {/* Información de imágenes si hay */}
         {imageStats.total > 0 && (
           <Paper elevation={1} sx={{ p: 2, mb: 3, backgroundColor: "info.50" }}>
             <Typography variant="subtitle2" color="info.dark" gutterBottom>
@@ -737,7 +861,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
                 </Typography>
               </Grid>
             </Grid>
-            
+
             {imageStats.processing > 0 && (
               <Box mt={1}>
                 <LinearProgress color="warning" />
@@ -749,7 +873,6 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
           </Paper>
         )}
 
-        {/* Botones de acción */}
         {!isReadOnly && (
           <Box display="flex" justifyContent="flex-end" gap={2}>
             <Button variant="outlined" onClick={onCancel} disabled={isPending}>
@@ -767,7 +890,6 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
         )}
       </form>
 
-      {/* Errores de validación */}
       {Object.keys(errors).length > 0 && (
         <Alert severity="warning" sx={{ mt: 2 }}>
           Por favor, corrige los errores en el formulario antes de continuar.
@@ -781,13 +903,15 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
         </Alert>
       )}
 
-      {/* Información de desarrollo */}
-      {process.env.NODE_ENV === 'development' && imageStats.total > 0 && (
+      {process.env.NODE_ENV === "development" && imageStats.total > 0 && (
         <Alert severity="info" sx={{ mt: 2 }}>
           <Typography variant="caption">
-            🚧 Modo desarrollo: {imageStats.base64} imágenes convertidas a Base64 (listas para BD). 
-            {imageStats.processing > 0 && `${imageStats.processing} aún procesándose.`}
-            {imageStats.totalSizeKB > 1000 && ` ⚠️ Tamaño total: ${imageStats.totalSizeKB}KB`}
+            🚧 Modo desarrollo: {imageStats.base64} imágenes convertidas a
+            Base64 (listas para BD).
+            {imageStats.processing > 0 &&
+              `${imageStats.processing} aún procesándose.`}
+            {imageStats.totalSizeKB > 1000 &&
+              ` ⚠️ Tamaño total: ${imageStats.totalSizeKB}KB`}
           </Typography>
         </Alert>
       )}

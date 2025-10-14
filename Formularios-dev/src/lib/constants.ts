@@ -79,3 +79,7 @@ export const valoracionCriterio = [
       "El ítem no es aplicable o la actividad no se pudo observar durante la inspección",
   },
 ];
+
+
+
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL 

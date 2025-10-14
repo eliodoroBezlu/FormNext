@@ -1,7 +1,12 @@
 "use client";
 
 import type React from "react";
-import { Control, useFieldArray, UseFormSetValue, useWatch } from "react-hook-form";
+import {
+  Control,
+  useFieldArray,
+  UseFormSetValue,
+  useWatch,
+} from "react-hook-form";
 import {
   Box,
   Typography,
@@ -13,23 +18,35 @@ import {
   Card,
   CardContent,
 } from "@mui/material";
-import { Add, Delete, ExpandMore, Image, CloudUpload } from "@mui/icons-material";
+import {
+  Add,
+  Delete,
+  ExpandMore,
+  Image,
+  CloudUpload,
+} from "@mui/icons-material";
 import { Button } from "../../atoms/button/Button";
 import {
   FormField,
   FormFieldValue,
 } from "../../molecules/form-field/FormField";
-import { FormBuilderData, SimpleSection, SimpleQuestion } from "@/types/formTypes";
+import {
+  FormBuilderData,
+  SimpleSection,
+  SimpleQuestion,
+} from "@/types/formTypes";
 import { useState } from "react";
 
-// Props del componente
 export interface ImageSectionBuilderProps {
   sectionIndex: number;
   section: SimpleSection;
   control: Control<FormBuilderData>;
   setValue: UseFormSetValue<FormBuilderData>;
   onRemove: () => void;
-  onUpdate?: (sectionIndex: number, updatedSection: Partial<SimpleSection>) => void;
+  onUpdate?: (
+    sectionIndex: number,
+    updatedSection: Partial<SimpleSection>
+  ) => void;
   expanded?: boolean;
   onToggleExpanded?: () => void;
   disabled?: boolean;
@@ -38,36 +55,38 @@ export interface ImageSectionBuilderProps {
   maxQuestions?: number;
 }
 
-// Función para convertir archivo a base64
 const convertFileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => {
-      if (reader.result && typeof reader.result === 'string') {
+      if (reader.result && typeof reader.result === "string") {
         resolve(reader.result);
       } else {
-        reject(new Error('Error al convertir archivo a base64'));
+        reject(new Error("Error al convertir archivo a base64"));
       }
     };
     reader.onerror = (error) => reject(error);
   });
 };
 
-// Función para validar y redimensionar imagen si es necesario
-const processImage = async (file: File, maxWidth = 1200, maxHeight = 800, quality = 0.8): Promise<string> => {
+const processImage = async (
+  file: File,
+  maxWidth = 1200,
+  maxHeight = 800,
+  quality = 0.8
+): Promise<string> => {
   return new Promise((resolve, reject) => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
     const img = new window.Image();
 
     img.onload = () => {
-      // Calcular nuevas dimensiones manteniendo aspect ratio
       let { width, height } = img;
-      
+
       if (width > maxWidth || height > maxHeight) {
         const aspectRatio = width / height;
-        
+
         if (width > height) {
           width = Math.min(width, maxWidth);
           height = width / aspectRatio;
@@ -77,19 +96,16 @@ const processImage = async (file: File, maxWidth = 1200, maxHeight = 800, qualit
         }
       }
 
-      // Configurar canvas
       canvas.width = width;
       canvas.height = height;
 
-      // Dibujar imagen redimensionada
       ctx?.drawImage(img, 0, 0, width, height);
 
-      // Convertir a base64 con calidad especificada
-      const base64 = canvas.toDataURL('image/jpeg', quality);
+      const base64 = canvas.toDataURL("image/jpeg", quality);
       resolve(base64);
     };
 
-    img.onerror = () => reject(new Error('Error al procesar la imagen'));
+    img.onerror = () => reject(new Error("Error al procesar la imagen"));
     img.src = URL.createObjectURL(file);
   });
 };
@@ -108,8 +124,12 @@ export const ImageSectionBuilder: React.FC<ImageSectionBuilderProps> = ({
   minQuestions = 1,
   maxQuestions = 50,
 }) => {
-  const [uploadingImages, setUploadingImages] = useState<Set<number>>(new Set());
-  const [processingImages, setProcessingImages] = useState<Set<number>>(new Set());
+  const [uploadingImages, setUploadingImages] = useState<Set<number>>(
+    new Set()
+  );
+  const [processingImages, setProcessingImages] = useState<Set<number>>(
+    new Set()
+  );
 
   const {
     fields: questions,
@@ -120,7 +140,6 @@ export const ImageSectionBuilder: React.FC<ImageSectionBuilderProps> = ({
     name: `simpleSections.${sectionIndex}.questions` as const,
   });
 
-  // Watch the current questions to get real-time updates including images
   const watchedQuestions = useWatch({
     control,
     name: `simpleSections.${sectionIndex}.questions`,
@@ -148,135 +167,133 @@ export const ImageSectionBuilder: React.FC<ImageSectionBuilderProps> = ({
     removeQuestion(questionIndex);
   };
 
-  const handleSectionUpdate = (field: keyof SimpleSection, value: FormFieldValue) => {
+  const handleSectionUpdate = (
+    field: keyof SimpleSection,
+    value: FormFieldValue
+  ) => {
     if (onUpdate) {
       onUpdate(sectionIndex, { [field]: value });
     }
   };
 
-  const handleImageUpload = async (questionIndex: number, event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (
+    questionIndex: number,
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validar tipo de archivo
-    if (!file.type.startsWith('image/')) {
-      alert('Por favor selecciona un archivo de imagen válido');
+    if (!file.type.startsWith("image/")) {
+      alert("Por favor selecciona un archivo de imagen válido");
       return;
     }
 
-    // Validar tamaño del archivo original (ejemplo: máximo 10MB para el archivo original)
-    const maxFileSize = 10 * 1024 * 1024; // 10MB
+    const maxFileSize = 10 * 1024 * 1024;
     if (file.size > maxFileSize) {
-      alert('La imagen es demasiado grande. Máximo 10MB permitido');
+      alert("La imagen es demasiado grande. Máximo 10MB permitido");
       return;
     }
 
     try {
-      // Marcar como cargando
-      setUploadingImages(prev => new Set([...prev, questionIndex]));
-      setProcessingImages(prev => new Set([...prev, questionIndex]));
+      setUploadingImages((prev) => new Set([...prev, questionIndex]));
+      setProcessingImages((prev) => new Set([...prev, questionIndex]));
 
-      // Crear URL temporal para previsualización inmediata
       const tempImageUrl = URL.createObjectURL(file);
-      
-      // Actualizar inmediatamente en el formulario para mostrar la previsualización
-      setValue(`simpleSections.${sectionIndex}.questions.${questionIndex}.image`, tempImageUrl);
 
-      // Procesar y convertir imagen a base64
+      setValue(
+        `simpleSections.${sectionIndex}.questions.${questionIndex}.image`,
+        tempImageUrl
+      );
+
       let base64Image: string;
-      
+
       try {
-        // Redimensionar y comprimir la imagen para optimizar el base64
         base64Image = await processImage(file, 1200, 800, 0.8);
-        console.log('Imagen procesada y convertida a base64');
       } catch (processError) {
-        console.warn('Error al procesar imagen, usando conversión directa:', processError);
-        // Fallback: conversión directa sin procesamiento
+        console.warn(
+          "Error al procesar imagen con optimización, usando conversión directa:",
+          processError
+        );
         base64Image = await convertFileToBase64(file);
       }
 
-      // Validar tamaño del base64 (opcional: máximo 2MB en base64)
-      const base64Size = (base64Image.length * 3) / 4; // Aproximación del tamaño en bytes
-      const maxBase64Size = 2 * 1024 * 1024; // 2MB
-      
+      const base64Size = (base64Image.length * 3) / 4;
+      const maxBase64Size = 2 * 1024 * 1024;
+
       if (base64Size > maxBase64Size) {
-        console.warn('Base64 muy grande, intentando mayor compresión...');
+        console.warn("Base64 muy grande, intentando mayor compresión...");
         try {
-          // Intentar con mayor compresión
           base64Image = await processImage(file, 800, 600, 0.6);
         } catch (compressionError) {
-          console.error('Error en compresión adicional:', compressionError);
-          // Continuar con la imagen original si falla la compresión
+          console.error("Error en compresión adicional:", compressionError);
         }
       }
 
-      // Liberar URL temporal
       URL.revokeObjectURL(tempImageUrl);
 
-      // Guardar la imagen en base64 en el formulario
-      setValue(`simpleSections.${sectionIndex}.questions.${questionIndex}.image`, base64Image);
-
-      console.log('Imagen guardada como base64. Tamaño aproximado:', Math.round(base64Size / 1024), 'KB');
-      
+      setValue(
+        `simpleSections.${sectionIndex}.questions.${questionIndex}.image`,
+        base64Image
+      );
     } catch (error) {
-      console.error('Error uploading/processing image:', error);
-      alert('Error al procesar la imagen. Por favor, intenta con otra imagen o un formato diferente.');
-      
-      // Limpiar la imagen si hay error
-      setValue(`simpleSections.${sectionIndex}.questions.${questionIndex}.image`, undefined);
+      console.error("Error uploading/processing image:", error);
+      alert(
+        "Error al procesar la imagen. Por favor, intenta con otra imagen o un formato diferente."
+      );
+
+      setValue(
+        `simpleSections.${sectionIndex}.questions.${questionIndex}.image`,
+        undefined
+      );
     } finally {
-      // Quitar del estado de carga
-      setUploadingImages(prev => {
+      setUploadingImages((prev) => {
         const newSet = new Set(prev);
         newSet.delete(questionIndex);
         return newSet;
       });
-      setProcessingImages(prev => {
+      setProcessingImages((prev) => {
         const newSet = new Set(prev);
         newSet.delete(questionIndex);
         return newSet;
       });
 
-      // Limpiar el input file
-      event.target.value = '';
+      event.target.value = "";
     }
   };
 
   const removeImage = (questionIndex: number) => {
     const currentImage = watchedQuestions?.[questionIndex]?.image;
-    
-    // Si es una URL temporal (blob), liberarla
-    if (currentImage && currentImage.startsWith('blob:')) {
+
+    if (currentImage && currentImage.startsWith("blob:")) {
       URL.revokeObjectURL(currentImage);
     }
-    
-    setValue(`simpleSections.${sectionIndex}.questions.${questionIndex}.image`, undefined);
-    console.log('Remove image from question:', questionIndex);
+
+    setValue(
+      `simpleSections.${sectionIndex}.questions.${questionIndex}.image`,
+      undefined
+    );
   };
 
-  // Función helper para determinar si una imagen es base64
   const isBase64Image = (imageUrl?: string): boolean => {
-    return imageUrl?.startsWith('data:image/') || false;
+    return imageUrl?.startsWith("data:image/") || false;
   };
 
-  // Función helper para obtener info del tamaño de la imagen
   const getImageInfo = (imageUrl?: string): string => {
-    if (!imageUrl) return '';
-    
+    if (!imageUrl) return "";
+
     if (isBase64Image(imageUrl)) {
       const sizeInBytes = (imageUrl.length * 3) / 4;
       const sizeInKB = Math.round(sizeInBytes / 1024);
       return `Base64 (~${sizeInKB}KB)`;
-    } else if (imageUrl.startsWith('blob:')) {
-      return 'Procesando...';
+    } else if (imageUrl.startsWith("blob:")) {
+      return "Procesando...";
     } else {
-      return 'URL externa';
+      return "URL externa";
     }
   };
 
-  // Usar watchedQuestions en lugar de questions para obtener datos actualizados
   const currentQuestions = watchedQuestions || questions;
-  const questionsWithImages = currentQuestions.filter(q => q?.image).length;
+  const questionsWithImages = currentQuestions.filter((q) => q?.image).length;
 
   return (
     <Accordion
@@ -305,7 +322,8 @@ export const ImageSectionBuilder: React.FC<ImageSectionBuilderProps> = ({
               {section.title && `: ${section.title}`}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {currentQuestions.length} pregunta{currentQuestions.length !== 1 ? "s" : ""}
+              {currentQuestions.length} pregunta
+              {currentQuestions.length !== 1 ? "s" : ""}
               {questionsWithImages > 0 && (
                 <span> • {questionsWithImages} con imagen</span>
               )}
@@ -329,7 +347,6 @@ export const ImageSectionBuilder: React.FC<ImageSectionBuilderProps> = ({
       </Box>
 
       <AccordionDetails>
-        {/* Título de la sección */}
         <Box mb={3}>
           <FormField
             name={`simpleSections.${sectionIndex}.title`}
@@ -341,7 +358,6 @@ export const ImageSectionBuilder: React.FC<ImageSectionBuilderProps> = ({
           />
         </Box>
 
-        {/* Header de preguntas */}
         <Box
           display="flex"
           justifyContent="space-between"
@@ -363,7 +379,6 @@ export const ImageSectionBuilder: React.FC<ImageSectionBuilderProps> = ({
           </Button>
         </Box>
 
-        {/* Lista de preguntas */}
         {currentQuestions.length === 0 ? (
           <Box
             p={3}
@@ -377,7 +392,8 @@ export const ImageSectionBuilder: React.FC<ImageSectionBuilderProps> = ({
             }}
           >
             <Typography variant="body2" color="text.secondary">
-              No hay preguntas. Haz clic en &quot;Agregar Pregunta&quot; para comenzar.
+              No hay preguntas. Haz clic en &quot;Agregar Pregunta&quot; para
+              comenzar.
             </Typography>
           </Box>
         ) : (
@@ -385,16 +401,15 @@ export const ImageSectionBuilder: React.FC<ImageSectionBuilderProps> = ({
             <Card
               key={`question-${questionIndex}`}
               variant="outlined"
-              sx={{ 
-                mb: 2, 
+              sx={{
+                mb: 2,
                 backgroundColor: "background.paper",
                 borderColor: "primary.light",
-                "&:hover": { borderColor: "primary.main" }
+                "&:hover": { borderColor: "primary.main" },
               }}
             >
               <CardContent>
                 <Grid container spacing={2}>
-                  {/* Campo de texto de la pregunta */}
                   <Grid size={{ xs: 12, md: question?.image ? 7 : 10 }}>
                     <FormField
                       name={`simpleSections.${sectionIndex}.questions.${questionIndex}.text`}
@@ -409,25 +424,25 @@ export const ImageSectionBuilder: React.FC<ImageSectionBuilderProps> = ({
                         required: "Pregunta es requerida",
                         minLength: {
                           value: 5,
-                          message: "La pregunta debe tener al menos 5 caracteres",
+                          message:
+                            "La pregunta debe tener al menos 5 caracteres",
                         },
                       }}
                       disabled={disabled}
                     />
                   </Grid>
 
-                  {/* Sección de imagen - Previsualización */}
                   {question?.image && (
                     <Grid size={{ xs: 12, md: 5 }}>
                       <Box
                         sx={{
                           position: "relative",
                           border: 2,
-                          borderColor: processingImages.has(questionIndex) 
-                            ? "warning.main" 
-                            : uploadingImages.has(questionIndex) 
-                              ? "info.main"
-                              : "primary.light",
+                          borderColor: processingImages.has(questionIndex)
+                            ? "warning.main"
+                            : uploadingImages.has(questionIndex)
+                            ? "info.main"
+                            : "primary.light",
                           borderRadius: 1,
                           overflow: "hidden",
                           backgroundColor: "primary.50",
@@ -445,16 +460,19 @@ export const ImageSectionBuilder: React.FC<ImageSectionBuilderProps> = ({
                             height: "auto",
                             maxHeight: "150px",
                             objectFit: "contain",
-                            opacity: (uploadingImages.has(questionIndex) || processingImages.has(questionIndex)) ? 0.7 : 1,
+                            opacity:
+                              uploadingImages.has(questionIndex) ||
+                              processingImages.has(questionIndex)
+                                ? 0.7
+                                : 1,
                           }}
                           onError={(e) => {
-                            console.error('Error loading image:', e);
-                            // Opcional: mostrar imagen placeholder en caso de error
+                            console.error("Error loading image:", e);
                           }}
                         />
-                        
-                        {/* Indicador de procesamiento */}
-                        {(uploadingImages.has(questionIndex) || processingImages.has(questionIndex)) && (
+
+                        {(uploadingImages.has(questionIndex) ||
+                          processingImages.has(questionIndex)) && (
                           <Box
                             position="absolute"
                             top="50%"
@@ -468,7 +486,9 @@ export const ImageSectionBuilder: React.FC<ImageSectionBuilderProps> = ({
                             }}
                           >
                             <Typography variant="caption">
-                              {processingImages.has(questionIndex) ? "Procesando..." : "Subiendo..."}
+                              {processingImages.has(questionIndex)
+                                ? "Procesando..."
+                                : "Subiendo..."}
                             </Typography>
                           </Box>
                         )}
@@ -480,69 +500,94 @@ export const ImageSectionBuilder: React.FC<ImageSectionBuilderProps> = ({
                             top: 4,
                             right: 4,
                             backgroundColor: "rgba(255,255,255,0.9)",
-                            "&:hover": { backgroundColor: "rgba(255,255,255,1)" },
+                            "&:hover": {
+                              backgroundColor: "rgba(255,255,255,1)",
+                            },
                           }}
                           onClick={() => removeImage(questionIndex)}
-                          disabled={disabled || uploadingImages.has(questionIndex) || processingImages.has(questionIndex)}
+                          disabled={
+                            disabled ||
+                            uploadingImages.has(questionIndex) ||
+                            processingImages.has(questionIndex)
+                          }
                         >
                           <Delete fontSize="small" color="error" />
                         </IconButton>
                       </Box>
 
-                      {/* Info de la imagen */}
-                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ mt: 1, display: "block" }}
+                      >
                         {isBase64Image(question.image) ? (
-                          <>✅ Listo para guardar - {getImageInfo(question.image)}</>
+                          <>
+                            ✅ Listo para guardar -{" "}
+                            {getImageInfo(question.image)}
+                          </>
                         ) : (
-                          <>💡 {getImageInfo(question.image)} - Se convertirá a Base64</>
+                          <>
+                            💡 {getImageInfo(question.image)} - Se convertirá a
+                            Base64
+                          </>
                         )}
                       </Typography>
                     </Grid>
                   )}
 
-                  {/* Controles de acción */}
                   <Grid size={{ xs: 12 }}>
-                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Box
+                      display="flex"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
                       <Box display="flex" gap={1}>
-                        {/* Botón para subir imagen */}
                         <Button
                           component="label"
                           variant={question?.image ? "outlined" : "contained"}
                           size="small"
-                          startIcon={question?.image ? <Image /> : <CloudUpload />}
-                          disabled={disabled || uploadingImages.has(questionIndex) || processingImages.has(questionIndex)}
+                          startIcon={
+                            question?.image ? <Image /> : <CloudUpload />
+                          }
+                          disabled={
+                            disabled ||
+                            uploadingImages.has(questionIndex) ||
+                            processingImages.has(questionIndex)
+                          }
                           color="primary"
                         >
-                          {processingImages.has(questionIndex) 
-                            ? "Procesando..." 
+                          {processingImages.has(questionIndex)
+                            ? "Procesando..."
                             : uploadingImages.has(questionIndex)
-                              ? "Subiendo..."
-                              : question?.image 
-                                ? "Cambiar imagen" 
-                                : "Agregar imagen"
-                          }
+                            ? "Subiendo..."
+                            : question?.image
+                            ? "Cambiar imagen"
+                            : "Agregar imagen"}
                           <input
                             type="file"
                             hidden
                             accept="image/*"
-                            onChange={(e) => handleImageUpload(questionIndex, e)}
+                            onChange={(e) =>
+                              handleImageUpload(questionIndex, e)
+                            }
                           />
                         </Button>
 
-                        {question?.image && !uploadingImages.has(questionIndex) && !processingImages.has(questionIndex) && (
-                          <Button
-                            variant="text"
-                            size="small"
-                            color="error"
-                            onClick={() => removeImage(questionIndex)}
-                            disabled={disabled}
-                          >
-                            Quitar imagen
-                          </Button>
-                        )}
+                        {question?.image &&
+                          !uploadingImages.has(questionIndex) &&
+                          !processingImages.has(questionIndex) && (
+                            <Button
+                              variant="text"
+                              size="small"
+                              color="error"
+                              onClick={() => removeImage(questionIndex)}
+                              disabled={disabled}
+                            >
+                              Quitar imagen
+                            </Button>
+                          )}
                       </Box>
 
-                      {/* Número de pregunta y botón eliminar */}
                       <Box display="flex" alignItems="center" gap={1}>
                         <Typography variant="caption" color="text.secondary">
                           #{questionIndex + 1}
@@ -551,7 +596,9 @@ export const ImageSectionBuilder: React.FC<ImageSectionBuilderProps> = ({
                           color="error"
                           onClick={() => handleRemoveQuestion(questionIndex)}
                           size="small"
-                          disabled={disabled || currentQuestions.length <= minQuestions}
+                          disabled={
+                            disabled || currentQuestions.length <= minQuestions
+                          }
                           title={
                             currentQuestions.length <= minQuestions
                               ? `Mínimo ${minQuestions} pregunta(s)`
@@ -569,13 +616,13 @@ export const ImageSectionBuilder: React.FC<ImageSectionBuilderProps> = ({
           ))
         )}
 
-        {/* Información adicional */}
         <Box mt={2} p={2} sx={{ backgroundColor: "info.50", borderRadius: 1 }}>
           <Typography variant="caption" color="info.main">
-            📷 Sección especial: Esta sección permite preguntas con imágenes opcionales.
-            Las imágenes se convierten automáticamente a Base64 para almacenamiento en base de datos.
-            Formatos soportados: JPG, PNG, GIF. Tamaño máximo: 10MB (se optimiza automáticamente).
-            Las imágenes se redimensionan y comprimen para optimizar el almacenamiento.
+            📷 Sección especial: Esta sección permite preguntas con imágenes
+            opcionales. Las imágenes se convierten automáticamente a Base64 para
+            almacenamiento en base de datos. Formatos soportados: JPG, PNG, GIF.
+            Tamaño máximo: 10MB (se optimiza automáticamente). Las imágenes se
+            redimensionan y comprimen para optimizar el almacenamiento.
           </Typography>
         </Box>
       </AccordionDetails>

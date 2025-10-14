@@ -46,6 +46,7 @@ import {
   GetInstancesFilters,
 } from "@/lib/actions/instance-actions";
 import { descargarExcelIroIsopCliente } from "@/app/actions/client";
+import AutocompleteCustom from "@/components/molecules/autocomplete-custom/AutocompleteCustom";
 
 // Estados de formularios
 const ESTADOS_FORMULARIO = [
@@ -79,6 +80,9 @@ export default function ListarInspeccionesIroIsop() {
   const [minComplianceFilter, setMinComplianceFilter] = useState("");
   const [maxComplianceFilter, setMaxComplianceFilter] = useState("");
 
+  const [areaFilter, setAreaFilter] = useState("");
+  const [superintendenciaFilter, setSuperintendenciaFilter] = useState("");
+
   const router = useRouter();
 
   useEffect(() => {
@@ -90,7 +94,9 @@ export default function ListarInspeccionesIroIsop() {
       setLoadingTemplates(true);
       const templatesData = await getTemplates();
       if (templatesData.success && templatesData.data) {
-        setTemplates(Array.isArray(templatesData.data) ? templatesData.data : []);
+        setTemplates(
+          Array.isArray(templatesData.data) ? templatesData.data : []
+        );
       } else {
         console.error("Error al cargar templates:", templatesData.error);
         setTemplates([]);
@@ -115,9 +121,15 @@ export default function ListarInspeccionesIroIsop() {
       if (createdByFilter) filters.createdBy = createdByFilter;
       if (dateFromFilter) filters.dateFrom = new Date(dateFromFilter);
       if (dateToFilter) filters.dateTo = new Date(dateToFilter);
-      if (minComplianceFilter) filters.minCompliance = parseFloat(minComplianceFilter);
-      if (maxComplianceFilter) filters.maxCompliance = parseFloat(maxComplianceFilter);
-      
+      if (minComplianceFilter)
+        filters.minCompliance = parseFloat(minComplianceFilter);
+      if (maxComplianceFilter)
+        filters.maxCompliance = parseFloat(maxComplianceFilter);
+
+      if (areaFilter) filters.area = areaFilter;
+      if (superintendenciaFilter)
+        filters.superintendencia = superintendenciaFilter;
+
       // Corregir la paginación - el backend parece usar página basada en 1
       filters.page = page + 1;
       filters.limit = rowsPerPage;
@@ -130,7 +142,7 @@ export default function ListarInspeccionesIroIsop() {
       if (response.success && response.data) {
         // Verificar la estructura de los datos
         console.log("Datos recibidos:", response.data);
-        
+
         // Si response.data es un array directo
         if (Array.isArray(response.data.data)) {
           setInstancias(response.data.data);
@@ -148,7 +160,7 @@ export default function ListarInspeccionesIroIsop() {
           setInstancias([]);
           setError("Estructura de datos inesperada del servidor");
         }
-        
+
         setMostrarResultados(true);
       } else {
         console.error("Error en response:", response);
@@ -156,10 +168,11 @@ export default function ListarInspeccionesIroIsop() {
         setError(response.error || "Error desconocido");
         setMostrarResultados(false);
       }
-
     } catch (error) {
       console.error("Error al buscar instancias:", error);
-      setError("No se pudieron cargar las instancias con los filtros seleccionados");
+      setError(
+        "No se pudieron cargar las instancias con los filtros seleccionados"
+      );
       setInstancias([]);
       setMostrarResultados(false);
     } finally {
@@ -176,6 +189,8 @@ export default function ListarInspeccionesIroIsop() {
     setDateToFilter("");
     setMinComplianceFilter("");
     setMaxComplianceFilter("");
+    setAreaFilter(""); // ✅ NUEVO
+    setSuperintendenciaFilter("");
     setInstancias([]);
     setMostrarResultados(false);
     setError(null);
@@ -190,7 +205,9 @@ export default function ListarInspeccionesIroIsop() {
     setTimeout(buscarInstancias, 100);
   };
 
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const newRowsPerPage = parseInt(event.target.value, 10);
     setRowsPerPage(newRowsPerPage);
     setPage(0);
@@ -209,7 +226,6 @@ export default function ListarInspeccionesIroIsop() {
   const handleDescargarPdf = async (id: string) => {
     try {
       console.log("Descargando PDF para instancia:", id);
-
     } catch (error) {
       console.error("Error al descargar el PDF:", error);
     }
@@ -224,27 +240,36 @@ export default function ListarInspeccionesIroIsop() {
     }
   };
 
-  const obtenerTemplateNombre = (templateId: string | { _id: string; name: string; code: string }): string => {
+  const obtenerTemplateNombre = (
+    templateId: string | { _id: string; name: string; code: string }
+  ): string => {
     // Verificar si templateId es un objeto o un string
     let id: string;
-    if (typeof templateId === 'object' && templateId._id) {
+    if (typeof templateId === "object" && templateId._id) {
       // Si es un objeto con la información completa
       return `${templateId.name} (${templateId.code})`;
-    } else if (typeof templateId === 'string') {
+    } else if (typeof templateId === "string") {
       id = templateId;
     } else {
       return "Template no válido";
     }
 
     const template = templates.find((t) => t._id === id);
-    return template ? `${template.name} (${template.code})` : "Template no encontrado";
+    return template
+      ? `${template.name} (${template.code})`
+      : "Template no encontrado";
   };
 
   const obtenerEstadoConfig = (status: string) => {
-    return ESTADOS_FORMULARIO.find((e) => e.value === status) || ESTADOS_FORMULARIO[0];
+    return (
+      ESTADOS_FORMULARIO.find((e) => e.value === status) ||
+      ESTADOS_FORMULARIO[0]
+    );
   };
 
-  const obtenerColorCumplimiento = (porcentaje: number): "error" | "warning" | "success" => {
+  const obtenerColorCumplimiento = (
+    porcentaje: number
+  ): "error" | "warning" | "success" => {
     if (porcentaje < 70) return "error";
     if (porcentaje < 90) return "warning";
     return "success";
@@ -271,7 +296,9 @@ export default function ListarInspeccionesIroIsop() {
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 4 }}>
             <FormControl fullWidth size="small">
-              <InputLabel id="template-filter-label">Template de Formulario</InputLabel>
+              <InputLabel id="template-filter-label">
+                Template de Formulario
+              </InputLabel>
               <Select
                 labelId="template-filter-label"
                 value={templateIdFilter}
@@ -371,9 +398,39 @@ export default function ListarInspeccionesIroIsop() {
               inputProps={{ min: 0, max: 100 }}
             />
           </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <AutocompleteCustom
+              dataSource="area"
+              label="Área"
+              placeholder="Seleccione o escriba un área"
+              value={areaFilter}
+              onChange={(value) => setAreaFilter(value || "")}
+            />
+          </Grid>
 
-          <Grid size={{ xs: 12, md: 5 }} display="flex" justifyContent="flex-end" alignItems="center" gap={1}>
-            <Button variant="outlined" startIcon={<ClearIcon />} onClick={limpiarFiltros}>
+          {/* ✅ CAMBIO: Filtro de Superintendencia con Autocomplete */}
+          <Grid size={{ xs: 12, md: 3 }}>
+            <AutocompleteCustom
+              dataSource="superintendencia"
+              label="Superintendencia"
+              placeholder="Seleccione o escriba una superintendencia"
+              value={superintendenciaFilter}
+              onChange={(value) => setSuperintendenciaFilter(value || "")}
+            />
+          </Grid>
+
+          <Grid
+            size={{ xs: 12, md: 5 }}
+            display="flex"
+            justifyContent="flex-end"
+            alignItems="center"
+            gap={1}
+          >
+            <Button
+              variant="outlined"
+              startIcon={<ClearIcon />}
+              onClick={limpiarFiltros}
+            >
               Limpiar
             </Button>
             <Button
@@ -390,14 +447,24 @@ export default function ListarInspeccionesIroIsop() {
 
       {/* Estado de carga */}
       {loading && (
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="200px"
+        >
           <CircularProgress />
         </Box>
       )}
 
       {/* Estado de error */}
       {error && (
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100px">
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="100px"
+        >
           <Typography color="error">{error}</Typography>
         </Box>
       )}
@@ -424,10 +491,14 @@ export default function ListarInspeccionesIroIsop() {
                 <Typography variant="h4" color="primary">
                   {instancias.length > 0
                     ? Math.round(
-                        instancias.reduce((sum, inst) => sum + (inst.overallCompliancePercentage || 0), 0) /
-                          instancias.length
+                        instancias.reduce(
+                          (sum, inst) =>
+                            sum + (inst.overallCompliancePercentage || 0),
+                          0
+                        ) / instancias.length
                       )
-                    : 0}%
+                    : 0}
+                  %
                 </Typography>
               </CardContent>
             </Card>
@@ -471,11 +542,15 @@ export default function ListarInspeccionesIroIsop() {
               alignItems: "center",
             }}
           >
-            <Typography variant="h6">Instancias de Formularios ({totalItems})</Typography>
+            <Typography variant="h6">
+              Instancias de Formularios ({totalItems})
+            </Typography>
             <Button
               variant="contained"
               startIcon={<FormIcon />}
-              onClick={() => router.push("/dashboard/formularios-de-inspeccion")}
+              onClick={() =>
+                router.push("/dashboard/formularios-de-inspeccion")
+              }
               color="primary"
             >
               Nueva Instancia
@@ -487,6 +562,9 @@ export default function ListarInspeccionesIroIsop() {
               <TableHead>
                 <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
                   <TableCell>Template</TableCell>
+                  <TableCell>Área</TableCell> {/* ✅ NUEVA COLUMNA */}
+                  <TableCell>Superintendencia</TableCell>{" "}
+                  {/* ✅ NUEVA COLUMNA */}
                   <TableCell>Estado</TableCell>
                   <TableCell>Creado por</TableCell>
                   <TableCell>Fecha Creación</TableCell>
@@ -499,15 +577,32 @@ export default function ListarInspeccionesIroIsop() {
               <TableBody>
                 {instancias.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                    <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
+                      {" "}
+                      {/* ✅ Cambiar de 8 a 10 */}
                       <Typography variant="body1" color="textSecondary">
-                        No se encontraron instancias con los criterios de búsqueda
+                        No se encontraron instancias con los criterios de
+                        búsqueda
                       </Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
                   instancias.map((instancia) => {
-                    const estadoConfig = obtenerEstadoConfig(instancia.status || "borrador");
+                    const estadoConfig = obtenerEstadoConfig(
+                      instancia.status || "borrador"
+                    );
+
+                    // ✅ NUEVO: Extraer área y superintendencia de verificationList
+                    const verificationList = instancia.verificationList || {};
+                    const area =
+                      verificationList["Área"] ||
+                      verificationList["area"] ||
+                      "-";
+                    const superintendencia =
+                      verificationList["Superintendencia"] ||
+                      verificationList["superintendencia"] ||
+                      "-";
+
                     return (
                       <TableRow
                         key={instancia._id}
@@ -518,26 +613,62 @@ export default function ListarInspeccionesIroIsop() {
                             {obtenerTemplateNombre(instancia.templateId)}
                           </Typography>
                         </TableCell>
+
+                        {/* ✅ NUEVA: Columna de Área */}
                         <TableCell>
-                          <Chip label={estadoConfig.label} color={estadoConfig.color} size="small" />
+                          <Typography
+                            variant="body2"
+                            noWrap
+                            sx={{ maxWidth: 200 }}
+                          >
+                            {area}
+                          </Typography>
                         </TableCell>
-                        <TableCell>{instancia.createdBy || "Sistema"}</TableCell>
+
+                        {/* ✅ NUEVA: Columna de Superintendencia */}
+                        <TableCell>
+                          <Typography
+                            variant="body2"
+                            noWrap
+                            sx={{ maxWidth: 250 }}
+                          >
+                            {superintendencia}
+                          </Typography>
+                        </TableCell>
+
+                        <TableCell>
+                          <Chip
+                            label={estadoConfig.label}
+                            color={estadoConfig.color}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {instancia.createdBy || "Sistema"}
+                        </TableCell>
                         <TableCell>
                           {instancia.createdAt
-                            ? new Date(instancia.createdAt).toLocaleDateString("es-ES")
+                            ? new Date(instancia.createdAt).toLocaleDateString(
+                                "es-ES"
+                              )
                             : "N/A"}
                         </TableCell>
                         <TableCell align="center">
                           <Chip
-                            label={`${(instancia.overallCompliancePercentage || 0).toFixed(1)}%`}
-                            color={obtenerColorCumplimiento(instancia.overallCompliancePercentage || 0)}
+                            label={`${(
+                              instancia.overallCompliancePercentage || 0
+                            ).toFixed(1)}%`}
+                            color={obtenerColorCumplimiento(
+                              instancia.overallCompliancePercentage || 0
+                            )}
                             size="small"
                             icon={<TrendingUpIcon />}
                           />
                         </TableCell>
                         <TableCell align="center">
                           <Typography variant="body2">
-                            {instancia.totalObtainedPoints || 0} / {instancia.totalApplicablePoints || 0}
+                            {instancia.totalObtainedPoints || 0} /{" "}
+                            {instancia.totalApplicablePoints || 0}
                           </Typography>
                         </TableCell>
                         <TableCell align="center">
@@ -575,7 +706,9 @@ export default function ListarInspeccionesIroIsop() {
                           </Tooltip>
                           <Tooltip title="Descargar Excel">
                             <IconButton
-                              onClick={() => handleDescargarExcel(instancia._id)}
+                              onClick={() =>
+                                handleDescargarExcel(instancia._id)
+                              }
                               color="success"
                               size="small"
                             >
@@ -590,7 +723,7 @@ export default function ListarInspeccionesIroIsop() {
               </TableBody>
             </Table>
           </TableContainer>
-          
+
           {totalItems > 0 && (
             <TablePagination
               rowsPerPageOptions={[5, 10, 25, 50]}

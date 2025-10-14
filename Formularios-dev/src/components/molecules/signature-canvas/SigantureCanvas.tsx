@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, forwardRef } from "react";
 import { Box, Button, Grid, Typography } from "@mui/material";
 import SignatureCanvas from "react-signature-canvas";
+import { CheckCircle } from "@mui/icons-material";
 
 interface DynamicSignatureCanvasProps {
   onClear: () => void;
@@ -20,7 +21,9 @@ const DynamicSignatureCanvas = forwardRef<
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const sigCanvasRef = useRef<SignatureCanvas | null>(null);
 
-  // Actualiza las dimensiones del canvas
+  const [isSaved, setIsSaved] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
+
   useEffect(() => {
     const updateDimensions = () => {
       if (containerRef.current) {
@@ -41,7 +44,28 @@ const DynamicSignatureCanvas = forwardRef<
     if (sigCanvasRef.current) {
       sigCanvasRef.current.clear();
     }
+    setIsSaved(false); 
+    setShowWarning(false);
     onClear();
+  };
+
+  const handleSave = () => {
+    if (sigCanvasRef.current && !sigCanvasRef.current.isEmpty()) {
+      onSave();
+      setShowWarning(false);
+      setIsSaved(true); 
+    } else {
+      setShowWarning(true);
+      setTimeout(() => {
+        setShowWarning(false);
+      }, 2500);
+    }
+  };
+
+  const handleBeginStroke = () => {
+    if (isSaved) {
+      setIsSaved(false); 
+    }
   };
 
   return (
@@ -73,12 +97,22 @@ const DynamicSignatureCanvas = forwardRef<
               userSelect: 'none'
             }
           }}
-          // Configuraciones optimizadas
           throttle={16}
           minWidth={0.5}
           maxWidth={2.5}
+          onBegin={handleBeginStroke} 
         />
       </Box>
+
+      {showWarning && (
+        <Typography 
+          variant="caption" 
+          color="warning.main" 
+          sx={{ mb: 2, display: 'block', textAlign: 'center', fontWeight: 'bold' }}
+        >
+          ⚠️ Por favor, dibuje una firma antes de guardar
+        </Typography>
+      )}
 
       {error && helperText && (
         <Typography variant="caption" color="error" sx={{ mb: 2, display: 'block' }}>
@@ -99,12 +133,18 @@ const DynamicSignatureCanvas = forwardRef<
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <Button
-            onClick={onSave}
+            onClick={handleSave}
             variant="contained"
-            color="primary"
             fullWidth
+            // ✅ Cambiar color y texto según estado
+            color={isSaved ? "success" : showWarning ? "warning" : "primary"}
+            startIcon={isSaved ? <CheckCircle /> : undefined}
+            sx={{
+              transition: 'all 0.3s ease',
+              boxShadow: isSaved ? '0 0 10px rgba(46, 125, 50, 0.5)' : undefined,
+            }}
           >
-            Guardar Firma
+            {isSaved ? "✓ Firma Guardada" : "Guardar Firma"}
           </Button>
         </Grid>
       </Grid>

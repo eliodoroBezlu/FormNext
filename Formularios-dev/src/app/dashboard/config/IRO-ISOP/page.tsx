@@ -2,15 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { Box, Typography, Grid, Fab, Tabs, Tab, Alert, CircularProgress, Chip, Button } from "@mui/material"
-import { Add, Edit, Delete, Description } from "@mui/icons-material"
+import { Add, Edit, Delete, Description, Visibility } from "@mui/icons-material"
 import { FormInstance, FormTemplate } from "@/types/formTypes"
-import { deleteTemplate, getTemplates } from "@/lib/actions/template-actions"
+import { deleteTemplate, getTemplates, getTemplate } from "@/lib/actions/template-actions"
 import { FormBuilder } from "@/components/organisms/form-builder/FormBuilder"
 import { InspectionFormIroIsop } from "@/components/organisms/inspection-form-iro-isop/InspectionFormIroIsop"
 import { TemplateCard } from "@/components/molecules/template-card/TemplateCard"
 import { BaseCard } from "@/components/molecules/base-card/BaseCard"
 
-// Interfaz para formularios personalizados
 interface CustomForm {
   id: string
   title: string
@@ -27,12 +26,13 @@ export default function HomePage() {
   const [templates, setTemplates] = useState<FormTemplate[]>([])
   const [customForms, setCustomForms] = useState<CustomForm[]>([])
   const [instances, setInstances] = useState<FormInstance[]>([])
-  const [currentView, setCurrentView] = useState<"list" | "create" | "edit" | "form" | "create-custom">("list")
+  const [currentView, setCurrentView] = useState<"list" | "create" | "edit" | "view" | "form" | "create-custom">("list")
   const [selectedTemplate, setSelectedTemplate] = useState<FormTemplate | null>(null)
   const [selectedCustomForm, setSelectedCustomForm] = useState<CustomForm | null>(null)
   const [tabValue, setTabValue] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
 
   // Cargar templates al montar el componente
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function HomePage() {
       const result = await getTemplates({ isActive: true })
 
       if (result.success) {
-        setTemplates(result.data)
+        setTemplates(result.data as FormTemplate[])
       } else {
         setError(result.error || "Error al cargar los templates")
       }
@@ -59,13 +59,8 @@ export default function HomePage() {
     }
   }
 
-  // Simular carga de formularios personalizados (reemplaza con tu lógica real)
   const loadCustomForms = async () => {
-    // Datos de ejemplo - reemplaza con tu API call
-    const mockCustomForms: CustomForm[] = [
-      
-    ]
-    
+    const mockCustomForms: CustomForm[] = []
     setCustomForms(mockCustomForms)
   }
 
@@ -74,17 +69,51 @@ export default function HomePage() {
     setCurrentView("create")
   }
 
-  //    
+  const handleViewTemplate = async (template: FormTemplate) => {
+    setLoadingDetail(true)
+    setError(null)
+    
+    try {
+      // Cargar el template completo con todos los detalles
+      const result = await getTemplate(template._id)
+      
+      if (result.success && result.data) {
+        setSelectedTemplate(result.data as FormTemplate)
+        setCurrentView("view")
+      } else {
+        setError(result.error || "Error al cargar el template")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al cargar el template")
+    } finally {
+      setLoadingDetail(false)
+    }
+  }
 
-  const handleEditTemplate = (template: FormTemplate) => {
-    setSelectedTemplate(template)
-    setCurrentView("edit")
+  const handleEditTemplate = async (template: FormTemplate) => {
+    setLoadingDetail(true)
+    setError(null)
+    
+    try {
+      // Cargar el template completo con todos los detalles
+      const result = await getTemplate(template._id)
+      
+      if (result.success && result.data) {
+        setSelectedTemplate(result.data as FormTemplate)
+        setCurrentView("edit")
+      } else {
+        setError(result.error || "Error al cargar el template")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al cargar el template")
+    } finally {
+      setLoadingDetail(false)
+    }
   }
 
   const handleEditCustomForm = (customForm: CustomForm) => {
     setSelectedCustomForm(customForm)
     setCurrentView("create-custom")
-    // Aquí podrías abrir un editor diferente para formularios personalizados
   }
 
   const handleDeleteTemplate = async (templateId: string) => {
@@ -111,15 +140,12 @@ export default function HomePage() {
     }
 
     try {
-      // Aquí iría tu lógica para eliminar formulario personalizado
       setCustomForms(prev => prev.filter(form => form.id !== customFormId))
       console.log("Eliminando formulario personalizado:", customFormId)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al eliminar el formulario personalizado")
     }
   }
-
-
 
   const handleSaveTemplate = async () => {
     await loadTemplates()
@@ -134,7 +160,6 @@ export default function HomePage() {
 
   const handleUseCustomForm = (customForm: CustomForm) => {
     console.log("Usando formulario personalizado:", customForm)
-    // Aquí podrías abrir el formulario personalizado para ser llenado
   }
 
   const handleSaveInstance = (instance: FormInstance) => {
@@ -144,11 +169,24 @@ export default function HomePage() {
     console.log("Formulario guardado:", instance)
   }
 
+  const handleCancel = () => {
+    setCurrentView("list")
+    setSelectedTemplate(null)
+    setSelectedCustomForm(null)
+  }
+
   // Función para generar las acciones de templates según el contexto
   const getTemplateActions = (template: FormTemplate) => {
     if (tabValue === 0) {
       // Tab de "Gestionar Plantillas" - acciones de administración
       return [
+        {
+          label: "Ver",
+          icon: <Visibility />,
+          onClick: () => handleViewTemplate(template),
+          variant: "outlined" as const,
+          size: "small" as const
+        },
         {
           label: "Editar",
           icon: <Edit />,
@@ -298,12 +336,37 @@ export default function HomePage() {
     )
   }
 
+  // Loading detail state
+  if (loadingDetail) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+        <Typography variant="body1" sx={{ ml: 2 }}>
+          Cargando detalles del template...
+        </Typography>
+      </Box>
+    )
+  }
+
+  // View mode
+  if (currentView === "view" && selectedTemplate) {
+    return (
+      <FormBuilder 
+        template={selectedTemplate} 
+        onSave={handleSaveTemplate} 
+        onCancel={handleCancel}
+        mode="view" 
+      />
+    )
+  }
+
+  // Create/Edit modes
   if (currentView === "create" || currentView === "edit") {
     return (
       <FormBuilder 
         template={selectedTemplate} 
         onSave={handleSaveTemplate} 
-        onCancel={() => setCurrentView("list")}
+        onCancel={handleCancel}
         mode={currentView} 
       />
     )
@@ -320,7 +383,7 @@ export default function HomePage() {
         </Typography>
         <Button 
           variant="outlined" 
-          onClick={() => setCurrentView("list")}
+          onClick={handleCancel}
         >
           Volver
         </Button>
@@ -333,12 +396,12 @@ export default function HomePage() {
       <InspectionFormIroIsop 
         template={selectedTemplate} 
         onSave={handleSaveInstance} 
-        onCancel={() => setCurrentView("list")}
-         
+        onCancel={handleCancel}
       />
     )
   }
 
+  // Main list view
   return (
     <Box p={3}>
       <Box mb={4}>
@@ -414,27 +477,15 @@ export default function HomePage() {
             </Box>
           )}
 
-          {/* FABs para crear contenido - Solo en tab de gestión */}
           {tabValue === 0 && (
-            <>
-              <Fab
-                color="primary"
-                aria-label="add template"
-                sx={{ position: "fixed", bottom: 80, right: 16 }}
-                onClick={handleCreateTemplate}
-              >
-                <Add />
-              </Fab>
-              
-              {/* <Fab
-                color="secondary"
-                aria-label="add custom form"
-                sx={{ position: "fixed", bottom: 16, right: 16 }}
-                onClick={handleCreateCustomForm}
-              >
-                <Description />
-              </Fab> */}
-            </>
+            <Fab
+              color="primary"
+              aria-label="add template"
+              sx={{ position: "fixed", bottom: 80, right: 16 }}
+              onClick={handleCreateTemplate}
+            >
+              <Add />
+            </Fab>
           )}
         </>
       )}

@@ -33,12 +33,12 @@ export const NAVIGATION: NavigationItem[] = [
     title: "Dashboard",
     icon: "dashboard",
   },
-  {
-    segment: "config",
-    title: "Configuración",
-    icon: "settings",
-    //requiredRoles: ['admin'],
-  },
+  // {
+  //   segment: "config",
+  //   title: "Configuración",
+  //   icon: "settings",
+  //   //requiredRoles: ['admin'],
+  // },
   {
     segment: "formularios-de-inspeccion",
     title: "Formularios de Inspección de Seguridad",

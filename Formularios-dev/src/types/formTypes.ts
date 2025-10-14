@@ -339,8 +339,24 @@ export interface Question {
 export interface Section {
   _id?: string;
   title: string;
+  description?: string;        // ← Nuevo
   maxPoints: number;
   questions: Question[];
+  order?: number;
+  isParent?: boolean;          // ← Nuevo - Indica si es sección padre
+  parentId?: string | null;    // ← Nuevo - ID del padre
+  subsections?: Section[];     // ← Nuevo - Subsecciones anidadas
+}
+
+export interface SimpleSection {
+  _id?: string;
+  title: string;
+  description?: string;        // ← Nuevo
+  questions: SimpleQuestion[];
+  order?: number;
+  isParent?: boolean;          // ← Nuevo
+  parentId?: string | null;    // ← Nuevo
+  subsections?: SimpleSection[]; // ← Nuevo
 }
 
 export interface SimpleQuestion {
@@ -349,18 +365,13 @@ export interface SimpleQuestion {
   image?: string;
 }
 
-export interface SimpleSection {
-  _id?: string;
-  title: string;
-  questions: SimpleQuestion[];
-}
-
 
 export interface VerificationField {
   _id?: string
   label: string
-  type: "text" | "date" | "number" | "select"
+  type: "text" | "date" | "number" | "select" | "autocomplete"
   options?: string[] // Para campos select
+  dataSource?: string;
   required?: boolean
 }
 
@@ -425,6 +436,11 @@ export interface SectionResponse {
   sectionComment?: string // Comentario general de la sección
 }
 
+
+export interface PersonalInvolucrado {
+  nombre: string;
+  ci: string;
+}
 export interface FormInstance {
   _id: string
   templateId: string
@@ -434,6 +450,8 @@ export interface FormInstance {
   
   // Cambio principal: respuestas organizadas por secciones
   sections: SectionResponse[]
+
+  personalInvolucrado?: PersonalInvolucrado[]; // Lista de personal involucrado
   
   aspectosPositivos?: string
   aspectosAdicionales?: string

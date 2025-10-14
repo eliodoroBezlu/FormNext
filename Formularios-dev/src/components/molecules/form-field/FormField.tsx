@@ -8,26 +8,35 @@ import {
 import { Input, type InputProps } from "../../atoms/input/Input";
 import { Select, type SelectProps } from "../../atoms/select/Select";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { 
-  FormControl, 
-  FormControlLabel, 
+import {
+  FormControl,
+  FormControlLabel,
   Checkbox,
-  Typography
+  Typography,
 } from "@mui/material";
 import dayjs from "dayjs";
+import { DataSourceType } from "@/lib/actions/dataSourceService";
+import AutocompleteCustom from "../autocomplete-custom/AutocompleteCustom";
 
-export type FormFieldValue = string | number | Date | boolean | null | undefined;
+export type FormFieldValue =
+  | string
+  | number
+  | Date
+  | boolean
+  | null
+  | undefined;
 
 export interface FormFieldProps<T extends FieldValues> {
   name: FieldPath<T>;
   control: Control<T>;
-  type?: "text" | "number" | "date" | "select" | "checkbox";
+  type?: "text" | "number" | "date" | "select" | "checkbox" | "autocomplete";
   label: string;
   options?: SelectProps["options"];
   inputProps?: Partial<InputProps>;
   rules?: RegisterOptions<T, FieldPath<T>>;
   disabled?: boolean;
   onChange?: (value: FormFieldValue) => void;
+  dataSource?: DataSourceType;
 }
 
 export function FormField<T extends FieldValues>({
@@ -40,6 +49,7 @@ export function FormField<T extends FieldValues>({
   rules = {},
   disabled = false,
   onChange,
+  dataSource,
 }: FormFieldProps<T>) {
   return (
     <Controller
@@ -68,14 +78,18 @@ export function FormField<T extends FieldValues>({
                   }
                   label={label}
                   sx={{
-                    color: error ? 'error.main' : 'inherit',
-                    '& .MuiFormControlLabel-label': {
-                      fontSize: '0.875rem'
-                    }
+                    color: error ? "error.main" : "inherit",
+                    "& .MuiFormControlLabel-label": {
+                      fontSize: "0.875rem",
+                    },
                   }}
                 />
                 {error && (
-                  <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>
+                  <Typography
+                    variant="caption"
+                    color="error"
+                    sx={{ ml: 2, mt: 0.5 }}
+                  >
                     {error.message}
                   </Typography>
                 )}
@@ -132,6 +146,21 @@ export function FormField<T extends FieldValues>({
                 disabled={disabled}
                 onChange={(e) => handleChange(e.target.value)}
                 {...inputProps}
+              />
+            );
+
+          case "autocomplete":
+            return (
+              <AutocompleteCustom
+                dataSource={dataSource as DataSourceType}
+                label={label}
+                value={field.value || null}
+                onChange={(newValue) => handleChange(newValue)}
+                onBlur={field.onBlur}
+                error={!!error}
+                helperText={error?.message}
+                disabled={disabled}
+                required={!!rules.required}
               />
             );
 
