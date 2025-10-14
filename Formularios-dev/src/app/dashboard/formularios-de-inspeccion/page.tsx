@@ -75,7 +75,7 @@ export default function HomePage() {
       const result = await getTemplates({ isActive: true });
 
       if (result.success) {
-        setTemplates(result.data);
+        setTemplates(result.data as FormTemplate[]);
       } else {
         setError(result.error || "Error al cargar los templates");
       }
