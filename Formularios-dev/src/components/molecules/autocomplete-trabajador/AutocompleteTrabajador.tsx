@@ -2,16 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { TextField, Autocomplete, CircularProgress } from '@mui/material';
 
 export interface TrabajadorOption {
-  nomina: string; // Cambio: nombre → nomina
+  nomina: string;
   ci: string;
-  puesto?: string; // Cambio: cargo → puesto
+  puesto?: string;
 }
 
 interface AutocompleteTrabajadorProps {
   label?: string;
   placeholder?: string;
   value?: string | null;
-  onChange?: (nomina: string | null, trabajadorCompleto?: TrabajadorOption) => void; // Cambio: nombre → nomina
+  onChange?: (nomina: string | null, trabajadorCompleto?: TrabajadorOption) => void;
   onBlur?: () => void;
   error?: boolean;
   helperText?: string;
@@ -32,6 +32,7 @@ const AutocompleteTrabajador: React.FC<AutocompleteTrabajadorProps> = ({
 }) => {
   const [options, setOptions] = useState<TrabajadorOption[]>([]);
   const [loading, setLoading] = useState(false);
+  const [inputValue, setInputValue] = useState('');
 
   useEffect(() => {
     const loadTrabajadores = async () => {
@@ -40,14 +41,11 @@ const AutocompleteTrabajador: React.FC<AutocompleteTrabajadorProps> = ({
         const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
         const url = `${API_BASE_URL}/trabajadores/completos`;
         
-        
         const response = await fetch(url, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
           cache: 'no-store'
         });
-
-        console.log('📡 Response status:', response.status);
 
         if (!response.ok) {
           throw new Error(`Error: ${response.statusText}`);
@@ -56,7 +54,6 @@ const AutocompleteTrabajador: React.FC<AutocompleteTrabajadorProps> = ({
         const data = await response.json();
         
         if (Array.isArray(data) && data.length > 0) {
-          console.log('📦 Primer item:', data[0]);
           const filtered = data.filter(t => t.nomina && t.ci);
           setOptions(filtered);
         } else {
@@ -75,6 +72,8 @@ const AutocompleteTrabajador: React.FC<AutocompleteTrabajadorProps> = ({
   }, []);
 
   const handleChange = (_event: React.SyntheticEvent, newValue: TrabajadorOption | string | null) => {
+
+    
     if (!newValue) {
       onChange?.(null);
       return;
@@ -82,41 +81,69 @@ const AutocompleteTrabajador: React.FC<AutocompleteTrabajadorProps> = ({
 
     // Si es un objeto (selección de la lista)
     if (typeof newValue === 'object') {
-      // Pasar la nomina y el objeto completo (con puesto y ci)
-      onChange?.(newValue.nomina, newValue); // Cambio: nombre → nomina
+      onChange?.(newValue.nomina, newValue);
     } else {
-      // Si es texto libre (freeSolo)
       onChange?.(newValue, undefined);
     }
   };
 
-  // Mostrar SOLO la nomina (como antes)
+  // Mostrar SOLO la nomina
   const getOptionLabel = (option: TrabajadorOption | string): string => {
     if (typeof option === 'string') return option;
-    return option.nomina; // Cambio: nombre → nomina
+    return option.nomina;
   };
 
-  // Comparar opciones correctamente
+  // Comparación simplificada
   const isOptionEqualToValue = (option: TrabajadorOption | string, value: TrabajadorOption | string): boolean => {
+    
+    // Si ambos son strings, comparar directamente
     if (typeof option === 'string' && typeof value === 'string') {
-      return option === value;
+      const result = option === value;
+      return result;
     }
+    // Si option es objeto y value es string, comparar por nomina
     if (typeof option === 'object' && typeof value === 'string') {
-      return option.nomina === value; // Cambio: nombre → nomina
+      const result = option.nomina === value;
+      return result;
     }
+    // Si value es objeto y option es string, comparar por nomina
+    if (typeof option === 'string' && typeof value === 'object') {
+      const result = option === value.nomina;
+      return result;
+    }
+    // Si ambos son objetos, comparar por CI
     if (typeof option === 'object' && typeof value === 'object') {
-      return option.ci === value.ci;
+      const result = option.ci === value.ci;
+      return result;
     }
     return false;
   };
 
-  // Encontrar la opción actual basada en la nomina
+  // Mejorar getCurrentValue
   const getCurrentValue = (): TrabajadorOption | string | null => {
-    if (!value) return null;
+    
+    if (!value) {
+      return null;
+    }
     
     // Buscar en las opciones si coincide la nomina
-    const found = options.find(opt => opt.nomina === value); // Cambio: nombre → nomina
-    return found || value;
+    const found = options.find(opt => opt.nomina === value);
+    
+    if (found) {
+      return found;
+    }
+    
+    return value;
+  };
+
+  const handleBlur = () => {
+    
+    // Si hay un inputValue diferente al value, disparar onChange
+    if (inputValue && inputValue !== value) {
+      onChange?.(inputValue, undefined);
+    }
+    
+    onBlur?.();
   };
 
   return (
@@ -125,11 +152,24 @@ const AutocompleteTrabajador: React.FC<AutocompleteTrabajadorProps> = ({
       options={options}
       value={getCurrentValue()}
       onChange={handleChange}
-      onBlur={onBlur}
+      onBlur={handleBlur}
+      inputValue={inputValue}
+      onInputChange={(event, newInputValue) => {
+        setInputValue(newInputValue);
+      }}
       loading={loading}
       disabled={disabled}
       getOptionLabel={getOptionLabel}
       isOptionEqualToValue={isOptionEqualToValue}
+      filterOptions={(options, params) => {
+        const filtered = options.filter(option => {
+          if (typeof option === 'string') {
+            return option.toLowerCase().includes(params.inputValue.toLowerCase());
+          }
+          return option.nomina.toLowerCase().includes(params.inputValue.toLowerCase());
+        });
+        return filtered;
+      }}
       renderInput={(params) => (
         <TextField
           {...params}

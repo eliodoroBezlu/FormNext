@@ -1,7 +1,7 @@
 "use client";
 
-import type React from "react";
-import { useForm, useFieldArray, Controller } from "react-hook-form";
+import React from "react";
+import { useForm, useFieldArray, Controller, Control } from "react-hook-form";
 import {
   Box,
   Typography,
@@ -37,6 +37,7 @@ import {
   VerificationField,
   SimpleSection,
   Section,
+  Question,
 } from "@/types/formTypes";
 import { createInstance } from "@/lib/actions/instance-actions";
 import { startTransition, useState, useCallback, useMemo } from "react";
@@ -46,11 +47,11 @@ import { DataSourceType } from "@/lib/actions/dataSourceService";
 import AutocompleteTrabajador from "@/components/molecules/autocomplete-trabajador/AutocompleteTrabajador";
 import { PersonalInvolucrado } from "@/components/molecules/personal-involucrado/PersonalInvolucrado";
 
-// Tipos más específicos
 interface PersonalInvolucrado {
   nombre: string;
   ci: string;
 }
+
 interface InspectionFormData {
   verificationList: VerificationList;
   inspectionTeam: InspectionTeamMember[];
@@ -63,26 +64,151 @@ interface InspectionFormData {
 
 type ValoracionValue = "0" | "1" | "2" | "3" | "N/A" | "";
 
-interface SectionMetrics {
-  obtainedPoints: number;
-  applicablePoints: number;
-  naCount: number;
-  compliancePercentage: number;
-}
-
-interface OverallMetrics {
-  totalObtainedPoints: number;
-  totalApplicablePoints: number;
-  totalMaxPoints: number;
-  totalNaCount: number;
-  overallCompliancePercentage: number;
-}
-
 export interface InspectionFormProps {
   template: FormTemplate;
   onSave: (instance: FormInstance) => void;
   onCancel: () => void;
 }
+
+// 🚀 OPTIMIZACIÓN 1: Componente para cada pregunta
+interface QuestionItemProps {
+  section: Section;
+  question: Question;
+  questionIndex: number;
+  flatIndex: number;
+  control: Control<InspectionFormData>;
+  onResponseChange: (sectionIndex: number, questionIndex: number, value: string) => void;
+}
+
+const QuestionItem = React.memo<QuestionItemProps>(({
+  section,
+  question,
+  questionIndex,
+  flatIndex,
+  control,
+  onResponseChange,
+}) => {
+  return (
+    <Paper
+      key={questionIndex}
+      variant="outlined"
+      sx={{
+        mb: 2,
+        p: { xs: 1.5, sm: 2 },
+        bgcolor: "grey.50",
+      }}
+    >
+      <Grid container spacing={2} alignItems="center">
+        <Grid size={{ xs: 2, md: 1 }}>
+          <Typography
+            variant="body2"
+            fontWeight="bold"
+            textAlign="center"
+            color="primary"
+            sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}
+          >
+            {section._id?.charAt(0).toUpperCase()}.{questionIndex + 1}
+          </Typography>
+        </Grid>
+
+        <Grid size={{ xs: 10, md: 5 }}>
+          <Typography
+            variant="body2"
+            sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}
+          >
+            {question.text}
+          </Typography>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 3 }}>
+          <Box>
+            <Typography
+              variant="caption"
+              display={{ xs: "block", md: "none" }}
+              color="text.secondary"
+              sx={{ mb: 0.5 }}
+            >
+              Valoración:
+            </Typography>
+            <Controller
+              name={`sections.${flatIndex}.questions.${questionIndex}.response`}
+              control={control}
+              render={({ field }) => (
+                <Select
+                  value={field.value || ""}
+                  onChange={(value) => {
+                    const selectedValue =
+                      typeof value === "string"
+                        ? value
+                        : (value as { target: { value: ValoracionValue } })?.target?.value || "";
+                    field.onChange(selectedValue);
+                    onResponseChange(flatIndex, questionIndex, selectedValue);
+                  }}
+                  label=""
+                  options={valoracionOptions}
+                  sx={{
+                    fontSize: { xs: "0.8rem", sm: "0.875rem" },
+                    ...(question.obligatorio && {
+                      backgroundColor: "#E63715",
+                      "& .MuiSelect-select": {
+                        backgroundColor: "#E63715 !important",
+                      },
+                      "& .MuiOutlinedInput-root": {
+                        backgroundColor: "#E63715 !important",
+                        "& fieldset": {
+                          borderColor: "#E63715",
+                        },
+                        "&:hover fieldset": {
+                          borderColor: "#E63715",
+                        },
+                        "&.Mui-focused fieldset": {
+                          borderColor: "#E63715",
+                        },
+                      },
+                    }),
+                  }}
+                />
+              )}
+            />
+          </Box>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 3 }}>
+          <Box>
+            <Typography
+              variant="caption"
+              display={{ xs: "block", md: "none" }}
+              color="text.secondary"
+              sx={{ mb: 0.5 }}
+            >
+              Comentario:
+            </Typography>
+            <Controller
+              name={`sections.${flatIndex}.questions.${questionIndex}.comment`}
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  value={field.value || ""}
+                  label=""
+                  inputProps={{ placeholder: "Comentario" }}
+                  sx={{
+                    fontSize: { xs: "0.8rem", sm: "0.875rem" },
+                    "& .MuiInputBase-input": {
+                      padding: { xs: "8px 12px", sm: "8px 12px" },
+                    },
+                  }}
+                />
+              )}
+            />
+          </Box>
+        </Grid>
+      </Grid>
+    </Paper>
+  );
+});
+
+QuestionItem.displayName = 'QuestionItem';
 
 export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
   template,
@@ -98,7 +224,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
     if (code.includes("1.02.P06.F12")) {
       return {
         title: "VALORACIÓN & CRITERIO",
-        showConformacion: true, // Flag para mostrar columnas adicionales
+        showConformacion: true,
         items: [
           {
             valoracion: "0",
@@ -139,25 +265,22 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
       };
     }
 
-    // Mensaje por defecto para otros formularios
     return {
       title: "VALORACIÓN Y CRITERIO",
       showConformacion: false,
       items: valoracionCriterio,
       nota: null,
     };
-  }, [template.code, valoracionCriterio]);
+  }, [template.code]);
 
   const flattenSections = useCallback((sections: Section[]): Section[] => {
     const flattened: Section[] = [];
 
     const flatten = (section: Section) => {
-      // Solo agregar secciones que NO sean padre
       if (!section.isParent) {
         flattened.push(section);
       }
 
-      // Procesar subsecciones recursivamente
       if (section.subsections && section.subsections.length > 0) {
         section.subsections.forEach(flatten);
       }
@@ -167,47 +290,11 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
     return flattened;
   }, []);
 
-  const flatSections = useMemo(
+  const allFlatSections = useMemo(
     () => flattenSections(template.sections),
-    [template.sections]
+    [template.sections, flattenSections]
   );
 
-  // Función para calcular métricas de una sección (memoizada)
-  const calculateSectionMetrics = useCallback(
-    (sectionIndex: number, questions: QuestionResponse[]): SectionMetrics => {
-      const section = flatSections[sectionIndex];
-      let obtainedPoints = 0;
-      let naCount = 0;
-
-      questions.forEach((question) => {
-        if (question.response === "N/A") {
-          naCount++;
-        } else if (
-          question.response !== "" &&
-          question.response !== undefined
-        ) {
-          const points = Number(question.response);
-          if (!isNaN(points)) {
-            obtainedPoints += points;
-          }
-        }
-      });
-
-      const applicablePoints = section.maxPoints;
-      const compliancePercentage =
-        section.maxPoints > 0 ? (obtainedPoints / section.maxPoints) * 100 : 0;
-
-      return {
-        obtainedPoints,
-        applicablePoints: Number(applicablePoints.toFixed(2)),
-        naCount,
-        compliancePercentage: Number(compliancePercentage.toFixed(2)),
-      };
-    },
-    [flatSections]
-  );
-
-  // Crear valores iniciales para las secciones
   const createInitialSections = useCallback((): SectionResponse[] => {
     const flatSections = flattenSections(template.sections);
 
@@ -234,14 +321,13 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
         sectionComment: "",
       };
     });
-  }, [template.sections]);
+  }, [template.sections, flattenSections]);
 
   const {
     control,
     handleSubmit,
-    watch,
     setValue,
-    formState: {},
+    getValues,
   } = useForm<InspectionFormData>({
     defaultValues: {
       verificationList: template.verificationFields
@@ -260,7 +346,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
       sections: createInitialSections(),
       aspectosPositivos: "",
       aspectosAdicionales: "",
-
       personalInvolucrado:
         template.code === "1.02.P06.F46"
           ? [
@@ -268,9 +353,8 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
               { nombre: "", ci: "" },
               { nombre: "", ci: "" },
               { nombre: "", ci: "" },
-            ] // Comienza con 1 fila vacía para F46
-          : [], // Vacío para otros templates
-      // 👈 Inicializado con 8 filas vacías
+            ]
+          : [],
     },
   });
 
@@ -283,131 +367,93 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
     name: "inspectionTeam",
   });
 
-  const watchedSections = watch("sections");
+  const [metricsTrigger, setMetricsTrigger] = useState(0);
+  
+  const sectionResponses = useMemo(() => {
+    const sections = getValues("sections");
+    return sections.map(section => ({
+      maxPoints: section.maxPoints,
+      responses: section.questions.map(q => q.response)
+    }));
+  }, [metricsTrigger, getValues]);
 
-  // Marcar sección como no aplicable (optimizada)
-  const markSectionAsNotApplicable = useCallback(
+  const handleMarkSectionAsNotApplicable = useCallback(
     (sectionIndex: number) => {
-      const currentSections = watchedSections;
-      const updatedSections = [...currentSections];
-
-      // Marcar todas las preguntas como "N/A"
-      const updatedQuestions = updatedSections[sectionIndex].questions.map(
+      const currentSections = getValues("sections");
+      const updatedQuestions = currentSections[sectionIndex].questions.map(
         (question) => ({
           ...question,
           response: "N/A" as ValoracionValue,
-          points: 0,
         })
       );
 
-      // Calcular métricas una sola vez
-      const metrics = calculateSectionMetrics(sectionIndex, updatedQuestions);
-
-      updatedSections[sectionIndex] = {
-        ...updatedSections[sectionIndex],
-        questions: updatedQuestions,
-        ...metrics,
-      };
-
-      setValue("sections", updatedSections);
+      setValue(`sections.${sectionIndex}.questions`, updatedQuestions, {
+        shouldValidate: false,
+        shouldDirty: true,
+      });
+      
+      setMetricsTrigger(prev => prev + 1);
     },
-    [watchedSections, setValue, calculateSectionMetrics]
+    [getValues, setValue]
   );
 
-  // Actualizar métricas de sección solo cuando cambia la respuesta (no en comentarios)
-  const updateSectionMetrics = useCallback(
+  const handleUpdateQuestionResponse = useCallback(
     (sectionIndex: number, questionIndex: number, newResponse: string) => {
-      const currentSections = watchedSections;
-      const updatedSections = [...currentSections];
-
-      // Validar respuesta
       const validResponses = ["0", "1", "2", "3", "N/A", ""];
       const sanitizedResponse = validResponses.includes(newResponse)
         ? newResponse
         : "";
 
-      // Solo actualizar si realmente cambió la respuesta
-      const currentResponse =
-        updatedSections[sectionIndex].questions[questionIndex].response;
-      if (currentResponse === sanitizedResponse) return;
-
-      // Actualizar respuesta y puntos
-      updatedSections[sectionIndex].questions[questionIndex] = {
-        ...updatedSections[sectionIndex].questions[questionIndex],
-        response: sanitizedResponse,
-        points:
-          sanitizedResponse === "N/A" || sanitizedResponse === ""
-            ? 0
-            : Number(sanitizedResponse) || 0,
-      };
-
-      // Recalcular métricas solo cuando cambia la respuesta
-      const metrics = calculateSectionMetrics(
-        sectionIndex,
-        updatedSections[sectionIndex].questions
-      );
-
-      updatedSections[sectionIndex] = {
-        ...updatedSections[sectionIndex],
-        ...metrics,
-      };
-
-      setValue("sections", updatedSections);
-    },
-    [watchedSections, setValue, calculateSectionMetrics]
-  );
-
-  // Actualizar comentario de pregunta sin recalcular métricas
-  const updateQuestionComment = useCallback(
-    (sectionIndex: number, questionIndex: number, comment: string) => {
-      // Usar setValue directo sin recalcular métricas
       setValue(
-        `sections.${sectionIndex}.questions.${questionIndex}.comment`,
-        comment,
-        { shouldValidate: false, shouldDirty: true, shouldTouch: true }
+        `sections.${sectionIndex}.questions.${questionIndex}.response`,
+        sanitizedResponse,
+        { shouldValidate: false, shouldDirty: true }
       );
+      
+      setMetricsTrigger(prev => prev + 1);
     },
     [setValue]
   );
 
-  // Actualizar comentario de sección sin recalcular métricas
-  const updateSectionComment = useCallback(
-    (sectionIndex: number, comment: string) => {
-      setValue(`sections.${sectionIndex}.sectionComment`, comment);
-    },
-    [setValue]
-  );
+  const previewMetrics = useMemo(() => {
+    let totalObtained = 0;
+    let totalApplicable = 0;
+    let totalNA = 0;
 
-  // Calcular métricas generales (memoizado)
-  const overallMetrics = useMemo((): OverallMetrics => {
-    const totalObtainedPoints = watchedSections.reduce(
-      (sum, section) => sum + section.obtainedPoints,
-      0
-    );
-    const totalMaxPoints = watchedSections.reduce(
-      (sum, section) => sum + section.maxPoints,
-      0
-    );
-    const totalNaCount = watchedSections.reduce(
-      (sum, section) => sum + section.naCount,
-      0
-    );
+    sectionResponses.forEach((section) => {
+      let sectionObtained = 0;
+       // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      let sectionNA = 0;
 
-    const overallCompliancePercentage =
-      totalMaxPoints > 0 ? (totalObtainedPoints / totalMaxPoints) * 100 : 0;
+      section.responses.forEach((response) => {
+        if (response === "N/A") {
+           // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          sectionNA++;
+          totalNA++;
+        } else if (response !== "") {
+          const points = Number(response);
+          if (!isNaN(points)) {
+            sectionObtained += points;
+          }
+        }
+      });
+
+      totalObtained += sectionObtained;
+      totalApplicable += section.maxPoints;
+    });
+
+    const compliance = totalApplicable > 0 
+      ? (totalObtained / totalApplicable) * 100 
+      : 0;
 
     return {
-      totalObtainedPoints,
-      totalApplicablePoints: totalMaxPoints,
-      totalMaxPoints,
-      totalNaCount,
-      overallCompliancePercentage: Number(
-        overallCompliancePercentage.toFixed(2)
-      ),
+      totalObtained: totalObtained.toFixed(2),
+      totalApplicable: totalApplicable.toFixed(2),
+      totalNA,
+      compliance: compliance.toFixed(2),
     };
-  }, [watchedSections]);
+  }, [sectionResponses]);
 
-  // Envío del formulario
   const onSubmit = useCallback(
     (data: InspectionFormData) => {
       startTransition(async () => {
@@ -424,10 +470,9 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
             aspectosPositivos: data.aspectosPositivos,
             aspectosAdicionales: data.aspectosAdicionales,
             personalInvolucrado: data.personalInvolucrado,
-            ...overallMetrics,
           };
 
-          console.log("Datos antes de enviar:", instanceData);
+          console.log("📤 Enviando datos al backend:", instanceData);
           const result = await createInstance(instanceData);
 
           if (result.success) {
@@ -439,10 +484,15 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
               verificationList: data.verificationList,
               inspectionTeam: data.inspectionTeam,
               valoracionCriterio,
-              sections: data.sections,
+              sections: result.data?.sections || data.sections,
               aspectosPositivos: data.aspectosPositivos,
               aspectosAdicionales: data.aspectosAdicionales,
-              ...overallMetrics,
+              personalInvolucrado: data.personalInvolucrado,
+              totalObtainedPoints: result.data?.totalObtainedPoints || 0,
+              totalApplicablePoints: result.data?.totalApplicablePoints || 0,
+              totalMaxPoints: result.data?.totalMaxPoints || 0,
+              totalNaCount: result.data?.totalNaCount || 0,
+              overallCompliancePercentage: result.data?.overallCompliancePercentage || 0,
               status: "borrador" as const,
               createdBy: "current-user",
               createdAt: result.data?.createdAt || new Date(),
@@ -464,21 +514,44 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
         }
       });
     },
-    [template._id, valoracionCriterio, overallMetrics, onSave]
+    [template._id, onSave]
   );
 
   const addTeamMember = useCallback(() => {
     appendTeamMember({ nombre: "", cargo: "", firma: "" });
   }, [appendTeamMember]);
 
-  // Reemplaza tu función renderSections actual con esta versión completa:
+  const calculateSectionMetrics = useCallback((questions: QuestionResponse[], maxPoints: number) => {
+    let obtained = 0;
+    let na = 0;
+    
+    questions.forEach((q) => {
+      if (q.response === "N/A") {
+        na++;
+      } else if (q.response !== "") {
+        const points = Number(q.response);
+        if (!isNaN(points)) {
+          obtained += points;
+        }
+      }
+    });
+    
+    const compliance = maxPoints > 0 ? (obtained / maxPoints) * 100 : 0;
+    
+    return {
+      obtained: obtained.toFixed(2),
+      na,
+      compliance: compliance.toFixed(2)
+    };
+  }, []);
 
   const renderSections = (
     sections: Section[],
     level: number = 0
   ): React.ReactNode => {
+    const currentSections = getValues("sections");
+    
     return sections.map((section, index) => {
-      // Si es sección padre, renderizar como contenedor
       if (section.isParent) {
         return (
           <Accordion
@@ -541,13 +614,17 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
         );
       }
 
-      // Si NO es sección padre, renderizar sección con preguntas
-      const flatIndex = flatSections.findIndex((s) => s._id === section._id);
+      const flatIndex = allFlatSections.findIndex((s) => s._id === section._id);
       if (flatIndex === -1) return null;
 
-      const sectionData = watchedSections[flatIndex];
+      const sectionData = currentSections[flatIndex];
       const isCompleted = sectionData?.questions?.every(
         (q) => q.response && q.response !== ""
+      );
+
+      const sectionMetrics = calculateSectionMetrics(
+        sectionData?.questions || [],
+        section.maxPoints
       );
 
       return (
@@ -609,7 +686,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                     textAlign: { xs: "left", sm: "right" },
                   }}
                 >
-                  % Cumplimiento: {sectionData?.compliancePercentage || 0}%
+                  % Cumplimiento: {sectionMetrics.compliance}%
                 </Typography>
               </Grid>
             </Grid>
@@ -637,7 +714,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                     variant="body2"
                     fontSize={{ xs: "0.75rem", sm: "0.875rem" }}
                   >
-                    Aplicable: {sectionData?.applicablePoints?.toFixed(2) || 0}
+                    Aplicable: {section.maxPoints.toFixed(2)}
                   </Typography>
                 </Grid>
                 <Grid size={{ xs: 6, sm: 2 }}>
@@ -645,7 +722,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                     variant="body2"
                     fontSize={{ xs: "0.75rem", sm: "0.875rem" }}
                   >
-                    Obtenido: {sectionData?.obtainedPoints?.toFixed(2) || 0}
+                    Obtenido: {sectionMetrics.obtained}
                   </Typography>
                 </Grid>
                 <Grid size={{ xs: 6, sm: 2 }}>
@@ -653,7 +730,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                     variant="body2"
                     fontSize={{ xs: "0.75rem", sm: "0.875rem" }}
                   >
-                    N/A: {sectionData?.naCount || 0}
+                    N/A: {sectionMetrics.na}
                   </Typography>
                 </Grid>
                 <Grid size={{ xs: 12, sm: 4 }}>
@@ -664,7 +741,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                     <Button
                       variant="outlined"
                       size="small"
-                      onClick={() => markSectionAsNotApplicable(flatIndex)}
+                      onClick={() => handleMarkSectionAsNotApplicable(flatIndex)}
                       sx={{
                         bgcolor: "white",
                         color: "error.main",
@@ -688,152 +765,38 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
 
             <Box p={{ xs: 2, sm: 3 }}>
               {section.questions.map((question, questionIndex) => (
-                <Paper
+                <QuestionItem
                   key={questionIndex}
-                  variant="outlined"
-                  sx={{
-                    mb: 2,
-                    p: { xs: 1.5, sm: 2 },
-                    bgcolor: "grey.50",
-                  }}
-                >
-                  <Grid container spacing={2} alignItems="center">
-                    {/* Número de pregunta */}
-                    <Grid size={{ xs: 2, md: 1 }}>
-                      <Typography
-                        variant="body2"
-                        fontWeight="bold"
-                        textAlign="center"
-                        color="primary"
-                        sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}
-                      >
-                        {section._id?.charAt(0).toUpperCase()}.
-                        {questionIndex + 1}
-                      </Typography>
-                    </Grid>
-
-                    {/* Texto de la pregunta */}
-                    <Grid size={{ xs: 10, md: 5 }}>
-                      <Typography
-                        variant="body2"
-                        sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}
-                      >
-                        {question.text}
-                      </Typography>
-                    </Grid>
-
-                    {/* Select de valoración */}
-                    <Grid size={{ xs: 12, md: 3 }}>
-                      <Box>
-                        <Typography
-                          variant="caption"
-                          display={{ xs: "block", md: "none" }}
-                          color="text.secondary"
-                          sx={{ mb: 0.5 }}
-                        >
-                          Valoración:
-                        </Typography>
-                        <Select
-                          value={
-                            sectionData?.questions[questionIndex]?.response ||
-                            ""
-                          }
-                          onChange={(value) => {
-                            const selectedValue =
-                              typeof value === "string"
-                                ? value
-                                : (
-                                    value as {
-                                      target: { value: ValoracionValue };
-                                    }
-                                  )?.target?.value || "";
-                            updateSectionMetrics(
-                              flatIndex,
-                              questionIndex,
-                              selectedValue
-                            );
-                          }}
-                          label=""
-                          options={valoracionOptions}
-                          sx={{
-                            fontSize: { xs: "0.8rem", sm: "0.875rem" },
-                            ...(question.obligatorio && {
-                              backgroundColor: "#E63715",
-                              "& .MuiSelect-select": {
-                                backgroundColor: "#E63715 !important",
-                              },
-                              "& .MuiOutlinedInput-root": {
-                                backgroundColor: "#E63715 !important",
-                                "& fieldset": {
-                                  borderColor: "#E63715",
-                                },
-                                "&:hover fieldset": {
-                                  borderColor: "#E63715",
-                                },
-                                "&.Mui-focused fieldset": {
-                                  borderColor: "#E63715",
-                                },
-                              },
-                            }),
-                          }}
-                        />
-                      </Box>
-                    </Grid>
-
-                    {/* Campo de comentario */}
-                    <Grid size={{ xs: 12, md: 3 }}>
-                      <Box>
-                        <Typography
-                          variant="caption"
-                          display={{ xs: "block", md: "none" }}
-                          color="text.secondary"
-                          sx={{ mb: 0.5 }}
-                        >
-                          Comentario:
-                        </Typography>
-                        <Input
-                          value={
-                            sectionData?.questions[questionIndex]?.comment || ""
-                          }
-                          onChange={(e) =>
-                            updateQuestionComment(
-                              flatIndex,
-                              questionIndex,
-                              e.target.value
-                            )
-                          }
-                          label=""
-                          inputProps={{ placeholder: "Comentario" }}
-                          sx={{
-                            fontSize: { xs: "0.8rem", sm: "0.875rem" },
-                            "& .MuiInputBase-input": {
-                              padding: { xs: "8px 12px", sm: "8px 12px" },
-                            },
-                          }}
-                        />
-                      </Box>
-                    </Grid>
-                  </Grid>
-                </Paper>
+                  section={section}
+                  question={question}
+                  questionIndex={questionIndex}
+                  flatIndex={flatIndex}
+                  control={control}
+                  onResponseChange={handleUpdateQuestionResponse}
+                />
               ))}
 
               <Box mt={3}>
-                <TextField
-                  value={sectionData?.sectionComment || ""}
-                  onChange={(e) =>
-                    updateSectionComment(flatIndex, e.target.value)
-                  }
-                  label="Comentarios de la Sección"
-                  multiline
-                  rows={3}
-                  fullWidth
-                  variant="outlined"
-                  placeholder="Comentarios adicionales para esta sección..."
-                  sx={{
-                    "& .MuiInputBase-input": {
-                      fontSize: { xs: "0.8rem", sm: "0.875rem" },
-                    },
-                  }}
+                <Controller
+                  name={`sections.${flatIndex}.sectionComment`}
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      value={field.value || ""}
+                      label="Comentarios de la Sección"
+                      multiline
+                      rows={3}
+                      fullWidth
+                      variant="outlined"
+                      placeholder="Comentarios adicionales para esta sección..."
+                      sx={{
+                        "& .MuiInputBase-input": {
+                          fontSize: { xs: "0.8rem", sm: "0.875rem" },
+                        },
+                      }}
+                    />
+                  )}
                 />
               </Box>
             </Box>
@@ -845,7 +808,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
 
   return (
     <Box p={{ xs: 1, sm: 2, md: 3 }}>
-      {/* Header - Responsive */}
       <Box
         display="flex"
         flexDirection={{ xs: "column", sm: "row" }}
@@ -904,12 +866,11 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
               fontSize: { xs: "1.2rem", sm: "1.5rem" },
             }}
           >
-            % Cumplimiento Global: {overallMetrics.overallCompliancePercentage}%
+            % Cumplimiento Global: {previewMetrics.compliance}%
           </Typography>
         </Box>
       </Box>
 
-      {/* Mostrar mensajes de éxito/error */}
       {success && (
         <Box
           mb={2}
@@ -934,7 +895,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
       )}
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        {/* Lista de Verificación - Accordion */}
         <Accordion elevation={2} sx={{ mb: 2 }} defaultExpanded>
           <AccordionSummary
             expandIcon={<ExpandMore />}
@@ -981,7 +941,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
           </AccordionDetails>
         </Accordion>
 
-        {/* Equipo de Inspección - Accordion */}
         <Accordion elevation={2} sx={{ mb: 2 }} defaultExpanded>
           <AccordionSummary
             expandIcon={<ExpandMore />}
@@ -1001,7 +960,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
             </Typography>
           </AccordionSummary>
           <AccordionDetails sx={{ p: { xs: 2, sm: 3 } }}>
-            {/* Header para desktop */}
             <Box display={{ xs: "none", md: "block" }} mb={2}>
               <Grid container spacing={2}>
                 <Grid size={1}>
@@ -1032,7 +990,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
               </Grid>
             </Box>
 
-            {/* Team Members */}
             {teamMembers.map((member, index) => (
               <Paper
                 key={member.id}
@@ -1044,7 +1001,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                 }}
               >
                 <Grid container spacing={2} alignItems="center">
-                  {/* Número */}
                   <Grid size={{ xs: 6, md: 1 }}>
                     <Typography
                       variant="body2"
@@ -1055,7 +1011,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                     </Typography>
                   </Grid>
 
-                  {/* Acciones - En móvil aparece al lado del cargo */}
                   <Grid
                     size={{ xs: 6, md: 1 }}
                     display={{ xs: "flex-end", md: "none" }}
@@ -1073,7 +1028,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                     </Box>
                   </Grid>
 
-                  {/* Nombre */}
                   <Grid size={{ xs: 12, md: 3 }}>
                     <Box>
                       <Typography
@@ -1094,11 +1048,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                             placeholder="Seleccione trabajador"
                             value={field.value || null}
                             onChange={(nomina, trabajador) => {
-                              // Actualizar el nombre (nomina)
                               field.onChange(nomina);
-
-                              // Si se seleccionó un trabajador de la lista
-                              // autocompletar el cargo con el puesto
                               if (trabajador?.puesto) {
                                 setValue(
                                   `inspectionTeam.${index}.cargo`,
@@ -1116,7 +1066,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                     </Box>
                   </Grid>
 
-                  {/* Cargo - Sin cambios */}
                   <Grid size={{ xs: 12, md: 3 }}>
                     <Box>
                       <Typography
@@ -1137,7 +1086,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                     </Box>
                   </Grid>
 
-                  {/* Firma */}
                   <Grid size={{ xs: 12, md: 4 }}>
                     <Box>
                       <Typography
@@ -1158,7 +1106,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                     </Box>
                   </Grid>
 
-                  {/* Acciones - Solo en desktop */}
                   <Grid size={1} display={{ xs: "none", md: "flex" }}>
                     <Box display="flex" justifyContent="center">
                       {teamMembers.length > 1 && (
@@ -1192,7 +1139,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
           </AccordionDetails>
         </Accordion>
 
-        {/* Valoración y Criterio - Accordion */}
         <Accordion elevation={2} sx={{ mb: 2 }}>
           <AccordionSummary
             expandIcon={<ExpandMore />}
@@ -1213,7 +1159,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
           </AccordionSummary>
           <AccordionDetails sx={{ p: { xs: 1, sm: 2 } }}>
             <Box>
-              {/* Header con columnas adicionales si es F46 */}
               {getValoracionMessage().showConformacion && (
                 <Grid
                   container
@@ -1226,7 +1171,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                     display: { xs: "none", md: "flex" },
                   }}
                 >
-                  {/* Columna Valoración */}
                   <Grid size={1.5}>
                     <Typography
                       variant="subtitle2"
@@ -1237,7 +1181,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                     </Typography>
                   </Grid>
 
-                  {/* Columna Criterio */}
                   <Grid size={5}>
                     <Typography
                       variant="subtitle2"
@@ -1248,7 +1191,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                     </Typography>
                   </Grid>
 
-                  {/* Columna Conformación */}
                   <Grid size={5.5}>
                     <Typography
                       variant="subtitle2"
@@ -1306,7 +1248,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                 </Grid>
               )}
 
-              {/* Items de valoración */}
               {getValoracionMessage().items.map((item, idx) => (
                 <Grid
                   container
@@ -1322,7 +1263,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                     },
                   }}
                 >
-                  {/* Valoración */}
                   <Grid size={{ xs: 12, md: 1.5 }}>
                     <Box
                       sx={{
@@ -1345,7 +1285,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                     </Box>
                   </Grid>
 
-                  {/* Criterio */}
                   <Grid size={{ xs: 12, md: 5 }}>
                     <Box
                       sx={{
@@ -1363,11 +1302,9 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                     </Box>
                   </Grid>
 
-                  {/* Columnas de conformación (solo para F46) */}
                   {getValoracionMessage().showConformacion && (
                     <Grid size={{ xs: 12, md: 5.5 }}>
                       <Grid container spacing={1} sx={{ height: "100%" }}>
-                        {/* ISOP para MSC */}
                         <Grid size={{ xs: 12, sm: 6 }}>
                           <Box
                             sx={{
@@ -1399,7 +1336,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                           </Box>
                         </Grid>
 
-                        {/* ISOP para EECC */}
                         <Grid size={{ xs: 12, sm: 6 }}>
                           <Box
                             sx={{
@@ -1434,14 +1370,12 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                     </Grid>
                   )}
 
-                  {/* Para formularios sin conformación */}
                   {!getValoracionMessage().showConformacion && (
                     <Grid size={{ xs: 12, md: 5.5 }} />
                   )}
                 </Grid>
               ))}
 
-              {/* Nota especial para F46 */}
               {getValoracionMessage().nota && (
                 <Box
                   sx={{
@@ -1459,7 +1393,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                     color="error.dark"
                     sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}
                   >
-                   Nota: {getValoracionMessage().nota}
+                    Nota: {getValoracionMessage().nota}
                   </Typography>
                 </Box>
               )}
@@ -1467,10 +1401,8 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
           </AccordionDetails>
         </Accordion>
 
-        {/* Secciones del Formulario - Accordions individuales */}
         {renderSections(template.sections, 0)}
 
-        {/* Secciones Simples (Informativas) */}
         {template.simpleSections && template.simpleSections.length > 0 && (
           <Box mb={2}>
             {template.simpleSections.map((section, index) => (
@@ -1576,7 +1508,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
           </Box>
         )}
 
-        {/* Conclusiones - Accordion */}
         <Accordion elevation={2} sx={{ mb: 2 }} defaultExpanded>
           <AccordionSummary
             expandIcon={<ExpandMore />}
@@ -1627,7 +1558,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                     <TextField
                       {...field}
                       value={field.value || ""}
-                      label="2. Ítems Críticos encontrados::"
+                      label="2. Ítems Críticos encontrados:"
                       multiline
                       rows={4}
                       fullWidth
@@ -1685,7 +1616,6 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
           </Accordion>
         )}
 
-        {/* Resumen General - Siempre visible */}
         <Paper
           elevation={3}
           sx={{ mb: 3, border: "2px solid", borderColor: "primary.main" }}
@@ -1697,7 +1627,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
               variant="h6"
               sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}
             >
-              RESUMEN GENERAL
+              RESUMEN GENERAL (Vista Previa)
             </Typography>
           </Box>
           <Box p={{ xs: 2, sm: 3 }}>
@@ -1710,7 +1640,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                   variant="h6"
                   sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}
                 >
-                  {overallMetrics.totalObtainedPoints.toFixed(2)}
+                  {previewMetrics.totalObtained}
                 </Typography>
               </Grid>
               <Grid size={{ xs: 6, sm: 3 }}>
@@ -1721,7 +1651,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                   variant="h6"
                   sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}
                 >
-                  {overallMetrics.totalApplicablePoints.toFixed(2)}
+                  {previewMetrics.totalApplicable}
                 </Typography>
               </Grid>
               <Grid size={{ xs: 6, sm: 3 }}>
@@ -1732,7 +1662,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                   variant="h6"
                   sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}
                 >
-                  {overallMetrics.totalNaCount}
+                  {previewMetrics.totalNA}
                 </Typography>
               </Grid>
               <Grid size={{ xs: 6, sm: 3 }}>
@@ -1744,14 +1674,18 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                   color="primary"
                   sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
                 >
-                  {overallMetrics.overallCompliancePercentage}%
+                  {previewMetrics.compliance}%
                 </Typography>
               </Grid>
             </Grid>
+            <Box mt={2} p={1} bgcolor="info.50" borderRadius={1}>
+              <Typography variant="caption" color="info.main">
+                ℹ️ Los valores finales serán calculados automáticamente por el servidor al guardar
+              </Typography>
+            </Box>
           </Box>
         </Paper>
 
-        {/* Botones de acción - Siempre visibles */}
         <Paper elevation={3} sx={{ p: { xs: 2, sm: 3 }, bgcolor: "grey.50" }}>
           <Grid container spacing={2} justifyContent="flex-end">
             <Grid size={{ xs: 12, sm: "auto" }}>

@@ -1,8 +1,7 @@
-// components/form-filler/QuestionRenderer.tsx
 "use client";
 
 import React from "react";
-import { Controller, Control, FieldErrors, FieldPath } from "react-hook-form";
+import { Controller, Control, FieldErrors, FieldPath, PathValue } from "react-hook-form";
 import {
   Box,
   Typography,
@@ -17,9 +16,8 @@ import {
   Chip,
   FormHelperText,
 } from "@mui/material";
-import { FormDataHerraEquipos, getNestedError, Question } from "./types/IProps";
+import { FormDataHerraEquipos, getNestedError, Question, QuestionResponse, FormFeatureConfig } from "./types/IProps";
 
-// Hacer el componente genérico
 interface QuestionRendererProps<T extends FormDataHerraEquipos = FormDataHerraEquipos> {
   question: Question;
   sectionPath: string;
@@ -27,6 +25,7 @@ interface QuestionRendererProps<T extends FormDataHerraEquipos = FormDataHerraEq
   control: Control<T>;
   errors: FieldErrors<T>;
   readonly?: boolean;
+  formConfig: FormFeatureConfig; // ✅ Solo el config completo
 }
 
 export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraEquipos>({
@@ -36,117 +35,309 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
   control,
   errors,
   readonly = false,
+  formConfig, // ✅ Recibimos el config completo
 }: QuestionRendererProps<T>) => {
   const fieldName = `${sectionPath}.q${questionIndex}` as FieldPath<T>;
-  const observacionFieldName = `${sectionPath}.q${questionIndex}.observacion` as FieldPath<T>;
   
-  const error = getNestedError(errors, fieldName);
-  const observacionError = getNestedError(errors, observacionFieldName);
+  // ✅ Extraer configuraciones del formConfig
+  const descriptionConfig = formConfig.questionDescription;
+  const observationConfig = formConfig.questionObservations;
+  
+  const showDescription = descriptionConfig?.enabled ?? false;
+  const descriptionRequired = descriptionConfig?.required ?? false;
+  const descriptionLabel = descriptionConfig?.label ?? "Descripción";
+  const descriptionPlaceholder = descriptionConfig?.placeholder ?? "Describa el elemento...";
+  
+  const showObservations = observationConfig?.enabled ?? true;
+  const observationRequired = observationConfig?.required ?? false;
+  const observationLabel = observationConfig?.label ?? "Observaciones (opcional)";
+  const observationPlaceholder = observationConfig?.placeholder ?? "Ingrese observaciones adicionales...";
+  
+  const error = getNestedError(errors, `${fieldName}.value`);
+  const descripcionError = getNestedError(errors, `${fieldName}.descripcion`);
+  const observacionError = getNestedError(errors, `${fieldName}.observacion`);
+
+  // Helper para obtener el valor actual
+  const getCurrentValue = (fieldValue: unknown): QuestionResponse => {
+    if (fieldValue && typeof fieldValue === "object" && "value" in fieldValue) {
+      return fieldValue as QuestionResponse;
+    }
+    return { value: "", description: "", observacion: "" };
+  };
+
+  // Helper para actualizar el valor
+  const updateValue = (
+    currentFieldValue: unknown,
+    newValue: string | number | boolean
+  ): QuestionResponse => {
+    const current = getCurrentValue(currentFieldValue);
+    return {
+      value: newValue,
+      description: current.description,
+      observacion: current.observacion,
+    };
+  };
+
+  // ✅ Helper para actualizar la descripción
+  const updateDescripcion = (
+    currentFieldValue: unknown,
+    newDescripcion: string
+  ): QuestionResponse => {
+    const current = getCurrentValue(currentFieldValue);
+    return {
+      value: current.value,
+      description: newDescripcion,
+      observacion: current.observacion,
+    };
+  };
+
+  // Helper para actualizar la observación
+  const updateObservacion = (
+    currentFieldValue: unknown,
+    newObservacion: string
+  ): QuestionResponse => {
+    const current = getCurrentValue(currentFieldValue);
+    return {
+      value: current.value,
+      description: current.description,
+      observacion: newObservacion,
+    };
+  };
+
+  // ✅ Campo de DESCRIPCIÓN
+  const renderDescripcionField = () => {
+    if (!showDescription) return null;
+
+    return (
+      <Box mt={2}>
+        <Controller
+          name={fieldName}
+          control={control}
+          rules={{
+            validate: descriptionRequired
+              ? (value) => {
+                  const response = getCurrentValue(value);
+                  if (!response.description?.trim()) {
+                    return "La descripción es obligatoria";
+                  }
+                  return true;
+                }
+              : undefined,
+          }}
+          render={({ field }) => {
+            const current = getCurrentValue(field.value);
+            return (
+              <TextField
+                value={current.description || ""}
+                onChange={(e) =>
+                  field.onChange(updateDescripcion(field.value, e.target.value))
+                }
+                fullWidth
+                size="small"
+                label={descriptionLabel}
+                placeholder={descriptionPlaceholder}
+                multiline
+                rows={2}
+                error={!!descripcionError}
+                disabled={readonly}
+                required={descriptionRequired}
+              />
+            );
+          }}
+        />
+      </Box>
+    );
+  };
+
+  // ✅ Campo de OBSERVACIONES
+  const renderObservacionField = () => {
+    if (!showObservations) return null;
+
+    return (
+      <Box mt={2}>
+        <Controller
+          name={fieldName}
+          control={control}
+          rules={{
+            validate: observationRequired
+              ? (value) => {
+                  const response = getCurrentValue(value);
+                  return response.observacion?.trim() !== "" || "La observación es obligatoria";
+                }
+              : undefined,
+          }}
+          render={({ field }) => {
+            const current = getCurrentValue(field.value);
+            return (
+              <TextField
+                value={current.observacion || ""}
+                onChange={(e) =>
+                  field.onChange(updateObservacion(field.value, e.target.value))
+                }
+                fullWidth
+                size="small"
+                label={observationLabel}
+                placeholder={observationPlaceholder}
+                multiline
+                rows={2}
+                error={!!observacionError}
+                helperText={observacionError?.message}
+                disabled={readonly}
+                required={observationRequired}
+              />
+            );
+          }}
+        />
+      </Box>
+    );
+  };
 
   const renderInput = () => {
     const { type, options, placeholder, min, max } = question.responseConfig;
 
     switch (type) {
       case "si_no_na":
+      case "bueno_malo_na":
         return (
           <>
             <Controller
               name={fieldName}
               control={control}
-              rules={{ required: question.obligatorio ? "Este campo es obligatorio" : false }}
-              render={({ field }) => (
-                <FormControl error={!!error} fullWidth>
-                  <RadioGroup 
-                    value={field.value || ""} 
-                    onChange={field.onChange}
-                    row
-                  >
-                    {options?.map((option) => (
-                      <FormControlLabel
-                        key={String(option.value)}
-                        value={option.value}
-                        control={<Radio disabled={readonly} />}
-                        label={
-                          <Chip
-                            label={option.label}
-                            size="small"
-                            sx={{
-                              backgroundColor: option.color || "default",
-                              color: "white",
-                            }}
-                          />
-                        }
-                      />
-                    ))}
-                  </RadioGroup>
-                  {error && <FormHelperText>{error.message}</FormHelperText>}
-                </FormControl>
-              )}
+              defaultValue={{ value: "", descripcion: "", observacion: "" } as PathValue<T, typeof fieldName>}
+              rules={{
+                validate: question.obligatorio
+                  ? (value) => {
+                      const response = getCurrentValue(value);
+                      return response.value !== "" || "Este campo es obligatorio";
+                    }
+                  : undefined,
+              }}
+              render={({ field }) => {
+                const current = getCurrentValue(field.value);
+                const displayOptions = options || [];
+                
+                return (
+                  <FormControl error={!!error} fullWidth>
+                    <RadioGroup
+                      value={current.value || ""}
+                      onChange={(e) => field.onChange(updateValue(field.value, e.target.value))}
+                      row
+                    >
+                      {displayOptions.map((option) => (
+                        <FormControlLabel
+                          key={String(option.value)}
+                          value={option.value}
+                          control={<Radio disabled={readonly} />}
+                          label={
+                            <Chip
+                              label={option.label}
+                              size="small"
+                              sx={{
+                                backgroundColor: option.color || "default",
+                                color: "white",
+                              }}
+                            />
+                          }
+                        />
+                      ))}
+                    </RadioGroup>
+                    {error && <FormHelperText>{error.message}</FormHelperText>}
+                  </FormControl>
+                );
+              }}
             />
-            <Box mt={2}>
-              <Controller
-                name={observacionFieldName}
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    value={field.value || ""}
-                    fullWidth
-                    size="small"
-                    label="Observaciones (opcional)"
-                    placeholder="Ingrese observaciones adicionales..."
-                    multiline
-                    rows={2}
-                    error={!!observacionError}
-                    helperText={observacionError?.message}
-                    disabled={readonly}
-                  />
-                )}
-              />
-            </Box>
+            {renderDescripcionField()}
+            {renderObservacionField()}
           </>
         );
 
+       case "bien_mal":
+      case "operativo_mantenimiento":
+        return (
+          <>
+            <Controller
+              name={fieldName}
+              control={control}
+              defaultValue={{ value: "", descripcion: "", observacion: "" } as PathValue<T, typeof fieldName>}
+              rules={{
+                validate: question.obligatorio
+                  ? (value) => {
+                      const response = getCurrentValue(value);
+                      return response.value !== "" || "Este campo es obligatorio";
+                    }
+                  : undefined,
+              }}
+              render={({ field }) => {
+                const current = getCurrentValue(field.value);
+                const displayOptions = options || [];
+                
+                return (
+                  <FormControl error={!!error} fullWidth>
+                    <RadioGroup
+                      value={current.value || ""}
+                      onChange={(e) => field.onChange(updateValue(field.value, e.target.value))}
+                      row
+                    >
+                      {displayOptions.map((option) => (
+                        <FormControlLabel
+                          key={String(option.value)}
+                          value={option.value}
+                          control={<Radio disabled={readonly} />}
+                          label={
+                            <Chip
+                              label={option.label}
+                              size="small"
+                              sx={{
+                                backgroundColor: option.color || "#757575",
+                                color: "white",
+                              }}
+                            />
+                          }
+                        />
+                      ))}
+                    </RadioGroup>
+                    {error && <FormHelperText>{error.message}</FormHelperText>}
+                  </FormControl>
+                );
+              }}
+            />
+            {renderDescripcionField()}
+            {renderObservacionField()}
+          </>
+        );
       case "text":
         return (
           <>
             <Controller
               name={fieldName}
               control={control}
-              rules={{ required: question.obligatorio ? "Este campo es obligatorio" : false }}
-              render={({ field }) => (
-                <TextField
-                  value={field.value || ""}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  fullWidth
-                  size="small"
-                  placeholder={placeholder || "Ingrese su respuesta"}
-                  error={!!error}
-                  helperText={error?.message}
-                  disabled={readonly}
-                />
-              )}
-            />
-            <Box mt={2}>
-              <Controller
-                name={observacionFieldName}
-                control={control}
-                render={({ field }) => (
+              defaultValue={{ value: "", descripcion: "", observacion: "" } as PathValue<T, typeof fieldName>}
+              rules={{
+                validate: question.obligatorio
+                  ? (value) => {
+                      const response = getCurrentValue(value);
+                      return response.value !== "" || "Este campo es obligatorio";
+                    }
+                  : undefined,
+              }}
+              render={({ field }) => {
+                const current = getCurrentValue(field.value);
+                return (
                   <TextField
-                    {...field}
-                    value={field.value || ""}
+                    value={current.value || ""}
+                    onChange={(e) => field.onChange(updateValue(field.value, e.target.value))}
                     fullWidth
                     size="small"
-                    label="Observaciones (opcional)"
-                    placeholder="Ingrese observaciones adicionales..."
-                    multiline
-                    rows={2}
+                    placeholder={placeholder || "Ingrese su respuesta"}
+                    error={!!error}
+                    helperText={error?.message}
                     disabled={readonly}
                   />
-                )}
-              />
-            </Box>
+                );
+              }}
+            />
+            {renderDescripcionField()}
+            {renderObservacionField()}
           </>
         );
 
@@ -156,42 +347,35 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
             <Controller
               name={fieldName}
               control={control}
-              rules={{ required: question.obligatorio ? "Este campo es obligatorio" : false }}
-              render={({ field }) => (
-                <TextField
-                  value={field.value || ""}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  fullWidth
-                  multiline
-                  rows={4}
-                  size="small"
-                  placeholder={placeholder || "Ingrese su respuesta"}
-                  error={!!error}
-                  helperText={error?.message}
-                  disabled={readonly}
-                />
-              )}
-            />
-            <Box mt={2}>
-              <Controller
-                name={observacionFieldName}
-                control={control}
-                render={({ field }) => (
+              defaultValue={{ value: "", descripcion: "", observacion: "" } as PathValue<T, typeof fieldName>}
+              rules={{
+                validate: question.obligatorio
+                  ? (value) => {
+                      const response = getCurrentValue(value);
+                      return response.value !== "" || "Este campo es obligatorio";
+                    }
+                  : undefined,
+              }}
+              render={({ field }) => {
+                const current = getCurrentValue(field.value);
+                return (
                   <TextField
-                    {...field}
-                    value={field.value || ""}
+                    value={current.value || ""}
+                    onChange={(e) => field.onChange(updateValue(field.value, e.target.value))}
                     fullWidth
-                    size="small"
-                    label="Observaciones adicionales (opcional)"
-                    placeholder="Ingrese observaciones complementarias..."
                     multiline
-                    rows={2}
+                    rows={4}
+                    size="small"
+                    placeholder={placeholder || "Ingrese su respuesta"}
+                    error={!!error}
+                    helperText={error?.message}
                     disabled={readonly}
                   />
-                )}
-              />
-            </Box>
+                );
+              }}
+            />
+            {renderDescripcionField()}
+            {renderObservacionField()}
           </>
         );
 
@@ -201,45 +385,49 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
             <Controller
               name={fieldName}
               control={control}
+              defaultValue={{ value: "", descripcion: "", observacion: "" } as PathValue<T, typeof fieldName>}
               rules={{
-                required: question.obligatorio ? "Este campo es obligatorio" : false,
-                min: min ? { value: min, message: `Mínimo: ${min}` } : undefined,
-                max: max ? { value: max, message: `Máximo: ${max}` } : undefined,
+                validate: (value) => {
+                  const response = getCurrentValue(value);
+                  const numValue = Number(response.value);
+
+                  if (question.obligatorio && response.value === "") {
+                    return "Este campo es obligatorio";
+                  }
+                  if (response.value !== "" && isNaN(numValue)) {
+                    return "Debe ser un número válido";
+                  }
+                  if (min !== undefined && numValue < min) {
+                    return `Mínimo: ${min}`;
+                  }
+                  if (max !== undefined && numValue > max) {
+                    return `Máximo: ${max}`;
+                  }
+                  return true;
+                },
               }}
-              render={({ field }) => (
-                <TextField
-                  value={field.value || ""}
-                  onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : "")}
-                  onBlur={field.onBlur}
-                  type="number"
-                  size="small"
-                  placeholder={placeholder || "0"}
-                  inputProps={{ min, max }}
-                  error={!!error}
-                  helperText={error?.message}
-                  disabled={readonly}
-                />
-              )}
-            />
-            <Box mt={2}>
-              <Controller
-                name={observacionFieldName}
-                control={control}
-                render={({ field }) => (
+              render={({ field }) => {
+                const current = getCurrentValue(field.value);
+                return (
                   <TextField
-                    {...field}
-                    value={field.value || ""}
-                    fullWidth
+                    value={current.value || ""}
+                    onChange={(e) => {
+                      const newValue = e.target.value ? Number(e.target.value) : "";
+                      field.onChange(updateValue(field.value, newValue));
+                    }}
+                    type="number"
                     size="small"
-                    label="Observaciones (opcional)"
-                    placeholder="Ingrese observaciones adicionales..."
-                    multiline
-                    rows={2}
+                    placeholder={placeholder || "0"}
+                    inputProps={{ min, max }}
+                    error={!!error}
+                    helperText={error?.message}
                     disabled={readonly}
                   />
-                )}
-              />
-            </Box>
+                );
+              }}
+            />
+            {renderDescripcionField()}
+            {renderObservacionField()}
           </>
         );
 
@@ -249,38 +437,27 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
             <Controller
               name={fieldName}
               control={control}
-              render={({ field }) => (
-                <FormControlLabel
-                  control={
-                    <Checkbox 
-                      checked={!!field.value} 
-                      onChange={(e) => field.onChange(e.target.checked)}
-                      disabled={readonly}
-                    />
-                  }
-                  label="Sí"
-                />
-              )}
-            />
-            <Box mt={2}>
-              <Controller
-                name={observacionFieldName}
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    value={field.value || ""}
-                    fullWidth
-                    size="small"
-                    label="Observaciones (opcional)"
-                    placeholder="Ingrese observaciones adicionales..."
-                    multiline
-                    rows={2}
-                    disabled={readonly}
+              defaultValue={{ value: "", descripcion: "", observacion: "" } as PathValue<T, typeof fieldName>}
+              render={({ field }) => {
+                const current = getCurrentValue(field.value);
+                return (
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={!!current.value}
+                        onChange={(e) =>
+                          field.onChange(updateValue(field.value, e.target.checked))
+                        }
+                        disabled={readonly}
+                      />
+                    }
+                    label="Sí"
                   />
-                )}
-              />
-            </Box>
+                );
+              }}
+            />
+            {renderDescripcionField()}
+            {renderObservacionField()}
           </>
         );
 
@@ -290,40 +467,33 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
             <Controller
               name={fieldName}
               control={control}
-              rules={{ required: question.obligatorio ? "Este campo es obligatorio" : false }}
-              render={({ field }) => (
-                <TextField
-                  value={field.value || ""}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  type="date"
-                  size="small"
-                  InputLabelProps={{ shrink: true }}
-                  error={!!error}
-                  helperText={error?.message}
-                  disabled={readonly}
-                />
-              )}
-            />
-            <Box mt={2}>
-              <Controller
-                name={observacionFieldName}
-                control={control}
-                render={({ field }) => (
+              defaultValue={{ value: "", descripcion: "", observacion: "" } as PathValue<T, typeof fieldName>}
+              rules={{
+                validate: question.obligatorio
+                  ? (value) => {
+                      const response = getCurrentValue(value);
+                      return response.value !== "" || "Este campo es obligatorio";
+                    }
+                  : undefined,
+              }}
+              render={({ field }) => {
+                const current = getCurrentValue(field.value);
+                return (
                   <TextField
-                    {...field}
-                    value={field.value || ""}
-                    fullWidth
+                    value={current.value || ""}
+                    onChange={(e) => field.onChange(updateValue(field.value, e.target.value))}
+                    type="date"
                     size="small"
-                    label="Observaciones (opcional)"
-                    placeholder="Ingrese observaciones adicionales..."
-                    multiline
-                    rows={2}
+                    InputLabelProps={{ shrink: true }}
+                    error={!!error}
+                    helperText={error?.message}
                     disabled={readonly}
                   />
-                )}
-              />
-            </Box>
+                );
+              }}
+            />
+            {renderDescripcionField()}
+            {renderObservacionField()}
           </>
         );
 

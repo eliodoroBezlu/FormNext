@@ -10,15 +10,26 @@ import { getTemplatesHerraEquipos } from '@/lib/actions/template-herra-equipos';
 
 import { FormFiller } from '@/components/herra_equipos/FormRenderer';
 import ArnesInspeccionForm from '@/components/herra_equipos/ArnesInspeccionForm';
-import { FormTemplate } from '@/components/herra_equipos/types/IProps';
-import CilindrosInspeccionForm from '@/components/herra_equipos/CilindrosInspeccionForm';
+import {  FormTemplateHerraEquipos } from '@/components/herra_equipos/types/IProps';
+import { UnifiedFormRouter } from '@/components/herra_equipos/UnifiedFormRouter';
 
 
 // Mapeo de códigos a componentes especializados
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SPECIALIZED_FORMS: Record<string, React.ComponentType<any>> = {
   '1.02.P06.F19': ArnesInspeccionForm,
-  '1.02.P06.F20': CilindrosInspeccionForm,
+  '1.02.P06.F20': UnifiedFormRouter,
+  '1.02.P06.F39':UnifiedFormRouter,
+  '1.02.P06.F42':UnifiedFormRouter,
+  '1.02.P06.F40':UnifiedFormRouter,
+  '2.03.P10.F05':UnifiedFormRouter,
+  '3.04.P04.F23':UnifiedFormRouter,
+  '3.04.P37.F19':UnifiedFormRouter,
+  '3.04.P37.F24':UnifiedFormRouter,
+  '3.04.P37.F25':UnifiedFormRouter,
+  '3.04.P48.F03':UnifiedFormRouter,
+  '1.02.P06.F37':UnifiedFormRouter,
+  '3.04.P04.F35':UnifiedFormRouter,
   // 'ESC-001': EscalerasInspeccionForm,  // Futuro
   // 'EXT-001': ExtintoresInspeccionForm, // Futuro
 };
@@ -28,7 +39,7 @@ export default function FormularioDinamicoPage() {
   const router = useRouter();
   const code = decodeURIComponent(params.code as string);
   
-  const [template, setTemplate] = useState<FormTemplate | null>(null);
+  const [template, setTemplate] = useState<FormTemplateHerraEquipos | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);

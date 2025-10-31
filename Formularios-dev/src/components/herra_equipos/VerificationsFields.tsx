@@ -3,26 +3,24 @@
 
 import React from "react";
 import { Controller, Control, FieldErrors, FieldPath } from "react-hook-form";
-import {
-  Typography,
-  Card,
-  CardContent,
-  TextField,
-  Grid,
-} from "@mui/material";
+import { Typography, Card, CardContent, TextField, Grid } from "@mui/material";
 import AutocompleteCustom from "@/components/molecules/autocomplete-custom/AutocompleteCustom";
 import { DataSourceType } from "@/lib/actions/dataSourceService";
 import { VerificationField, FormDataHerraEquipos } from "./types/IProps";
 
 // Hacer el componente genérico para aceptar cualquier extensión de FormDataHerraEquipos
-interface VerificationFieldsProps<T extends FormDataHerraEquipos = FormDataHerraEquipos> {
+interface VerificationFieldsProps<
+  T extends FormDataHerraEquipos = FormDataHerraEquipos
+> {
   fields: VerificationField[];
   control: Control<T>;
   errors: FieldErrors<T>;
   readonly?: boolean;
 }
 
-export const VerificationFields = <T extends FormDataHerraEquipos = FormDataHerraEquipos>({
+export const VerificationFields = <
+  T extends FormDataHerraEquipos = FormDataHerraEquipos
+>({
   fields,
   control,
   errors,
@@ -37,8 +35,11 @@ export const VerificationFields = <T extends FormDataHerraEquipos = FormDataHerr
         <Grid container spacing={2}>
           {fields.map((field, idx) => {
             const fieldKey = `verification.${field.label}` as FieldPath<T>;
-            const fieldError =
-              (errors.verification as Record<string, { message?: string }> | undefined)?.[field.label];
+            const fieldError = (
+              errors.verification as
+                | Record<string, { message?: string }>
+                | undefined
+            )?.[field.label];
 
             return (
               <Grid size={{ xs: 12, md: 6 }} key={idx}>
@@ -76,16 +77,23 @@ export const VerificationFields = <T extends FormDataHerraEquipos = FormDataHerr
                         type={
                           field.type === "date"
                             ? "date"
+                            : field.type === "time"
+                            ? "time"
                             : field.type === "number"
                             ? "number"
                             : "text"
                         }
                         InputLabelProps={
-                          field.type === "date" ? { shrink: true } : undefined
+                          field.type === "date" || field.type === "time" 
+                            ? { shrink: true } 
+                            : undefined
                         }
                         error={!!fieldError}
                         helperText={fieldError?.message}
-                        disabled={readonly}
+                        disabled={readonly || field.type === "time"}
+                        InputProps={{
+                          readOnly: field.type === "time",
+                        }}
                       />
                     )}
                   />

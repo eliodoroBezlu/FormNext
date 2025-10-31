@@ -51,6 +51,7 @@ import {
 } from "@mui/icons-material";
 import { MESES, TAGS_CON_SELECCION_EXTINTORES } from "@/lib/constants";
 import ExtintoresVisualizacion from "./ExtintoresVisualizacion";
+import { SuccessScreen } from "../SucessScreen";
 
 // Helper functions
 
@@ -89,6 +90,7 @@ export const InspeccionSistemasEmergencia = ({
   const currentMes = obtenerMesActual();
   const submitInProgress = useRef(false);
   const [dentroPeriodoValido, setDentroPeriodoValido] = useState(true);
+  const [showSuccessScreen, setShowSuccessScreen] = useState(false);
 
   // Form state
   const {
@@ -253,9 +255,9 @@ export const InspeccionSistemasEmergencia = ({
 
             const totalActivos = extintores.totalExtintoresActivosArea || 0;
 
-            const estaInspeccionado = tagsInspeccionados.some(
-              (t: TagConEstado) => t.tag === tag
-            );
+            const estaInspeccionado = Array.isArray(tagsInspeccionados)
+              ? tagsInspeccionados.some((t) => t.tag === tag && t.inspeccionado)
+              : false;
             return {
               tag,
               extintoresPendientes: extintores.extintores?.length || 0,
@@ -459,14 +461,13 @@ export const InspeccionSistemasEmergencia = ({
   const onSubmit = async (data: FormularioInspeccion) => {
     if (formState.submitting) return;
 
-    
-      console.log("Formulario enviado exitosamente", data);
+    console.log("Formulario enviado exitosamente", data);
 
     try {
       setFormState((prev) => ({
         ...prev,
         loading: true,
-        submitting: true, // Marcar como enviando 
+        submitting: true, // Marcar como enviando
         error: null,
       }));
 
@@ -491,7 +492,7 @@ export const InspeccionSistemasEmergencia = ({
         // Crear nuevo formulario completo
         await crearFormSistemasEmergencia(data);
       }
-      console.log("Formulario enviado exitosamente", data);
+      setShowSuccessScreen(true);
 
       setFormState((prev) => ({
         ...prev,
@@ -501,9 +502,7 @@ export const InspeccionSistemasEmergencia = ({
 
       setTimeout(() => {
         resetForm();
-        router.push(
-          "/dashboard/formularios-de-inspeccion"
-        );
+        router.push("/dashboard/formularios-de-inspeccion");
       }, 2000);
     } catch (error) {
       console.error("Error al enviar el formulario:", error);
@@ -576,268 +575,305 @@ export const InspeccionSistemasEmergencia = ({
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Button
-        variant="outlined"
-        startIcon={<ArrowBack />}
-        onClick={onCancel}
-        sx={{
-          fontSize: { xs: "0.8rem", sm: "0.875rem" },
-          padding: { xs: "6px 12px", sm: "8px 16px" },
-        }}
-      >
-        Volver
-      </Button>
-      <Paper elevation={3} sx={{ p: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          Formulario de Inspección de Seguridad
-        </Typography>
-        <Typography variant="subtitle1" gutterBottom>
-          Código: 3.02.P01.F17 - Rev. 2
-        </Typography>
-
-        {successMessage && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            {successMessage}
-          </Alert>
-        )}
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        {!dentroPeriodoValido ? (
-          <Box sx={{ mb: 4 }}>
-            <Alert severity="warning" sx={{ mb: 2 }}>
-              Las inspecciones solo están habilitadas hasta el día 10 de cada
-              mes. Por favor, espere hasta el próximo mes para realizar una
-              nueva inspección.
-            </Alert>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() =>
-                router.push(
-                  "/dashboard/inspeccion-sistemas-emergencia/formulario-insp-herr-equi/form-sistemas-de-emergencia"
-                )
-              }
-            >
-              Volver al Panel
-            </Button>
-          </Box>
-        ) : !showForm ? (
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h6" gutterBottom>
-              Seleccione primero el área y el TAG se completará automáticamente
+      {showSuccessScreen ? (
+        <SuccessScreen
+          title="¡Inspección Guardada Exitosamente!"
+          message={
+            soloExtintores
+              ? "Los extintores han sido inspeccionados correctamente."
+              : "La inspección de sistemas de emergencia se ha registrado correctamente."
+          }
+          subtitle={`TAG: ${areaData.tag} - Área: ${areaData.area} - Mes: ${currentMes}`}
+          autoRedirect={true}
+          redirectDelay={5000}
+          redirectPath="/dashboard/formularios-de-inspeccion"
+          detailsLabel="Ver Formulario"
+          listLabel="Ver Todas las Inspecciones"
+          homeLabel="Ir al Dashboard"
+        />
+      ) : (
+        // Tu formulario existente aquí
+        <>
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBack />}
+            onClick={onCancel}
+            sx={{
+              fontSize: { xs: "0.8rem", sm: "0.875rem" },
+              padding: { xs: "6px 12px", sm: "8px 16px" },
+            }}
+          >
+            Volver
+          </Button>
+          <Paper elevation={3} sx={{ p: 3 }}>
+            <Typography variant="h4" gutterBottom>
+              Formulario de Inspección de Seguridad
             </Typography>
-            <Grid container spacing={2} sx={{ mb: 2 }}>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <FormControl fullWidth disabled={tagOptions.length === 0}>
-                  <InputLabel id="tag-label">TAG</InputLabel>
-                  <Select
-                    labelId="tag-label"
-                    id="tag-select"
-                    value={tag}
-                    label="TAG"
-                    onChange={(e) => handleTagChange(e.target.value as string)}
-                  >
-                    {tagOptions.map((option) => {
-                      const estado = determinarEstadoTag(option);
-                      const ubicacion = areaData.tagUbicaciones[option] || "";
+            <Typography variant="subtitle1" gutterBottom>
+              Código: 3.02.P01.F17 - Rev. 2
+            </Typography>
 
-                      return (
-                        <MenuItem key={option} value={option}>
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              width: "100%",
-                            }}
-                          >
-                            <Box sx={{ flexGrow: 1 }}>
-                              <Typography
-                                component="span"
-                                sx={{ fontWeight: "bold" }}
+            {successMessage && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                {successMessage}
+              </Alert>
+            )}
+
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
+
+            {!dentroPeriodoValido ? (
+              <Box sx={{ mb: 4 }}>
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  Las inspecciones solo están habilitadas hasta el día 10 de
+                  cada mes. Por favor, espere hasta el próximo mes para realizar
+                  una nueva inspección.
+                </Alert>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() =>
+                    router.push(
+                      "/dashboard/inspeccion-sistemas-emergencia/formulario-insp-herr-equi/form-sistemas-de-emergencia"
+                    )
+                  }
+                >
+                  Volver al Panel
+                </Button>
+              </Box>
+            ) : !showForm ? (
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h6" gutterBottom>
+                  Seleccione primero el área y el TAG se completará
+                  automáticamente
+                </Typography>
+                <Grid container spacing={2} sx={{ mb: 2 }}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <FormControl fullWidth disabled={tagOptions.length === 0}>
+                      <InputLabel id="tag-label">TAG</InputLabel>
+                      <Select
+                        labelId="tag-label"
+                        id="tag-select"
+                        value={tag}
+                        label="TAG"
+                        onChange={(e) =>
+                          handleTagChange(e.target.value as string)
+                        }
+                      >
+                        {tagOptions.map((option) => {
+                          const estado = determinarEstadoTag(option);
+                          const ubicacion =
+                            areaData.tagUbicaciones[option] || "";
+
+                          return (
+                            <MenuItem key={option} value={option}>
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  width: "100%",
+                                }}
                               >
-                                {option}
-                              </Typography>
-                              {ubicacion && (
-                                <Typography
-                                  component="span"
-                                  sx={{
-                                    ml: 1,
-                                    color: "text.secondary",
-                                    fontSize: "0.875rem",
-                                    fontStyle: "italic",
-                                  }}
-                                >
-                                  ({ubicacion})
-                                </Typography>
-                              )}
-                            </Box>
+                                <Box sx={{ flexGrow: 1 }}>
+                                  <Typography
+                                    component="span"
+                                    sx={{ fontWeight: "bold" }}
+                                  >
+                                    {option}
+                                  </Typography>
+                                  {ubicacion && (
+                                    <Typography
+                                      component="span"
+                                      sx={{
+                                        ml: 1,
+                                        color: "text.secondary",
+                                        fontSize: "0.875rem",
+                                        fontStyle: "italic",
+                                      }}
+                                    >
+                                      ({ubicacion})
+                                    </Typography>
+                                  )}
+                                </Box>
 
-                            {estado === "completado" ? (
-                              <CheckCircle
-                                sx={{
-                                  color: "success.main",
-                                  fontSize: "1.2rem",
-                                  ml: 1,
-                                }}
-                                titleAccess="Todos los extintores inspeccionados"
-                              />
-                            ) : estado === "parcial" ? (
-                              <Autorenew // Icono de recarga para estado parcial
-                                sx={{
-                                  color: "warning.main",
-                                  fontSize: "1.2rem",
-                                  ml: 1,
-                                }}
-                                titleAccess="Algunos extintores inspeccionados"
-                              />
-                            ) : (
-                              <LockClock
-                                sx={{
-                                  color: "error.main",
-                                  fontSize: "1.2rem",
-                                  ml: 1,
-                                }}
-                                titleAccess="Ningún extintor inspeccionado"
-                              />
-                            )}
-                          </Box>
-                        </MenuItem>
-                      );
-                    })}
-                  </Select>
-                </FormControl>
-              </Grid>
+                                {estado === "completado" ? (
+                                  <CheckCircle
+                                    sx={{
+                                      color: "success.main",
+                                      fontSize: "1.2rem",
+                                      ml: 1,
+                                    }}
+                                    titleAccess="Todos los extintores inspeccionados"
+                                  />
+                                ) : estado === "parcial" ? (
+                                  <Autorenew // Icono de recarga para estado parcial
+                                    sx={{
+                                      color: "warning.main",
+                                      fontSize: "1.2rem",
+                                      ml: 1,
+                                    }}
+                                    titleAccess="Algunos extintores inspeccionados"
+                                  />
+                                ) : (
+                                  <LockClock
+                                    sx={{
+                                      color: "error.main",
+                                      fontSize: "1.2rem",
+                                      ml: 1,
+                                    }}
+                                    titleAccess="Ningún extintor inspeccionado"
+                                  />
+                                )}
+                              </Box>
+                            </MenuItem>
+                          );
+                        })}
+                      </Select>
+                    </FormControl>
+                  </Grid>
 
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <FormControl fullWidth>
-                  <InputLabel id="area-label">Área</InputLabel>
-                  <Select
-                    labelId="area-label"
-                    id="area-select"
-                    value={area}
-                    label="Área"
-                    onChange={(e) => handleAreaChange(e.target.value as string)}
-                  >
-                    {areaOptions.map((option) => (
-                      <MenuItem key={option} value={option}>
-                        {option}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <FormControl fullWidth>
+                      <InputLabel id="area-label">Área</InputLabel>
+                      <Select
+                        labelId="area-label"
+                        id="area-select"
+                        value={area}
+                        label="Área"
+                        onChange={(e) =>
+                          handleAreaChange(e.target.value as string)
+                        }
+                      >
+                        {areaOptions.map((option) => (
+                          <MenuItem key={option} value={option}>
+                            {option}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
 
-              <Grid size={{ xs: 12, sm: 6 }}>
-                {area &&
-                  tag &&
-                  (TAGS_CON_SELECCION_EXTINTORES.includes(tag) ? (
-                    <ExtintoresChecklist
-                      tag={tag} // Asegura que el tag se pasa como área
-                      extintores={extintores}
-                      onExtintoresSeleccionados={handleExtintoresSeleccionados}
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    {area &&
+                      tag &&
+                      (TAGS_CON_SELECCION_EXTINTORES.includes(tag) ? (
+                        <ExtintoresChecklist
+                          tag={tag} // Asegura que el tag se pasa como área
+                          extintores={extintores}
+                          onExtintoresSeleccionados={
+                            handleExtintoresSeleccionados
+                          }
+                        />
+                      ) : (
+                        <Paper
+                          elevation={2}
+                          sx={{ p: 2, height: "100%", minHeight: "56px" }}
+                        >
+                          <ExtintoresVisualizacion
+                            tag={tag}
+                            extintores={extintores}
+                            totalExtintoresActivos={
+                              areaData.totalExtintoresActivos
+                            }
+                          />
+                        </Paper>
+                      ))}
+                  </Grid>
+                </Grid>
+
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleTagSubmit}
+                  disabled={loading || !tag}
+                >
+                  {loading ? "Verificando..." : "Continuar"}
+                </Button>
+              </Box>
+            ) : (
+              <form onSubmit={handleSubmit(onSubmit)}>
+                {/* Mostrar InformacionGeneral solo si es formulario nuevo */}
+                <InformacionGeneral
+                  control={control}
+                  errors={errors}
+                  soloLectura={esFormularioExistente} // Pasar prop soloLectura como true si es formulario existente
+                />
+
+                {/* Mostrar SistemasPasivos y Activos si no es solo extintores */}
+                {!soloExtintores && (
+                  <>
+                    <SistemasPasivos
+                      control={control}
+                      currentMes={currentMes}
                     />
-                  ) : (
-                    <Paper
-                      elevation={2}
-                      sx={{ p: 2, height: "100%", minHeight: "56px" }}
-                    >
-                      <ExtintoresVisualizacion
-                        tag={tag}
-                        extintores={extintores}
-                        totalExtintoresActivos={areaData.totalExtintoresActivos}
-                      />
-                    </Paper>
-                  ))}
-              </Grid>
-            </Grid>
+                    <SistemasActivos
+                      control={control}
+                      currentMes={currentMes}
+                    />
+                  </>
+                )}
 
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleTagSubmit}
-              disabled={loading || !tag}
-            >
-              {loading ? "Verificando..." : "Continuar"}
-            </Button>
-          </Box>
-        ) : (
-          <form onSubmit={handleSubmit(onSubmit)}>
-            {/* Mostrar InformacionGeneral solo si es formulario nuevo */}
-            <InformacionGeneral
-              control={control}
-              errors={errors}
-              soloLectura={esFormularioExistente} // Pasar prop soloLectura como true si es formulario existente
-            />
+                {/* Siempre mostrar extintores */}
+                <InspeccionExtintores
+                  control={control}
+                  currentMes={currentMes}
+                  extintores={
+                    TAGS_CON_SELECCION_EXTINTORES.includes(tag)
+                      ? extintoresSeleccionados
+                      : extintores
+                  }
+                />
 
-            {/* Mostrar SistemasPasivos y Activos si no es solo extintores */}
-            {!soloExtintores && (
-              <>
-                <SistemasPasivos control={control} currentMes={currentMes} />
-                <SistemasActivos control={control} currentMes={currentMes} />
-              </>
+                {/* Mostrar InformacionInspector si no es solo extintores */}
+                {!soloExtintores && (
+                  <InformacionInspector
+                    control={control}
+                    currentMes={currentMes}
+                    setValue={setValue}
+                    errors={errors}
+                  />
+                )}
+
+                <Box sx={{ mt: 4 }}>
+                  <Grid container spacing={2} justifyContent="space-between">
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        size="large"
+                        fullWidth
+                        onClick={resetForm}
+                        disabled={loading}
+                      >
+                        Cancelar
+                      </Button>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Button
+                        type="submit"
+                        variant="contained"
+                        color="primary"
+                        size="large"
+                        fullWidth
+                        disabled={formState.loading || formState.submitting}
+                      >
+                        {formState.loading || formState.submitting
+                          ? "Guardando..."
+                          : formState.soloExtintores
+                          ? "Guardar Inspección de Extintores"
+                          : "Guardar Inspección"}
+                      </Button>
+                    </Grid>
+                  </Grid>
+                </Box>
+              </form>
             )}
-
-            {/* Siempre mostrar extintores */}
-            <InspeccionExtintores
-              control={control}
-              currentMes={currentMes}
-              extintores={
-                TAGS_CON_SELECCION_EXTINTORES.includes(tag)
-                  ? extintoresSeleccionados
-                  : extintores
-              }
-            />
-
-            {/* Mostrar InformacionInspector si no es solo extintores */}
-            {!soloExtintores && (
-              <InformacionInspector
-                control={control}
-                currentMes={currentMes}
-                setValue={setValue}
-                errors={errors}
-              />
-            )}
-
-            <Box sx={{ mt: 4 }}>
-              <Grid container spacing={2} justifyContent="space-between">
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Button
-                    variant="outlined"
-                    color="secondary"
-                    size="large"
-                    fullWidth
-                    onClick={resetForm}
-                    disabled={loading}
-                  >
-                    Cancelar
-                  </Button>
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    color="primary"
-                    size="large"
-                    fullWidth
-                    disabled={formState.loading || formState.submitting}
-                  >
-                    {formState.loading || formState.submitting
-                      ? "Guardando..."
-                      : formState.soloExtintores
-                      ? "Guardar Inspección de Extintores"
-                      : "Guardar Inspección"}
-                  </Button>
-                </Grid>
-              </Grid>
-            </Box>
-          </form>
-        )}
-      </Paper>
+          </Paper>
+        </>
+      )}
     </Container>
   );
 };

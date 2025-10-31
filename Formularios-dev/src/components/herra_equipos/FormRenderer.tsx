@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from "react";
@@ -11,16 +10,18 @@ import {
   Button,
   Alert,
   Chip,
+  Paper,
 } from "@mui/material";
 import { Save, Send, CheckCircle } from "@mui/icons-material";
 
 // Componentes compartidos reutilizables
 import { VerificationFields } from "./VerificationsFields";
 import { SectionRenderer } from "./SectionRenderer";
-import { FormTemplate, FormResponse, FormDataHerraEquipos } from "./types/IProps";
+import {  FormResponse, FormDataHerraEquipos, FormTemplateHerraEquipos } from "./types/IProps";
+import { getFormConfig } from "./config/form-config.helpers";
 
 interface FormFillerProps {
-  template: FormTemplate;
+  template: FormTemplateHerraEquipos;
   onSave?: (data: FormResponse) => void;
   onSubmit?: (data: FormResponse) => void;
   readonly?: boolean;
@@ -33,7 +34,8 @@ export const FormFiller: React.FC<FormFillerProps> = ({
   readonly = false 
 }) => {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-
+  
+  // ✅ Llamar a useForm ANTES de cualquier return condicional
   const {
     control,
     handleSubmit,
@@ -44,6 +46,19 @@ export const FormFiller: React.FC<FormFillerProps> = ({
       responses: {},
     },
   });
+
+  // ✅ Ahora sí, hacer la validación de config
+  const config = getFormConfig(template.code);
+
+  if (!config) {
+    return (
+      <Paper elevation={2} sx={{ p: 3 }}>
+        <Typography color="error">
+          Configuración no encontrada para {template.code}
+        </Typography>
+      </Paper>
+    );
+  }
 
   const handleSaveDraft = (data: FormDataHerraEquipos) => {
     const formResponse: FormResponse = {
@@ -124,6 +139,7 @@ export const FormFiller: React.FC<FormFillerProps> = ({
               control={control}
               errors={errors}
               readonly={readonly}
+              formConfig={config}
             />
           ))}
         </Box>

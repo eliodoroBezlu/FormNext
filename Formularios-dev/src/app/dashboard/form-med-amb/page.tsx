@@ -8,11 +8,11 @@ import {
 } from '@mui/material';
 import { getTemplatesHerraEquipos } from '@/lib/actions/template-herra-equipos';
 import { Assignment, Science } from '@mui/icons-material';
-import { FormTemplate } from '@/components/herra_equipos/types/IProps';
+import {  FormTemplateHerraEquipos } from '@/components/herra_equipos/types/IProps';
 
 export default function LlenarFormulariosPage() {
   const router = useRouter();
-  const [templates, setTemplates] = useState<FormTemplate[]>([]);
+  const [templates, setTemplates] = useState<FormTemplateHerraEquipos[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,7 +43,7 @@ export default function LlenarFormulariosPage() {
     setLoading(false);
   };
 
-  const handleSelectTemplate = (template: FormTemplate) => {
+  const handleSelectTemplate = (template: FormTemplateHerraEquipos) => {
     // ÚNICA RUTA - Usa CODE en vez de ID
     router.push(`/dashboard/form-med-amb/${template.code}`);
   };

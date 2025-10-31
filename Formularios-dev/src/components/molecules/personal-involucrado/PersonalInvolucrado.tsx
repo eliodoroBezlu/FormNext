@@ -96,6 +96,7 @@ export const PersonalInvolucrado = <T extends FieldValues>({
                   }}
                   render={({ field, fieldState: { error } }) => (
                     <AutocompleteTrabajador
+                      
                       label="Nombre y Apellido"
                       placeholder="Seleccione o escriba un nombre"
                       value={field.value || null}

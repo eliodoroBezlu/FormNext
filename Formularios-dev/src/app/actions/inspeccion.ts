@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-//import { cookies } from 'next/headers';
 import type {
   FormData,
   InspeccionServiceExport,
@@ -20,54 +19,20 @@ import type {
   QRCompleteResponse,
   QROptions,
 } from "../../types/formTypes";
+import { handleApiResponse } from "@/lib/actions/helpers";
 
 // URL base para la API
 const API_URL = process.env.API_URL || "";
 
-// Función auxiliar para manejar respuestas
-export async function handleResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Error en la solicitud: ${response.status} - ${errorText}`);
-  }
-
-  const contentType = response.headers.get("content-type");
-  if (contentType && contentType.includes("application/json")) {
-    const jsonData = await response.json();
-    return jsonData as T;
-  }
-
-  const blob = await response.blob();
-  return blob as unknown as T;
-}
-
-// for submit changes
-
 // Función para obtener headers
-// Versión simplificada sin autenticación por ahora
 function getHeaders() {
   return new Headers({
     "Content-Type": "application/json",
   });
-
-  // Cuando implementes autenticación, puedes usar algo como esto:
-  /*
-  const headers = new Headers({
-    'Content-Type': 'application/json',
-  });
-  
-  const cookieStore = cookies();
-  const token = cookieStore.get('auth_token')?.value;
-  
-  if (token) {
-    headers.append('Authorization', `Bearer ${token}`);
-  }
-  
-  return headers;
-  */
 }
 
-// Acciones del servidor que reemplazan a inspeccionService
+// ============= INSPECCIONES =============
+
 export async function crearInspeccion(data: FormData): Promise<FormData> {
   const response = await fetch(`${API_URL}/inspecciones`, {
     method: "POST",
@@ -76,7 +41,7 @@ export async function crearInspeccion(data: FormData): Promise<FormData> {
     cache: "no-store",
   });
 
-  const result = await handleResponse<FormData>(response);
+  const result = await handleApiResponse<FormData>(response);
   revalidatePath("/inspecciones");
   return result;
 }
@@ -87,7 +52,7 @@ export async function obtenerInspeccionPorId(id: string): Promise<FormData> {
     cache: "no-store",
   });
 
-  return handleResponse<FormData>(response);
+  return handleApiResponse<FormData>(response);
 }
 
 export async function obtenerTodasInspecciones(): Promise<FormDataExport[]> {
@@ -96,7 +61,7 @@ export async function obtenerTodasInspecciones(): Promise<FormDataExport[]> {
     cache: "no-store",
   });
 
-  return handleResponse<FormDataExport[]>(response);
+  return handleApiResponse<FormDataExport[]>(response);
 }
 
 export async function listarInspecciones(
@@ -115,7 +80,7 @@ export async function listarInspecciones(
     }
   );
 
-  return handleResponse<{
+  return handleApiResponse<{
     inspecciones: FormDataExport[];
     totalPages: number;
     currentPage: number;
@@ -133,7 +98,7 @@ export async function actualizarInspeccion(
     cache: "no-store",
   });
 
-  const result = await handleResponse<FormDataExport>(response);
+  const result = await handleApiResponse<FormDataExport>(response);
   revalidatePath("/inspecciones");
   return result;
 }
@@ -145,7 +110,7 @@ export async function eliminarInspeccion(id: string): Promise<void> {
     cache: "no-store",
   });
 
-  await handleResponse<{ success: boolean }>(response);
+  await handleApiResponse<{ success: boolean }>(response);
   revalidatePath("/inspecciones");
 }
 
@@ -155,7 +120,7 @@ export async function descargarPdf(id: string): Promise<Blob> {
     cache: "no-store",
   });
 
-  return handleResponse<Blob>(response);
+  return handleApiResponse<Blob>(response);
 }
 
 export async function descargarExcel(id: string): Promise<Blob> {
@@ -164,8 +129,10 @@ export async function descargarExcel(id: string): Promise<Blob> {
     cache: "no-store",
   });
 
-  return handleResponse<Blob>(response);
+  return handleApiResponse<Blob>(response);
 }
+
+// ============= INSPECCIONES EMERGENCIA =============
 
 export async function verificarTag(datos: VerificarTagData): Promise<{
   existe: boolean;
@@ -186,7 +153,7 @@ export async function verificarTag(datos: VerificarTagData): Promise<{
     }
   );
 
-  return handleResponse<{
+  return handleApiResponse<{
     existe: boolean;
     formulario: FormularioInspeccion;
     extintores: {
@@ -210,7 +177,7 @@ export async function crearFormSistemasEmergencia(
     }
   );
 
-  const result = await handleResponse<FormularioInspeccion>(response);
+  const result = await handleApiResponse<FormularioInspeccion>(response);
   revalidatePath("/inspecciones-emergencia");
   return result;
 }
@@ -231,7 +198,7 @@ export async function actualizarMesPorTag(
     }
   );
 
-  const result = await handleResponse<FormularioInspeccion>(response);
+  const result = await handleApiResponse<FormularioInspeccion>(response);
   revalidatePath("/inspecciones-emergencia");
   return result;
 }
@@ -239,7 +206,6 @@ export async function actualizarMesPorTag(
 export async function obtenerSistemasEmergenciaReport(
   filtros?: FiltrosInspeccion
 ): Promise<InspeccionServiceExport[]> {
-  // Construir los parámetros de consulta
   const params = new URLSearchParams();
 
   if (filtros) {
@@ -261,19 +227,7 @@ export async function obtenerSistemasEmergenciaReport(
     cache: "no-store",
   });
 
-  return handleResponse<InspeccionServiceExport[]>(response);
-}
-
-export async function buscarTrabajadores(query: string): Promise<Trabajador[]> {
-  const response = await fetch(
-    `${API_URL}/trabajadores/buscar?query=${encodeURIComponent(query)}`,
-    {
-      headers: getHeaders(),
-      cache: "no-store",
-    }
-  );
-
-  return handleResponse<Trabajador[]>(response);
+  return handleApiResponse<InspeccionServiceExport[]>(response);
 }
 
 export async function descargarExcelInspeccionesEmergencia(
@@ -287,56 +241,7 @@ export async function descargarExcelInspeccionesEmergencia(
     }
   );
 
-  return handleResponse<Blob>(response);
-}
-
-export async function buscarAreas(query: string): Promise<string[]> {
-  const response = await fetch(
-    `${API_URL}/area/buscar?query=${encodeURIComponent(query)}`,
-    {
-      headers: getHeaders(),
-      cache: "no-store",
-    }
-  );
-
-  return handleResponse<string[]>(response);
-}
-
-export async function obtenerAreas(): Promise<string[]> {
-  const response = await fetch(`${API_URL}/area`, {
-    headers: getHeaders(),
-    cache: "no-store",
-  });
-
-  return handleResponse<string[]>(response);
-}
-
-export async function obtenerTagsPorArea(area: string): Promise<string[]> {
-  const response = await fetch(
-    `${API_URL}/tag/por-area?area=${encodeURIComponent(area)}`,
-    {
-      headers: getHeaders(),
-      cache: "no-store",
-    }
-  );
-
-  const data = await handleResponse<string[]>(response);
-  return Array.isArray(data) ? data : [];
-}
-
-export async function obtenerExtintoresPorTag(
-  tag: string
-): Promise<ExtintorAreaResponse> {
-  const response = await fetch(
-    `${API_URL}/extintor/tag/${encodeURIComponent(tag)}`,
-    {
-      headers: getHeaders(),
-      cache: "no-store",
-    }
-  );
-
-  const data = await handleResponse<ExtintorAreaResponse>(response);
-  return data;
+  return handleApiResponse<Blob>(response);
 }
 
 export async function actualizarExtintoresPorTag(
@@ -353,26 +258,7 @@ export async function actualizarExtintoresPorTag(
     }
   );
 
-  const result = await handleResponse<{ success: boolean; message: string }>(
-    response
-  );
-  revalidatePath("/inspecciones-emergencia");
-  return result;
-}
-
-export async function desactivarExtintor(
-  codigo: string
-): Promise<{ exito: boolean; mensaje: string }> {
-  const response = await fetch(
-    `${API_URL}/extintor/desactivar/${encodeURIComponent(codigo)}`,
-    {
-      method: "PUT",
-      headers: getHeaders(),
-      cache: "no-store",
-    }
-  );
-
-  const result = await handleResponse<{ exito: boolean; mensaje: string }>(
+  const result = await handleApiResponse<{ success: boolean; message: string }>(
     response
   );
   revalidatePath("/inspecciones-emergencia");
@@ -393,28 +279,118 @@ export async function obtenerTagsConEstadoPorAreaYMes(
     }
   );
 
-  return handleResponse<{ tag: string; inspeccionRealizada: boolean }[]>(
+  return handleApiResponse<{ tag: string; inspeccionRealizada: boolean }[]>(
     response
   );
 }
 
-export async function verificarInspecciones(area: string, mesActual: string) {
-  const res = await fetch(
+// ✅ CORREGIDO: Tipar correctamente el retorno
+export async function verificarInspecciones(
+  area: string, 
+  mesActual: string
+): Promise<{
+  totalTags: number;
+  inspeccionadas: number;
+  pendientes: number;
+  porcentajeCompletado: number;
+  tags: Array<{ tag: string; inspeccionRealizada: boolean }>;
+}> {
+  const response = await fetch(
     `${API_URL}/inspecciones-emergencia/verificar-inspecciones?area=${encodeURIComponent(
       area
-    )}&mesActual=${encodeURIComponent(mesActual)}`
+    )}&mesActual=${encodeURIComponent(mesActual)}`,
+    {
+      headers: getHeaders(),
+      cache: "no-store",
+    }
   );
 
-  if (!res.ok) {
-    throw new Error("Error al verificar inspecciones");
-  }
+  return handleApiResponse<{
+    totalTags: number;
+    inspeccionadas: number;
+    pendientes: number;
+    porcentajeCompletado: number;
+    tags: Array<{ tag: string; inspeccionRealizada: boolean }>;
+  }>(response);
+}
 
-  return await res.json();
+// ============= TRABAJADORES =============
+
+export async function buscarTrabajadores(query: string): Promise<Trabajador[]> {
+  const response = await fetch(
+    `${API_URL}/trabajadores/buscar?query=${encodeURIComponent(query)}`,
+    {
+      headers: getHeaders(),
+      cache: "no-store",
+    }
+  );
+
+  return handleApiResponse<Trabajador[]>(response);
+}
+
+// ============= AREAS =============
+
+export async function buscarAreas(query: string): Promise<string[]> {
+  const response = await fetch(
+    `${API_URL}/area/buscar?query=${encodeURIComponent(query)}`,
+    {
+      headers: getHeaders(),
+      cache: "no-store",
+    }
+  );
+
+  return handleApiResponse<string[]>(response);
+}
+
+export async function obtenerAreas(): Promise<string[]> {
+  const response = await fetch(`${API_URL}/area`, {
+    headers: getHeaders(),
+    cache: "no-store",
+  });
+
+  return handleApiResponse<string[]>(response);
+}
+
+export async function obtenerTagsPorArea(area: string): Promise<string[]> {
+  const response = await fetch(
+    `${API_URL}/tag/por-area?area=${encodeURIComponent(area)}`,
+    {
+      headers: getHeaders(),
+      cache: "no-store",
+    }
+  );
+
+  const data = await handleApiResponse<string[]>(response);
+  return Array.isArray(data) ? data : [];
+}
+
+// ============= EXTINTORES =============
+
+export async function obtenerExtintoresPorTag(
+  tag: string
+): Promise<ExtintorAreaResponse> {
+  console.log('🔍 Frontend - Obteniendo extintores para tag:', tag);
+  console.log('📍 URL:', `${API_URL}/extintor/tag/${encodeURIComponent(tag)}`);
+  
+  const response = await fetch(
+    `${API_URL}/extintor/tag/${encodeURIComponent(tag)}`,
+    {
+      headers: getHeaders(),
+      cache: "no-store",
+    }
+  );
+
+  const data = await handleApiResponse<ExtintorAreaResponse>(response);
+  console.log('✅ Extintores recibidos:', data);
+  return data;
 }
 
 export async function obtenerExtintoresPorArea(
   area: string
 ): Promise<ExtintorAreaResponse> {
+  console.log('🔍 Frontend - Obteniendo extintores para área:', area);
+  console.log('📍 URL:', `${API_URL}/extintor/area/${encodeURIComponent(area)}`);
+  
   const response = await fetch(
     `${API_URL}/extintor/area/${encodeURIComponent(area)}`,
     {
@@ -423,9 +399,31 @@ export async function obtenerExtintoresPorArea(
     }
   );
 
-  const data = await handleResponse<ExtintorAreaResponse>(response);
+  const data = await handleApiResponse<ExtintorAreaResponse>(response);
+  console.log('✅ Extintores recibidos:', data);
   return data;
 }
+
+export async function desactivarExtintor(
+  codigo: string
+): Promise<{ exito: boolean; mensaje: string }> {
+  const response = await fetch(
+    `${API_URL}/extintor/desactivar/${encodeURIComponent(codigo)}`,
+    {
+      method: "PUT",
+      headers: getHeaders(),
+      cache: "no-store",
+    }
+  );
+
+  const result = await handleApiResponse<{ exito: boolean; mensaje: string }>(
+    response
+  );
+  revalidatePath("/inspecciones-emergencia");
+  return result;
+}
+
+// ============= QR CODES =============
 
 export async function generarCodigoQR(
   data: QRGenerateRequest
@@ -437,14 +435,11 @@ export async function generarCodigoQR(
     cache: "no-store",
   });
 
-  const result = await handleResponse<QRGenerateResponse>(response);
+  const result = await handleApiResponse<QRGenerateResponse>(response);
   revalidatePath("/qr-generator");
   return result;
 }
 
-/**
- * Genera todas las versiones del código QR (base64, buffer, svg)
- */
 export async function generarCodigoQRCompleto(
   data: QRGenerateRequest
 ): Promise<QRCompleteResponse> {
@@ -455,15 +450,11 @@ export async function generarCodigoQRCompleto(
     cache: "no-store",
   });
 
-  const result = await handleResponse<QRCompleteResponse>(response);
+  const result = await handleApiResponse<QRCompleteResponse>(response);
   revalidatePath("/qr-generator");
   return result;
 }
 
-/**
- * Obtiene la URL para descargar el código QR como imagen PNG
- */
-// En tu archivo de server actions
 export async function obtenerUrlImagenQR(
   text: string,
   options?: Omit<QROptions, "color" | "errorCorrectionLevel">,
@@ -497,9 +488,6 @@ export async function obtenerUrlSvgQR(
   return { url };
 }
 
-/**
- * Descarga directamente el código QR como imagen
- */
 export async function descargarImagenQR(
   text: string,
   options?: Omit<QROptions, "color" | "errorCorrectionLevel">
@@ -511,16 +499,13 @@ export async function descargarImagenQR(
   if (options?.margin) params.append("margin", options.margin.toString());
 
   const response = await fetch(`${API_URL}/qr/image?${params.toString()}`, {
-    headers: new Headers(), // Sin Content-Type para imágenes
+    headers: new Headers(),
     cache: "no-store",
   });
 
-  return handleResponse<Blob>(response);
+  return handleApiResponse<Blob>(response);
 }
 
-/**
- * Descarga directamente el código QR como SVG
- */
 export async function descargarSvgQR(
   text: string,
   options?: Omit<QROptions, "color" | "errorCorrectionLevel">
@@ -535,12 +520,9 @@ export async function descargarSvgQR(
     cache: "no-store",
   });
 
-  return handleResponse<Blob>(response);
+  return handleApiResponse<Blob>(response);
 }
 
-/**
- * Valida una URL antes de generar el QR
- */
 export async function validarUrl(
   url: string
 ): Promise<{ valida: boolean; mensaje?: string }> {
@@ -556,9 +538,6 @@ export async function validarUrl(
   }
 }
 
-/**
- * Genera múltiples códigos QR de una vez
- */
 export async function generarMultiplesQR(
   urls: string[],
   options?: QROptions
