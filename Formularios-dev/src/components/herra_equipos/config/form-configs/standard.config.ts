@@ -250,6 +250,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     questionObservations: {
       enabled: true,
       required: false,
+      label: "Observaciones"
     },
 
     outOfService: {
@@ -262,6 +263,12 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
       enabled: true,
       required: false, // Obligatorio para este formulario
       label: "Recomendaciones",
+    },
+
+    questionDescription: {
+      enabled: true,
+      required: false, // Obligatorio para este formulario
+      label: "Descripción del Mantenimiento",
     },
     requiresPhotos: false,
     allowDraft: true,
@@ -323,6 +330,42 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
       label: "Observaciones",
     },
     requiresPhotos: false,
+    allowDraft: true,
+  },
+
+
+  //falta la configuracion de la fecha de la firma del supervisor mas la configuracion del label para todos
+  "1.02.P06.F20": {
+    formCode: "1.02.P06.F20",
+    formName: "INSPECCIÓN DE CILINDROS PARA GASES COMPRIMIDOS",
+    formType: "standard",
+    signatures: {
+      inspector: true,
+      supervisor: true,
+    },
+    colorCode: {
+      enabled: false,
+      hasTrimestre: false,
+    },
+    alert: {
+      show: true,
+      message: "Recuerde verificar el estado del disco y protecciones",
+      variant: "warning",
+    },
+    conclusion: {
+      enabled: true,
+      label: "Conclusión de la inspección",
+      placeholder: "Ingrese observaciones finales...",
+    },
+    questionObservations: {
+      enabled: true,
+      required: false,
+    },
+    generalObservations: {
+      enabled: true,
+      required: false,
+    },
+    requiresPhotos: true,
     allowDraft: true,
   },
 };

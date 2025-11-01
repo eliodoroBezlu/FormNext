@@ -68,6 +68,7 @@ export function StandardInspectionForm({
                 control={control}
                 errors={errors}
                 readonly={readonly}
+                setValue={setValue} 
               />
 
       {config.alert && <AlertSection config={config.alert} />}

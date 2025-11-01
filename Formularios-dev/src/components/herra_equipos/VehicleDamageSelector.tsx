@@ -1,11 +1,11 @@
-// components/form-filler/specialized/VehicleDamageSelector.tsx
+// VehicleDamageSelector.tsx - Versión Genérica
 "use client";
 
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Box, Paper, Typography, Button, Chip, Alert } from '@mui/material';
 import { ChangeHistory, Circle } from '@mui/icons-material';
 import html2canvas from 'html2canvas';
-import { Control, UseFormSetValue } from 'react-hook-form';
+import { Control, UseFormSetValue, FieldValues, Path, PathValue } from 'react-hook-form';
 
 // ==================== TIPOS ====================
 export interface DamageMarker {
@@ -68,23 +68,23 @@ export interface VehicleDamageSelectorRef {
   getObservations: () => string;
 }
 
-interface VehicleDamageSelectorProps {
+interface VehicleDamageSelectorProps<TFieldValues extends FieldValues = FieldValues> {
   vehicleImageUrl?: string;
-  control?: Control<Record<string, unknown>>;
-  setValue?: UseFormSetValue<Record<string, unknown>>;
+  control?: Control<TFieldValues>;
+  setValue?: UseFormSetValue<TFieldValues>;
   damageFieldName?: string;
   observationsFieldName?: string;
   readonly?: boolean;
 }
 
 // ==================== COMPONENTE PRINCIPAL ====================
-const VehicleDamageSelector = forwardRef<VehicleDamageSelectorRef, VehicleDamageSelectorProps>(({
+const VehicleDamageSelectorInner = <TFieldValues extends FieldValues = FieldValues>({
   vehicleImageUrl = 'https://via.placeholder.com/800x600/e0e0e0/666666?text=Imagen+del+Vehiculo',
   setValue,
   damageFieldName = 'vehicleDamages',
   observationsFieldName = 'vehicleObservations',
   readonly = false
-}, ref) => {
+}: VehicleDamageSelectorProps<TFieldValues>, ref: React.Ref<VehicleDamageSelectorRef>) => {
   const [selectedTool, setSelectedTool] = useState<'abollado' | 'raspado' | 'roto'>('abollado');
   const [damages, setDamages] = useState<DamageMarker[]>([]);
   const [observations] = useState('');
@@ -94,8 +94,17 @@ const VehicleDamageSelector = forwardRef<VehicleDamageSelectorRef, VehicleDamage
   // Sincronizar con react-hook-form
   useEffect(() => {
     if (setValue) {
-      setValue(damageFieldName, damages);
-      setValue(observationsFieldName, observations);
+      const damageFieldPath = damageFieldName as Path<TFieldValues>;
+      const observationsFieldPath = observationsFieldName as Path<TFieldValues>;
+      
+      setValue(
+        damageFieldPath, 
+        damages as PathValue<TFieldValues, Path<TFieldValues>>
+      );
+      setValue(
+        observationsFieldPath, 
+        observations as PathValue<TFieldValues, Path<TFieldValues>>
+      );
     }
   }, [damages, observations, setValue, damageFieldName, observationsFieldName]);
 
@@ -334,7 +343,11 @@ const VehicleDamageSelector = forwardRef<VehicleDamageSelectorRef, VehicleDamage
       </Alert>
     </Paper>
   );
-});
+};
 
-VehicleDamageSelector.displayName = 'VehicleDamageSelector';
+// Componente con forwardRef genérico
+const VehicleDamageSelector = forwardRef(VehicleDamageSelectorInner) as <TFieldValues extends FieldValues = FieldValues>(
+  props: VehicleDamageSelectorProps<TFieldValues> & { ref?: React.Ref<VehicleDamageSelectorRef> }
+) => ReturnType<typeof VehicleDamageSelectorInner>;
+
 export default VehicleDamageSelector;

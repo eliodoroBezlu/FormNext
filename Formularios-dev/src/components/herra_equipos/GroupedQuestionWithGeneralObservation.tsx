@@ -14,8 +14,7 @@ import {
   FormControl,
   FormHelperText,
 } from "@mui/material"
-import type { FormDataHerraEquipos, Question, GroupedQuestionData, ColumnConfig } from "./types/IProps"
-import { FormFeatureConfig } from "./formConfig"
+import type { FormDataHerraEquipos, Question, GroupedQuestionData, ColumnConfig, FormFeatureConfig } from "./types/IProps"
 
 interface GroupedQuestionWithGeneralObservationProps<T extends FormDataHerraEquipos = FormDataHerraEquipos> {
   question: Question
@@ -42,28 +41,57 @@ export const GroupedQuestionWithGeneralObservation = <T extends FormDataHerraEqu
   }
 
   const fieldName = `${sectionPath}.q${questionIndex}` as FieldPath<T>
-
-
   const options = question.responseConfig?.options 
 
-  const getBackgroundColor = (applicability: string): string => {
+  // 🆕 Helper para convertir nombres de colores a hex
+  const getColorHex = (colorName: string): string => {
+    const colorMap: Record<string, string> = {
+      white: "#ffffff",
+      red: "#ffebee",
+      gray: "#f5f5f5",
+      grey: "#f5f5f5",
+      yellow: "#fff9c4",
+      blue: "#e3f2fd",
+      green: "#e8f5e9",
+      orange: "#fff3e0",
+      // Agrega más colores según necesites
+    };
+    
+    // Si ya es un color hex, retornarlo directamente
+    if (colorName.startsWith('#')) return colorName;
+    
+    // Buscar en el mapa (case-insensitive)
+    return colorMap[colorName.toLowerCase()] || "#ffffff";
+  }
+
+  // 🆕 Función mejorada para obtener color de fondo por columna y pregunta
+  const getBackgroundColor = (columnKey: string, applicability: string): string => {
+    // PRIORIDAD 1: Verificar si hay configuración de colores por pregunta en groupedConfig
+    if (groupedConfig?.questionColumnColors) {
+      const questionColors = groupedConfig.questionColumnColors[questionIndex];
+      
+      if (questionColors && questionColors[columnKey]) {
+        return getColorHex(questionColors[columnKey]);
+      }
+    }
+
+    // PRIORIDAD 2 (FALLBACK): Usar color basado en applicability
     switch (applicability) {
       case "required":
-        return "#ffebee"
+        return "#ffebee" // Rojo claro
       case "requiredWithCount":
-        return "#fff9c4"
+        return "#fff9c4" // Amarillo claro
       case "notApplicable":
-        return "#f5f5f5"
+        return "#f5f5f5" // Gris claro
       default:
-        return "#ffffff"
+        return "#ffffff" // Blanco
     }
   }
 
-  // 🆕 Valores por defecto para la estructura - CON TIPOS EXPLÍCITOS
+  // Valores por defecto para la estructura
   const getDefaultData = (): GroupedQuestionData => {
     const values: { [key: string]: string } = {}
 
-    // 🆕 Tipo explícito para col
     groupedConfig.columns.forEach((col: ColumnConfig) => {
       if (col.applicability !== "notApplicable") {
         values[col.key] = ""
@@ -155,6 +183,9 @@ export const GroupedQuestionWithGeneralObservation = <T extends FormDataHerraEqu
                   {groupedConfig.columns.map((column: ColumnConfig) => {
                     const isDisabled = column.applicability === "notApplicable"
                     const columnValue = currentData.values?.[column.key] || ""
+                    
+                    // 🆕 Obtener color de fondo dinámico basado en configuración
+                    const bgColor = getBackgroundColor(column.key, column.applicability)
 
                     return (
                       <Grid size={{ xs: 6, sm: 6, md: 6, lg: 3 }} key={column.key}>
@@ -163,7 +194,7 @@ export const GroupedQuestionWithGeneralObservation = <T extends FormDataHerraEqu
                           sx={{
                             p: { xs: 1, md: 2 },
                             height: "100%",
-                            backgroundColor: getBackgroundColor(column.applicability),
+                            backgroundColor: bgColor, // 🆕 Color dinámico
                             border: isDisabled ? "2px dashed #ccc" : "2px solid #ddd",
                             opacity: isDisabled ? 0.5 : 1,
                           }}
@@ -253,6 +284,7 @@ export const GroupedQuestionWithGeneralObservation = <T extends FormDataHerraEqu
                     onChange={(e) => updateObservacion(e.target.value)}
                     fullWidth
                     multiline
+                    rows={3}
                     label="Observación General"
                     placeholder="Ingrese una observación general para este criterio..."
                     disabled={readonly}

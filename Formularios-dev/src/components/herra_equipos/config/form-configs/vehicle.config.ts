@@ -2,13 +2,13 @@ import { FormFeatureConfig } from "../../types/IProps";
 
 // Configuraciones para formularios de vehículos
 export const vehicleFormConfigs: Record<string, FormFeatureConfig> = {
-  "INSP-VEH-001": {
-    formCode: "INSP-VEH-001",
-    formName: "Inspección de Vehículos",
+  "3.04.P48.F03": {
+    formCode: "3.04.P48.F03",
+    formName: "LISTA DE VERIFICACIÓN DE VEHÍCULOS Y EQUIPOS MÓVILES",
     formType: "vehicle",
     signatures: {
       inspector: true,
-      supervisor: false,
+      supervisor: true,
     },
     vehicle: {
       hasDamageSelector: true,
@@ -20,33 +20,9 @@ export const vehicleFormConfigs: Record<string, FormFeatureConfig> = {
     },
     conclusion: {
       enabled: true,
-      label: "Observaciones del vehículo",
+      label: "Observaciones en general de todo el check list:",
     },
     requiresPhotos: true,
     allowDraft: true,
-  },
-
-  "INSP-MONT-001": {
-    formCode: "INSP-MONT-001",
-    formName: "Inspección de Montacargas",
-    formType: "vehicle",
-    signatures: {
-      inspector: true,
-      supervisor: true,
-    },
-    vehicle: {
-      hasDamageSelector: true,
-      hasNextInspectionDate: true,
-    },
-    alert: {
-      show: true,
-      message: "Inspección de equipo crítico",
-      variant: "warning",
-    },
-    conclusion: {
-      enabled: true,
-    },
-    requiresPhotos: true,
-    allowDraft: false,
   },
 }

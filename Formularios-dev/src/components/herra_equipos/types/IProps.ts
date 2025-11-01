@@ -1,4 +1,5 @@
 import { FieldErrors } from "react-hook-form";
+import { DamageMarker } from "../VehicleDamageSelector";
 
 export interface ResponseOption {
   label: string;
@@ -123,10 +124,34 @@ export type OutOfServiceResponse = "yes" | "no" | "na" | "nr";
 export type OutOfServiceResponseType = "yes-no" | "yes-no-na" | "yes-no-na-nr";
 
 
+
+export interface AccesorioConfig {
+  cantidad: number;
+  tipoServicio: string;
+}
+
+export interface AccesoriosConfig {
+  [key: string]: AccesorioConfig;
+}
+
+export interface VehicleData {
+  // Daños
+  damages?: DamageMarker[];
+  damageImageBase64?: string;
+  damageObservations?: string;
+  
+  // Inspección
+  tipoInspeccion?: "inicial" | "periodica";
+  certificacionMSC?: "si" | "no";
+  fechaProximaInspeccion?: string;
+  responsableProximaInspeccion?: string;
+}
 export interface FormDataHerraEquipos {
   verification: Record<string, string | number>;
   responses: Record<string, Record<string, QuestionResponseUnion>>;
   outOfService?: OutOfServiceData; // 🆕 Usar el tipo unificado
+  accesoriosConfig?: AccesoriosConfig
+  vehicle?: VehicleData;
 }
 
 export interface FormResponse {
@@ -269,6 +294,19 @@ export interface FormFeatureConfig {
   generalObservations?: GeneralObservationsConfig // ✅ NUEVO
   outOfService?: OutOfServiceConfig
   questionDescription?: QuestionDescriptionConfig
+
+  groupedConfig?: {
+    columns: Array<{
+      key: string;
+      label: string;
+      applicability: 'required' | 'notApplicable' | 'requiredWithCount';
+    }>;
+    questionColumnColors?: Record<number, Record<string, string>>;
+    instructionText?: string;
+    hasTipoServicio?: boolean;
+    hasDescripcionAparato?: boolean;
+    notaImportante?: string;
+  };
 
   // Additional metadata
   requiresPhotos?: boolean

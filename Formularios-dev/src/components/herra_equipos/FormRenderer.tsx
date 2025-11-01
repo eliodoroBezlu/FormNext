@@ -38,6 +38,7 @@ export const FormFiller: React.FC<FormFillerProps> = ({
   // ✅ Llamar a useForm ANTES de cualquier return condicional
   const {
     control,
+    setValue,
     handleSubmit,
     formState: { errors },
   } = useForm<FormDataHerraEquipos>({
@@ -127,6 +128,7 @@ export const FormFiller: React.FC<FormFillerProps> = ({
           control={control}
           errors={errors}
           readonly={readonly}
+          setValue={setValue} 
         />
 
         {/* Secciones del formulario */}

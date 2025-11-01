@@ -1,7 +1,13 @@
 "use client";
 
 import React from "react";
-import { Controller, Control, FieldErrors, FieldPath, PathValue } from "react-hook-form";
+import {
+  Controller,
+  Control,
+  FieldErrors,
+  FieldPath,
+  PathValue,
+} from "react-hook-form";
 import {
   Box,
   Typography,
@@ -16,9 +22,17 @@ import {
   Chip,
   FormHelperText,
 } from "@mui/material";
-import { FormDataHerraEquipos, getNestedError, Question, QuestionResponse, FormFeatureConfig } from "./types/IProps";
+import {
+  FormDataHerraEquipos,
+  getNestedError,
+  Question,
+  QuestionResponse,
+  FormFeatureConfig,
+} from "./types/IProps";
 
-interface QuestionRendererProps<T extends FormDataHerraEquipos = FormDataHerraEquipos> {
+interface QuestionRendererProps<
+  T extends FormDataHerraEquipos = FormDataHerraEquipos
+> {
   question: Question;
   sectionPath: string;
   questionIndex: number;
@@ -28,7 +42,9 @@ interface QuestionRendererProps<T extends FormDataHerraEquipos = FormDataHerraEq
   formConfig: FormFeatureConfig; // ✅ Solo el config completo
 }
 
-export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraEquipos>({
+export const QuestionRenderer = <
+  T extends FormDataHerraEquipos = FormDataHerraEquipos
+>({
   question,
   sectionPath,
   questionIndex,
@@ -38,21 +54,24 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
   formConfig, // ✅ Recibimos el config completo
 }: QuestionRendererProps<T>) => {
   const fieldName = `${sectionPath}.q${questionIndex}` as FieldPath<T>;
-  
+
   // ✅ Extraer configuraciones del formConfig
   const descriptionConfig = formConfig.questionDescription;
   const observationConfig = formConfig.questionObservations;
-  
+
   const showDescription = descriptionConfig?.enabled ?? false;
   const descriptionRequired = descriptionConfig?.required ?? false;
   const descriptionLabel = descriptionConfig?.label ?? "Descripción";
-  const descriptionPlaceholder = descriptionConfig?.placeholder ?? "Describa el elemento...";
-  
+  const descriptionPlaceholder =
+    descriptionConfig?.placeholder ?? "Describa el elemento...";
+
   const showObservations = observationConfig?.enabled ?? true;
   const observationRequired = observationConfig?.required ?? false;
-  const observationLabel = observationConfig?.label ?? "Observaciones (opcional)";
-  const observationPlaceholder = observationConfig?.placeholder ?? "Ingrese observaciones adicionales...";
-  
+  const observationLabel =
+    observationConfig?.label ?? "Observaciones ";
+  const observationPlaceholder =
+    observationConfig?.placeholder ?? "Ingrese observaciones adicionales...";
+
   const error = getNestedError(errors, `${fieldName}.value`);
   const descripcionError = getNestedError(errors, `${fieldName}.descripcion`);
   const observacionError = getNestedError(errors, `${fieldName}.observacion`);
@@ -162,7 +181,10 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
             validate: observationRequired
               ? (value) => {
                   const response = getCurrentValue(value);
-                  return response.observacion?.trim() !== "" || "La observación es obligatoria";
+                  return (
+                    response.observacion?.trim() !== "" ||
+                    "La observación es obligatoria"
+                  );
                 }
               : undefined,
           }}
@@ -203,24 +225,33 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
             <Controller
               name={fieldName}
               control={control}
-              defaultValue={{ value: "", descripcion: "", observacion: "" } as PathValue<T, typeof fieldName>}
+              defaultValue={
+                { value: "", descripcion: "", observacion: "" } as PathValue<
+                  T,
+                  typeof fieldName
+                >
+              }
               rules={{
                 validate: question.obligatorio
                   ? (value) => {
                       const response = getCurrentValue(value);
-                      return response.value !== "" || "Este campo es obligatorio";
+                      return (
+                        response.value !== "" || "Este campo es obligatorio"
+                      );
                     }
                   : undefined,
               }}
               render={({ field }) => {
                 const current = getCurrentValue(field.value);
                 const displayOptions = options || [];
-                
+
                 return (
                   <FormControl error={!!error} fullWidth>
                     <RadioGroup
                       value={current.value || ""}
-                      onChange={(e) => field.onChange(updateValue(field.value, e.target.value))}
+                      onChange={(e) =>
+                        field.onChange(updateValue(field.value, e.target.value))
+                      }
                       row
                     >
                       {displayOptions.map((option) => (
@@ -251,31 +282,40 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
           </>
         );
 
-       case "bien_mal":
+      case "bien_mal":
       case "operativo_mantenimiento":
         return (
           <>
             <Controller
               name={fieldName}
               control={control}
-              defaultValue={{ value: "", descripcion: "", observacion: "" } as PathValue<T, typeof fieldName>}
+              defaultValue={
+                { value: "", descripcion: "", observacion: "" } as PathValue<
+                  T,
+                  typeof fieldName
+                >
+              }
               rules={{
                 validate: question.obligatorio
                   ? (value) => {
                       const response = getCurrentValue(value);
-                      return response.value !== "" || "Este campo es obligatorio";
+                      return (
+                        response.value !== "" || "Este campo es obligatorio"
+                      );
                     }
                   : undefined,
               }}
               render={({ field }) => {
                 const current = getCurrentValue(field.value);
                 const displayOptions = options || [];
-                
+
                 return (
                   <FormControl error={!!error} fullWidth>
                     <RadioGroup
                       value={current.value || ""}
-                      onChange={(e) => field.onChange(updateValue(field.value, e.target.value))}
+                      onChange={(e) =>
+                        field.onChange(updateValue(field.value, e.target.value))
+                      }
                       row
                     >
                       {displayOptions.map((option) => (
@@ -311,12 +351,19 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
             <Controller
               name={fieldName}
               control={control}
-              defaultValue={{ value: "", descripcion: "", observacion: "" } as PathValue<T, typeof fieldName>}
+              defaultValue={
+                { value: "", descripcion: "", observacion: "" } as PathValue<
+                  T,
+                  typeof fieldName
+                >
+              }
               rules={{
                 validate: question.obligatorio
                   ? (value) => {
                       const response = getCurrentValue(value);
-                      return response.value !== "" || "Este campo es obligatorio";
+                      return (
+                        response.value !== "" || "Este campo es obligatorio"
+                      );
                     }
                   : undefined,
               }}
@@ -325,7 +372,9 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
                 return (
                   <TextField
                     value={current.value || ""}
-                    onChange={(e) => field.onChange(updateValue(field.value, e.target.value))}
+                    onChange={(e) =>
+                      field.onChange(updateValue(field.value, e.target.value))
+                    }
                     fullWidth
                     size="small"
                     placeholder={placeholder || "Ingrese su respuesta"}
@@ -347,12 +396,19 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
             <Controller
               name={fieldName}
               control={control}
-              defaultValue={{ value: "", descripcion: "", observacion: "" } as PathValue<T, typeof fieldName>}
+              defaultValue={
+                { value: "", descripcion: "", observacion: "" } as PathValue<
+                  T,
+                  typeof fieldName
+                >
+              }
               rules={{
                 validate: question.obligatorio
                   ? (value) => {
                       const response = getCurrentValue(value);
-                      return response.value !== "" || "Este campo es obligatorio";
+                      return (
+                        response.value !== "" || "Este campo es obligatorio"
+                      );
                     }
                   : undefined,
               }}
@@ -361,7 +417,9 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
                 return (
                   <TextField
                     value={current.value || ""}
-                    onChange={(e) => field.onChange(updateValue(field.value, e.target.value))}
+                    onChange={(e) =>
+                      field.onChange(updateValue(field.value, e.target.value))
+                    }
                     fullWidth
                     multiline
                     rows={4}
@@ -385,7 +443,12 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
             <Controller
               name={fieldName}
               control={control}
-              defaultValue={{ value: "", descripcion: "", observacion: "" } as PathValue<T, typeof fieldName>}
+              defaultValue={
+                { value: "", descripcion: "", observacion: "" } as PathValue<
+                  T,
+                  typeof fieldName
+                >
+              }
               rules={{
                 validate: (value) => {
                   const response = getCurrentValue(value);
@@ -412,7 +475,9 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
                   <TextField
                     value={current.value || ""}
                     onChange={(e) => {
-                      const newValue = e.target.value ? Number(e.target.value) : "";
+                      const newValue = e.target.value
+                        ? Number(e.target.value)
+                        : "";
                       field.onChange(updateValue(field.value, newValue));
                     }}
                     type="number"
@@ -437,7 +502,12 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
             <Controller
               name={fieldName}
               control={control}
-              defaultValue={{ value: "", descripcion: "", observacion: "" } as PathValue<T, typeof fieldName>}
+              defaultValue={
+                { value: "", descripcion: "", observacion: "" } as PathValue<
+                  T,
+                  typeof fieldName
+                >
+              }
               render={({ field }) => {
                 const current = getCurrentValue(field.value);
                 return (
@@ -446,7 +516,9 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
                       <Checkbox
                         checked={!!current.value}
                         onChange={(e) =>
-                          field.onChange(updateValue(field.value, e.target.checked))
+                          field.onChange(
+                            updateValue(field.value, e.target.checked)
+                          )
                         }
                         disabled={readonly}
                       />
@@ -467,12 +539,19 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
             <Controller
               name={fieldName}
               control={control}
-              defaultValue={{ value: "", descripcion: "", observacion: "" } as PathValue<T, typeof fieldName>}
+              defaultValue={
+                { value: "", descripcion: "", observacion: "" } as PathValue<
+                  T,
+                  typeof fieldName
+                >
+              }
               rules={{
                 validate: question.obligatorio
                   ? (value) => {
                       const response = getCurrentValue(value);
-                      return response.value !== "" || "Este campo es obligatorio";
+                      return (
+                        response.value !== "" || "Este campo es obligatorio"
+                      );
                     }
                   : undefined,
               }}
@@ -481,7 +560,9 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
                 return (
                   <TextField
                     value={current.value || ""}
-                    onChange={(e) => field.onChange(updateValue(field.value, e.target.value))}
+                    onChange={(e) =>
+                      field.onChange(updateValue(field.value, e.target.value))
+                    }
                     type="date"
                     size="small"
                     InputLabelProps={{ shrink: true }}
@@ -498,7 +579,9 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
         );
 
       default:
-        return <Typography color="error">Tipo de pregunta no soportado</Typography>;
+        return (
+          <Typography color="error">Tipo de pregunta no soportado</Typography>
+        );
     }
   };
 
@@ -540,7 +623,12 @@ export const QuestionRenderer = <T extends FormDataHerraEquipos = FormDataHerraE
             </Typography>
           </FormLabel>
           {question.image?.caption && (
-            <Typography variant="caption" color="text.secondary" display="block" mb={1}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              display="block"
+              mb={1}
+            >
               {question.image.caption}
             </Typography>
           )}

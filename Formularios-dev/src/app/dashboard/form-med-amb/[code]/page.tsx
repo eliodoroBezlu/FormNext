@@ -9,7 +9,6 @@ import { ArrowBack } from '@mui/icons-material';
 import { getTemplatesHerraEquipos } from '@/lib/actions/template-herra-equipos';
 
 import { FormFiller } from '@/components/herra_equipos/FormRenderer';
-import ArnesInspeccionForm from '@/components/herra_equipos/ArnesInspeccionForm';
 import {  FormTemplateHerraEquipos } from '@/components/herra_equipos/types/IProps';
 import { UnifiedFormRouter } from '@/components/herra_equipos/UnifiedFormRouter';
 
@@ -17,7 +16,7 @@ import { UnifiedFormRouter } from '@/components/herra_equipos/UnifiedFormRouter'
 // Mapeo de códigos a componentes especializados
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SPECIALIZED_FORMS: Record<string, React.ComponentType<any>> = {
-  '1.02.P06.F19': ArnesInspeccionForm,
+  '1.02.P06.F19': UnifiedFormRouter, // arenes
   '1.02.P06.F20': UnifiedFormRouter,
   '1.02.P06.F39':UnifiedFormRouter,
   '1.02.P06.F42':UnifiedFormRouter,

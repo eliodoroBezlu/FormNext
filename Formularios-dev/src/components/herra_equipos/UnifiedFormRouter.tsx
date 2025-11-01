@@ -4,7 +4,6 @@ import { Paper, Typography } from "@mui/material"
 import { StandardInspectionForm } from "./StandardInspectionForm"
 import { getFormType } from "./config/form-config.helpers"
 import {  FormTemplateHerraEquipos } from "./types/IProps"
-import { CylinderInspectionForm } from "./CylinderInspectionForm"
 import { GroupedAccessoriesForm } from "./GroupedAccessoriesForm"
 import { VehicleInspectionForm } from "./VehicleInspectionForm"
 interface UnifiedFormRouterProps {
@@ -19,9 +18,6 @@ export function UnifiedFormRouter({ template, onSubmit, onSaveDraft }: UnifiedFo
   switch (formType) {
     case "standard":
       return <StandardInspectionForm template={template} onSubmit={onSubmit} onSaveDraft={onSaveDraft} />
-
-    case "cylinder":
-      return <CylinderInspectionForm template={template} onSubmit={onSubmit} onSaveDraft={onSaveDraft} />
 
     case "grouped":
       return <GroupedAccessoriesForm template={template} onSubmit={onSubmit} onSaveDraft={onSaveDraft} />
