@@ -106,7 +106,7 @@ export function VehicleInspectionForm({
         control={control}
         errors={errors}
         readonly={readonly}
-        setValue={setValue} 
+        setValue={setValue}
       />
 
       {/* Tipo de Inspección y Certificación MSC */}
@@ -331,19 +331,19 @@ export function VehicleInspectionForm({
       )}
 
       {template.sections && template.sections.length > 0 && (
-              <Box>
-                {template.sections.map((section, idx) => (
-                  <SectionRenderer
-                    key={section._id || idx}
-                    section={section}
-                    sectionPath={`sections.${idx}`}
-                    control={control}
-                    errors={errors}
-                    formConfig={config}
-                  />
-                ))}
-              </Box>
-            )}
+        <Box>
+          {template.sections.map((section, idx) => (
+            <SectionRenderer
+              key={section._id || idx}
+              section={section}
+              sectionPath={`sections.${idx}`}
+              control={control}
+              errors={errors}
+              formConfig={config}
+            />
+          ))}
+        </Box>
+      )}
 
       {/* Selector de daños del vehículo */}
       {config.vehicle?.hasDamageSelector && (
@@ -522,8 +522,6 @@ export function VehicleInspectionForm({
         </Paper>
       )}
 
-      
-
       {/* Conclusión/Observaciones */}
       {config.conclusion && (
         <ObservationsSection
@@ -535,11 +533,23 @@ export function VehicleInspectionForm({
 
       {/* Firmas */}
       {config.signatures?.inspector && (
-        <InspectorSignature register={register} errors={errors} />
+        <InspectorSignature
+          register={register}
+          control={control}
+          errors={errors}
+          setValue={setValue}
+          config={config.signatures.inspector}
+        />
       )}
 
       {config.signatures?.supervisor && (
-        <SupervisorSignature register={register} errors={errors} />
+        <SupervisorSignature
+          register={register}
+          control={control}
+          errors={errors}
+          setValue={setValue}
+          config={config.signatures.supervisor}
+        />
       )}
 
       {/* Botones */}

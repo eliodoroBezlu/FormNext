@@ -1,46 +1,214 @@
-"use client"
+"use client";
 
-import { TextField, Typography, Paper, Box } from "@mui/material"
-import type { UseFormRegister, FieldErrors } from "react-hook-form"
-import type { FormDataHerraEquipos } from "../types/IProps"
+import { TextField, Typography, Paper, Box } from "@mui/material";
+import type {
+  Control,
+  UseFormRegister,
+  UseFormSetValue,
+  FieldErrors,
+  Path,
+  FieldValues,
+} from "react-hook-form";
+import type {
+  FormDataHerraEquipos,
+  SignatureConfig,
+  SignatureFieldConfig,
+} from "../types/IProps";
+import dynamic from "next/dynamic";
+import { SignatureFieldProps } from "@/components/molecules/team-member-signature/SigantureField";
+import { DataSourceType } from "@/lib/actions/dataSourceService";
+
+// ✅ Importar solo los componentes necesarios
+const AutocompleteCustom = dynamic(
+  () => import("@/components/molecules/autocomplete-custom/AutocompleteCustom"),
+  { ssr: false }
+);
+const SignatureField = dynamic(
+  () =>
+    import("@/components/molecules/team-member-signature/SigantureField").then(
+      (mod) => mod.SignatureField
+    ),
+  { ssr: false }
+) as <T extends FieldValues>(
+  props: SignatureFieldProps<T>
+) => React.ReactElement;
 
 interface InspectorSignatureProps {
-  register: UseFormRegister<FormDataHerraEquipos>
-  errors: FieldErrors<FormDataHerraEquipos>
+  register: UseFormRegister<FormDataHerraEquipos>;
+  control: Control<FormDataHerraEquipos>;
+  setValue: UseFormSetValue<FormDataHerraEquipos>;
+  errors: FieldErrors<FormDataHerraEquipos>;
+  config?: SignatureConfig["inspector"];
 }
 
-export function InspectorSignature({ register, errors }: InspectorSignatureProps) {
+export function InspectorSignature({
+  register,
+  control,
+  setValue,
+  errors,
+  config,
+}: InspectorSignatureProps) {
+  // Si está deshabilitado, no renderizar
+  if (config === false || config === undefined) {
+    return null;
+  }
+
+  // Si config es boolean true, usar valores por defecto
+  if (config === true) {
+    config = {
+      enabled: true,
+      title: "Firma del Inspector",
+      fields: {
+        name: {
+          enabled: true,
+          type: "text",
+          label: "Nombre del Inspector",
+          placeholder: "Ingrese nombre completo",
+          required: true,
+          fieldName: "verification.inspectorName",
+        },
+        signature: {
+          enabled: true,
+          type: "text",
+          label: "Firma",
+          placeholder: "Firma digital o código",
+          required: true,
+          fieldName: "verification.inspectorSignature",
+        },
+      },
+    };
+  }
+
+  // Si es objeto pero está deshabilitado
+  if (typeof config === "object" && !config.enabled) {
+    return null;
+  }
+
+  const fields = config.fields || {};
+
+  // Helper para renderizar cada campo según su tipo
+  const renderField = (key: string, field: SignatureFieldConfig) => {
+    if (!field || !field.enabled) return null;
+
+    const fieldName = field.fieldName || `verification.inspector_${key}`;
+    const fieldKey = fieldName.split(".")[1];
+    const fieldType = field.type || "text";
+
+    const commonProps = {
+      label: field.label || key,
+      placeholder: field.placeholder || "",
+      required: field.required || false,
+      error:
+        !!errors.verification?.[fieldKey as keyof typeof errors.verification],
+      helperText: errors.verification?.[
+        fieldKey as keyof typeof errors.verification
+      ]?.message as string | undefined,
+    };
+
+    switch (fieldType) {
+      case "autocomplete":
+        return (
+          <AutocompleteCustom
+            key={key}
+            {...commonProps}
+            dataSource={field.dataSource as DataSourceType | undefined}
+            value={undefined}
+            onChange={(value: string | null) => {
+              setValue(
+                fieldName as Path<FormDataHerraEquipos>, 
+                value as FormDataHerraEquipos[keyof FormDataHerraEquipos]
+              );
+            }}
+          />
+        );
+
+      case "canvas":
+        return (
+          <Box key={key}>
+            <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+              {field.label || "Firma"}
+              {field.required && <span style={{ color: "red" }}> *</span>}
+            </Typography>
+            <SignatureField<FormDataHerraEquipos>
+              fieldName={fieldName as Path<FormDataHerraEquipos>}
+              control={control}
+              setValue={setValue}
+              heightPercentage={field.heightPercentage || 60}
+              error={commonProps.error}
+              helperText={commonProps.helperText}
+            />
+          </Box>
+        );
+
+      case "date":
+        return (
+          <TextField
+            key={key}
+            type="date"
+            InputLabelProps={{ shrink: true }}
+            fullWidth
+            {...commonProps}
+            {...register(fieldName as Path<FormDataHerraEquipos>, {
+              required: field.required
+                ? `${field.label || key} es obligatorio`
+                : false,
+            })}
+          />
+        );
+
+      case "text":
+      default:
+        return (
+          <TextField
+            key={key}
+            fullWidth
+            {...commonProps}
+            {...register(fieldName as Path<FormDataHerraEquipos>, {
+              required: field.required
+                ? `${field.label || key} es obligatorio`
+                : false,
+            })}
+          />
+        );
+    }
+  };
+
+  // Preparar los campos estándar
+  const standardFields = ["name", "signature", "date", "position", "license"];
+  const standardFieldsToRender = standardFields
+    .map((key) => (fields[key] ? { key, field: fields[key]! } : null))
+    .filter((item) => item !== null);
+
+  // Campos custom
+  const customFields = Object.entries(fields)
+    .filter(([key]) => !standardFields.includes(key))
+    .map(([key, field]) => (field ? { key, field } : null))
+    .filter((item) => item !== null);
+
+  const allFields = [...standardFieldsToRender, ...customFields];
+
+  if (allFields.length === 0) {
+    return null;
+  }
+
   return (
     <Paper elevation={2} sx={{ p: 3 }}>
       <Typography variant="h6" gutterBottom>
-        Firma del Inspector
+        {config.title || "Firma del Inspector"}
       </Typography>
 
-      <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" } }}>
-        <TextField
-          label="Nombre del Inspector"
-          placeholder="Ingrese nombre completo"
-          required
-          fullWidth
-          {...register("verification.inspectorName", {
-            required: "El nombre del inspector es obligatorio",
-          })}
-          error={!!errors.verification?.inspectorName}
-          helperText={errors.verification?.inspectorName?.message}
-        />
-
-        <TextField
-          label="Firma"
-          placeholder="Firma digital o código"
-          required
-          fullWidth
-          {...register("verification.inspectorSignature", {
-            required: "La firma del inspector es obligatoria",
-          })}
-          error={!!errors.verification?.inspectorSignature}
-          helperText={errors.verification?.inspectorSignature?.message}
-        />
+      <Box
+        sx={{
+          display: "grid",
+          gap: 2,
+          gridTemplateColumns: {
+            xs: "1fr",
+            md: allFields.length === 1 ? "1fr" : "repeat(2, 1fr)",
+          },
+        }}
+      >
+        {allFields.map((item) => item && renderField(item.key, item.field))}
       </Box>
     </Paper>
-  )
+  );
 }

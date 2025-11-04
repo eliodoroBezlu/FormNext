@@ -1,0 +1,67 @@
+import { FormFeatureConfig } from "../../types/IProps";
+
+
+// Configuraciones para formularios con accesorios agrupados (Eslings, Grilletes, etc.)
+export const andamioFormConfigs: Record<string, FormFeatureConfig> = {
+  "1.02.P06.F30": {
+    formCode: "1.02.P06.F30",
+    formName: "INSPECCIÓN DE ANDAMIOS PERIMETRALES",
+    formType: "scaffold",
+    signatures: {
+      inspector: true,
+      supervisor: true,
+    },
+
+     routineInspection: {
+      enabled: true,
+      title: "II. INSPECCIÓN RUTINARIA DEL ANDAMIO",
+      question:
+        "EL ANDAMIO MANTIENE LOS ESTÁNDARES DE SEGURIDAD INICIALES. NO SE HA DETECTADO NINGUNA CONDICIÓN INSEGURA EN SU ESTRUCTURA",
+      maxEntries: 30,
+      fields: {
+        showDate: true,
+        dateLabel: "FECHA DE INSPECCIÓN",
+        dateRequired: true,
+
+        showInspector: true,
+        inspectorLabel: "NOMBRE DEL INSPECTOR",
+        inspectorRequired: true,
+
+        showResponse: true,
+        responseRequired: true,
+
+        showObservations: true,
+        observationsLabel: "OBSERVACIONES",
+        observationsPlaceholder: "Describa cualquier anomalía o condición detectada",
+
+        showSignature: true,
+        signatureLabel: "FIRMA",
+      },
+    },
+
+    
+
+    colorCode: {
+      enabled: false,
+      hasTrimestre: false,
+    },
+    alert: {
+      show: false,
+      message: "Inspeccione cada eslinga individualmente",
+      variant: "warning",
+    },
+    conclusion: {
+      enabled: true,
+      label: "A LA CONCLUSIÓN DE LA INSPECCIÓN DE TODOS LOS ITEMS EL INSPECTOR DEBERÁ VERIFICAR QUE:",
+      showCheckbox: true,
+      checkboxOptions: {
+        liberatedLabel: "El Andamio es liberado, colocar una tarjeta verde y autorizar la utilización del mismo.",
+        liberatedColor: "#4caf50",
+        notLiberatedLabel: "El Andamio No es liberado, colocar tarjeta roja y cinta de peligro hasta que las observaciones se corrijan.",
+        notLiberatedColor: "#f44336",
+      },
+    },
+    requiresPhotos: true,
+    allowDraft: true,
+  },
+}

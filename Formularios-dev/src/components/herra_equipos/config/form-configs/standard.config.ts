@@ -250,7 +250,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     questionObservations: {
       enabled: true,
       required: false,
-      label: "Observaciones"
+      label: "Observaciones",
     },
 
     outOfService: {
@@ -333,7 +333,6 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     allowDraft: true,
   },
 
-
   //falta la configuracion de la fecha de la firma del supervisor mas la configuracion del label para todos
   "1.02.P06.F20": {
     formCode: "1.02.P06.F20",
@@ -367,5 +366,95 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     },
     requiresPhotos: true,
     allowDraft: true,
+  },
+
+  "1.02.P06.F33": {
+    formCode: "1.02.P06.F33",
+    formName: "INSPECCIÓN  DE  ESCALERAS DE MANO",
+    formType: "standard",
+    signatures: {
+      inspector: {
+        enabled: true,
+        title: "NOMBRE DEL RESPONSABLE DE LA INSPECCIÓN",
+        fields: {
+          name: {
+            enabled: true,
+            type: 'autocomplete',
+            dataSource: "trabajador",
+            label: "NOMBRE DEL RESPONSABLE DE LA INSPECCIÓN",
+            required: true,
+            fieldName: "verification.inspectorName",
+          },
+          signature: {
+            type: 'canvas',
+            enabled: true,
+            required: true,
+            fieldName: "verification.inspectorSignature",
+          },
+        },
+      },
+      supervisor: {
+        enabled: true,
+        title:"NOMBRE DEL SUPERVISOR DE LA INSPECCIÓN",
+        fields: {
+          name: {
+            enabled: true,
+            type: 'autocomplete',
+            label:"NOMBRE DEL SUPERVISOR DE LA INSPECCIÓN",
+            required: true,
+            dataSource: "supervisor",
+            fieldName: "verification.supervisorName",
+          },
+          signature: {
+            type: 'canvas',
+            enabled: true,
+            required: true,
+            heightPercentage: 30,
+            fieldName: "verification.supervisorSignature",
+          },
+          // Campo custom para supervisor
+          
+        },
+      },
+    },
+    colorCode: {
+      enabled: false,
+      hasTrimestre: false,
+    },
+    alert: {
+      show: true,
+      message: "QUÉ DEBE HACER SI LA ESCALERA ESTÁ DEFECTUOSA",
+      description:
+        "Si usted nota una escalera EN MAL ESTADO O DEFECTOSA NO LA USE, estas deben ser removidas cuanto antes del lugar de trabajo y dar de baja la escalera cortando longitudinalmente.",
+      variant: "warning",
+    },
+    conclusion: {
+      enabled: true,
+      label: "Conclusión de la inspección",
+      placeholder: "Ingrese observaciones finales...",
+    },
+    questionObservations: {
+      enabled: true,
+      required: false,
+    },
+    generalObservations: {
+      enabled: true,
+      required: false,
+    },
+    requiresPhotos: true,
+    allowDraft: true,
+
+    sectionSelector: {
+      enabled: true,
+      items: [
+        {
+          sectionTitle:
+            "B. OTRAS CONSIDERACIONES A INSPECCIONAR SEGÚN EL TIPO DE ESCALERA (Seleccione el tipo de escalera y continúe con la inspección)", // ← Título exacto de la sección
+          label: "Seleccione el tipo de escalera y continúe con la inspección",
+          helperText: "Puede seleccionar una o más ",
+          required: true,
+        },
+      ],
+    },
   },
 };

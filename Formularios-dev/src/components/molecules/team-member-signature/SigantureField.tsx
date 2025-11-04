@@ -4,7 +4,7 @@ import SignatureCanvas from "react-signature-canvas";
 import DynamicSignatureCanvas from "../signature-canvas/SigantureCanvas";
 
 // Componente simple y reutilizable solo para firmas
-interface SignatureFieldProps<T extends Record<string, unknown>> {
+export interface SignatureFieldProps<T extends Record<string, unknown>> {
   fieldName: Path<T>; // El path completo del campo (ej: "inspectionTeam.0.firma")
   control: Control<T>;
   setValue: UseFormSetValue<T>;

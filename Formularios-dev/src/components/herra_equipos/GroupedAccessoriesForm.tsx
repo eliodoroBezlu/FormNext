@@ -1,7 +1,14 @@
 "use client";
 
 import { Controller, useForm } from "react-hook-form";
-import { Box, Typography, Paper,  Grid, TextField, MenuItem } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Paper,
+  Grid,
+  TextField,
+  MenuItem,
+} from "@mui/material";
 import { FormDataHerraEquipos, FormTemplateHerraEquipos } from "./types/IProps";
 import { AlertSection } from "./common/AlertSection";
 import { ColorCodeSection } from "./common/ColorCodeSection";
@@ -67,7 +74,7 @@ export function GroupedAccessoriesForm({
         control={control}
         errors={errors}
         readonly={readonly}
-        setValue={setValue} 
+        setValue={setValue}
       />
       {config.formType === "grouped" && (
         <Paper elevation={3} sx={{ p: 3, mb: 3, border: "2px solid #2196f3" }}>
@@ -85,7 +92,6 @@ export function GroupedAccessoriesForm({
               }}
             >
               📊 Cantidad de Accesorios de Izaje a Inspeccionar
-              
             </Typography>
 
             <Grid container spacing={2}>
@@ -182,113 +188,112 @@ export function GroupedAccessoriesForm({
           ))}
         </Box>
       ))}
-         {config.formType === "grouped" && (
-            <Paper
-              elevation={3}
-              sx={{
-                p: 3,
-                mb: 3,
-                border: "2px solid #4caf50",
-                backgroundColor: "#f1f8e9",
-              }}
-            >
-              <Typography
-                variant="h6"
-                gutterBottom
-                sx={{
-                  fontWeight: "bold",
-                  color: "#2e7d32",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  mb: 3,
-                }}
-              >
-                🏷️ Tipo de Servicio por Accesorio
-              </Typography>
+      {config.formType === "grouped" && (
+        <Paper
+          elevation={3}
+          sx={{
+            p: 3,
+            mb: 3,
+            border: "2px solid #4caf50",
+            backgroundColor: "#f1f8e9",
+          }}
+        >
+          <Typography
+            variant="h6"
+            gutterBottom
+            sx={{
+              fontWeight: "bold",
+              color: "#2e7d32",
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              mb: 3,
+            }}
+          >
+            🏷️ Tipo de Servicio por Accesorio
+          </Typography>
 
-              <Grid container spacing={3}>
-                {config.groupedConfig?.columns
-                  .filter((col) => col.applicability === "requiredWithCount")
-                  .map((column) => (
-                    <Grid size={{ xs: 12, md: 6 }} key={column.key}>
-                      <Box sx={{ mb: 2 }}>
-                        <Typography
-                          variant="subtitle1"
+          <Grid container spacing={3}>
+            {config.groupedConfig?.columns
+              .filter((col) => col.applicability === "requiredWithCount")
+              .map((column) => (
+                <Grid size={{ xs: 12, md: 6 }} key={column.key}>
+                  <Box sx={{ mb: 2 }}>
+                    <Typography
+                      variant="subtitle1"
+                      sx={{
+                        fontWeight: "bold",
+                        mb: 1,
+                        color: "#1976d2",
+                      }}
+                    >
+                      {column.label}
+                    </Typography>
+                    <Controller
+                      name={`accesoriosConfig.${column.key}.tipoServicio`}
+                      control={control}
+                      rules={{
+                        required: `Seleccione tipo de servicio para ${column.label}`,
+                      }}
+                      render={({ field, fieldState }) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          select
+                          label={`Tipo de Servicio - ${column.label}`}
+                          value={field.value || ""}
+                          error={!!fieldState.error}
+                          helperText={fieldState.error?.message}
+                          disabled={readonly}
                           sx={{
-                            fontWeight: "bold",
-                            mb: 1,
-                            color: "#1976d2",
+                            "& .MuiOutlinedInput-root": {
+                              backgroundColor: "#e8f5e9",
+                              "& fieldset": {
+                                borderColor: "#4caf50",
+                              },
+                            },
                           }}
                         >
-                          {column.label}
-                        </Typography>
-                        <Controller
-                          name={`accesoriosConfig.${column.key}.tipoServicio`}
-                          control={control}
-                          rules={{
-                            required: `Seleccione tipo de servicio para ${column.label}`,
-                          }}
-                          render={({ field, fieldState }) => (
-                            <TextField
-                              {...field}
-                              fullWidth
-                              select
-                              label={`Tipo de Servicio - ${column.label}`}
-                              value={field.value || ""}
-                              error={!!fieldState.error}
-                              helperText={fieldState.error?.message}
-                              disabled={readonly}
-                              sx={{
-                                "& .MuiOutlinedInput-root": {
-                                  backgroundColor: "#e8f5e9",
-                                  "& fieldset": {
-                                    borderColor: "#4caf50",
-                                  },
-                                },
-                              }}
-                            >
-                              <MenuItem value="">
-                                <em>Seleccione tipo</em>
-                              </MenuItem>
-                              <MenuItem value="N">N - Normal</MenuItem>
-                              <MenuItem value="S">S - Severo</MenuItem>
-                              <MenuItem value="ES">ES - Especial</MenuItem>
-                            </TextField>
-                          )}
-                        />
-                      </Box>
-                    </Grid>
-                  ))}
-              </Grid>
+                          <MenuItem value="">
+                            <em>Seleccione tipo</em>
+                          </MenuItem>
+                          <MenuItem value="N">N - Normal</MenuItem>
+                          <MenuItem value="S">S - Severo</MenuItem>
+                          <MenuItem value="ES">ES - Especial</MenuItem>
+                        </TextField>
+                      )}
+                    />
+                  </Box>
+                </Grid>
+              ))}
+          </Grid>
 
-              {/* Leyenda de tipos */}
-              <Box
-                sx={{
-                  mt: 2,
-                  p: 2,
-                  backgroundColor: "#e3f2fd",
-                  borderRadius: 1,
-                }}
-              >
-                <Typography variant="body2" sx={{ fontWeight: "bold", mb: 1 }}>
-                  📋 Descripción de Tipos de Servicio:
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 0.5 }}>
-                  • <strong>N - Normal:</strong> Uso estándar sin condiciones
-                  especiales
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 0.5 }}>
-                  • <strong>S - Severo:</strong> Condiciones de trabajo
-                  exigentes
-                </Typography>
-                <Typography variant="body2">
-                  • <strong>ES - Especial:</strong> Aplicaciones específicas o
-                  críticas
-                </Typography>
-              </Box>
-            </Paper>
-          )}
+          {/* Leyenda de tipos */}
+          <Box
+            sx={{
+              mt: 2,
+              p: 2,
+              backgroundColor: "#e3f2fd",
+              borderRadius: 1,
+            }}
+          >
+            <Typography variant="body2" sx={{ fontWeight: "bold", mb: 1 }}>
+              📋 Descripción de Tipos de Servicio:
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 0.5 }}>
+              • <strong>N - Normal:</strong> Uso estándar sin condiciones
+              especiales
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 0.5 }}>
+              • <strong>S - Severo:</strong> Condiciones de trabajo exigentes
+            </Typography>
+            <Typography variant="body2">
+              • <strong>ES - Especial:</strong> Aplicaciones específicas o
+              críticas
+            </Typography>
+          </Box>
+        </Paper>
+      )}
 
       {config.conclusion && (
         <ObservationsSection
@@ -299,11 +304,23 @@ export function GroupedAccessoriesForm({
       )}
 
       {config.signatures?.inspector && (
-        <InspectorSignature register={register} errors={errors} />
+        <InspectorSignature
+          register={register}
+          control={control}
+          errors={errors}
+          setValue={setValue}
+          config={config.signatures.supervisor}
+        />
       )}
 
       {config.signatures?.supervisor && (
-        <SupervisorSignature register={register} errors={errors} />
+        <SupervisorSignature
+          register={register}
+          control={control}
+          errors={errors}
+          setValue={setValue}
+          config={config.signatures.supervisor}
+        />
       )}
 
       <SaveSubmitButtons

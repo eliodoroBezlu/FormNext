@@ -25,7 +25,6 @@ import {
 import { FormDataHerraEquipos, Section } from "./types/IProps";
 import { QuestionRenderer } from "./QuestionRenderer";
 import Image from "next/image";
-
 import { FormFeatureConfig } from "./types/IProps";
 
 interface SectionRendererProps<T extends FormDataHerraEquipos = FormDataHerraEquipos> {
@@ -35,7 +34,7 @@ interface SectionRendererProps<T extends FormDataHerraEquipos = FormDataHerraEqu
   errors: FieldErrors<T>;
   level?: number;
   readonly?: boolean;
-  formConfig: FormFeatureConfig; // ✅ Ahora solo pasamos el config completo
+  formConfig: FormFeatureConfig;
 }
 
 export const SectionRenderer = <T extends FormDataHerraEquipos = FormDataHerraEquipos>({
@@ -45,7 +44,7 @@ export const SectionRenderer = <T extends FormDataHerraEquipos = FormDataHerraEq
   errors,
   level = 0,
   readonly = false,
-  formConfig, // ✅ Recibimos el config completo
+  formConfig,
 }: SectionRendererProps<T>) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -99,7 +98,7 @@ export const SectionRenderer = <T extends FormDataHerraEquipos = FormDataHerraEq
                       control={control}
                       errors={errors}
                       readonly={readonly}
-                      formConfig={formConfig} // ✅ Solo el config completo
+                      formConfig={formConfig}
                     />
                     {/* Botón "Ver imagen" cada 2 preguntas en móvil */}
                     {isMobile && hasImages && (qIdx + 1) % 2 === 0 && (
@@ -133,7 +132,7 @@ export const SectionRenderer = <T extends FormDataHerraEquipos = FormDataHerraEq
                     errors={errors}
                     level={level + 1}
                     readonly={readonly}
-                    formConfig={formConfig} // ✅ Solo propagar el config completo
+                    formConfig={formConfig}
                   />
                 ))}
               </Box>

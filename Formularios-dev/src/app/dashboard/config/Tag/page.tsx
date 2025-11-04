@@ -515,7 +515,11 @@ export default function GestionTags() {
                 fullWidth
                 label="Tag *"
                 value={formData.tag}
-                onChange={(e) => setFormData({ ...formData, tag: e.target.value.toUpperCase() })}
+                onChange={(e) => {
+    // Permitir: letras, números, guion, guion bajo, numeral
+    const value = e.target.value.toUpperCase().replace(/[^A-Z0-9\-_#]/g, '')
+    setFormData({ ...formData, tag: value })
+  }}
                 required
                 error={!formData.tag}
                 helperText={!formData.tag ? "Campo requerido. Solo letras mayúsculas y números" : "Solo letras mayúsculas y números"}

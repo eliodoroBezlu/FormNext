@@ -152,6 +152,10 @@ export interface FormDataHerraEquipos {
   outOfService?: OutOfServiceData; // 🆕 Usar el tipo unificado
   accesoriosConfig?: AccesoriosConfig
   vehicle?: VehicleData;
+  scaffold?: ScaffoldData;
+  selectedSubsections?: string[];
+  selectedItems?: Record<string, string[]>;
+  
 }
 
 export interface FormResponse {
@@ -178,16 +182,54 @@ export const getNestedError = (
   return current as { message?: string } | undefined;
 };
 
+export type SignatureFieldType = 
+  | 'text' // TextField normal (para códigos, nombres manuales)
+  | 'autocomplete' // AutocompleteCustom (para seleccionar de listas)
+  | 'canvas' // SignatureCanvas (firma digital real)
+  | 'date'; // DatePicker (fechas)
 
-//form
+export interface SignatureFieldConfig {
+  enabled: boolean;
+  type?: SignatureFieldType; // ✅ NUEVO: Tipo de campo
+  label?: string;
+  placeholder?: string;
+  required?: boolean;
+  fieldName?: string;
+  dataSource?: string; // Para autocomplete
+  heightPercentage?: number; // Para canvas
+}
+
 export interface SignatureConfig {
-  inspector: boolean
-  supervisor: boolean
+  inspector: boolean | {
+    enabled: boolean;
+    title?: string;
+    fields?: {
+      name?: SignatureFieldConfig;
+      signature?: SignatureFieldConfig;
+      date?: SignatureFieldConfig;
+      position?: SignatureFieldConfig;
+      license?: SignatureFieldConfig;
+      [key: string]: SignatureFieldConfig | undefined;
+    };
+  };
+  supervisor: boolean | {
+    enabled: boolean;
+    title?: string;
+    fields?: {
+      name?: SignatureFieldConfig;
+      signature?: SignatureFieldConfig;
+      date?: SignatureFieldConfig;
+      position?: SignatureFieldConfig;
+      license?: SignatureFieldConfig;
+      [key: string]: SignatureFieldConfig | undefined;
+    };
+  };
 }
 
 export interface AlertConfig {
   show: boolean
   message?: string
+  description?:string
   variant?: "default" | "destructive" | "warning"
 }
 
@@ -196,10 +238,19 @@ export interface ColorCodeConfig {
   hasTrimestre: boolean
 }
 
+export interface ConclusionCheckboxOptions {
+  liberatedLabel?: string;
+  liberatedColor?: string;
+  notLiberatedLabel?: string;
+  notLiberatedColor?: string;
+}
+
 export interface ConclusionConfig {
   enabled: boolean
   label?: string
   placeholder?: string
+  showCheckbox?: boolean;
+  checkboxOptions?: ConclusionCheckboxOptions;
 }
 
 export interface VehicleConfig {
@@ -279,13 +330,37 @@ export interface OutOfServiceConfig {
   };
 }
 
+export interface SelectableItemConfig {
+  sectionTitle: string; // Título de la sección/subsección padre
+  label?: string; // Etiqueta personalizada para el selector
+  helperText?: string;
+  defaultSelected?: string[]; // Títulos pre-seleccionados
+  required?: boolean;
+  // ✅ Puede tener selectores anidados (para subsecciones de subsecciones)
+  nested?: SelectableItemConfig[];
+}
+
+export interface SectionSelector {
+  enabled: boolean;
+  items: SelectableItemConfig[]; // ✅ Múltiples secciones configurables
+}
+
+export interface SubsectionSelector {
+  enabled: boolean;
+  parentSectionTitle?: string; // Título de la sección padre
+  label?: string;
+  helperText?: string;
+  defaultSelected?: string[]; // Subsecciones pre-seleccionadas
+  required?: boolean; // Si es obligatorio seleccionar al menos una
+}
+
 export interface FormFeatureConfig {
   formCode: string
   formName: string
-  formType: "standard" | "cylinder" | "grouped" | "vehicle"
+  formType: "standard" | "grouped" | "vehicle" | "scaffold"
 
   // Feature flags
-  signatures?: SignatureConfig
+  signatures?: SignatureConfig;
   alert?: AlertConfig
   colorCode?: ColorCodeConfig
   conclusion?: ConclusionConfig
@@ -294,6 +369,8 @@ export interface FormFeatureConfig {
   generalObservations?: GeneralObservationsConfig // ✅ NUEVO
   outOfService?: OutOfServiceConfig
   questionDescription?: QuestionDescriptionConfig
+  routineInspection?: RoutineInspectionConfig;
+  sectionSelector?: SectionSelector;
 
   groupedConfig?: {
     columns: Array<{
@@ -308,6 +385,8 @@ export interface FormFeatureConfig {
     notaImportante?: string;
   };
 
+  subsectionSelector?: SubsectionSelector;
+
   // Additional metadata
   requiresPhotos?: boolean
   allowDraft?: boolean
@@ -315,6 +394,49 @@ export interface FormFeatureConfig {
 
 // Helper type for form config registry
 export type FormConfigRegistry = Record<string, FormFeatureConfig>
+
+
+//scaffold 
+
+export interface RoutineInspectionEntry {
+  date: string;
+  inspector: string;
+  response: "si" | "no";
+  observations?: string;
+  signature?: string;
+}
+
+export interface RoutineInspectionConfig {
+  enabled: boolean;
+  title?: string;
+  question?: string;
+  maxEntries?: number;
+  fields?: {
+    showDate?: boolean;
+    dateLabel?: string;
+    dateRequired?: boolean;
+    
+    showInspector?: boolean;
+    inspectorLabel?: string;
+    inspectorRequired?: boolean;
+    
+    showResponse?: boolean;
+    responseLabel?: string;
+    responseRequired?: boolean;
+    
+    showObservations?: boolean;
+    observationsLabel?: string;
+    observationsPlaceholder?: string;
+    
+    showSignature?: boolean;
+    signatureLabel?: string;
+  };
+}
+
+export interface ScaffoldData {
+  routineInspections?: RoutineInspectionEntry[];
+  finalConclusion?: "liberated" | "not_liberated";
+}
 
 
 

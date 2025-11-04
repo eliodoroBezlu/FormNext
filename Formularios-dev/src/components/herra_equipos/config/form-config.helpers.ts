@@ -1,4 +1,3 @@
-
 import { FormFeatureConfig } from "../types/IProps"
 import { formConfigRegistry } from "./form-configs"
 
@@ -30,7 +29,15 @@ export const requiresColorCodeWithTrimestre = (formCode: string): boolean => {
  */
 export const requiresSupervisorSignature = (formCode: string): boolean => {
   const config = getFormConfig(formCode)
-  return config?.signatures?.supervisor ?? false
+  const supervisor = config?.signatures?.supervisor
+  
+  // Si es boolean, retornarlo directamente
+  if (typeof supervisor === 'boolean') {
+    return supervisor
+  }
+  
+  // Si es objeto, verificar la propiedad enabled
+  return supervisor?.enabled ?? false
 }
 
 /**
@@ -38,7 +45,15 @@ export const requiresSupervisorSignature = (formCode: string): boolean => {
  */
 export const requiresInspectorSignature = (formCode: string): boolean => {
   const config = getFormConfig(formCode)
-  return config?.signatures?.inspector ?? true // Por defecto true
+  const inspector = config?.signatures?.inspector
+  
+  // Si es boolean, retornarlo directamente
+  if (typeof inspector === 'boolean') {
+    return inspector
+  }
+  
+  // Si es objeto, verificar la propiedad enabled
+  return inspector?.enabled ?? true // Por defecto true
 }
 
 /**
@@ -85,4 +100,32 @@ export const getAllFormCodes = (): string[] => {
  */
 export const getFormConfigsByType = (type: FormFeatureConfig["formType"]): FormFeatureConfig[] => {
   return Object.values(formConfigRegistry).filter((config) => config.formType === type)
+}
+
+/**
+ * Obtiene la configuración completa de firmas del inspector
+ */
+export const getInspectorSignatureConfig = (formCode: string) => {
+  const config = getFormConfig(formCode)
+  const inspector = config?.signatures?.inspector
+  
+  if (typeof inspector === 'boolean') {
+    return inspector ? { enabled: true } : { enabled: false }
+  }
+  
+  return inspector ?? { enabled: true }
+}
+
+/**
+ * Obtiene la configuración completa de firmas del supervisor
+ */
+export const getSupervisorSignatureConfig = (formCode: string) => {
+  const config = getFormConfig(formCode)
+  const supervisor = config?.signatures?.supervisor
+  
+  if (typeof supervisor === 'boolean') {
+    return supervisor ? { enabled: true } : { enabled: false }
+  }
+  
+  return supervisor ?? { enabled: false }
 }
