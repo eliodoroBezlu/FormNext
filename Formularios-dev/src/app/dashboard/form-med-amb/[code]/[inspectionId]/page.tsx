@@ -12,14 +12,11 @@ import { getTemplatesHerraEquipos } from '@/lib/actions/template-herra-equipos';
 import { FormTemplateHerraEquipos, FormDataHerraEquipos } from '@/components/herra_equipos/types/IProps';
 import { UnifiedFormRouter } from '@/components/herra_equipos/UnifiedFormRouter';
 import { 
-  saveDraftInspection, 
-  submitInspection,
-  saveProgressInspection,
   finalizeInspection,
   getInspectionById,
   updateInProgressInspection,
 } from '@/lib/actions/inspection-herra-equipos';
-
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SPECIALIZED_FORMS: Record<string, React.ComponentType<any>> = {
   '1.02.P06.F19': UnifiedFormRouter,
   '1.02.P06.F20': UnifiedFormRouter,
@@ -46,6 +43,7 @@ export default function EditInspectionPage() {
   const inspectionId = params.inspectionId as string;
   
   const [template, setTemplate] = useState<FormTemplateHerraEquipos | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [existingInspection, setExistingInspection] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -108,20 +106,13 @@ export default function EditInspectionPage() {
       }
 
       // Validar que el código del template coincida
-      if (inspectionResult.data.templateCode !== code) {
+      if (inspectionResult.data?.templateCode !== code) {
         throw new Error(`La inspección no corresponde al template ${code}`);
       }
 
       setExistingInspection(inspectionResult.data);
       
-      console.log('✅ [EDIT PAGE] Inspección cargada:', {
-        id: inspectionResult.data._id,
-        status: inspectionResult.data.status,
-        templateCode: inspectionResult.data.templateCode,
-        isScaffold: !!inspectionResult.data.scaffold,
-        routinesCount: inspectionResult.data.scaffold?.routineInspections?.length || 0,
-      });
-
+     
       // Mensaje según estado
       if (inspectionResult.data.status === 'in_progress') {
         setSnackbar({

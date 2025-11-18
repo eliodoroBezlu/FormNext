@@ -32,6 +32,7 @@ export function ObservationsSection({ config, register, errors, readonly=false }
         multiline
         rows={4}
         fullWidth
+        disabled={readonly}
         required={config.required}
         {...register("generalObservations", { // ✅ Cambio aquí
           required: config.required ? "Las observaciones son obligatorias" : false,

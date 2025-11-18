@@ -41,21 +41,15 @@ import {
   Download as DownloadIcon,
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
-import { deleteInspection, getInspectionById, getInspectionsHerraEquipos, updateInspection } from "@/lib/actions/inspection-herra-equipos";
+import {
+  deleteInspection,
+  getInspectionById,
+  getInspectionsHerraEquipos,
+  InspectionResponse, // ✅ IMPORTA EL TIPO CORRECTO
+} from "@/lib/actions/inspection-herra-equipos";
 
-interface Inspection {
-  _id: string;
-  templateCode: string;
-  templateName?: string;
-  status: "draft" | "completed";
-  submittedAt: string;
-  submittedBy?: string;
-  location?: string;
-  project?: string;
-  verification: Record<string, string | number>;
-  createdAt?: string;
-  updatedAt?: string;
-}
+// ✅ Usa el tipo del backend directamente
+type Inspection = InspectionResponse;
 
 export default function GestionInspecciones() {
   const router = useRouter();
@@ -75,7 +69,7 @@ export default function GestionInspecciones() {
 
   // Estados para modal de vista detallada
   const [openDetailModal, setOpenDetailModal] = useState(false);
-  const [selectedInspection, setSelectedInspection] = useState<any>(null);
+  const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null); // ✅ Sin `any`
 
   // Estado para notificaciones
   const [notification, setNotification] = useState<{
@@ -88,10 +82,7 @@ export default function GestionInspecciones() {
     severity: "info",
   });
 
-  useEffect(() => {
-    cargarInspecciones();
-  }, []);
-
+  // ✅ Arregla el useEffect: define `cargarInspecciones` dentro o usa useCallback
   const cargarInspecciones = async () => {
     try {
       setLoading(true);
@@ -113,12 +104,23 @@ export default function GestionInspecciones() {
     }
   };
 
+  useEffect(() => {
+    cargarInspecciones();
+  }, []); // ✅ Ahora `cargarInspecciones` está definida antes del useEffect
+
   const aplicarFiltros = async () => {
     try {
       setLoading(true);
       setPage(0);
 
-      const filters: any = {};
+      const filters: {
+        templateCode?: string;
+        status?: string;
+        submittedBy?: string;
+        startDate?: string;
+        endDate?: string;
+      } = {}; // ✅ Tipo explícito, sin `any`
+
       if (templateCodeFilter) filters.templateCode = templateCodeFilter;
       if (statusFilter) filters.status = statusFilter;
       if (submittedByFilter) filters.submittedBy = submittedByFilter;
@@ -190,7 +192,6 @@ export default function GestionInspecciones() {
   };
 
   const editarInspeccion = (inspection: Inspection) => {
-    // Redirigir a una página de edición con el ID
     router.push(`/dashboard/config/inspecciones/editar/${inspection._id}`);
   };
 
@@ -200,7 +201,6 @@ export default function GestionInspecciones() {
       const result = await getInspectionById(inspection._id);
 
       if (result.success && result.data) {
-        // Guardar en localStorage para pre-llenar el formulario
         const draftData = {
           ...result.data,
           status: "draft",
@@ -214,7 +214,6 @@ export default function GestionInspecciones() {
 
         mostrarNotificacion("Inspección duplicada, redirigiendo...", "info");
         
-        // Redirigir al formulario con el código del template
         setTimeout(() => {
           router.push(`/dashboard/form-med-amb/${inspection.templateCode}`);
         }, 1000);
@@ -227,36 +226,8 @@ export default function GestionInspecciones() {
     }
   };
 
-  const cambiarEstado = async (inspection: Inspection) => {
-    if (!confirm(`¿Cambiar estado a ${inspection.status === "draft" ? "completado" : "borrador"}?`)) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const newStatus = inspection.status === "draft" ? "completed" : "draft";
-
-      const result = await updateInspection(inspection._id, {}, newStatus);
-
-      if (result.success) {
-        mostrarNotificacion(
-          `Inspección marcada como ${newStatus === "completed" ? "completada" : "borrador"}`,
-          "success"
-        );
-        await cargarInspecciones();
-      } else {
-        throw new Error(result.error || "Error al cambiar estado");
-      }
-    } catch (error) {
-      console.error("Error al cambiar estado:", error);
-      mostrarNotificacion(
-        error instanceof Error ? error.message : "Error al cambiar el estado",
-        "error"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  // ✅ Elimina la función no usada `cambiarEstado`
+  // (o coméntala si planeas usarla después)
 
   const handleEliminarInspeccion = async (id: string) => {
     if (!confirm("¿Estás seguro de que quieres eliminar esta inspección?")) return;
@@ -282,10 +253,9 @@ export default function GestionInspecciones() {
     }
   };
 
-  const exportarPDF = async (inspection: Inspection) => {
-    mostrarNotificacion("Función de exportación en desarrollo", "info");
-    // TODO: Implementar exportación a PDF
-  };
+  // const exportarPDF = async (inspection: Inspection) => {
+  //   mostrarNotificacion("Función de exportación en desarrollo", "info");
+  // };
 
   const mostrarNotificacion = (
     message: string,
@@ -437,7 +407,7 @@ export default function GestionInspecciones() {
             p: 2,
             borderBottom: "1px solid #e0e0e0",
             display: "flex",
-            justifyContent: "space-between",
+            justifyContent:"space-between",
             alignItems: "center",
           }}
         >
@@ -503,10 +473,10 @@ export default function GestionInspecciones() {
                         >
                           <TableCell>
                             <Typography variant="body2" fontWeight="medium">
-                              {inspection.templateCode}
+                              {inspection.templateCode || "N/A"}
                             </Typography>
                           </TableCell>
-                          <TableCell>{inspection.templateName || "N/A"}</TableCell>
+                          <TableCell>{inspection.templateCode || "N/A"}</TableCell>
                           <TableCell>
                             <Chip
                               label={
@@ -525,7 +495,9 @@ export default function GestionInspecciones() {
                           <TableCell>{inspection.location || "N/A"}</TableCell>
                           <TableCell>{inspection.project || "N/A"}</TableCell>
                           <TableCell align="center">
-                            {new Date(inspection.submittedAt).toLocaleDateString()}
+                            {inspection.submittedAt
+                              ? new Date(inspection.submittedAt).toLocaleDateString()
+                              : "N/A"}
                           </TableCell>
                           <TableCell align="center">
                             {inspection.submittedBy || "N/A"}
@@ -563,7 +535,7 @@ export default function GestionInspecciones() {
 
                             <Tooltip title="Exportar PDF">
                               <IconButton
-                                onClick={() => exportarPDF(inspection)}
+                                //onClick={() => exportarPDF(inspection)}
                                 color="success"
                                 size="small"
                               >
@@ -620,15 +592,15 @@ export default function GestionInspecciones() {
                 Información General
               </Typography>
               <Grid container spacing={2}>
-                <Grid size={{ xs:  6}}>
+                <Grid size={{ xs: 6 }}>
                   <Typography variant="body2" color="textSecondary">
                     Código Template:
                   </Typography>
                   <Typography variant="body1">
-                    {selectedInspection.templateCode}
+                    {selectedInspection.templateCode || "N/A"}
                   </Typography>
                 </Grid>
-                <Grid size={{ xs:  6}}>
+                <Grid size={{ xs: 6 }}>
                   <Typography variant="body2" color="textSecondary">
                     Estado:
                   </Typography>

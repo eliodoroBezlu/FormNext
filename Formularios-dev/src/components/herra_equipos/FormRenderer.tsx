@@ -19,7 +19,6 @@ import { VerificationFields } from "./VerificationsFields";
 import { SectionRenderer } from "./SectionRenderer";
 import { FormDataHerraEquipos, FormTemplateHerraEquipos } from "./types/IProps";
 import { getFormConfig } from "./config/form-config.helpers";
-import { init } from "next/dist/compiled/webpack/webpack";
 
 // ============================================
 // PROPS DEL COMPONENTE
@@ -46,7 +45,6 @@ export const FormFiller: React.FC<FormFillerProps> = ({
     control,
     setValue,
     handleSubmit,
-    register,
     reset,
     formState: { errors },
   } = useForm<FormDataHerraEquipos>({

@@ -57,15 +57,6 @@ export function ScaffoldInspectionForm({
   const shouldShowRoutines = !isNewInspection || 
     (initialData?.scaffold?.routineInspections?.length || 0) > 0;
 
-  // ✅ Log para debug
-  console.log('🏗️ [ScaffoldForm] Estado:', {
-    isNewInspection,
-    isInProgress,
-    shouldShowRoutines,
-    hasInitialData: !!initialData,
-    status: initialData?.status,
-    routinesCount: initialData?.scaffold?.routineInspections?.length || 0,
-  });
 
   const defaultValues: FormDataHerraEquipos = {
     verification: initialData?.verification || {},
@@ -97,20 +88,13 @@ export function ScaffoldInspectionForm({
 
   useEffect(() => {
     if (initialData) {
-      console.log("🔄 [ScaffoldForm] Cargando initialData:", {
-        id: (initialData as any)._id,
-        status: initialData.status,
-        hasRoutines: !!initialData.scaffold?.routineInspections,
-        routinesCount: initialData.scaffold?.routineInspections?.length || 0,
-      });
-      
       reset(defaultValues);
       
       const isProgressing = initialData.status === InspectionStatus.IN_PROGRESS;
       setIsInProgress(isProgressing);
       setFieldsReadonly(isProgressing);
     }
-  }, [initialData]);
+  }, [initialData,reset,defaultValues]);
 
   if (!config) {
     return (
@@ -127,22 +111,15 @@ export function ScaffoldInspectionForm({
   // ============================================
 
   const handleFormSubmit = (data: FormDataHerraEquipos) => {
-    console.log("📤 [ScaffoldForm] SUBMIT FINAL");
-    console.log("📊 Datos scaffold:", data.scaffold);
     onSubmit({ ...data, status: InspectionStatus.COMPLETED });
   };
 
   const handleFormSaveDraft = (data: FormDataHerraEquipos) => {
-    console.log("💾 [ScaffoldForm] GUARDAR BORRADOR");
     onSaveDraft?.({ ...data, status: InspectionStatus.DRAFT });
   };
 
   const handleFormSaveProgress = (data: FormDataHerraEquipos) => {
-    console.log("🔄 [ScaffoldForm] GUARDAR EN PROGRESO");
-    console.log("🏗️ Scaffold data:", {
-      routinesCount: data.scaffold?.routineInspections?.length || 0,
-      hasFinalConclusion: !!data.scaffold?.finalConclusion,
-    });
+   
     
     const progressData = {
       ...data,
@@ -157,12 +134,6 @@ export function ScaffoldInspectionForm({
   };
 
   const handleFormFinalize = (data: FormDataHerraEquipos) => {
-    console.log("✅ [ScaffoldForm] FINALIZAR INSPECCIÓN");
-    console.log("🏗️ Scaffold final data:", {
-      routinesCount: data.scaffold?.routineInspections?.length || 0,
-      finalConclusion: data.scaffold?.finalConclusion,
-    });
-    
     const finalData = {
       ...data,
       status: InspectionStatus.COMPLETED,
@@ -228,7 +199,7 @@ export function ScaffoldInspectionForm({
       {isNewInspection && (
         <Alert severity="success" sx={{ mb: 2 }}>
           ✨ <strong>Nueva inspección de andamio</strong><br />
-          Complete los datos iniciales. Puede guardar como "En Progreso" para continuar agregando 
+          Complete los datos iniciales. Puede guardar como &quot;En Progreso&quot; para continuar agregando 
           inspecciones rutinarias después.
         </Alert>
       )}
@@ -257,9 +228,6 @@ export function ScaffoldInspectionForm({
         />
       )}
 
-      {/* ============================================ */}
-      {/* SECCIONES DEL FORMULARIO */}
-      {/* ============================================ */}
       {template.sections && template.sections.length > 0 && (
         <Box>
           {template.sections.map((section, idx) => (

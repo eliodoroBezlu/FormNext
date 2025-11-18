@@ -232,8 +232,6 @@ export function StandardInspectionForm({
           errors={errors}
         />
       )}
-
-      {/* ✅ DEBUG: Mostrar visualmente si debe renderizarse */}
       
 
       {config.signatures?.inspector && (

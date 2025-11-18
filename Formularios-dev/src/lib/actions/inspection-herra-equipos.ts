@@ -1,10 +1,18 @@
 "use server";
 
-import { FormDataHerraEquipos, InspectionStatus } from "@/components/herra_equipos/types/IProps";
+import {
+  FormDataHerraEquipos,
+  QuestionResponseUnion,
+  OutOfServiceData,
+  AccesoriosConfig,
+  VehicleData,
+  ScaffoldData,
+} from "@/components/herra_equipos/types/IProps";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 const INSPECTIONS_ENDPOINT = `${API_BASE_URL}/inspections-herra-equipos`;
 
+// ✅ Respuesta genérica tipada
 interface ApiResponse<T> {
   success: boolean;
   message?: string;
@@ -13,23 +21,46 @@ interface ApiResponse<T> {
   count?: number;
 }
 
-// ✅ ACTUALIZAR InspectionPayload
+// ✅ Tipos para respuestas del backend
+export interface InspectionResponse extends FormDataHerraEquipos {
+   _id: string;
+  templateCode: string;        // ✅ Asegúrate de que exista
+  submittedAt: string;
+  submittedBy?: string;        // ✅ Añadido
+  location?: string;           // ✅ Añadido
+  project?: string;            // ✅ Añadido
+  updatedAt: string;
+}
+
+export interface InProgressInspection {
+  _id: string;
+  templateCode: string;
+  templateName?: string;
+  status: string;
+  verification: Record<string, string | number>;
+  scaffold?: ScaffoldData;
+  submittedAt: string;
+  submittedBy?: string;
+  updatedAt?: string;
+}
+
+// ✅ Payload completamente tipado (sin `any`)
 interface InspectionPayload {
   templateId: string;
   templateCode: string;
   templateName?: string;
   verification: Record<string, string | number>;
-  responses: Record<string, Record<string, any>>;
+  responses: Record<string, Record<string, QuestionResponseUnion>>;
   generalObservations?: string;
   inspectorSignature?: Record<string, string | number>;
   supervisorSignature?: Record<string, string | number>;
-  outOfService?: any;
-  accesoriosConfig?: Record<string, any>;
-  vehicle?: any;
-  scaffold?: any;
+  outOfService?: OutOfServiceData;
+  accesoriosConfig?: AccesoriosConfig;
+  vehicle?: VehicleData;
+  scaffold?: ScaffoldData;
   selectedSubsections?: string[];
   selectedItems?: Record<string, string[]>;
-  status: "draft" | "in_progress" | "completed"; // ✅ AGREGAR in_progress
+  status: "draft" | "in_progress" | "completed";
   submittedAt: string;
   submittedBy?: string;
   location?: string;
@@ -70,12 +101,11 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
   }
 }
 
-// ✅ ACTUALIZAR mapFormDataToPayload
 function mapFormDataToPayload(
   formData: FormDataHerraEquipos,
   templateId: string,
   templateCode: string,
-  status: "draft" | "in_progress" | "completed", // ✅ AGREGAR in_progress
+  status: "draft" | "in_progress" | "completed",
   additionalData?: {
     templateName?: string;
     submittedBy?: string;
@@ -83,28 +113,12 @@ function mapFormDataToPayload(
     project?: string;
   }
 ): InspectionPayload {
-  let responses: Record<string, Record<string, any>> = {};
-  
-  if (formData.responses && Array.isArray(formData.responses)) {
-    console.log("🔄 [MAPPER] Transformando responses array a objeto");
-    formData.responses.forEach((sectionData: any, index: number) => {
-      const sectionKey = `section_${index}`;
-      responses[sectionKey] = sectionData;
-    });
-  } else if (formData.responses && typeof formData.responses === 'object' && !Array.isArray(formData.responses)) {
-    responses = formData.responses;
-  } else if ((formData as any).sections && Array.isArray((formData as any).sections)) {
-    console.log("🔄 [MAPPER] Transformando sections array a responses objeto");
-    const sectionsArray = (formData as any).sections;
-    sectionsArray.forEach((sectionData: any, index: number) => {
-      const sectionKey = `section_${index}`;
-      responses[sectionKey] = sectionData;
-    });
-  } else {
-    responses = {};
-  }
+  const responses =
+    formData.responses && typeof formData.responses === "object" && !Array.isArray(formData.responses)
+      ? formData.responses
+      : {};
 
-  const payload: InspectionPayload = {
+  return {
     templateId,
     templateCode,
     templateName: additionalData?.templateName,
@@ -125,25 +139,24 @@ function mapFormDataToPayload(
     location: additionalData?.location,
     project: additionalData?.project,
   };
-
-  return payload;
 }
 
 // ============================================
-// ✅ FUNCIÓN BASE MEJORADA
+// ✅ FUNCIONES DE ACCIÓN (TODAS TIPADAS)
 // ============================================
+
 export async function createInspectionHerraEquipos(
   formData: FormDataHerraEquipos,
   templateId: string,
   templateCode: string,
-  status: "draft" | "in_progress" | "completed" = "completed", // ✅ AGREGAR in_progress
+  status: "draft" | "in_progress" | "completed" = "completed",
   additionalData?: {
     templateName?: string;
     submittedBy?: string;
     location?: string;
     project?: string;
   }
-): Promise<ApiResponse<any>> {
+): Promise<ApiResponse<InspectionResponse>> {
   try {
     console.log("📤 [ACTION] Enviando inspección:", {
       templateCode,
@@ -152,16 +165,7 @@ export async function createInspectionHerraEquipos(
       routineInspectionsCount: formData.scaffold?.routineInspections?.length || 0,
     });
 
-    const payload = mapFormDataToPayload(
-      formData,
-      templateId,
-      templateCode,
-      status,
-      additionalData
-    );
-
-    console.log("📦 [ACTION] Payload status:", payload.status);
-    console.log("🏗️ [ACTION] Scaffold data:", payload.scaffold);
+    const payload = mapFormDataToPayload(formData, templateId, templateCode, status, additionalData);
 
     const response = await fetch(INSPECTIONS_ENDPOINT, {
       method: "POST",
@@ -171,7 +175,7 @@ export async function createInspectionHerraEquipos(
       body: JSON.stringify(payload),
     });
 
-    const result = await handleApiResponse<ApiResponse<any>>(response);
+    const result = await handleApiResponse<ApiResponse<InspectionResponse>>(response);
 
     console.log("✅ [ACTION] Inspección guardada:", result);
 
@@ -189,9 +193,6 @@ export async function createInspectionHerraEquipos(
   }
 }
 
-// ============================================
-// ✅ GUARDAR BORRADOR
-// ============================================
 export async function saveDraftInspection(
   formData: FormDataHerraEquipos,
   templateId: string,
@@ -202,7 +203,7 @@ export async function saveDraftInspection(
     location?: string;
     project?: string;
   }
-): Promise<ApiResponse<any>> {
+): Promise<ApiResponse<InspectionResponse>> {
   console.log("💾 [ACTION] Guardando borrador:", templateCode);
   
   return createInspectionHerraEquipos(
@@ -214,9 +215,6 @@ export async function saveDraftInspection(
   );
 }
 
-// ============================================
-// ✅ NUEVO: GUARDAR EN PROGRESO (Para andamios)
-// ============================================
 export async function saveProgressInspection(
   formData: FormDataHerraEquipos,
   templateId: string,
@@ -227,21 +225,18 @@ export async function saveProgressInspection(
     location?: string;
     project?: string;
   }
-): Promise<ApiResponse<any>> {
+): Promise<ApiResponse<InspectionResponse>> {
   console.log("🔄 [ACTION] Guardando en progreso:", templateCode);
   
   return createInspectionHerraEquipos(
     formData,
     templateId,
     templateCode,
-    "in_progress", // ✅ NUEVO STATUS
+    "in_progress",
     additionalData
   );
 }
 
-// ============================================
-// ✅ SUBMIT FINAL
-// ============================================
 export async function submitInspection(
   formData: FormDataHerraEquipos,
   templateId: string,
@@ -252,7 +247,7 @@ export async function submitInspection(
     location?: string;
     project?: string;
   }
-): Promise<ApiResponse<any>> {
+): Promise<ApiResponse<InspectionResponse>> {
   console.log("📤 [ACTION] Enviando inspección final:", templateCode);
   
   return createInspectionHerraEquipos(
@@ -264,19 +259,16 @@ export async function submitInspection(
   );
 }
 
-// ============================================
-// ✅ NUEVO: ACTUALIZAR INSPECCIÓN EN PROGRESO
-// ============================================
 export async function updateInProgressInspection(
   id: string,
   formData: Partial<FormDataHerraEquipos>,
   status?: "in_progress" | "completed"
-): Promise<ApiResponse<any>> {
+): Promise<ApiResponse<InspectionResponse>> {
   try {
     console.log("🔄 [ACTION] Actualizando inspección en progreso:", id);
     console.log("🏗️ [ACTION] Scaffold data a actualizar:", formData.scaffold);
 
-    const updatePayload: any = { ...formData };
+    const updatePayload: Partial<InspectionPayload> = { ...formData };
     if (status) {
       updatePayload.status = status;
     }
@@ -289,7 +281,7 @@ export async function updateInProgressInspection(
       body: JSON.stringify(updatePayload),
     });
 
-    const result = await handleApiResponse<ApiResponse<any>>(response);
+    const result = await handleApiResponse<ApiResponse<InspectionResponse>>(response);
 
     console.log("✅ [ACTION] Inspección actualizada:", result);
 
@@ -307,13 +299,10 @@ export async function updateInProgressInspection(
   }
 }
 
-// ============================================
-// ✅ NUEVO: OBTENER INSPECCIONES EN PROGRESO
-// ============================================
 export async function getInProgressInspections(filters?: {
   templateCode?: string;
   submittedBy?: string;
-}): Promise<ApiResponse<any[]>> {
+}): Promise<ApiResponse<InProgressInspection[]>> {
   try {
     const queryParams = new URLSearchParams();
     queryParams.append("status", "in_progress");
@@ -330,7 +319,7 @@ export async function getInProgressInspections(filters?: {
       },
     });
 
-    const result = await handleApiResponse<ApiResponse<any[]>>(response);
+    const result = await handleApiResponse<ApiResponse<InProgressInspection[]>>(response);
 
     console.log("📊 [ACTION] Inspecciones en progreso:", result.data?.length || 0);
 
@@ -349,17 +338,13 @@ export async function getInProgressInspections(filters?: {
   }
 }
 
-// ============================================
-// RESTO DE FUNCIONES (sin cambios)
-// ============================================
-
 export async function getInspectionsHerraEquipos(filters?: {
   status?: string;
   templateCode?: string;
   startDate?: string;
   endDate?: string;
   submittedBy?: string;
-}): Promise<ApiResponse<any[]>> {
+}): Promise<ApiResponse<InspectionResponse[]>> {
   try {
     const queryParams = new URLSearchParams();
     
@@ -378,7 +363,7 @@ export async function getInspectionsHerraEquipos(filters?: {
       },
     });
 
-    const result = await handleApiResponse<ApiResponse<any[]>>(response);
+    const result = await handleApiResponse<ApiResponse<InspectionResponse[]>>(response);
 
     return {
       success: true,
@@ -395,7 +380,7 @@ export async function getInspectionsHerraEquipos(filters?: {
   }
 }
 
-export async function getInspectionById(id: string): Promise<ApiResponse<any>> {
+export async function getInspectionById(id: string): Promise<ApiResponse<InspectionResponse>> {
   try {
     const response = await fetch(`${INSPECTIONS_ENDPOINT}/${id}`, {
       method: "GET",
@@ -404,7 +389,7 @@ export async function getInspectionById(id: string): Promise<ApiResponse<any>> {
       },
     });
 
-    const result = await handleApiResponse<ApiResponse<any>>(response);
+    const result = await handleApiResponse<ApiResponse<InspectionResponse>>(response);
 
     return {
       success: true,
@@ -419,7 +404,7 @@ export async function getInspectionById(id: string): Promise<ApiResponse<any>> {
   }
 }
 
-export async function getDraftInspections(userId?: string): Promise<ApiResponse<any[]>> {
+export async function getDraftInspections(userId?: string): Promise<ApiResponse<InspectionResponse[]>> {
   try {
     const url = userId 
       ? `${INSPECTIONS_ENDPOINT}/drafts?userId=${userId}`
@@ -432,7 +417,7 @@ export async function getDraftInspections(userId?: string): Promise<ApiResponse<
       },
     });
 
-    const result = await handleApiResponse<ApiResponse<any[]>>(response);
+    const result = await handleApiResponse<ApiResponse<InspectionResponse[]>>(response);
 
     return {
       success: true,
@@ -452,12 +437,12 @@ export async function getDraftInspections(userId?: string): Promise<ApiResponse<
 export async function updateInspection(
   id: string,
   formData: Partial<FormDataHerraEquipos>,
-  status?: "draft" | "in_progress" | "completed" // ✅ AGREGAR in_progress
-): Promise<ApiResponse<any>> {
+  status?: "draft" | "in_progress" | "completed"
+): Promise<ApiResponse<InspectionResponse>> {
   try {
     console.log("🔄 [ACTION] Actualizando inspección:", id);
 
-    const updatePayload: any = { ...formData };
+    const updatePayload: Partial<InspectionPayload> = { ...formData };
     if (status) {
       updatePayload.status = status;
     }
@@ -470,7 +455,7 @@ export async function updateInspection(
       body: JSON.stringify(updatePayload),
     });
 
-    const result = await handleApiResponse<ApiResponse<any>>(response);
+    const result = await handleApiResponse<ApiResponse<InspectionResponse>>(response);
 
     console.log("✅ [ACTION] Inspección actualizada:", result);
 
@@ -516,7 +501,8 @@ export async function deleteInspection(id: string): Promise<ApiResponse<null>> {
   }
 }
 
-export async function getInspectionStats(templateCode?: string): Promise<ApiResponse<any>> {
+// ✅ Usa `unknown` si la estructura no está definida (seguro y permitido por ESLint)
+export async function getInspectionStats(templateCode?: string): Promise<ApiResponse<Record<string, unknown>>> {
   try {
     const url = templateCode
       ? `${INSPECTIONS_ENDPOINT}/stats?templateCode=${templateCode}`
@@ -529,7 +515,7 @@ export async function getInspectionStats(templateCode?: string): Promise<ApiResp
       },
     });
 
-    const result = await handleApiResponse<ApiResponse<any>>(response);
+    const result = await handleApiResponse<ApiResponse<Record<string, unknown>>>(response);
 
     return {
       success: true,
@@ -546,7 +532,7 @@ export async function getInspectionStats(templateCode?: string): Promise<ApiResp
 
 export async function getInspectionsByTemplateCode(
   templateCode: string
-): Promise<ApiResponse<any[]>> {
+): Promise<ApiResponse<InspectionResponse[]>> {
   try {
     const response = await fetch(`${INSPECTIONS_ENDPOINT}/template/${templateCode}`, {
       method: "GET",
@@ -555,7 +541,7 @@ export async function getInspectionsByTemplateCode(
       },
     });
 
-    const result = await handleApiResponse<ApiResponse<any[]>>(response);
+    const result = await handleApiResponse<ApiResponse<InspectionResponse[]>>(response);
 
     return {
       success: true,
@@ -572,13 +558,10 @@ export async function getInspectionsByTemplateCode(
   }
 }
 
-// ============================================
-// ✅ NUEVO: FINALIZAR INSPECCIÓN
-// ============================================
 export async function finalizeInspection(
   id: string,
   formData: FormDataHerraEquipos
-): Promise<ApiResponse<any>> {
+): Promise<ApiResponse<InspectionResponse>> {
   console.log("✅ [ACTION] Finalizando inspección:", id);
   
   return updateInProgressInspection(id, formData, "completed");

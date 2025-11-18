@@ -68,6 +68,13 @@ export function VehicleInspectionForm({
   });
 
   const vehicleDamageRef = useRef<VehicleDamageSelectorRef>(null);
+   useEffect(() => {
+    if (initialData) {
+      console.log("🔄 Cargando datos iniciales:", initialData);
+      reset(initialData);
+      console.log("✅ Datos cargados");
+    }
+  }, [initialData, reset]);
 
   if (!config) {
     return (
@@ -82,46 +89,36 @@ export function VehicleInspectionForm({
   const handleFormSubmit = async (data: FormDataHerraEquipos) => {
   // ✅ Limpiar tempId de damages
   if (data.vehicle?.damages) {
-    data.vehicle.damages = data.vehicle.damages.map(({ tempId, ...damage }) => damage);
-  }
+      data.vehicle.damages = data.vehicle.damages.map((damage) => ({
+        type: damage.type,
+        x: damage.x,
+        y: damage.y,
+        timestamp: damage.timestamp,
+      }));
+    }
 
   // ✅ Generar nueva imagen SOLO si hay daños
   if (vehicleDamageRef.current) {
-    const damageImage = await vehicleDamageRef.current.generateBase64();
-    
-    if (data.vehicle) {
-      if (damageImage) {
-        // Hay daños: guardar nueva imagen
-        data.vehicle.damageImageBase64 = damageImage;
-      } else {
-        // No hay daños: limpiar imagen
-        data.vehicle.damageImageBase64 = undefined;
+      const damageImage = await vehicleDamageRef.current.generateBase64();
+      if (data.vehicle) {
+        data.vehicle.damageImageBase64 = damageImage || undefined;
       }
     }
-  }
   
   onSubmit(data);
 };
 
-  useEffect(() => {
-    if (initialData) {
-      console.log("🔄 Cargando datos iniciales:", initialData);
-      reset(initialData);
-      console.log("✅ Datos cargados");
-    }
-  }, [initialData, reset]);
+ 
 
   const handleSaveDraftWithImage = async (data: FormDataHerraEquipos) => {
     // ✅ LIMPIAR tempId de damages ANTES de guardar borrador
     if (data.vehicle?.damages) {
-      data.vehicle.damages = data.vehicle.damages.map(
-        ({ tempId, ...damage }) => ({
-          type: damage.type,
-          x: damage.x,
-          y: damage.y,
-          timestamp: damage.timestamp,
-        })
-      );
+      data.vehicle.damages = data.vehicle.damages.map((damage) => ({
+        type: damage.type,
+        x: damage.x,
+        y: damage.y,
+        timestamp: damage.timestamp,
+      }));
     }
 
     // Generar imagen de daños

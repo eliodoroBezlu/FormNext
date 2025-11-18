@@ -129,6 +129,7 @@ export function SupervisorSignature({
                 dataSource={field.dataSource as DataSourceType | undefined}
               />
             )}
+            disabled={readonly}
           />
         );
 
@@ -153,6 +154,7 @@ export function SupervisorSignature({
                   helperText={commonProps.helperText}
                   value={controllerField.value as string}
                   onChange={controllerField.onChange}
+                  disabled={readonly}
                 />
               </Box>
             )}
@@ -183,6 +185,7 @@ export function SupervisorSignature({
             InputLabelProps={{
               shrink: true,
             }}
+            disabled={readonly}
             sx={{
               "& .MuiInputBase-input": {
                 cursor: "default", // ✅ Cursor normal en lugar de texto

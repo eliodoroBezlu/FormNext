@@ -6,7 +6,6 @@ import {
   FormControlLabel,
   Radio,
   FormControl,
-  Alert,
 } from "@mui/material";
 import { UseFormRegister, FieldErrors } from "react-hook-form";
 import { ConclusionConfig, FormDataHerraEquipos } from "./types/IProps";

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -18,15 +17,33 @@ import {
 import { Check, Info } from '@mui/icons-material';
 import { checkEquipmentStatus } from '@/lib/actions/equipment-tracking';
 
+// ✅ Definir interfaces tipadas
+interface TrackingData {
+  preUsoCount?: number;
+  usageInterval?: number;
+  remainingUses?: number;
+  lastInspectionDate?: string;
+  nextInspectionDate?: string;
+}
+
+interface VerificationResult {
+  openForm: string;
+  shouldRedirect: boolean;
+  message: string;
+  trackingData?: TrackingData;
+}
+
+interface VerifiedData {
+  equipmentId: string;
+  openForm: string;
+  shouldRedirect: boolean;
+  trackingData?: TrackingData;
+}
+
 interface TagVerificationModalProps {
   open: boolean;
   onClose: () => void;
-  onVerified: (result: {
-    equipmentId: string;
-    openForm: string;
-    shouldRedirect: boolean;
-    trackingData?: any;
-  }) => void;
+  onVerified: (result: VerifiedData) => void;
   templateCode: string;
   formName: string;
 }
@@ -41,7 +58,7 @@ export function TagVerificationModal({
   const [tag, setTag] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [verificationResult, setVerificationResult] = useState<any>(null);
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
 
   const handleVerify = async () => {
     if (!tag.trim()) {
@@ -86,7 +103,7 @@ export function TagVerificationModal({
 
       // ✅ SIN REDIRECCIÓN, mostrar resultado en el modal
       console.log("✅ Sin redirección - mostrar resultado");
-      setVerificationResult(result.data);
+      setVerificationResult(result.data as VerificationResult);
 
     } catch (err) {
       console.error('❌ Error en verificación:', err);

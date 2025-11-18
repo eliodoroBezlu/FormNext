@@ -69,7 +69,7 @@ export function InspectorSignature({
           label: "Nombre del Inspector",
           placeholder: "Ingrese nombre completo",
           required: true,
-          fieldName: "inspectorSignature.name", // ✅ Cambio aquí
+          fieldName: "inspectorSignature.name",
         },
         signature: {
           enabled: true,
@@ -77,7 +77,7 @@ export function InspectorSignature({
           label: "Firma",
           placeholder: "Firma digital o código",
           required: true,
-          fieldName: "inspectorSignature.signature", // ✅ Cambio aquí
+          fieldName: "inspectorSignature.signature",
         },
       },
     };
@@ -94,9 +94,8 @@ export function InspectorSignature({
   const renderField = (key: string, field: SignatureFieldConfig) => {
     if (!field || !field.enabled) return null;
 
-    // ✅ Usar fieldName del config o generar uno por defecto con inspectorSignature
     const fieldName = field.fieldName || `inspectorSignature.${key}`;
-    const fieldKey = fieldName.split(".")[1]; // Extraer la parte después del punto
+    const fieldKey = fieldName.split(".")[1];
     const fieldType = field.type || "text";
 
     const commonProps = {
@@ -121,11 +120,14 @@ export function InspectorSignature({
             defaultValue=""
             render={({ field: controllerField }) => (
               <AutocompleteCustom
-                value={controllerField.value as string | null} // ✅ Usa el valor del form
+                value={controllerField.value as string | null}
                 onChange={(value: string | null) => {
-                  controllerField.onChange(value); // ✅ Actualiza el form
+                  if (!readonly) {
+                    controllerField.onChange(value);
+                  }
                 }}
                 dataSource={field.dataSource as DataSourceType | undefined}
+                disabled={readonly}
               />
             )}
           />
@@ -152,6 +154,7 @@ export function InspectorSignature({
                   helperText={commonProps.helperText}
                   value={controllerField.value as string}
                   onChange={controllerField.onChange}
+                  disabled={readonly}
                 />
               </Box>
             )}
@@ -159,39 +162,39 @@ export function InspectorSignature({
         );
 
       case "date":
-  return (
-    <Controller
-      name={fieldName as Path<FormDataHerraEquipos>}
-      control={control}
-      defaultValue={dayjs().format("YYYY-MM-DD")} // ✅ Fecha de hoy por defecto
-      render={({ field: controllerField }) => {
-        // ✅ Si no hay valor, setear la fecha de hoy automáticamente
-        if (!controllerField.value) {
-          controllerField.onChange(dayjs().format("YYYY-MM-DD"));
-        }
-        
         return (
-          <TextField
-            {...commonProps}
-            type="date"
-            fullWidth
-            value={controllerField.value || dayjs().format("YYYY-MM-DD")}
-            InputProps={{
-              readOnly: true, // ✅ No se puede modificar
-            }}
-            InputLabelProps={{
-              shrink: true,
-            }}
-            sx={{
-              "& .MuiInputBase-input": {
-                cursor: "default", // ✅ Cursor normal en lugar de texto
-              },
+          <Controller
+            name={fieldName as Path<FormDataHerraEquipos>}
+            control={control}
+            defaultValue={dayjs().format("YYYY-MM-DD")}
+            render={({ field: controllerField }) => {
+              if (!controllerField.value) {
+                controllerField.onChange(dayjs().format("YYYY-MM-DD"));
+              }
+              
+              return (
+                <TextField
+                  {...commonProps}
+                  type="date"
+                  fullWidth
+                  value={controllerField.value || dayjs().format("YYYY-MM-DD")}
+                  InputProps={{
+                    readOnly: true,
+                  }}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  disabled={readonly}
+                  sx={{
+                    "& .MuiInputBase-input": {
+                      cursor: "default",
+                    },
+                  }}
+                />
+              );
             }}
           />
         );
-      }}
-    />
-  );
 
       case "text":
       default:
@@ -205,6 +208,7 @@ export function InspectorSignature({
                 ? `${field.label || key} es obligatorio`
                 : false,
             })}
+            disabled={readonly}
           />
         );
     }
@@ -227,6 +231,7 @@ export function InspectorSignature({
   if (allFields.length === 0) {
     return null;
   }
+  
   return (
     <Paper elevation={2} sx={{ p: 3 }}>
       <Typography variant="h6" gutterBottom>

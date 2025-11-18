@@ -1,4 +1,3 @@
-// components/herra_equipos/InProgressInspectionsList.tsx
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -27,19 +26,32 @@ import {
 } from '@mui/icons-material';
 import { getInProgressInspections } from '@/lib/actions/inspection-herra-equipos';
 
-interface InProgressInspection {
+// Tipos reales del backend
+interface RoutineInspection {
+  date: string;
+  inspector: string;
+  response: "si" | "no";
+  observations?: string;
+  signature?: string;
+}
+
+interface ScaffoldData {
+  routineInspections?: RoutineInspection[];
+  finalConclusion?: "liberado" | "no_liberado";
+}
+
+interface VerificationData {
+  TAG?: string;
+  [key: string]: string | number | undefined;
+}
+
+export interface InProgressInspection {
   _id: string;
   templateCode: string;
   templateName?: string;
   status: string;
-  verification: {
-    TAG?: string;
-    [key: string]: any;
-  };
-  scaffold?: {
-    routineInspections?: any[];
-    finalConclusion?: any;
-  };
+  verification: VerificationData;
+  scaffold?: ScaffoldData;
   submittedAt: string;
   submittedBy?: string;
   updatedAt?: string;
@@ -48,6 +60,15 @@ interface InProgressInspection {
 export interface InProgressListProps {
   onSelectInspection?: (inspection: InProgressInspection) => void;
   filterByTemplateCode?: string;
+}
+
+// ✅ Define un tipo para la respuesta tipada de la API
+interface TypedApiResponse<T> {
+  success: boolean;
+  message?: string;
+  data?: T;
+  error?: string;
+  count?: number;
 }
 
 export function InProgressInspectionsList({ 
@@ -68,20 +89,21 @@ export function InProgressInspectionsList({
     setError(null);
 
     try {
-      console.log('📊 Cargando inspecciones en progreso...');
+      console.log('Cargando inspecciones en progreso...');
       
-      const result = await getInProgressInspections({
+      // ✅ Llamada tipada: asumimos que getInProgressInspections devuelve InProgressInspection[]
+      const result = (await getInProgressInspections({
         templateCode: filterByTemplateCode,
-      });
+      })) as TypedApiResponse<InProgressInspection[]>; // ✅ Seguro y explícito
 
-      if (result.success) {
-        setInspections(result.data || []);
-        console.log(`✅ ${result.data?.length || 0} inspecciones en progreso cargadas`);
+      if (result.success && Array.isArray(result.data)) {
+        setInspections(result.data); // ✅ Sin "as any"
+        console.log(`✅ ${result.data.length} inspecciones en progreso cargadas`);
       } else {
-        throw new Error(result.error || 'Error desconocido');
+        throw new Error(result.error || 'No se pudieron cargar las inspecciones');
       }
     } catch (err) {
-      console.error('❌ Error al cargar inspecciones:', err);
+      console.error('Error al cargar inspecciones:', err);
       setError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
       setLoading(false);
@@ -89,12 +111,11 @@ export function InProgressInspectionsList({
   };
 
   const handleContinueInspection = (inspection: InProgressInspection) => {
-    console.log('🔄 Continuando inspección:', inspection._id);
+    console.log('Continuando inspección:', inspection._id);
     
     if (onSelectInspection) {
       onSelectInspection(inspection);
     } else {
-      // Navegar a la página de edición con el ID de inspección
       router.push(`/dashboard/form-med-amb/${inspection.templateCode}/${inspection._id}`);
     }
   };
@@ -148,7 +169,6 @@ export function InProgressInspectionsList({
 
   return (
     <Box>
-      {/* Header */}
       <Box display="flex" alignItems="center" gap={2} mb={3}>
         <Construction color="warning" fontSize="large" />
         <Typography variant="h5">
@@ -161,20 +181,18 @@ export function InProgressInspectionsList({
         />
       </Box>
 
-      {/* Info Alert */}
       <Alert severity="info" sx={{ mb: 3 }}>
-        📋 Estos andamios están en uso y requieren inspecciones rutinarias diarias. 
+        Estos andamios están en uso y requieren inspecciones rutinarias diarias. 
         Selecciona uno para continuar agregando rutinarias o para finalizar la inspección.
       </Alert>
 
-      {/* Grid de inspecciones */}
       <Grid container spacing={3}>
         {inspections.map((inspection) => {
           const routineCount = getRoutineCount(inspection);
           const daysSinceStart = getDaysSinceStart(inspection.submittedAt);
           
           return (
-            <Grid size={{xs:12, sm:6, lg:4}} key={inspection._id}>
+            <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={inspection._id}>
               <Card 
                 elevation={3}
                 sx={{ 
@@ -191,7 +209,6 @@ export function InProgressInspectionsList({
                 }}
               >
                 <CardContent sx={{ flexGrow: 1 }}>
-                  {/* Header con TAG */}
                   <Box display="flex" justifyContent="space-between" alignItems="start" mb={2}>
                     <Box>
                       <Typography variant="h6" color="primary" gutterBottom>
@@ -211,9 +228,7 @@ export function InProgressInspectionsList({
 
                   <Divider sx={{ my: 2 }} />
 
-                  {/* Información del andamio */}
                   <Stack spacing={1.5}>
-                    {/* Nombre del template */}
                     {inspection.templateName && (
                       <Box display="flex" alignItems="center" gap={1}>
                         <Construction fontSize="small" color="action" />
@@ -223,7 +238,6 @@ export function InProgressInspectionsList({
                       </Box>
                     )}
 
-                    {/* Inspecciones rutinarias */}
                     <Box display="flex" alignItems="center" gap={1}>
                       <CheckCircle 
                         fontSize="small" 
@@ -234,7 +248,6 @@ export function InProgressInspectionsList({
                       </Typography>
                     </Box>
 
-                    {/* Días en uso */}
                     <Box display="flex" alignItems="center" gap={1}>
                       <Schedule fontSize="small" color="action" />
                       <Typography variant="body2" color="text.secondary">
@@ -242,7 +255,6 @@ export function InProgressInspectionsList({
                       </Typography>
                     </Box>
 
-                    {/* Fecha de inicio */}
                     <Box display="flex" alignItems="center" gap={1}>
                       <CalendarToday fontSize="small" color="action" />
                       <Typography variant="body2" color="text.secondary">
@@ -250,7 +262,6 @@ export function InProgressInspectionsList({
                       </Typography>
                     </Box>
 
-                    {/* Inspector */}
                     {inspection.submittedBy && (
                       <Box display="flex" alignItems="center" gap={1}>
                         <Person fontSize="small" color="action" />
@@ -262,7 +273,6 @@ export function InProgressInspectionsList({
                   </Stack>
                 </CardContent>
 
-                {/* Acciones */}
                 <Box sx={{ p: 2, pt: 0 }}>
                   <Button
                     fullWidth
@@ -273,9 +283,7 @@ export function InProgressInspectionsList({
                     sx={{ 
                       fontWeight: 'bold',
                       boxShadow: 2,
-                      '&:hover': {
-                        boxShadow: 4,
-                      }
+                      '&:hover': { boxShadow: 4 }
                     }}
                   >
                     Continuar

@@ -9,7 +9,7 @@ import { ArrowBack } from '@mui/icons-material';
 import { getTemplatesHerraEquipos } from '@/lib/actions/template-herra-equipos';
 import { FormTemplateHerraEquipos, FormDataHerraEquipos } from '@/components/herra_equipos/types/IProps';
 import { UnifiedFormRouter } from '@/components/herra_equipos/UnifiedFormRouter';
-import { getInspectionById, updateInspection } from '@/lib/actions/inspection-herra-equipos';
+import { getInspectionById, InspectionResponse, updateInspection } from '@/lib/actions/inspection-herra-equipos';
 
 // Mapeo de códigos a componentes especializados (mismo que en FormularioDinamicoPage)
 const SPECIALIZED_FORMS: Record<string, React.ComponentType<{
@@ -41,7 +41,7 @@ export default function EditarInspeccionPage() {
   const inspectionId = params.id as string;
   
   const [template, setTemplate] = useState<FormTemplateHerraEquipos | null>(null);
-  const [inspectionData, setInspectionData] = useState<any>(null);
+  const [inspectionData, setInspectionData] = useState<InspectionResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -130,13 +130,12 @@ export default function EditarInspeccionPage() {
         "draft" // Mantener como borrador al actualizar
       );
 
-      if (result.success) {
+      if (result.success && result.data) {
         setSnackbar({
           open: true,
           message: 'Inspección actualizada exitosamente',
           severity: 'success'
         });
-        console.log("✅ Inspección actualizada:", result.data);
         
         // Actualizar datos locales
         setInspectionData(result.data);

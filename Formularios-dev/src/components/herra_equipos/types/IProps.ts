@@ -173,7 +173,8 @@ export interface FormResponse {
   verificationData: Record<string, string | number>;
   responses: Record<string, Record<string, QuestionResponseUnion>>; // 🆕 Usar el tipo unificado aquí también
   submittedAt: Date;
-  status: "draft" | "completed";
+  status: InspectionStatus;
+  
 }
 
 // Helper para obtener errores anidados

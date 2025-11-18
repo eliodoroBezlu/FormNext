@@ -58,6 +58,7 @@ export default function FormularioDinamicoPage() {
   const code = decodeURIComponent((params.code || params.templateCode) as string);
   
   const [template, setTemplate] = useState<FormTemplateHerraEquipos | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [existingInspection, setExistingInspection] = useState<any>(null); // ✅ NUEVO
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -127,18 +128,11 @@ export default function FormularioDinamicoPage() {
 
           setExistingInspection(inspectionResult.data);
           
-          console.log('✅ [PAGE] Inspección cargada:', {
-            id: inspectionResult.data._id,
-            status: inspectionResult.data.status,
-            templateCode: inspectionResult.data.templateCode,
-            hasScaffold: !!inspectionResult.data.scaffold,
-            routinesCount: inspectionResult.data.scaffold?.routineInspections?.length || 0,
-          });
+          
 
           // ✅ Si la inspección tiene un TAG, pre-llenarlo
-          if (inspectionResult.data.verification?.TAG) {
-            const tag = inspectionResult.data.verification.TAG;
-            console.log(`🔍 [PAGE] TAG encontrado en inspección: ${tag}`);
+          if (inspectionResult.data?.verification?.TAG) {
+            const tag = String(inspectionResult.data.verification.TAG);
             setVerifiedEquipmentId(tag);
             setVerifiedTemplateCode(foundTemplate.code);
           }
@@ -147,7 +141,7 @@ export default function FormularioDinamicoPage() {
           setShowTagVerification(false);
 
           // ✅ Mostrar mensaje informativo según el estado
-          if (inspectionResult.data.status === 'in_progress') {
+          if (inspectionResult.data?.status === 'in_progress') {
             setSnackbar({
               open: true,
               message: `🔄 Continuando inspección en progreso - ${inspectionResult.data.scaffold?.routineInspections?.length || 0} rutinarias registradas`,
@@ -253,6 +247,7 @@ export default function FormularioDinamicoPage() {
     equipmentId: string;
     openForm: string;
     shouldRedirect: boolean;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     trackingData?: any;
   }) => {
     console.log('✅ [PAGE] TAG verificado:', result);
@@ -387,10 +382,6 @@ export default function FormularioDinamicoPage() {
           severity: 'success'
         });
 
-        console.log("✅ [PAGE] Guardado en progreso:", {
-          id: result.data._id,
-          status: result.data.status,
-        });
 
         // Redirigir a lista de andamios en progreso después de 2 segundos
         setTimeout(() => {
@@ -415,11 +406,6 @@ export default function FormularioDinamicoPage() {
   const handleFinalize = async (data: FormDataHerraEquipos) => {
     if (!template) return;
 
-    console.log("✅ [PAGE] FINALIZAR INSPECCIÓN");
-    console.log("🏗️ [PAGE] Scaffold final data:", {
-      routinesCount: data.scaffold?.routineInspections?.length || 0,
-      finalConclusion: data.scaffold?.finalConclusion,
-    });
 
     const formDataWithEquipment = {
       ...data,
@@ -466,8 +452,8 @@ export default function FormularioDinamicoPage() {
         });
 
         console.log("✅ [PAGE] Inspección finalizada:", {
-          id: result.data._id,
-          status: result.data.status,
+          id: result.data?._id,
+          status: result.data?.status,
         });
 
         setTimeout(() => {

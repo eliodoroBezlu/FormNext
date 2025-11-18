@@ -1,3 +1,5 @@
+// ./src/components/molecules/team-member-signature/SigantureField.tsx
+
 import { useRef, useEffect, useState } from "react";
 import { Control, UseFormSetValue, Path, FieldValues } from "react-hook-form";
 import SignatureCanvas from "react-signature-canvas";
@@ -6,7 +8,6 @@ import { Box, Button, Typography } from "@mui/material";
 import Image from "next/image";
 import { Edit as EditIcon } from "@mui/icons-material";
 
-// Componente simple y reutilizable solo para firmas
 export interface SignatureFieldProps<T extends Record<string, unknown>> {
   fieldName: Path<T>;
   control: Control<T>;
@@ -15,8 +16,9 @@ export interface SignatureFieldProps<T extends Record<string, unknown>> {
   format?: "png" | "jpeg";
   error?: boolean;
   helperText?: string;
-  value?: string; // Valor actual de la firma (base64)
+  value?: string;
   onChange?: (value: string) => void;
+  disabled?: boolean; // ← Ahora SÍ se usa
 }
 
 export const SignatureField = <T extends FieldValues>({
@@ -27,66 +29,87 @@ export const SignatureField = <T extends FieldValues>({
   error = false,
   helperText,
   value = "",
-  onChange
+  onChange,
+  disabled = false, // ← Lo recibimos
 }: SignatureFieldProps<T>) => {
   const sigCanvasRef = useRef<SignatureCanvas | null>(null);
-  const [isEditing, setIsEditing] = useState(false); // ✅ Estado para controlar si está editando
-  const [hasExistingSignature, setHasExistingSignature] = useState(false); // ✅ Si hay firma previa
+  const [isEditing, setIsEditing] = useState(false);
+  const [hasExistingSignature, setHasExistingSignature] = useState(false);
 
-  // ✅ Verificar si hay una firma existente al montar
   useEffect(() => {
     if (value && value.trim() !== "") {
       setHasExistingSignature(true);
-      setIsEditing(false); // Mostrar imagen por defecto
+      setIsEditing(false);
     } else {
       setHasExistingSignature(false);
-      setIsEditing(true); // Mostrar canvas si no hay firma
+      setIsEditing(true);
     }
   }, [value]);
 
   const saveSignature = () => {
-    if (sigCanvasRef.current) {
-      const signature = sigCanvasRef.current
-        .getTrimmedCanvas()
-        .toDataURL(`image/${format}`);
-      
-      if (onChange) {
-        onChange(signature);
-      }
-      
-      setValue(fieldName, signature as T[Path<T>]);
-      setHasExistingSignature(true);
-      setIsEditing(false); // ✅ Volver a mostrar imagen después de guardar
-    }
+    if (!sigCanvasRef.current || disabled) return;
+
+    const signature = sigCanvasRef.current
+      .getTrimmedCanvas()
+      .toDataURL(`image/${format}`);
+
+    onChange?.(signature);
+    setValue(fieldName, signature as T[Path<T>]);
+    setHasExistingSignature(true);
+    setIsEditing(false);
   };
 
   const clearSignature = () => {
-    if (sigCanvasRef.current) {
-      sigCanvasRef.current.clear();
-    }
-    
-    if (onChange) {
-      onChange("");
-    }
-    
+    if (disabled) return;
+
+    sigCanvasRef.current?.clear();
+    onChange?.("");
     setValue(fieldName, "" as T[Path<T>]);
     setHasExistingSignature(false);
   };
 
   const handleEdit = () => {
-    setIsEditing(true); // ✅ Cambiar a modo edición
+    if (disabled) return;
+    setIsEditing(true);
   };
 
   const handleCancelEdit = () => {
-    if (hasExistingSignature) {
-      setIsEditing(false); // ✅ Volver a mostrar la imagen
-      if (sigCanvasRef.current) {
-        sigCanvasRef.current.clear(); // Limpiar canvas sin guardar
-      }
+    if (hasExistingSignature && sigCanvasRef.current) {
+      sigCanvasRef.current.clear();
     }
+    setIsEditing(false);
   };
 
-  // ✅ Si hay firma y NO está editando, mostrar la imagen
+  // Si está deshabilitado, solo mostramos la imagen (o nada si no hay firma)
+  if (disabled) {
+    if (hasExistingSignature && value) {
+      return (
+        <Box>
+          <Box
+            sx={{
+              border: "1px solid #ccc",
+              borderRadius: 2,
+              p: 2,
+              mb: 2,
+              backgroundColor: "#f9f9f9",
+            }}
+          >
+            <Box sx={{ position: "relative", width: "100%", height: "200px" }}>
+              <Image src={value} alt="Firma" fill style={{ objectFit: "contain" }} />
+            </Box>
+          </Box>
+          {error && helperText && (
+            <Typography variant="caption" color="error" sx={{ display: "block" }}>
+              {helperText}
+            </Typography>
+          )}
+        </Box>
+      );
+    }
+    return null; // o un placeholder si prefieres
+  }
+
+  // === MODO NORMAL (no disabled) ===
   if (hasExistingSignature && !isEditing && value) {
     return (
       <Box>
@@ -100,47 +123,22 @@ export const SignatureField = <T extends FieldValues>({
             backgroundColor: "#f9f9f9",
           }}
         >
-          <Box
-            sx={{
-              position: "relative",
-              width: "100%",
-              height: "200px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Image
-              src={value}
-              alt="Firma guardada"
-              fill
-              style={{
-                objectFit: "contain",
-              }}
-            />
+          <Box sx={{ position: "relative", width: "100%", height: "200px" }}>
+            <Image src={value} alt="Firma guardada" fill style={{ objectFit: "contain" }} />
           </Box>
         </Box>
 
         {error && helperText && (
-          <Typography variant="caption" color="error" sx={{ mb: 2, display: 'block' }}>
+          <Typography variant="caption" color="error" sx={{ mb: 2, display: "block" }}>
             {helperText}
           </Typography>
         )}
 
         <Box sx={{ display: "flex", gap: 2, justifyContent: "center" }}>
-          <Button
-            onClick={handleEdit}
-            variant="outlined"
-            color="primary"
-            startIcon={<EditIcon />}
-          >
+          <Button onClick={handleEdit} variant="outlined" startIcon={<EditIcon />}>
             Editar Firma
           </Button>
-          <Button
-            onClick={clearSignature}
-            variant="outlined"
-            color="secondary"
-          >
+          <Button onClick={clearSignature} variant="outlined" color="secondary">
             Eliminar Firma
           </Button>
         </Box>
@@ -148,7 +146,6 @@ export const SignatureField = <T extends FieldValues>({
     );
   }
 
-  // ✅ Si está editando o no hay firma, mostrar el canvas
   return (
     <Box>
       <DynamicSignatureCanvas
@@ -159,15 +156,10 @@ export const SignatureField = <T extends FieldValues>({
         error={error}
         helperText={helperText}
       />
-      
+
       {hasExistingSignature && (
         <Box sx={{ display: "flex", justifyContent: "center", mt: 1 }}>
-          <Button
-            onClick={handleCancelEdit}
-            variant="text"
-            color="secondary"
-            size="small"
-          >
+          <Button onClick={handleCancelEdit} variant="text" color="secondary" size="small">
             Cancelar Edición
           </Button>
         </Box>

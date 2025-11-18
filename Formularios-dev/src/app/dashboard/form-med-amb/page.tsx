@@ -1,7 +1,7 @@
 // app/dashboard/form-med-amb/page.tsx
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Box, Typography, Card, CardContent, Button, 
@@ -28,7 +28,8 @@ function TabPanel({ children, value, index }: TabPanelProps) {
   );
 }
 
-export default function LlenarFormulariosPage() {
+// Componente interno que usa useSearchParams
+function LlenarFormulariosContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -172,7 +173,7 @@ export default function LlenarFormulariosPage() {
               const isScaffold = template.code === SCAFFOLD_FORM;
               
               return (
-                <Grid  size={{xs:12, md:4}} key={template._id}>
+                <Grid size={{xs:12, md:4}} key={template._id}>
                   <Card 
                     sx={{ 
                       height: '100%', 
@@ -292,5 +293,18 @@ export default function LlenarFormulariosPage() {
         />
       </TabPanel>
     </Box>
+  );
+}
+
+// Componente principal con Suspense
+export default function LlenarFormulariosPage() {
+  return (
+    <Suspense fallback={
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
+    }>
+      <LlenarFormulariosContent />
+    </Suspense>
   );
 }
