@@ -1,5 +1,5 @@
 import { FormFeatureConfig } from "../types/IProps"
-import { formConfigRegistry } from "./form-configs"
+import { formConfigRegistry } from "."
 
 /**
  * Obtiene la configuración de características para un formulario específico

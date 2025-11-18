@@ -146,8 +146,15 @@ export interface VehicleData {
   fechaProximaInspeccion?: string;
   responsableProximaInspeccion?: string;
 }
+
+export enum InspectionStatus {
+  DRAFT = 'draft',
+  IN_PROGRESS = 'in_progress', // ✅ NUEVO
+  COMPLETED = 'completed',
+}
 export interface FormDataHerraEquipos {
   verification: Record<string, string | number>;
+  generalObservations?: string;
   responses: Record<string, Record<string, QuestionResponseUnion>>;
   outOfService?: OutOfServiceData; // 🆕 Usar el tipo unificado
   accesoriosConfig?: AccesoriosConfig
@@ -155,7 +162,10 @@ export interface FormDataHerraEquipos {
   scaffold?: ScaffoldData;
   selectedSubsections?: string[];
   selectedItems?: Record<string, string[]>;
-  
+
+  inspectorSignature?: Record<string, string | number>;
+  supervisorSignature?: Record<string, string | number>;
+  status?: InspectionStatus;
 }
 
 export interface FormResponse {
@@ -197,6 +207,39 @@ export interface SignatureFieldConfig {
   fieldName?: string;
   dataSource?: string; // Para autocomplete
   heightPercentage?: number; // Para canvas
+}
+
+export interface SignatureConfig {
+  inspector: boolean | SignatureDetailsConfig;
+  supervisor: boolean | SignatureDetailsConfig;
+}
+
+export interface SignatureData {
+  // Campos estándar
+  name?: string;
+  signature?: string;           // base64 si es canvas, o texto/código
+  date?: string;                // ISO string
+  position?: string;
+  license?: string;
+  
+  // Campos custom adicionales
+  [key: string]: string | undefined;
+}
+
+export interface SignatureDetailsConfig {
+  enabled: boolean;
+  title?: string;               // Título de la sección (ej: "Firma del Inspector")
+  fields?: {
+    // Campos estándar
+    name?: SignatureFieldConfig;
+    signature?: SignatureFieldConfig;
+    date?: SignatureFieldConfig;
+    position?: SignatureFieldConfig;
+    license?: SignatureFieldConfig;
+    
+    // Permite campos custom adicionales
+    [key: string]: SignatureFieldConfig | undefined;
+  };
 }
 
 export interface SignatureConfig {
@@ -286,8 +329,41 @@ export interface OutOfServiceData {
   tag?: string;          // ✅ NUEVO
   inspector?: string;    // ✅ NUEVO
   capacidad?: string;    // ✅ NUEVO
-  tipo?: string; 
+  tipo?: string;
+  [key: string]: string | OutOfServiceResponse | undefined; 
 }
+export interface DynamicFieldConfig {
+  type: 'text' | 'date' | 'number' | 'select' | 'autocomplete' | 'radioGroup'; // ✅ NUEVO tipo
+  label: string;
+  placeholder?: string;
+  required?: boolean;
+  fieldName: string;
+  
+  // Para select/autocomplete
+  options?: string[] | { label: string; value: string }[];
+  dataSource?: string;
+  
+  // ✅ NUEVO: Para radioGroup
+  responseType?: "yes-no" | "yes-no-na" | "yes-no-na-nr" | "AP-MAN-RECH";
+  defaultValue?: string;
+  
+  // Para validaciones
+  minLength?: number;
+  maxLength?: number;
+  min?: number;
+  max?: number;
+  pattern?: string;
+  
+  // Configuración de grid
+  gridColumn?: string;
+}
+
+export interface OutOfServiceSectionConfig {
+  enabled: boolean;
+  title?: string; // Título opcional para la sección
+  fields: DynamicFieldConfig[]; // Array de campos configurables
+}
+
 
 export interface OutOfServiceConfig {
   enabled: boolean
@@ -297,6 +373,8 @@ export interface OutOfServiceConfig {
   required?: boolean
   defaultValue?: string
 
+  header?: OutOfServiceSectionConfig;
+  footer?: OutOfServiceSectionConfig;
   fields?: {
     showDate?: boolean;
     dateLabel?: string;
@@ -435,7 +513,7 @@ export interface RoutineInspectionConfig {
 
 export interface ScaffoldData {
   routineInspections?: RoutineInspectionEntry[];
-  finalConclusion?: "liberated" | "not_liberated";
+  finalConclusion?: "liberado" | "no_liberado"; // ✅ Mantener español
 }
 
 

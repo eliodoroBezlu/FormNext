@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Paper,
@@ -20,8 +20,11 @@ import {
   Alert,
 } from "@mui/material";
 import { Add, Delete } from "@mui/icons-material";
-import { UseFormRegister, FieldErrors } from "react-hook-form";
+import dayjs from "dayjs";
+import { UseFormRegister, FieldErrors, useForm } from "react-hook-form";
 import { FormDataHerraEquipos, RoutineInspectionConfig, RoutineInspectionEntry } from "./types/IProps";
+import AutocompleteCustom from "../molecules/autocomplete-custom/AutocompleteCustom";
+import { SignatureField } from "../molecules/team-member-signature/SigantureField";
 
 interface RoutineInspectionSectionProps {
   config: RoutineInspectionConfig;
@@ -32,26 +35,51 @@ interface RoutineInspectionSectionProps {
   readonly?: boolean;
 }
 
+interface TempEntryForm {
+  tempSignature: string;
+}
+
 export function RoutineInspectionSection({
   config,
   value = [],
   onChange,
   readonly = false,
 }: RoutineInspectionSectionProps) {
-  const [entries, setEntries] = useState<RoutineInspectionEntry[]>(value);
+  
+
+
+  // ✅ NO usar estado local, trabajar directamente con value
   const [currentEntry, setCurrentEntry] = useState<Partial<RoutineInspectionEntry>>({
-    date: "",
+    date: dayjs().format("YYYY-MM-DD"),
     inspector: "",
     response: undefined,
     observations: "",
     signature: "",
   });
 
+  const { control: tempControl, setValue: tempSetValue, watch, reset: resetTempForm } = useForm<TempEntryForm>({
+    defaultValues: {
+      tempSignature: "",
+    },
+  });
+
+  const tempSignature = watch("tempSignature");
+
   const maxEntries = config.maxEntries || 10;
-  const canAddMore = entries.length < maxEntries;
+  const canAddMore = value.length < maxEntries;
 
   const handleAddEntry = () => {
     if (!currentEntry.date || !currentEntry.inspector || !currentEntry.response) {
+      console.warn("❌ Campos requeridos faltantes:", {
+        fecha: !!currentEntry.date,
+        inspector: !!currentEntry.inspector,
+        respuesta: !!currentEntry.response
+      });
+      return;
+    }
+
+    if (!onChange) {
+      console.error("❌ CRÍTICO: onChange NO está disponible!");
       return;
     }
 
@@ -60,27 +88,36 @@ export function RoutineInspectionSection({
       inspector: currentEntry.inspector,
       response: currentEntry.response as "si" | "no",
       observations: currentEntry.observations || "",
-      signature: currentEntry.signature || "",
+      signature: tempSignature || "",
     };
 
-    const updatedEntries = [...entries, newEntry];
-    setEntries(updatedEntries);
-    onChange?.(updatedEntries);
+    // ✅ CRÍTICO: Crear nuevo array (inmutabilidad)
+    const updatedEntries = [...value, newEntry];
+
+    // ✅ CRÍTICO: Notificar cambio
+    onChange(updatedEntries);
 
     // Resetear formulario
     setCurrentEntry({
-      date: "",
+      date: dayjs().format("YYYY-MM-DD"),
       inspector: "",
       response: undefined,
       observations: "",
       signature: "",
     });
+    resetTempForm();
   };
 
   const handleDeleteEntry = (index: number) => {
-    const updatedEntries = entries.filter((_, i) => i !== index);
-    setEntries(updatedEntries);
-    onChange?.(updatedEntries);
+    // ✅ CRÍTICO: Crear nuevo array (inmutabilidad)
+    const updatedEntries = value.filter((_, i) => i !== index);
+    
+
+    
+    // ✅ CRÍTICO: Notificar cambio
+    if (onChange) {
+      onChange(updatedEntries);
+    }
   };
 
   const fields = config.fields || {
@@ -89,6 +126,10 @@ export function RoutineInspectionSection({
     showResponse: true,
     showObservations: true,
     showSignature: true,
+  };
+
+  const formatDate = (dateString: string) => {
+    return dayjs(dateString).format("DD/MM/YYYY");
   };
 
   return (
@@ -103,7 +144,7 @@ export function RoutineInspectionSection({
       </Typography>
 
       {/* Tabla de entradas existentes */}
-      {entries.length > 0 && (
+      {value.length > 0 && (
         <TableContainer sx={{ mb: 3 }}>
           <Table size="small">
             <TableHead>
@@ -118,8 +159,8 @@ export function RoutineInspectionSection({
                   {config.question ||
                     "EL ANDAMIO MANTIENE LOS ESTÁNDARES DE SEGURIDAD INICIALES"}
                 </TableCell>
-                <TableCell>SI</TableCell>
-                <TableCell>NO</TableCell>
+                <TableCell align="center">SI</TableCell>
+                <TableCell align="center">NO</TableCell>
                 {fields.showObservations && (
                   <TableCell>{fields.observationsLabel || "OBSERVACIONES"}</TableCell>
                 )}
@@ -130,9 +171,11 @@ export function RoutineInspectionSection({
               </TableRow>
             </TableHead>
             <TableBody>
-              {entries.map((entry, index) => (
+              {value.map((entry, index) => (
                 <TableRow key={index}>
-                  {fields.showDate && <TableCell>{entry.date}</TableCell>}
+                  {fields.showDate && (
+                    <TableCell>{formatDate(entry.date)}</TableCell>
+                  )}
                   {fields.showInspector && <TableCell>{entry.inspector}</TableCell>}
                   <TableCell>
                     {config.question?.substring(0, 30) || "Estándares de seguridad"}...
@@ -147,7 +190,17 @@ export function RoutineInspectionSection({
                     <TableCell>{entry.observations || "-"}</TableCell>
                   )}
                   {fields.showSignature && (
-                    <TableCell>{entry.signature || "-"}</TableCell>
+                    <TableCell>
+                      {entry.signature ? (
+                        <img 
+                          src={entry.signature} 
+                          alt="Firma" 
+                          style={{ maxWidth: "100px", maxHeight: "50px" }}
+                        />
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
                   )}
                   {!readonly && (
                     <TableCell>
@@ -178,26 +231,25 @@ export function RoutineInspectionSection({
             {fields.showDate && (
               <TextField
                 label={fields.dateLabel || "Fecha de inspección"}
-                type="date"
-                value={currentEntry.date}
-                onChange={(e) =>
-                  setCurrentEntry({ ...currentEntry, date: e.target.value })
-                }
+                value={formatDate(currentEntry.date || "")}
                 InputLabelProps={{ shrink: true }}
                 required={fields.dateRequired !== false}
+                disabled
                 fullWidth
+                helperText="La fecha se establece automáticamente"
               />
             )}
 
             {fields.showInspector && (
-              <TextField
+              <AutocompleteCustom
+                dataSource="trabajador"
                 label={fields.inspectorLabel || "Nombre del inspector"}
-                value={currentEntry.inspector}
-                onChange={(e) =>
-                  setCurrentEntry({ ...currentEntry, inspector: e.target.value })
+                placeholder="Buscar o ingresar inspector"
+                value={currentEntry.inspector || null}
+                onChange={(newValue) =>
+                  setCurrentEntry({ ...currentEntry, inspector: newValue || "" })
                 }
                 required={fields.inspectorRequired !== false}
-                fullWidth
               />
             )}
           </Box>
@@ -218,8 +270,34 @@ export function RoutineInspectionSection({
                   })
                 }
               >
-                <FormControlLabel value="si" control={<Radio />} label="SI" />
-                <FormControlLabel value="no" control={<Radio />} label="NO" />
+                <FormControlLabel 
+                  value="si" 
+                  control={
+                    <Radio 
+                      sx={{
+                        color: "#4caf50",
+                        "&.Mui-checked": {
+                          color: "#4caf50",
+                        },
+                      }}
+                    />
+                  } 
+                  label="SI" 
+                />
+                <FormControlLabel 
+                  value="no" 
+                  control={
+                    <Radio 
+                      sx={{
+                        color: "#f44336",
+                        "&.Mui-checked": {
+                          color: "#f44336",
+                        },
+                      }}
+                    />
+                  } 
+                  label="NO" 
+                />
               </RadioGroup>
             </FormControl>
           )}
@@ -239,20 +317,26 @@ export function RoutineInspectionSection({
           )}
 
           {fields.showSignature && (
-            <TextField
-              label={fields.signatureLabel || "Firma"}
-              value={currentEntry.signature}
-              onChange={(e) =>
-                setCurrentEntry({ ...currentEntry, signature: e.target.value })
-              }
-              fullWidth
-            />
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                {fields.signatureLabel || "Firma del Inspector"}
+              </Typography>
+              <SignatureField
+                fieldName="tempSignature"
+                control={tempControl}
+                setValue={tempSetValue}
+                heightPercentage={50}
+                format="png"
+              />
+            </Box>
           )}
 
           <Button
             variant="contained"
             startIcon={<Add />}
-            onClick={handleAddEntry}
+            onClick={() => {
+              handleAddEntry();
+            }}
             disabled={
               !currentEntry.date ||
               !currentEntry.inspector ||
@@ -270,9 +354,15 @@ export function RoutineInspectionSection({
         </Alert>
       )}
 
-      {entries.length === 0 && (
+      {value.length === 0 && !readonly && (
         <Alert severity="warning" sx={{ mt: 2 }}>
           No se han registrado inspecciones rutinarias aún.
+        </Alert>
+      )}
+
+      {value.length === 0 && readonly && (
+        <Alert severity="info" sx={{ mt: 2 }}>
+          No hay inspecciones rutinarias registradas.
         </Alert>
       )}
     </Paper>

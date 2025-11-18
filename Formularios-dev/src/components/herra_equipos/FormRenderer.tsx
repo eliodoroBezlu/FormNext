@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
   Box,
@@ -17,21 +17,27 @@ import { Save, Send, CheckCircle } from "@mui/icons-material";
 // Componentes compartidos reutilizables
 import { VerificationFields } from "./VerificationsFields";
 import { SectionRenderer } from "./SectionRenderer";
-import {  FormResponse, FormDataHerraEquipos, FormTemplateHerraEquipos } from "./types/IProps";
+import { FormDataHerraEquipos, FormTemplateHerraEquipos } from "./types/IProps";
 import { getFormConfig } from "./config/form-config.helpers";
+import { init } from "next/dist/compiled/webpack/webpack";
 
+// ============================================
+// PROPS DEL COMPONENTE
+// ============================================
 interface FormFillerProps {
   template: FormTemplateHerraEquipos;
-  onSave?: (data: FormResponse) => void;
-  onSubmit?: (data: FormResponse) => void;
+  onSaveDraft?: (data: FormDataHerraEquipos) => void;    // ✅ Cambiado a FormDataHerraEquipos
+  onSubmit?: (data: FormDataHerraEquipos) => void;  // ✅ Cambiado a FormDataHerraEquipos
   readonly?: boolean;
+  initialData?: FormDataHerraEquipos;
 }
 
 export const FormFiller: React.FC<FormFillerProps> = ({ 
   template, 
-  onSave, 
+  onSaveDraft, 
   onSubmit,
-  readonly = false 
+  readonly = false, 
+  initialData,
 }) => {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   
@@ -40,6 +46,8 @@ export const FormFiller: React.FC<FormFillerProps> = ({
     control,
     setValue,
     handleSubmit,
+    register,
+    reset,
     formState: { errors },
   } = useForm<FormDataHerraEquipos>({
     defaultValues: {
@@ -47,6 +55,14 @@ export const FormFiller: React.FC<FormFillerProps> = ({
       responses: {},
     },
   });
+
+  useEffect(() => {
+    if (initialData) {
+      console.log("🔄 Cargando datos iniciales:", initialData)
+      reset(initialData) ;
+      console.log("✅ Datos cargados");
+    }
+  }, [initialData, reset]);
 
   // ✅ Ahora sí, hacer la validación de config
   const config = getFormConfig(template.code);
@@ -61,41 +77,46 @@ export const FormFiller: React.FC<FormFillerProps> = ({
     );
   }
 
+  // ============================================
+  // HANDLER: Guardar Borrador
+  // ============================================
   const handleSaveDraft = (data: FormDataHerraEquipos) => {
-    const formResponse: FormResponse = {
-      templateId: template._id,
-      verificationData: data.verification,
-      responses: data.responses,
-      submittedAt: new Date(),
-      status: "draft",
-    };
+    console.log("=".repeat(60));
+    console.log("💾 [FormFiller] GUARDAR BORRADOR");
+    console.log("=".repeat(60));
+    console.log("Template:", template.code);
+    console.log("Datos:", data);
+    console.log("=".repeat(60));
 
-    console.log("Guardando borrador:", formResponse);
     setSaveMessage("Borrador guardado exitosamente");
     setTimeout(() => setSaveMessage(null), 3000);
 
-    if (onSave) {
-      onSave(formResponse);
+    if (onSaveDraft) {
+      onSaveDraft(data); // ✅ Ahora pasa FormDataHerraEquipos directamente
     }
   };
 
+  // ============================================
+  // HANDLER: Submit Final
+  // ============================================
   const handleFinalSubmit = (data: FormDataHerraEquipos) => {
-    const formResponse: FormResponse = {
-      templateId: template._id,
-      verificationData: data.verification,
-      responses: data.responses,
-      submittedAt: new Date(),
-      status: "completed",
-    };
+    console.log("=".repeat(60));
+    console.log("📤 [FormFiller] SUBMIT FINAL");
+    console.log("=".repeat(60));
+    console.log("Template:", template.code);
+    console.log("Datos:", data);
+    console.log("=".repeat(60));
 
-    console.log("Enviando formulario:", formResponse);
     setSaveMessage("Formulario enviado exitosamente");
 
     if (onSubmit) {
-      onSubmit(formResponse);
+      onSubmit(data); // ✅ Ahora pasa FormDataHerraEquipos directamente
     }
   };
 
+  // ============================================
+  // RENDERIZADO
+  // ============================================
   return (
     <Box sx={{ maxWidth: 1200, mx: "auto", p: 3 }}>
       {/* Header del formulario */}

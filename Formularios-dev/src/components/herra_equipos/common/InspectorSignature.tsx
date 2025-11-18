@@ -1,13 +1,14 @@
 "use client";
 
 import { TextField, Typography, Paper, Box } from "@mui/material";
-import type {
-  Control,
-  UseFormRegister,
-  UseFormSetValue,
-  FieldErrors,
-  Path,
-  FieldValues,
+import {
+  type Control,
+  type UseFormRegister,
+  type UseFormSetValue,
+  type FieldErrors,
+  type Path,
+  type FieldValues,
+  Controller,
 } from "react-hook-form";
 import type {
   FormDataHerraEquipos,
@@ -17,6 +18,7 @@ import type {
 import dynamic from "next/dynamic";
 import { SignatureFieldProps } from "@/components/molecules/team-member-signature/SigantureField";
 import { DataSourceType } from "@/lib/actions/dataSourceService";
+import dayjs from "dayjs";
 
 // ✅ Importar solo los componentes necesarios
 const AutocompleteCustom = dynamic(
@@ -39,6 +41,7 @@ interface InspectorSignatureProps {
   setValue: UseFormSetValue<FormDataHerraEquipos>;
   errors: FieldErrors<FormDataHerraEquipos>;
   config?: SignatureConfig["inspector"];
+  readonly?: boolean;
 }
 
 export function InspectorSignature({
@@ -47,6 +50,7 @@ export function InspectorSignature({
   setValue,
   errors,
   config,
+  readonly = false,
 }: InspectorSignatureProps) {
   // Si está deshabilitado, no renderizar
   if (config === false || config === undefined) {
@@ -65,7 +69,7 @@ export function InspectorSignature({
           label: "Nombre del Inspector",
           placeholder: "Ingrese nombre completo",
           required: true,
-          fieldName: "verification.inspectorName",
+          fieldName: "inspectorSignature.name", // ✅ Cambio aquí
         },
         signature: {
           enabled: true,
@@ -73,7 +77,7 @@ export function InspectorSignature({
           label: "Firma",
           placeholder: "Firma digital o código",
           required: true,
-          fieldName: "verification.inspectorSignature",
+          fieldName: "inspectorSignature.signature", // ✅ Cambio aquí
         },
       },
     };
@@ -90,8 +94,9 @@ export function InspectorSignature({
   const renderField = (key: string, field: SignatureFieldConfig) => {
     if (!field || !field.enabled) return null;
 
-    const fieldName = field.fieldName || `verification.inspector_${key}`;
-    const fieldKey = fieldName.split(".")[1];
+    // ✅ Usar fieldName del config o generar uno por defecto con inspectorSignature
+    const fieldName = field.fieldName || `inspectorSignature.${key}`;
+    const fieldKey = fieldName.split(".")[1]; // Extraer la parte después del punto
     const fieldType = field.type || "text";
 
     const commonProps = {
@@ -99,62 +104,94 @@ export function InspectorSignature({
       placeholder: field.placeholder || "",
       required: field.required || false,
       error:
-        !!errors.verification?.[fieldKey as keyof typeof errors.verification],
-      helperText: errors.verification?.[
-        fieldKey as keyof typeof errors.verification
+        !!errors.inspectorSignature?.[
+          fieldKey as keyof typeof errors.inspectorSignature
+        ],
+      helperText: errors.inspectorSignature?.[
+        fieldKey as keyof typeof errors.inspectorSignature
       ]?.message as string | undefined,
     };
 
     switch (fieldType) {
       case "autocomplete":
         return (
-          <AutocompleteCustom
-            key={key}
-            {...commonProps}
-            dataSource={field.dataSource as DataSourceType | undefined}
-            value={undefined}
-            onChange={(value: string | null) => {
-              setValue(
-                fieldName as Path<FormDataHerraEquipos>, 
-                value as FormDataHerraEquipos[keyof FormDataHerraEquipos]
-              );
-            }}
+          <Controller
+            name={fieldName as Path<FormDataHerraEquipos>}
+            control={control}
+            defaultValue=""
+            render={({ field: controllerField }) => (
+              <AutocompleteCustom
+                value={controllerField.value as string | null} // ✅ Usa el valor del form
+                onChange={(value: string | null) => {
+                  controllerField.onChange(value); // ✅ Actualiza el form
+                }}
+                dataSource={field.dataSource as DataSourceType | undefined}
+              />
+            )}
           />
         );
 
       case "canvas":
         return (
-          <Box key={key}>
-            <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-              {field.label || "Firma"}
-              {field.required && <span style={{ color: "red" }}> *</span>}
-            </Typography>
-            <SignatureField<FormDataHerraEquipos>
-              fieldName={fieldName as Path<FormDataHerraEquipos>}
-              control={control}
-              setValue={setValue}
-              heightPercentage={field.heightPercentage || 60}
-              error={commonProps.error}
-              helperText={commonProps.helperText}
-            />
-          </Box>
+          <Controller
+            name={fieldName as Path<FormDataHerraEquipos>}
+            control={control}
+            defaultValue=""
+            render={({ field: controllerField }) => (
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                  {field.label || "Firma"}
+                  {field.required && <span style={{ color: "red" }}> *</span>}
+                </Typography>
+                <SignatureField<FormDataHerraEquipos>
+                  fieldName={fieldName as Path<FormDataHerraEquipos>}
+                  control={control}
+                  setValue={setValue}
+                  heightPercentage={field.heightPercentage || 60}
+                  error={commonProps.error}
+                  helperText={commonProps.helperText}
+                  value={controllerField.value as string}
+                  onChange={controllerField.onChange}
+                />
+              </Box>
+            )}
+          />
         );
 
       case "date":
+  return (
+    <Controller
+      name={fieldName as Path<FormDataHerraEquipos>}
+      control={control}
+      defaultValue={dayjs().format("YYYY-MM-DD")} // ✅ Fecha de hoy por defecto
+      render={({ field: controllerField }) => {
+        // ✅ Si no hay valor, setear la fecha de hoy automáticamente
+        if (!controllerField.value) {
+          controllerField.onChange(dayjs().format("YYYY-MM-DD"));
+        }
+        
         return (
           <TextField
-            key={key}
-            type="date"
-            InputLabelProps={{ shrink: true }}
-            fullWidth
             {...commonProps}
-            {...register(fieldName as Path<FormDataHerraEquipos>, {
-              required: field.required
-                ? `${field.label || key} es obligatorio`
-                : false,
-            })}
+            type="date"
+            fullWidth
+            value={controllerField.value || dayjs().format("YYYY-MM-DD")}
+            InputProps={{
+              readOnly: true, // ✅ No se puede modificar
+            }}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            sx={{
+              "& .MuiInputBase-input": {
+                cursor: "default", // ✅ Cursor normal en lugar de texto
+              },
+            }}
           />
         );
+      }}
+    />
+  );
 
       case "text":
       default:
@@ -190,11 +227,10 @@ export function InspectorSignature({
   if (allFields.length === 0) {
     return null;
   }
-
   return (
     <Paper elevation={2} sx={{ p: 3 }}>
       <Typography variant="h6" gutterBottom>
-        {config.title || "Firma del Inspector"}
+        {config.title || ""}
       </Typography>
 
       <Box
@@ -207,7 +243,12 @@ export function InspectorSignature({
           },
         }}
       >
-        {allFields.map((item) => item && renderField(item.key, item.field))}
+        {allFields.map(
+          (item) =>
+            item && (
+              <Box key={item.key}>{renderField(item.key, item.field)}</Box>
+            )
+        )}
       </Box>
     </Paper>
   );

@@ -76,6 +76,15 @@ const SettingsPage: React.FC = () => {
       color: "#f44336",
       items: ["Crear", "editar", "eliminar"],
     },
+
+    {
+      id: "inspecciones/gestion",
+      title: "Gestion de inspecciones de herramientas y equipos",
+      description: "Configura y administra las inspecciones de herramientas y equipos",
+      icon: EditDocumentIcon,
+      color: "#f44336",
+      items: ["Crear", "editar", "eliminar"],
+    },
     // {
     //   id: "integrations",
     //   title: "Integraciones",

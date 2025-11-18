@@ -11,7 +11,6 @@ import AutocompleteCustom from "@/components/molecules/autocomplete-custom/Autoc
 import { DataSourceType } from "@/lib/actions/dataSourceService";
 import { VerificationField, FormDataHerraEquipos } from "./types/IProps";
 
-// Hacer el componente genérico para aceptar cualquier extensión de FormDataHerraEquipos
 interface VerificationFieldsProps<
   T extends FormDataHerraEquipos = FormDataHerraEquipos
 > {
@@ -20,15 +19,14 @@ interface VerificationFieldsProps<
   errors: FieldErrors<T>;
   setValue: UseFormSetValue<T>;
   readonly?: boolean;
+  isEditMode?: boolean; // ✅ NUEVO: Para saber si estamos editando
 }
 
-// Función helper para obtener la fecha actual en formato YYYY-MM-DD
 const getCurrentDate = (): string => {
   const today = new Date();
   return today.toISOString().split('T')[0];
 };
 
-// Función helper para obtener la hora actual en formato HH:mm
 const getCurrentTime = (): string => {
   const now = new Date();
   const hours = String(now.getHours()).padStart(2, '0');
@@ -44,22 +42,25 @@ export const VerificationFields = <
   errors,
   setValue,
   readonly = false,
+  isEditMode = false, // ✅ NUEVO
 }: VerificationFieldsProps<T>) => {
   
-  // Setear automáticamente las fechas y horas al montar el componente
+  // ✅ MODIFICADO: Solo setear fechas automáticamente si NO estamos editando
   useEffect(() => {
-    fields.forEach((field) => {
-      const fieldKey = `verification.${field.label}` as FieldPath<T>;
-      
-      if (field.type === "date") {
-        const currentDate = getCurrentDate();
-        setValue(fieldKey, currentDate as PathValue<T, FieldPath<T>>);
-      } else if (field.type === "time") {
-        const currentTime = getCurrentTime();
-        setValue(fieldKey, currentTime as PathValue<T, FieldPath<T>>);
-      }
-    });
-  }, [fields, setValue]);
+    if (!isEditMode) {
+      fields.forEach((field) => {
+        const fieldKey = `verification.${field.label}` as FieldPath<T>;
+        
+        if (field.type === "date") {
+          const currentDate = getCurrentDate();
+          setValue(fieldKey, currentDate as PathValue<T, FieldPath<T>>);
+        } else if (field.type === "time") {
+          const currentTime = getCurrentTime();
+          setValue(fieldKey, currentTime as PathValue<T, FieldPath<T>>);
+        }
+      });
+    }
+  }, [fields, setValue, isEditMode]);
 
   return (
     <Card sx={{ mb: 3 }}>
@@ -113,13 +114,13 @@ export const VerificationFields = <
                           }
                         }}
                         label={field.label}
-                        disabled={true}
+                        disabled={!isEditMode} // ✅ MODIFICADO: Habilitar en modo edición
                         slotProps={{
                           textField: {
                             error: !!fieldError,
                             helperText: fieldError?.message,
                             fullWidth: true,
-                            disabled: true,
+                            disabled: !isEditMode,
                           },
                         }}
                       />
@@ -141,13 +142,13 @@ export const VerificationFields = <
                           }
                         }}
                         label={field.label}
-                        disabled={true}
+                        disabled={!isEditMode} // ✅ MODIFICADO: Habilitar en modo edición
                         slotProps={{
                           textField: {
                             error: !!fieldError,
                             helperText: fieldError?.message,
                             fullWidth: true,
-                            disabled: true,
+                            disabled: !isEditMode,
                           },
                         }}
                       />

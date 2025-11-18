@@ -22,7 +22,7 @@ import { VerificationFields } from "./VerificationsFields";
 import VehicleDamageSelector, {
   VehicleDamageSelectorRef,
 } from "./VehicleDamageSelector";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { SectionRenderer } from "./SectionRenderer";
 
 interface VehicleInspectionFormProps {
@@ -30,6 +30,7 @@ interface VehicleInspectionFormProps {
   onSubmit: (data: FormDataHerraEquipos) => void;
   onSaveDraft?: (data: FormDataHerraEquipos) => void;
   readonly?: boolean;
+  initialData?: FormDataHerraEquipos;
 }
 
 export function VehicleInspectionForm({
@@ -37,6 +38,7 @@ export function VehicleInspectionForm({
   onSubmit,
   onSaveDraft,
   readonly = false,
+  initialData,
 }: VehicleInspectionFormProps) {
   const config = getFormConfig(template.code);
 
@@ -45,8 +47,25 @@ export function VehicleInspectionForm({
     register,
     handleSubmit,
     setValue,
+    reset,
     formState: { errors, isSubmitting },
-  } = useForm<FormDataHerraEquipos>();
+  } = useForm<FormDataHerraEquipos>({
+    defaultValues: initialData || {
+      verification: {},
+      responses: {},
+      vehicle: {
+        tipoInspeccion: undefined,
+        certificacionMSC: undefined,
+        damages: [],
+        damageObservations: "",
+        fechaProximaInspeccion: "",
+        responsableProximaInspeccion: "",
+        damageImageBase64: "",
+      },
+      inspectorSignature: {},
+      supervisorSignature: {},
+    },
+  });
 
   const vehicleDamageRef = useRef<VehicleDamageSelectorRef>(null);
 
@@ -61,22 +80,58 @@ export function VehicleInspectionForm({
   }
 
   const handleFormSubmit = async (data: FormDataHerraEquipos) => {
-    if (vehicleDamageRef.current) {
-      const damageImage = await vehicleDamageRef.current.generateBase64();
-      if (damageImage && data.vehicle) {
+  // ✅ Limpiar tempId de damages
+  if (data.vehicle?.damages) {
+    data.vehicle.damages = data.vehicle.damages.map(({ tempId, ...damage }) => damage);
+  }
+
+  // ✅ Generar nueva imagen SOLO si hay daños
+  if (vehicleDamageRef.current) {
+    const damageImage = await vehicleDamageRef.current.generateBase64();
+    
+    if (data.vehicle) {
+      if (damageImage) {
+        // Hay daños: guardar nueva imagen
         data.vehicle.damageImageBase64 = damageImage;
+      } else {
+        // No hay daños: limpiar imagen
+        data.vehicle.damageImageBase64 = undefined;
       }
     }
-    onSubmit(data);
-  };
+  }
+  
+  onSubmit(data);
+};
+
+  useEffect(() => {
+    if (initialData) {
+      console.log("🔄 Cargando datos iniciales:", initialData);
+      reset(initialData);
+      console.log("✅ Datos cargados");
+    }
+  }, [initialData, reset]);
 
   const handleSaveDraftWithImage = async (data: FormDataHerraEquipos) => {
+    // ✅ LIMPIAR tempId de damages ANTES de guardar borrador
+    if (data.vehicle?.damages) {
+      data.vehicle.damages = data.vehicle.damages.map(
+        ({ tempId, ...damage }) => ({
+          type: damage.type,
+          x: damage.x,
+          y: damage.y,
+          timestamp: damage.timestamp,
+        })
+      );
+    }
+
+    // Generar imagen de daños
     if (vehicleDamageRef.current) {
       const damageImage = await vehicleDamageRef.current.generateBase64();
       if (damageImage && data.vehicle) {
         data.vehicle.damageImageBase64 = damageImage;
       }
     }
+
     if (onSaveDraft) {
       onSaveDraft(data);
     }
@@ -107,6 +162,7 @@ export function VehicleInspectionForm({
         errors={errors}
         readonly={readonly}
         setValue={setValue}
+        isEditMode={!!initialData}
       />
 
       {/* Tipo de Inspección y Certificación MSC */}
@@ -336,7 +392,7 @@ export function VehicleInspectionForm({
             <SectionRenderer
               key={section._id || idx}
               section={section}
-              sectionPath={`sections.${idx}`}
+              sectionPath={`responses.section_${idx}`}
               control={control}
               errors={errors}
               formConfig={config}
@@ -355,6 +411,8 @@ export function VehicleInspectionForm({
           damageFieldName="vehicle.damages"
           observationsFieldName="vehicle.damageObservations"
           readonly={readonly}
+          initialDamages={initialData?.vehicle?.damages} // ✅ NUEVO
+          initialImage={initialData?.vehicle?.damageImageBase64} // ✅ NUEVO
         />
       )}
 

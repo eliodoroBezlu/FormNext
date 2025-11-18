@@ -19,12 +19,14 @@ import { getFormConfig } from "./config/form-config.helpers";
 import { ObservationsSection } from "./common/ObservationsSection";
 import { VerificationFields } from "./VerificationsFields";
 import { GroupedQuestionWithGeneralObservation } from "./GroupedQuestionWithGeneralObservation";
+import { useEffect } from "react";
 
 interface GroupedAccessoriesFormProps {
   template: FormTemplateHerraEquipos;
   onSubmit: (data: FormDataHerraEquipos) => void;
   onSaveDraft?: (data: FormDataHerraEquipos) => void;
   readonly?: boolean;
+  initialData?: FormDataHerraEquipos;
 }
 
 export function GroupedAccessoriesForm({
@@ -32,6 +34,7 @@ export function GroupedAccessoriesForm({
   onSubmit,
   onSaveDraft,
   readonly = false,
+  initialData,
 }: GroupedAccessoriesFormProps) {
   const config = getFormConfig(template.code);
 
@@ -41,8 +44,17 @@ export function GroupedAccessoriesForm({
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<FormDataHerraEquipos>();
+
+  useEffect(() => {
+    if (initialData) {
+      console.log("🔄 Cargando datos iniciales:", initialData);
+      reset(initialData);
+      console.log("✅ Datos cargados");
+    }
+  }, [initialData, reset]);
 
   if (!config) {
     return (
@@ -75,6 +87,7 @@ export function GroupedAccessoriesForm({
         errors={errors}
         readonly={readonly}
         setValue={setValue}
+        isEditMode={!!initialData}
       />
       {config.formType === "grouped" && (
         <Paper elevation={3} sx={{ p: 3, mb: 3, border: "2px solid #2196f3" }}>
@@ -178,7 +191,7 @@ export function GroupedAccessoriesForm({
             <GroupedQuestionWithGeneralObservation
               key={`${sectionIndex}-${questionIndex}`}
               question={question}
-              sectionPath={`sections.${sectionIndex}.questions`}
+              sectionPath={`responses.${sectionIndex}.questions`}
               questionIndex={questionIndex}
               control={control}
               errors={errors}

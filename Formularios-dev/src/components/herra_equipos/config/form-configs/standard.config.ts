@@ -7,8 +7,29 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     formName: "Inspección de Amoladora",
     formType: "standard",
     signatures: {
-      inspector: true,
-      supervisor: false,
+      inspector: {
+        enabled: true,
+        title: "NOMBRE DEL RESPONSABLE DE LA INSPECCIÓN",
+        fields: {
+          name: {
+            enabled: true,
+            type: "autocomplete",
+            dataSource: "trabajador",
+            label: "NOMBRE DEL RESPONSABLE DE LA INSPECCIÓN",
+            required: true,
+            fieldName: "inspectorSignature.inspectorName",
+          },
+          signature: {
+            type: "canvas",
+            enabled: true,
+            required: true,
+            fieldName: "inspectorSignature.inspectorSignature",
+          },
+        },
+      },
+      supervisor: {
+        enabled: false,
+      },
     },
     colorCode: {
       enabled: true,
@@ -47,9 +68,32 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     formCode: "1.02.P06.F40",
     formName: "Inspección de Esmeril",
     formType: "standard",
+    
     signatures: {
-      inspector: true,
-      supervisor: false,
+      inspector: {
+        enabled: true,
+        title: "NOMBRE DEL RESPONSABLE DE LA INSPECCIÓN",
+        fields: {
+          name: {
+            enabled: true,
+            type: "autocomplete",
+            dataSource: "trabajador",
+            label: "NOMBRE DEL RESPONSABLE DE LA INSPECCIÓN",
+            required: true,
+            fieldName: "inspectorSignature.inspectorName",
+          },
+          signature: {
+            type: "canvas",
+            enabled: true,
+            required: true,
+            fieldName: "inspectorSignature.inspectorSignature",
+          },
+        },
+      },
+      supervisor: {
+        enabled: false,
+        
+      },
     },
     colorCode: {
       enabled: true,
@@ -81,9 +125,32 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     formCode: "1.02.P06.F42",
     formName: "Inspección de Soldadura",
     formType: "standard",
+    
     signatures: {
-      inspector: true,
-      supervisor: false,
+      inspector: {
+        enabled: true,
+        title: "NOMBRE DEL RESPONSABLE DE LA INSPECCIÓN",
+        fields: {
+          name: {
+            enabled: true,
+            type: "autocomplete",
+            dataSource: "trabajador",
+            label: "NOMBRE DEL RESPONSABLE DE LA INSPECCIÓN",
+            required: true,
+            fieldName: "inspectorSignature.inspectorName",
+          },
+          signature: {
+            type: "canvas",
+            enabled: true,
+            required: true,
+            fieldName: "inspectorSignature.inspectorSignature",
+          },
+        },
+      },
+      supervisor: {
+        enabled: false,
+        
+      },
     },
     colorCode: {
       enabled: true,
@@ -112,8 +179,62 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     formName: "Inspección de Taladro",
     formType: "standard",
     signatures: {
-      inspector: true,
-      supervisor: true,
+      inspector: {
+        enabled: true,
+        title: "NOMBRE DEL RESPONSABLE DE LA INSPECCIÓN",
+        fields: {
+          name: {
+            enabled: true,
+            type: "autocomplete",
+            dataSource: "trabajador",
+            label: "NOMBRE DEL RESPONSABLE DE LA INSPECCIÓN",
+            required: true,
+            fieldName: "inspectorSignature.inspectorName",
+          },
+          signature: {
+            type: "canvas",
+            enabled: true,
+            required: true,
+            heightPercentage: 30,
+            fieldName: "inspectorSignature.inspectorSignature",
+          },
+          date: {
+            enabled: true,
+            type: "date",
+            label: "Fecha",
+            required: true,
+            fieldName: "inspectorSignature.inspectionDate",
+          },
+        },
+      },
+      supervisor: {
+        enabled: true,
+        title: "NOMBRE DEL SUPERVISOR DE LA INSPECCIÓN",
+        fields: {
+          name: {
+            enabled: true,
+            type: "autocomplete",
+            label: "VoBo del  SUPERVISOR DEL ÁREA ( MSC S.A.)",
+            required: true,
+            dataSource: "supervisor",
+            fieldName: "supervisorSignature.supervisorName",
+          },
+          signature: {
+            type: "canvas",
+            enabled: true,
+            required: true,
+            heightPercentage: 30,
+            fieldName: "supervisorSignature.supervisorSignature",
+          },
+          date: {
+            enabled: true,
+            type: "date",
+            label: "Fecha de VoBo del Supervisor",
+            required: true,
+            fieldName: "supervisorSignature.supervisorDate",
+          },
+        },
+      },
     },
     colorCode: {
       enabled: true,
@@ -140,8 +261,50 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     formName: "INSPECCION  DE  MAN LIFT",
     formType: "standard",
     signatures: {
-      inspector: true,
-      supervisor: true,
+      inspector: {
+        enabled: true,
+        //title: "NOMBRE DEL RESPONSABLE DE LA INSPECCIÓN",
+        fields: {
+          name: {
+            enabled: false,
+            type: "autocomplete",
+            dataSource: "OPERADOR",
+            label: "NOMBRE DEL RESPONSABLE DE LA INSPECCIÓN",
+            required: true,
+            fieldName: "inspectorSignature.inspectorName",
+          },
+          signature: {
+            type: "canvas",
+            label: "FIRMA OPERADOR",
+            enabled: true,
+            required: true,
+            heightPercentage: 30,
+            fieldName: "inspectorSignature.inspectorSignature",
+          },
+        },
+      },
+      supervisor: {
+        enabled: true,
+        //title: "NOMBRE DEL SUPERVISOR DE LA INSPECCIÓN",
+        fields: {
+          name: {
+            enabled: false,
+            type: "autocomplete",
+            label: "SUPERVISOR DE ÁREA",
+            required: true,
+            dataSource: "supervisor",
+            fieldName: "supervisorSignature.supervisorName",
+          },
+          signature: {
+            type: "canvas",
+            label: "V°B° SUPERVISOR DE ÁREA",
+            enabled: true,
+            required: true,
+            heightPercentage: 30,
+            fieldName: "supervisorSignature.supervisorSignature",
+          }
+        },
+      },
     },
     colorCode: {
       enabled: false,
@@ -162,13 +325,31 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
 
     outOfService: {
       enabled: true,
+
       label: "Fuera de Servicio:",
       responseType: "yes-no", // Solo SI/NO
       required: false,
-      fields: {
-        showDate: true,
-        dateLabel: "Fecha probable de corrección",
-        dateRequired: false,
+
+      header: {
+        enabled: true,
+
+        fields: [
+          {
+            type: "radioGroup",
+            label: "¿El equipo está fuera de servicio?",
+            required: true,
+            fieldName: "outOfService.status",
+            responseType: "yes-no",
+          },
+          {
+            type: "date",
+            label: "Fecha probable de corrección",
+            required: false,
+            fieldName: "outOfService.fechaCorrecion",
+          },
+
+          
+        ],
       },
     },
     requiresPhotos: false,
@@ -180,8 +361,50 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     formName: "VERIFICACIÓN DE PUENTE GRUA CON CABINA",
     formType: "standard",
     signatures: {
-      inspector: true,
-      supervisor: true,
+      inspector: {
+        enabled: true,
+        title: "NOMBRE DEL RESPONSABLE DE LA INSPECCIÓN",
+        fields: {
+          name: {
+            enabled: true,
+            type: "autocomplete",
+            dataSource: "trabajador",
+            label: "Inspeccionado por ( Nombre y firma)",
+            required: true,
+            fieldName: "inspectorSignature.inspectorName",
+          },
+          signature: {
+            type: "canvas",
+            label: "FIRMA OPERADOR",
+            enabled: true,
+            required: true,
+            heightPercentage: 30,
+            fieldName: "inspectorSignature.inspectorSignature",
+          },
+        },
+      },
+      supervisor: {
+        enabled: true,
+        title: "NOMBRE DEL SUPERVISOR DE LA INSPECCIÓN",
+        fields: {
+          name: {
+            enabled: true,
+            type: "autocomplete",
+            label: "Verificado por ( Nombre y firma)",
+            required: true,
+            dataSource: "supervisor",
+            fieldName: "supervisorSignature.supervisorName",
+          },
+          signature: {
+            type: "canvas",
+            label: "V°B° SUPERVISOR DE ÁREA",
+            enabled: true,
+            required: true,
+            heightPercentage: 30,
+            fieldName: "supervisorSignature.supervisorSignature",
+          }
+        },
+      },
     },
     colorCode: {
       enabled: false,
@@ -209,8 +432,50 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
       "INSPECCION PUENTE GRUA A CONTROL REMOTO Y ACCESORIOS DE IZAJE (Inspección Pre-uso)",
     formType: "standard",
     signatures: {
-      inspector: true,
-      supervisor: true,
+      inspector: {
+        enabled: true,
+        title: "NOMBRE DEL RESPONSABLE DE LA INSPECCIÓN",
+        fields: {
+          name: {
+            enabled: true,
+            type: "autocomplete",
+            dataSource: "OPERADOR",
+            label: "Inspeccionado por ( Nombre y firma)",
+            required: true,
+            fieldName: "inspectorSignature.inspectorName",
+          },
+          signature: {
+            type: "canvas",
+            label: "FIRMA OPERADOR",
+            enabled: true,
+            required: true,
+            heightPercentage: 30,
+            fieldName: "inspectorSignature.inspectorSignature",
+          },
+        },
+      },
+      supervisor: {
+        enabled: true,
+        title: "NOMBRE DEL SUPERVISOR DE LA INSPECCIÓN",
+        fields: {
+          name: {
+            enabled: true,
+            type: "autocomplete",
+            label: "Verificado por ( Nombre y firma)",
+            required: true,
+            dataSource: "supervisor",
+            fieldName: "supervisorSignature.supervisorName",
+          },
+          signature: {
+            type: "canvas",
+            label: "V°B° SUPERVISOR DE ÁREA",
+            enabled: true,
+            required: true,
+            heightPercentage: 30,
+            fieldName: "supervisorSignature.supervisorSignature",
+          }
+        },
+      },
     },
     colorCode: {
       enabled: false,
@@ -255,9 +520,18 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
 
     outOfService: {
       enabled: true,
-      label: "Conclusión:",
-      responseType: "AP-MAN-RECH", // Solo SI/NO
-      required: true,
+      footer: {
+        enabled: true,
+        fields: [
+          {
+            type: "radioGroup",
+            label: "¿El equipo está fuera de servicio?",
+            required: true,
+            fieldName: "outOfService.status",
+            responseType: "AP-MAN-RECH",
+          },
+        ],
+      },
     },
     generalObservations: {
       enabled: true,
@@ -339,8 +613,56 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     formName: "INSPECCIÓN DE CILINDROS PARA GASES COMPRIMIDOS",
     formType: "standard",
     signatures: {
-      inspector: true,
-      supervisor: true,
+      inspector: {
+        enabled: true,
+        title: "NOMBRE DEL RESPONSABLE DE LA INSPECCIÓN",
+        fields: {
+          name: {
+            enabled: true,
+            type: "autocomplete",
+            dataSource: "trabajador",
+            label: "Nombre y firma del responsable del trabajo que realiza la inspección",
+            required: true,
+            fieldName: "inspectorSignature.inspectorName",
+          },
+          signature: {
+            type: "canvas",
+            enabled: true,
+            required: true,
+            heightPercentage: 30,
+            fieldName: "inspectorSignature.inspectorSignature",
+          },
+        },
+      },
+      supervisor: {
+        enabled: true,
+        title: "NOMBRE DEL SUPERVISOR DE LA INSPECCIÓN",
+        fields: {
+          name: {
+            enabled: true,
+            type: "autocomplete",
+            label: "Nombre del Supervisor que recibe y aprueba el check list de inspección",
+            required: true,
+            dataSource: "supervisor",
+            fieldName: "supervisorSignature.supervisorName",
+          },
+          signature: {
+            type: "canvas",
+            label: "FIRMA",
+            enabled: true,
+            required: true,
+            heightPercentage: 30,
+            fieldName: "supervisorSignature.supervisorSignature",
+          },
+          date: {
+            enabled: true,
+            type: "date",
+            label: "Fecha:",
+            required: true,
+            fieldName: "supervisorSignature.supervisorDate",
+          },
+        },
+      },
     },
     colorCode: {
       enabled: false,
@@ -379,41 +701,40 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
         fields: {
           name: {
             enabled: true,
-            type: 'autocomplete',
+            type: "autocomplete",
             dataSource: "trabajador",
             label: "NOMBRE DEL RESPONSABLE DE LA INSPECCIÓN",
             required: true,
-            fieldName: "verification.inspectorName",
+            fieldName: "inspectorSignature.inspectorName",
           },
           signature: {
-            type: 'canvas',
+            type: "canvas",
             enabled: true,
             required: true,
-            fieldName: "verification.inspectorSignature",
+            fieldName: "inspectorSignature.inspectorSignature",
           },
         },
       },
       supervisor: {
         enabled: true,
-        title:"NOMBRE DEL SUPERVISOR DE LA INSPECCIÓN",
+        title: "NOMBRE DEL SUPERVISOR DE LA INSPECCIÓN",
         fields: {
           name: {
             enabled: true,
-            type: 'autocomplete',
-            label:"NOMBRE DEL SUPERVISOR DE LA INSPECCIÓN",
+            type: "autocomplete",
+            label: "NOMBRE DEL SUPERVISOR DE LA INSPECCIÓN",
             required: true,
             dataSource: "supervisor",
-            fieldName: "verification.supervisorName",
+            fieldName: "supervisorSignature.supervisorName",
           },
           signature: {
-            type: 'canvas',
+            type: "canvas",
             enabled: true,
             required: true,
             heightPercentage: 30,
-            fieldName: "verification.supervisorSignature",
+            fieldName: "supervisorSignature.supervisorSignature",
           },
           // Campo custom para supervisor
-          
         },
       },
     },

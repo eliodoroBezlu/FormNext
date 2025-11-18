@@ -9,15 +9,14 @@ import {
   Alert,
 } from "@mui/material";
 import { UseFormRegister, FieldErrors } from "react-hook-form";
-import { CheckCircle, Cancel } from "@mui/icons-material";
 import { ConclusionConfig, FormDataHerraEquipos } from "./types/IProps";
 
 interface ScaffoldConclusionSectionProps {
   config: ConclusionConfig;
   register: UseFormRegister<FormDataHerraEquipos>;
   errors: FieldErrors<FormDataHerraEquipos>;
-  value?: "liberated" | "not_liberated";
-  onChange?: (value: "liberated" | "not_liberated") => void;
+  value?: "liberado" | "no_liberado";
+  onChange?: (value: "liberado" | "no_liberado") => void;
   readonly?: boolean;
 }
 
@@ -44,7 +43,7 @@ export function ScaffoldConclusionSection({
       <FormControl component="fieldset" fullWidth disabled={readonly}>
         <RadioGroup
           value={value || ""}
-          onChange={(e) => onChange?.(e.target.value as "liberated" | "not_liberated")}
+          onChange={(e) => onChange?.(e.target.value as "liberado" | "no_liberado")}
         >
           {/* Opción: NO Liberado */}
           <Box
@@ -52,9 +51,9 @@ export function ScaffoldConclusionSection({
               mb: 2,
               p: 2,
               border: 2,
-              borderColor: value === "not_liberated" ? options.notLiberatedColor : "grey.300",
+              borderColor: value === "no_liberado" ? options.notLiberatedColor : "grey.300",
               borderRadius: 1,
-              backgroundColor: value === "not_liberated" ? `${options.notLiberatedColor}15` : "transparent",
+              backgroundColor: value === "no_liberado" ? `${options.notLiberatedColor}15` : "transparent",
               transition: "all 0.2s",
               "&:hover": {
                 borderColor: options.notLiberatedColor,
@@ -63,7 +62,7 @@ export function ScaffoldConclusionSection({
             }}
           >
             <FormControlLabel
-              value="not_liberated"
+              value="no_liberado"
               control={
                 <Radio
                   sx={{
@@ -72,29 +71,42 @@ export function ScaffoldConclusionSection({
                       color: options.notLiberatedColor,
                     },
                   }}
-                  icon={<Cancel />}
-                  checkedIcon={<Cancel />}
                 />
               }
               label={
-                <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: value === "not_liberated" ? 600 : 400 }}>
-                    Alguno de los ítems arriba mencionados marcó en la columna NO.
-                  </Typography>
-                </Box>
+                <Typography variant="body2" sx={{ fontWeight: value === "no_liberado" ? 600 : 400 }}>
+                  Alguno de los ítems arriba mencionados marcó en la columna NO.
+                </Typography>
               }
             />
-            <Alert
-              severity="error"
+            
+            <Box
               sx={{
                 mt: 1,
                 ml: 4,
-                backgroundColor: `${options.notLiberatedColor}10`,
-                "& .MuiAlert-icon": { color: options.notLiberatedColor },
+                p: 1.5,
+                borderRadius: 1,
+                backgroundColor: value === "no_liberado" 
+                  ? `${options.notLiberatedColor}15` 
+                  : 'grey.50',
+                border: 1,
+                borderColor: value === "no_liberado" 
+                  ? options.notLiberatedColor 
+                  : 'grey.200',
+                opacity: value === "no_liberado" ? 1 : 0.6,
+                transition: 'all 0.2s'
               }}
             >
-              {options.notLiberatedLabel}
-            </Alert>
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  fontWeight: value === "no_liberado" ? 600 : 400,
+                  color: value === "no_liberado" ? options.notLiberatedColor : 'text.secondary'
+                }}
+              >
+                <strong>Acción:</strong> {options.notLiberatedLabel}
+              </Typography>
+            </Box>
           </Box>
 
           {/* Opción: Liberado */}
@@ -102,9 +114,9 @@ export function ScaffoldConclusionSection({
             sx={{
               p: 2,
               border: 2,
-              borderColor: value === "liberated" ? options.liberatedColor : "grey.300",
+              borderColor: value === "liberado" ? options.liberatedColor : "grey.300",
               borderRadius: 1,
-              backgroundColor: value === "liberated" ? `${options.liberatedColor}15` : "transparent",
+              backgroundColor: value === "liberado" ? `${options.liberatedColor}15` : "transparent",
               transition: "all 0.2s",
               "&:hover": {
                 borderColor: options.liberatedColor,
@@ -113,7 +125,7 @@ export function ScaffoldConclusionSection({
             }}
           >
             <FormControlLabel
-              value="liberated"
+              value="liberado"
               control={
                 <Radio
                   sx={{
@@ -122,29 +134,42 @@ export function ScaffoldConclusionSection({
                       color: options.liberatedColor,
                     },
                   }}
-                  icon={<CheckCircle />}
-                  checkedIcon={<CheckCircle />}
                 />
               }
               label={
-                <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: value === "liberated" ? 600 : 400 }}>
-                    Todas las los ítems arriba mencionados cumplen marcaron en la columna SI.
-                  </Typography>
-                </Box>
+                <Typography variant="body2" sx={{ fontWeight: value === "liberado" ? 600 : 400 }}>
+                  Todas las los ítems arriba mencionados cumplen marcaron en la columna SI.
+                </Typography>
               }
             />
-            <Alert
-              severity="success"
+            
+            <Box
               sx={{
                 mt: 1,
                 ml: 4,
-                backgroundColor: `${options.liberatedColor}10`,
-                "& .MuiAlert-icon": { color: options.liberatedColor },
+                p: 1.5,
+                borderRadius: 1,
+                backgroundColor: value === "liberado" 
+                  ? `${options.liberatedColor}15` 
+                  : 'grey.50',
+                border: 1,
+                borderColor: value === "liberado" 
+                  ? options.liberatedColor 
+                  : 'grey.200',
+                opacity: value === "liberado" ? 1 : 0.6,
+                transition: 'all 0.2s'
               }}
             >
-              {options.liberatedLabel}
-            </Alert>
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  fontWeight: value === "liberado" ? 600 : 400,
+                  color: value === "liberado" ? options.liberatedColor : 'text.secondary'
+                }}
+              >
+                <strong>Acción:</strong> {options.liberatedLabel}
+              </Typography>
+            </Box>
           </Box>
         </RadioGroup>
       </FormControl>

@@ -34,7 +34,6 @@ export function StandardInspectionForm({
 }: StandardInspectionFormProps) {
   const config = getFormConfig(template.code);
 
-  // ✅ Estado para múltiples selectores: { "Section.Subsection": ["item1", "item2"] }
   const [selectedItems, setSelectedItems] = useState<Record<string, string[]>>(
     initialData?.selectedItems || {}
   );
@@ -45,17 +44,22 @@ export function StandardInspectionForm({
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<FormDataHerraEquipos>({
     defaultValues: initialData,
   });
 
-  // ✅ Hook movido fuera del condicional
+  useEffect(() => {
+    if (initialData) {
+      reset(initialData);
+    }
+  }, [initialData, reset]);
+
   useEffect(() => {
     setValue("selectedItems", selectedItems);
   }, [selectedItems, setValue]);
 
-  // ✅ Helper functions definidas fuera de los hooks
   const initDefaults = (items: SelectableItemConfig[]): Record<string, string[]> => {
     const defaults: Record<string, string[]> = {};
     
@@ -63,7 +67,6 @@ export function StandardInspectionForm({
       if (item.defaultSelected && item.defaultSelected.length > 0) {
         defaults[item.sectionTitle] = item.defaultSelected;
       }
-      // Recursión para items anidados
       if (item.nested) {
         Object.assign(defaults, initDefaults(item.nested));
       }
@@ -82,7 +85,6 @@ export function StandardInspectionForm({
     return allConfigs;
   };
 
-  // ✅ Inicializar valores por defecto de los selectores (solo una vez)
   useEffect(() => {
     if (
       config?.sectionSelector?.enabled && 
@@ -92,8 +94,9 @@ export function StandardInspectionForm({
       const defaultSelections = initDefaults(config.sectionSelector.items);
       setSelectedItems(defaultSelections);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config?.sectionSelector?.enabled]); // Solo depende de si está habilitado
+  }, [config?.sectionSelector?.enabled]);
+
+  
 
   if (!config) {
     return (
@@ -105,7 +108,6 @@ export function StandardInspectionForm({
     );
   }
 
-  // ✅ Handler para actualizar selecciones
   const handleSelectionChange = (path: string, selected: string[]) => {
     setSelectedItems(prev => ({
       ...prev,
@@ -113,13 +115,11 @@ export function StandardInspectionForm({
     }));
   };
 
-  // ✅ Filtrar secciones según selecciones
   const visibleSections = config.sectionSelector?.enabled
     ? filterSectionsBySelections(template.sections, selectedItems)
     : template.sections;
 
   const handleFormSubmit = (data: FormDataHerraEquipos) => {
-    // Validar selectores requeridos
     if (config.sectionSelector?.enabled && config.sectionSelector.items) {
       const allConfigs = getAllConfigs(config.sectionSelector.items);
       const validation = validateRequiredSelections(selectedItems, allConfigs);
@@ -160,6 +160,7 @@ export function StandardInspectionForm({
         errors={errors}
         readonly={readonly}
         setValue={setValue}
+        isEditMode={!!initialData}
       />
 
       {config.alert && <AlertSection config={config.alert} />}
@@ -174,7 +175,6 @@ export function StandardInspectionForm({
         />
       )}
 
-      {/* ✅ Selectores dinámicos y recursivos */}
       {config.sectionSelector?.enabled && config.sectionSelector.items && !readonly && (
         <Box>
           {config.sectionSelector.items.map((itemConfig, idx) => (
@@ -190,7 +190,6 @@ export function StandardInspectionForm({
         </Box>
       )}
 
-      {/* Renderizar secciones filtradas */}
       {visibleSections.length > 0 && (
         <Box>
           {visibleSections.map((section, idx) => {
@@ -202,7 +201,7 @@ export function StandardInspectionForm({
               <SectionRenderer
                 key={section._id || idx}
                 section={section}
-                sectionPath={`sections.${originalIndex}`}
+                sectionPath={`responses.section_${originalIndex}`}
                 control={control}
                 errors={errors}
                 formConfig={config}
@@ -210,6 +209,19 @@ export function StandardInspectionForm({
               />
             );
           })}
+        </Box>
+      )}
+
+      {config.outOfService?.enabled && (
+        <Box>
+          <OutOfServiceSection
+            config={config.outOfService}
+            register={register}
+            control={control}
+            errors={errors}
+            readonly={readonly}
+            section="footer"
+          />
         </Box>
       )}
 
@@ -221,13 +233,8 @@ export function StandardInspectionForm({
         />
       )}
 
-      {config.outOfService?.enabled && (
-        <OutOfServiceSection
-          config={config.outOfService}
-          register={register}
-          errors={errors}
-        />
-      )}
+      {/* ✅ DEBUG: Mostrar visualmente si debe renderizarse */}
+      
 
       {config.signatures?.inspector && (
         <InspectorSignature 

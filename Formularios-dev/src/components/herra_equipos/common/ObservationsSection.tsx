@@ -8,9 +8,10 @@ interface ObservationsSectionProps {
   config: GeneralObservationsConfig
   register: UseFormRegister<FormDataHerraEquipos>
   errors: FieldErrors<FormDataHerraEquipos>
+  readonly?: boolean
 }
 
-export function ObservationsSection({ config, register, errors }: ObservationsSectionProps) {
+export function ObservationsSection({ config, register, errors, readonly=false }: ObservationsSectionProps) {
   if (!config.enabled) {
     return null
   }
@@ -20,7 +21,7 @@ export function ObservationsSection({ config, register, errors }: ObservationsSe
     : "Observaciones generales (Opcional)"
 
   return (
-    <Paper elevation={2} sx={{ p: 3 }}>
+     <Paper elevation={2} sx={{ p: 3 }}>
       <Typography variant="h6" gutterBottom>
         {config.label || defaultLabel}
       </Typography>
@@ -32,7 +33,7 @@ export function ObservationsSection({ config, register, errors }: ObservationsSe
         rows={4}
         fullWidth
         required={config.required}
-        {...register("verification.conclusion", {
+        {...register("generalObservations", { // ✅ Cambio aquí
           required: config.required ? "Las observaciones son obligatorias" : false,
           minLength: config.required ? {
             value: 10,
@@ -43,9 +44,9 @@ export function ObservationsSection({ config, register, errors }: ObservationsSe
             message: `Las observaciones no deben exceder ${config.maxLength} caracteres`,
           } : undefined,
         })}
-        error={!!errors.verification?.conclusion}
+        error={!!errors.generalObservations} // ✅ Cambio aquí
         helperText={
-          errors.verification?.conclusion?.message as string || 
+          errors.generalObservations?.message as string || // ✅ Cambio aquí
           config.helperText || 
           undefined
         }

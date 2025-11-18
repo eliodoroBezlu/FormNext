@@ -1,13 +1,14 @@
 "use client";
 
 import { TextField, Typography, Paper, Box } from "@mui/material";
-import type {
-  Control,
-  UseFormRegister,
-  UseFormSetValue,
-  FieldErrors,
-  FieldValues,
-  Path,
+import {
+  type Control,
+  type UseFormRegister,
+  type UseFormSetValue,
+  type FieldErrors,
+  type FieldValues,
+  type Path,
+  Controller,
 } from "react-hook-form";
 import type {
   FormDataHerraEquipos,
@@ -17,6 +18,7 @@ import type {
 import dynamic from "next/dynamic";
 import { SignatureFieldProps } from "@/components/molecules/team-member-signature/SigantureField";
 import { DataSourceType } from "@/lib/actions/dataSourceService";
+import dayjs from "dayjs";
 
 // ✅ Importar solo los componentes necesarios
 const AutocompleteCustom = dynamic(
@@ -39,6 +41,7 @@ interface SupervisorSignatureProps {
   setValue: UseFormSetValue<FormDataHerraEquipos>;
   errors: FieldErrors<FormDataHerraEquipos>;
   config?: SignatureConfig["supervisor"];
+  readonly?: boolean;
 }
 
 export function SupervisorSignature({
@@ -47,6 +50,7 @@ export function SupervisorSignature({
   setValue,
   errors,
   config,
+  readonly = false,
 }: SupervisorSignatureProps) {
   // Si está deshabilitado, no renderizar
   if (config === false || config === undefined) {
@@ -65,7 +69,7 @@ export function SupervisorSignature({
           label: "Nombre del Supervisor",
           placeholder: "Ingrese nombre completo",
           required: true,
-          fieldName: "verification.supervisorName",
+          fieldName: "supervisorSignature.supervisorName",
         },
         signature: {
           enabled: true,
@@ -73,7 +77,7 @@ export function SupervisorSignature({
           label: "Firma",
           placeholder: "Firma digital o código",
           required: true,
-          fieldName: "verification.supervisorSignature",
+          fieldName: "supervisorSignature.supervisorSignature",
         },
       },
     };
@@ -87,74 +91,108 @@ export function SupervisorSignature({
   const fields = config.fields || {};
 
   // Helper para renderizar cada campo según su tipo
-  const renderField = (key: string, field: SignatureFieldConfig) => {
-    if (!field || !field.enabled) return null;
+ const renderField = (key: string, field: SignatureFieldConfig) => {
+  if (!field || !field.enabled) return null;
 
-    const fieldName = field.fieldName || `verification.supervisor_${key}`;
-    const fieldKey = fieldName.split(".")[1];
-    const fieldType = field.type || "text";
+  const fieldName =
+    field.fieldName || `supervisorSignature.${key}`;
+  const fieldKey = fieldName.split(".")[1];
+  const fieldType = field.type || "text";
 
-    const commonProps = {
-      label: field.label || key,
-      placeholder: field.placeholder || "",
-      required: field.required || false,
-      error:
-        !!errors.verification?.[fieldKey as keyof typeof errors.verification],
-      helperText: errors.verification?.[
-        fieldKey as keyof typeof errors.verification
-      ]?.message as string | undefined,
-    };
+  const commonProps = {
+    label: field.label || key,
+    placeholder: field.placeholder || "",
+    required: field.required || false,
+    error:
+      !!errors.supervisorSignature?.[
+        fieldKey as keyof typeof errors.supervisorSignature
+      ],
+    helperText: errors.supervisorSignature?.[
+      fieldKey as keyof typeof errors.supervisorSignature
+    ]?.message as string | undefined,
+  };
 
     switch (fieldType) {
       case "autocomplete":
         return (
-          <AutocompleteCustom
-            key={key}
-            {...commonProps}
-            dataSource={field.dataSource as DataSourceType | undefined}
-            value={undefined}
-            onChange={(value: string | null) => {
-              setValue(
-                fieldName as Path<FormDataHerraEquipos>, 
-                value as FormDataHerraEquipos[keyof FormDataHerraEquipos]
-              );
-            }}
+          <Controller
+            name={fieldName as Path<FormDataHerraEquipos>}
+            control={control}
+            defaultValue=""
+            render={({ field: controllerField }) => (
+              <AutocompleteCustom
+                {...commonProps}
+                value={controllerField.value as string | null}
+                onChange={(value: string | null) => {
+                  controllerField.onChange(value);
+                }}
+                dataSource={field.dataSource as DataSourceType | undefined}
+              />
+            )}
           />
         );
 
       case "canvas":
         return (
-          <Box key={key}>
-            <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-              {field.label || "Firma"}
-              {field.required && <span style={{ color: "red" }}> *</span>}
-            </Typography>
-            <SignatureField<FormDataHerraEquipos>
-              fieldName={fieldName as Path<FormDataHerraEquipos>}
-              control={control}
-              setValue={setValue}
-              heightPercentage={field.heightPercentage || 60}
-              error={commonProps.error}
-              helperText={commonProps.helperText}
-            />
-          </Box>
+          <Controller
+            name={fieldName as Path<FormDataHerraEquipos>}
+            control={control}
+            defaultValue=""
+            render={({ field: controllerField }) => (
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                  {field.label || "Firma"}
+                  {field.required && <span style={{ color: "red" }}> *</span>}
+                </Typography>
+                <SignatureField<FormDataHerraEquipos>
+                  fieldName={fieldName as Path<FormDataHerraEquipos>}
+                  control={control}
+                  setValue={setValue}
+                  heightPercentage={field.heightPercentage || 60}
+                  error={commonProps.error}
+                  helperText={commonProps.helperText}
+                  value={controllerField.value as string}
+                  onChange={controllerField.onChange}
+                />
+              </Box>
+            )}
+          />
         );
 
       case "date":
+  return (
+    <Controller
+      name={fieldName as Path<FormDataHerraEquipos>}
+      control={control}
+      defaultValue={dayjs().format("YYYY-MM-DD")} // ✅ Fecha de hoy por defecto
+      render={({ field: controllerField }) => {
+        // ✅ Si no hay valor, setear la fecha de hoy automáticamente
+        if (!controllerField.value) {
+          controllerField.onChange(dayjs().format("YYYY-MM-DD"));
+        }
+        
         return (
           <TextField
-            key={key}
-            type="date"
-            InputLabelProps={{ shrink: true }}
-            fullWidth
             {...commonProps}
-            {...register(fieldName as Path<FormDataHerraEquipos>, {
-              required: field.required
-                ? `${field.label || key} es obligatorio`
-                : false,
-            })}
+            type="date"
+            fullWidth
+            value={controllerField.value || dayjs().format("YYYY-MM-DD")}
+            InputProps={{
+              readOnly: true, // ✅ No se puede modificar
+            }}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            sx={{
+              "& .MuiInputBase-input": {
+                cursor: "default", // ✅ Cursor normal en lugar de texto
+              },
+            }}
           />
         );
+      }}
+    />
+  );
 
       case "text":
       default:
@@ -192,23 +230,33 @@ export function SupervisorSignature({
   }
 
   return (
-    <Paper elevation={2} sx={{ p: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        {config.title || "Firma del Supervisor"}
-      </Typography>
+  <Paper elevation={2} sx={{ p: 3 }}>
+    <Typography variant="h6" gutterBottom>
+      {config.title || ""}
+    </Typography>
 
-      <Box
-        sx={{
-          display: "grid",
-          gap: 2,
-          gridTemplateColumns: {
-            xs: "1fr",
-            md: allFields.length === 1 ? "1fr" : "repeat(2, 1fr)",
-          },
-        }}
-      >
-        {allFields.map((item) => item && renderField(item.key, item.field))}
-      </Box>
-    </Paper>
-  );
+    <Box
+      sx={{
+        display: "grid",
+        gap: 2,
+        gridTemplateColumns: {
+          xs: "1fr",
+          md: allFields.length === 1 ? "1fr" : "repeat(2, 1fr)",
+        },
+      }}
+    >
+      {allFields.map((item) => 
+        item && (
+          <Box key={item.key}>
+            {renderField(item.key, item.field)}
+          </Box>
+        )
+      )}
+    </Box>
+  </Paper>
+);
+
+
+
+
 }

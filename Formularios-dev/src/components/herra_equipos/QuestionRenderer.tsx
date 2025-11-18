@@ -6,7 +6,6 @@ import {
   Control,
   FieldErrors,
   FieldPath,
-  PathValue,
 } from "react-hook-form";
 import {
   Box,
@@ -39,7 +38,7 @@ interface QuestionRendererProps<
   control: Control<T>;
   errors: FieldErrors<T>;
   readonly?: boolean;
-  formConfig: FormFeatureConfig; // ✅ Solo el config completo
+  formConfig: FormFeatureConfig;
 }
 
 export const QuestionRenderer = <
@@ -51,11 +50,11 @@ export const QuestionRenderer = <
   control,
   errors,
   readonly = false,
-  formConfig, // ✅ Recibimos el config completo
+  formConfig,
 }: QuestionRendererProps<T>) => {
   const fieldName = `${sectionPath}.q${questionIndex}` as FieldPath<T>;
 
-  // ✅ Extraer configuraciones del formConfig
+  // Extraer configuraciones del formConfig
   const descriptionConfig = formConfig.questionDescription;
   const observationConfig = formConfig.questionObservations;
 
@@ -73,7 +72,7 @@ export const QuestionRenderer = <
     observationConfig?.placeholder ?? "Ingrese observaciones adicionales...";
 
   const error = getNestedError(errors, `${fieldName}.value`);
-  const descripcionError = getNestedError(errors, `${fieldName}.descripcion`);
+  const descripcionError = getNestedError(errors, `${fieldName}.description`);
   const observacionError = getNestedError(errors, `${fieldName}.observacion`);
 
   // Helper para obtener el valor actual
@@ -97,7 +96,7 @@ export const QuestionRenderer = <
     };
   };
 
-  // ✅ Helper para actualizar la descripción
+  // Helper para actualizar la descripción
   const updateDescripcion = (
     currentFieldValue: unknown,
     newDescripcion: string
@@ -123,7 +122,7 @@ export const QuestionRenderer = <
     };
   };
 
-  // ✅ Campo de DESCRIPCIÓN
+  // Campo de DESCRIPCIÓN
   const renderDescripcionField = () => {
     if (!showDescription) return null;
 
@@ -168,7 +167,7 @@ export const QuestionRenderer = <
     );
   };
 
-  // ✅ Campo de OBSERVACIONES
+  // Campo de OBSERVACIONES
   const renderObservacionField = () => {
     if (!showObservations) return null;
 
@@ -220,68 +219,6 @@ export const QuestionRenderer = <
     switch (type) {
       case "si_no_na":
       case "bueno_malo_na":
-        return (
-          <>
-            <Controller
-              name={fieldName}
-              control={control}
-              defaultValue={
-                { value: "", descripcion: "", observacion: "" } as PathValue<
-                  T,
-                  typeof fieldName
-                >
-              }
-              rules={{
-                validate: question.obligatorio
-                  ? (value) => {
-                      const response = getCurrentValue(value);
-                      return (
-                        response.value !== "" || "Este campo es obligatorio"
-                      );
-                    }
-                  : undefined,
-              }}
-              render={({ field }) => {
-                const current = getCurrentValue(field.value);
-                const displayOptions = options || [];
-
-                return (
-                  <FormControl error={!!error} fullWidth>
-                    <RadioGroup
-                      value={current.value || ""}
-                      onChange={(e) =>
-                        field.onChange(updateValue(field.value, e.target.value))
-                      }
-                      row
-                    >
-                      {displayOptions.map((option) => (
-                        <FormControlLabel
-                          key={String(option.value)}
-                          value={option.value}
-                          control={<Radio disabled={readonly} />}
-                          label={
-                            <Chip
-                              label={option.label}
-                              size="small"
-                              sx={{
-                                backgroundColor: option.color || "default",
-                                color: "white",
-                              }}
-                            />
-                          }
-                        />
-                      ))}
-                    </RadioGroup>
-                    {error && <FormHelperText>{error.message}</FormHelperText>}
-                  </FormControl>
-                );
-              }}
-            />
-            {renderDescripcionField()}
-            {renderObservacionField()}
-          </>
-        );
-
       case "bien_mal":
       case "operativo_mantenimiento":
         return (
@@ -289,12 +226,7 @@ export const QuestionRenderer = <
             <Controller
               name={fieldName}
               control={control}
-              defaultValue={
-                { value: "", descripcion: "", observacion: "" } as PathValue<
-                  T,
-                  typeof fieldName
-                >
-              }
+              // ✅ ELIMINADO defaultValue - React Hook Form maneja esto con reset()
               rules={{
                 validate: question.obligatorio
                   ? (value) => {
@@ -345,18 +277,14 @@ export const QuestionRenderer = <
             {renderObservacionField()}
           </>
         );
+
       case "text":
         return (
           <>
             <Controller
               name={fieldName}
               control={control}
-              defaultValue={
-                { value: "", descripcion: "", observacion: "" } as PathValue<
-                  T,
-                  typeof fieldName
-                >
-              }
+              // ✅ ELIMINADO defaultValue
               rules={{
                 validate: question.obligatorio
                   ? (value) => {
@@ -396,12 +324,7 @@ export const QuestionRenderer = <
             <Controller
               name={fieldName}
               control={control}
-              defaultValue={
-                { value: "", descripcion: "", observacion: "" } as PathValue<
-                  T,
-                  typeof fieldName
-                >
-              }
+              // ✅ ELIMINADO defaultValue
               rules={{
                 validate: question.obligatorio
                   ? (value) => {
@@ -443,12 +366,7 @@ export const QuestionRenderer = <
             <Controller
               name={fieldName}
               control={control}
-              defaultValue={
-                { value: "", descripcion: "", observacion: "" } as PathValue<
-                  T,
-                  typeof fieldName
-                >
-              }
+              // ✅ ELIMINADO defaultValue
               rules={{
                 validate: (value) => {
                   const response = getCurrentValue(value);
@@ -502,12 +420,7 @@ export const QuestionRenderer = <
             <Controller
               name={fieldName}
               control={control}
-              defaultValue={
-                { value: "", descripcion: "", observacion: "" } as PathValue<
-                  T,
-                  typeof fieldName
-                >
-              }
+              // ✅ ELIMINADO defaultValue
               render={({ field }) => {
                 const current = getCurrentValue(field.value);
                 return (
@@ -539,12 +452,7 @@ export const QuestionRenderer = <
             <Controller
               name={fieldName}
               control={control}
-              defaultValue={
-                { value: "", descripcion: "", observacion: "" } as PathValue<
-                  T,
-                  typeof fieldName
-                >
-              }
+              // ✅ ELIMINADO defaultValue
               rules={{
                 validate: question.obligatorio
                   ? (value) => {

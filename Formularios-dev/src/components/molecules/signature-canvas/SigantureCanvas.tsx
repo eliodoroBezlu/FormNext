@@ -28,13 +28,17 @@ const DynamicSignatureCanvas = forwardRef<
     const updateDimensions = () => {
       if (containerRef.current) {
         const { width } = containerRef.current.getBoundingClientRect();
+        const calculatedHeight = width * (heightPercentage / 100);
         setDimensions({
           width,
-          height: width * (heightPercentage / 100),
+          height: calculatedHeight > 0 ? calculatedHeight : 200, // ✅ Altura mínima de 200px
         });
       }
     };
 
+    // ✅ Pequeño delay para asegurar que el contenedor esté montado
+    setTimeout(updateDimensions, 0);
+    
     updateDimensions();
     window.addEventListener("resize", updateDimensions);
     return () => window.removeEventListener("resize", updateDimensions);
@@ -75,8 +79,12 @@ const DynamicSignatureCanvas = forwardRef<
           border: error ? "1px solid #d32f2f" : "1px solid #ccc",
           borderRadius: 2,
           width: "100%",
-          height: "25%",
+          height: dimensions.height || 200, // ✅ Altura por defecto si no hay dimensiones
           mb: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
         }}
       >
         <SignatureCanvas
@@ -89,12 +97,13 @@ const DynamicSignatureCanvas = forwardRef<
             }
           }}
           canvasProps={{
-            width: dimensions.width,
-            height: dimensions.height,
+            width: dimensions.width || 300, // ✅ Ancho por defecto
+            height: dimensions.height || 200, // ✅ Alto por defecto
             className: "sigCanvas",
             style: { 
               touchAction: 'none',
-              userSelect: 'none'
+              userSelect: 'none',
+              display: 'block',
             }
           }}
           throttle={16}
@@ -136,7 +145,6 @@ const DynamicSignatureCanvas = forwardRef<
             onClick={handleSave}
             variant="contained"
             fullWidth
-            // ✅ Cambiar color y texto según estado
             color={isSaved ? "success" : showWarning ? "warning" : "primary"}
             startIcon={isSaved ? <CheckCircle /> : undefined}
             sx={{

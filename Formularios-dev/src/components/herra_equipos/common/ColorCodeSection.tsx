@@ -10,6 +10,7 @@ interface ColorCodeSectionProps {
   setValue: UseFormSetValue<FormDataHerraEquipos>
   watch: UseFormWatch<FormDataHerraEquipos>
   errors: FieldErrors<FormDataHerraEquipos>
+  readonly?: boolean
 }
 
 const COLOR_OPTIONS = [
@@ -26,7 +27,7 @@ const TRIMESTRE_OPTIONS = [
   { value: "4", label: "Cuarto Trimestre (Oct-Dic)" },
 ]
 
-export function ColorCodeSection({ config, setValue, watch, errors }: ColorCodeSectionProps) {
+export function ColorCodeSection({ config, setValue, watch, errors, readonly = false }: ColorCodeSectionProps) {
   if (!config.enabled) {
     return null
   }
@@ -47,6 +48,7 @@ export function ColorCodeSection({ config, setValue, watch, errors }: ColorCodeS
             value={selectedColor || ""}
             label="Color"
             onChange={(e) => setValue("verification.codigoColor", e.target.value)}
+            disabled={readonly}
           >
             {COLOR_OPTIONS.map((option) => (
               <MenuItem key={option.value} value={option.value}>
@@ -77,6 +79,7 @@ export function ColorCodeSection({ config, setValue, watch, errors }: ColorCodeS
               value={selectedTrimestre || ""}
               label="Trimestre"
               onChange={(e) => setValue("verification.trimestre", e.target.value)}
+              disabled={readonly}
             >
               {TRIMESTRE_OPTIONS.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
