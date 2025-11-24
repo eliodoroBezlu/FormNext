@@ -21,7 +21,7 @@ import { Visibility as VisibilityIcon, PictureAsPdf as PdfIcon, TableChart as Ex
 import { useRouter } from "next/navigation"
 import type { FormDataExport } from "@/types/formTypes"
 import { obtenerTodasInspecciones } from "@/app/actions/inspeccion"
-import { descargarExcelCliente, descargarPdfCliente } from "@/app/actions/client"
+import { descargarExcelCliente, descargarPdfCliente } from "@/lib/actions/client"
 
 export default function ListaInspecciones (){
   const [inspecciones, setInspecciones] = useState<FormDataExport[]>([])

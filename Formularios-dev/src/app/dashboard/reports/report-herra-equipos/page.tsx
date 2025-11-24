@@ -52,7 +52,7 @@ import {
   getInspectionsHerraEquipos,
   InspectionResponse,
 } from "@/lib/actions/inspection-herra-equipos";
-import { descargarExcelHerraEquipoCliente, descargarPdfHerraEquipoCliente } from "@/app/actions/client";
+import { descargarExcelHerraEquipoCliente, descargarPdfHerraEquipoCliente } from "@/lib/actions/client";
 
 // Estados de formularios
 // const ESTADOS_FORMULARIO = [

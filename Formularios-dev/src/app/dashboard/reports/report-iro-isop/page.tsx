@@ -45,7 +45,7 @@ import {
   getInstances,
   GetInstancesFilters,
 } from "@/lib/actions/instance-actions";
-import { descargarExcelIroIsopCliente, descargarPdfIroIsopCliente } from "@/app/actions/client";
+import { descargarExcelIroIsopCliente, descargarPdfIroIsopCliente } from "@/lib/actions/client";
 import AutocompleteCustom from "@/components/molecules/autocomplete-custom/AutocompleteCustom";
 
 // Estados de formularios

@@ -40,7 +40,7 @@ import { useRouter } from "next/navigation"
 import { 
   descargarExcelInspeccionesEmergenciaCliente, 
   descargarPdfInspeccionesEmergenciaCliente
-} from "@/app/actions/client"
+} from "@/lib/actions/client"
 import { buscarAreas, obtenerExtintoresPorArea, obtenerSistemasEmergenciaReport } from "@/app/actions/inspeccion"
 
 import type { ExtintorBackend, FiltrosInspeccion, InspeccionServiceExport } from "@/types/formTypes"
