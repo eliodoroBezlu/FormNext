@@ -131,4 +131,9 @@ export const FAMILIAS_PELIGRO = [
 ];
 
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL 
+export const API_BASE_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"; 
+
+if (typeof window !== 'undefined') {
+  console.log('🔍 NEXT_PUBLIC_API_URL desde constants:', process.env.NEXT_PUBLIC_API_URL);
+  console.log('🔍 API_BASE_URL final:', API_BASE_URL);
+}
