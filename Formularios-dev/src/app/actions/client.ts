@@ -62,6 +62,9 @@ export async function descargarExcelCliente(id: string): Promise<void> {
 export async function descargarExcelInspeccionesEmergenciaCliente(id: string): Promise<void> {
   try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+
+    console.log('🔍 API URL:', apiUrl); // ← AGREGAR ESTO
+    console.log('🔍 URL completa:', `${apiUrl}/instances/${id}/excel`);
     const response = await fetch(`${apiUrl}/inspecciones-emergencia/${id}/excel`);
     if (!response.ok) {
       const errorText = await response.text();
@@ -79,6 +82,8 @@ export async function descargarExcelInspeccionesEmergenciaCliente(id: string): P
 export async function descargarExcelIroIsopCliente(id: string): Promise<void> {
   try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    console.log('🔍 API URL:', apiUrl); // ← AGREGAR ESTO
+    console.log('🔍 URL completa:', `${apiUrl}/instances/${id}/excel`);
     const response = await fetch(`${apiUrl}/instances/${id}/excel`);
     if (!response.ok) {
       const errorText = await response.text();
@@ -96,6 +101,8 @@ export async function descargarExcelIroIsopCliente(id: string): Promise<void> {
 export async function descargarExcelHerraEquipoCliente(id: string): Promise<void> {
   try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    console.log('🔍 API URL:', apiUrl); // ← AGREGAR ESTO
+    console.log('🔍 URL completa:', `${apiUrl}/instances/${id}/excel`);
     const response = await fetch(`${apiUrl}/inspections-herra-equipos/${id}/excel`);
     if (!response.ok) {
       const errorText = await response.text();
@@ -113,6 +120,8 @@ export async function descargarExcelHerraEquipoCliente(id: string): Promise<void
 export async function descargarPdfInspeccionesEmergenciaCliente(id: string): Promise<void> {
   try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    console.log('🔍 API URL:', apiUrl); // ← AGREGAR ESTO
+    console.log('🔍 URL completa:', `${apiUrl}/instances/${id}/excel`);
     const response = await fetch(`${apiUrl}/inspecciones-emergencia/${id}/pdf`);
     if (!response.ok) {
       const errorText = await response.text();
@@ -130,6 +139,8 @@ export async function descargarPdfInspeccionesEmergenciaCliente(id: string): Pro
 export async function descargarPdfIroIsopCliente(id: string): Promise<void> {
   try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    console.log('🔍 API URL:', apiUrl); // ← AGREGAR ESTO
+    console.log('🔍 URL completa:', `${apiUrl}/instances/${id}/excel`);
     const response = await fetch(`${apiUrl}/instances/${id}/pdf`);
     if (!response.ok) {
       const errorText = await response.text();
@@ -147,6 +158,8 @@ export async function descargarPdfIroIsopCliente(id: string): Promise<void> {
 export async function descargarPdfHerraEquipoCliente(id: string): Promise<void> {
   try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    console.log('🔍 API URL:', apiUrl); // ← AGREGAR ESTO
+    console.log('🔍 URL completa:', `${apiUrl}/instances/${id}/excel`);
     const response = await fetch(`${apiUrl}/inspections-herra-equipos/${id}/pdf`);
     if (!response.ok) {
       const errorText = await response.text();
