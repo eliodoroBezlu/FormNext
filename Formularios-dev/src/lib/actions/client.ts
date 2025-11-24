@@ -1,5 +1,7 @@
 'use client';
 
+import { API_BASE_URL } from "../constants";
+
 // Guardar en app/actions/client.ts
 
 /**
@@ -61,11 +63,10 @@ export async function descargarExcelCliente(id: string): Promise<void> {
 
 export async function descargarExcelInspeccionesEmergenciaCliente(id: string): Promise<void> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-
-    console.log('🔍 API URL:', apiUrl); // ← AGREGAR ESTO
-    console.log('🔍 URL completa:', `${apiUrl}/instances/${id}/excel`);
-    const response = await fetch(`${apiUrl}/inspecciones-emergencia/${id}/excel`);
+    console.log('🔍 API URL:', API_BASE_URL);
+    console.log('🔍 URL completa:', `${API_BASE_URL}/instances/${id}/excel`);
+    
+    const response = await fetch(`${API_BASE_URL}/instances/${id}/excel`);
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Error al descargar el Excel: ${response.status} - ${errorText}`);
@@ -81,10 +82,9 @@ export async function descargarExcelInspeccionesEmergenciaCliente(id: string): P
 
 export async function descargarExcelIroIsopCliente(id: string): Promise<void> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-    console.log('🔍 API URL:', apiUrl); // ← AGREGAR ESTO
-    console.log('🔍 URL completa:', `${apiUrl}/instances/${id}/excel`);
-    const response = await fetch(`${apiUrl}/instances/${id}/excel`);
+    console.log('🔍 API URL:', API_BASE_URL);
+    console.log('🔍 URL completa:', `${API_BASE_URL}/instances/${id}/excel`);
+    const response = await fetch(`${API_BASE_URL}/instances/${id}/excel`);
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Error al descargar el Excel: ${response.status} - ${errorText}`);
@@ -100,10 +100,9 @@ export async function descargarExcelIroIsopCliente(id: string): Promise<void> {
 
 export async function descargarExcelHerraEquipoCliente(id: string): Promise<void> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-    console.log('🔍 API URL:', apiUrl); // ← AGREGAR ESTO
-    console.log('🔍 URL completa:', `${apiUrl}/instances/${id}/excel`);
-    const response = await fetch(`${apiUrl}/inspections-herra-equipos/${id}/excel`);
+    console.log('🔍 API URL:', API_BASE_URL);
+    console.log('🔍 URL completa:', `${API_BASE_URL}/instances/${id}/excel`);
+    const response = await fetch(`${API_BASE_URL}/inspections-herra-equipos/${id}/excel`);
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Error al descargar el Excel: ${response.status} - ${errorText}`);
@@ -119,10 +118,9 @@ export async function descargarExcelHerraEquipoCliente(id: string): Promise<void
 
 export async function descargarPdfInspeccionesEmergenciaCliente(id: string): Promise<void> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-    console.log('🔍 API URL:', apiUrl); // ← AGREGAR ESTO
-    console.log('🔍 URL completa:', `${apiUrl}/instances/${id}/excel`);
-    const response = await fetch(`${apiUrl}/inspecciones-emergencia/${id}/pdf`);
+    console.log('🔍 API URL:', API_BASE_URL);
+    console.log('🔍 URL completa:', `${API_BASE_URL}/instances/${id}/excel`);
+    const response = await fetch(`${API_BASE_URL}/inspecciones-emergencia/${id}/pdf`);
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Error al descargar el PDF: ${response.status} - ${errorText}`);
@@ -138,10 +136,9 @@ export async function descargarPdfInspeccionesEmergenciaCliente(id: string): Pro
 
 export async function descargarPdfIroIsopCliente(id: string): Promise<void> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-    console.log('🔍 API URL:', apiUrl); // ← AGREGAR ESTO
-    console.log('🔍 URL completa:', `${apiUrl}/instances/${id}/excel`);
-    const response = await fetch(`${apiUrl}/instances/${id}/pdf`);
+    console.log('🔍 API URL:', API_BASE_URL);
+    console.log('🔍 URL completa:', `${API_BASE_URL}/instances/${id}/excel`);
+    const response = await fetch(`${API_BASE_URL}/instances/${id}/pdf`);
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Error al descargar el PDF: ${response.status} - ${errorText}`);
@@ -157,10 +154,9 @@ export async function descargarPdfIroIsopCliente(id: string): Promise<void> {
 
 export async function descargarPdfHerraEquipoCliente(id: string): Promise<void> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-    console.log('🔍 API URL:', apiUrl); // ← AGREGAR ESTO
-    console.log('🔍 URL completa:', `${apiUrl}/instances/${id}/excel`);
-    const response = await fetch(`${apiUrl}/inspections-herra-equipos/${id}/pdf`);
+    console.log('🔍 API URL:', API_BASE_URL);
+    console.log('🔍 URL completa:', `${API_BASE_URL}/instances/${id}/excel`);
+    const response = await fetch(`${API_BASE_URL}/inspections-herra-equipos/${id}/pdf`);
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Error al descargar el PDF: ${response.status} - ${errorText}`);
