@@ -17,7 +17,7 @@ export function ScaffoldInspectionsManager() {
         <Button
           variant="contained"
           startIcon={<Add />}
-          onClick={() => router.push('/dashboard/form-med-amb/1.02.P06.F30')}
+          onClick={() => router.push('/dashboard/form-herra-equipos/1.02.P06.F30')}
         >
           Nueva Inspección de Andamio
         </Button>

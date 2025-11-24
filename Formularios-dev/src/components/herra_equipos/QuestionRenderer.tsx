@@ -1,12 +1,7 @@
 "use client";
 
 import React from "react";
-import {
-  Controller,
-  Control,
-  FieldErrors,
-  FieldPath,
-} from "react-hook-form";
+import { Controller, Control, FieldErrors, FieldPath } from "react-hook-form";
 import {
   Box,
   Typography,
@@ -66,8 +61,7 @@ export const QuestionRenderer = <
 
   const showObservations = observationConfig?.enabled ?? true;
   const observationRequired = observationConfig?.required ?? false;
-  const observationLabel =
-    observationConfig?.label ?? "Observaciones ";
+  const observationLabel = observationConfig?.label ?? "Observaciones ";
   const observationPlaceholder =
     observationConfig?.placeholder ?? "Ingrese observaciones adicionales...";
 
@@ -80,7 +74,12 @@ export const QuestionRenderer = <
     if (fieldValue && typeof fieldValue === "object" && "value" in fieldValue) {
       return fieldValue as QuestionResponse;
     }
-    return { value: "", description: "", observacion: "" };
+    // Para boolean, inicializar con false en lugar de string vacío
+    return {
+      value: question.responseConfig.type === "boolean" ? false : "",
+      description: "",
+      observacion: "",
+    };
   };
 
   // Helper para actualizar el valor
@@ -226,7 +225,6 @@ export const QuestionRenderer = <
             <Controller
               name={fieldName}
               control={control}
-              // ✅ ELIMINADO defaultValue - React Hook Form maneja esto con reset()
               rules={{
                 validate: question.obligatorio
                   ? (value) => {
@@ -239,7 +237,50 @@ export const QuestionRenderer = <
               }}
               render={({ field }) => {
                 const current = getCurrentValue(field.value);
-                const displayOptions = options || [];
+
+                // Definir colores fijos: azul, plomo, blanco
+                const fixedColors = ["#1976d2", "#607d8b", "#ffffff"];
+
+                // Definir opciones específicas según el tipo
+                let displayOptions = options || [];
+
+                // Si no hay opciones definidas en la config, usar las predeterminadas según el tipo
+                if (!options || options.length === 0) {
+                  switch (type) {
+                    case "si_no_na":
+                      displayOptions = [
+                        { value: "si", label: "Sí" },
+                        { value: "no", label: "No" },
+                        { value: "na", label: "N/A" },
+                      ];
+                      break;
+                    case "bueno_malo_na":
+                      displayOptions = [
+                        { value: "bueno", label: "Bueno" },
+                        { value: "malo", label: "Malo" },
+                        { value: "na", label: "N/A" },
+                      ];
+                      break;
+                    case "bien_mal":
+                      displayOptions = [
+                        { value: "bien", label: "Bien" },
+                        { value: "mal", label: "Mal" },
+                      ];
+                      break;
+                    case "operativo_mantenimiento":
+                      displayOptions = [
+                        { value: "operativo", label: "Operativo" },
+                        { value: "mantenimiento", label: "Mantenimiento" },
+                      ];
+                      break;
+                  }
+                }
+
+                // Asignar colores fijos a las opciones (sobrescribe cualquier color de config)
+                displayOptions = displayOptions.map((option, index) => ({
+                  ...option,
+                  color: fixedColors[index] || "#757575",
+                }));
 
                 return (
                   <FormControl error={!!error} fullWidth>
@@ -261,7 +302,14 @@ export const QuestionRenderer = <
                               size="small"
                               sx={{
                                 backgroundColor: option.color || "#757575",
-                                color: "white",
+                                color:
+                                  option.color === "#ffffff"
+                                    ? "#000000"
+                                    : "white",
+                                border:
+                                  option.color === "#ffffff"
+                                    ? "1px solid #ccc"
+                                    : "none",
                               }}
                             />
                           }
@@ -284,7 +332,6 @@ export const QuestionRenderer = <
             <Controller
               name={fieldName}
               control={control}
-              // ✅ ELIMINADO defaultValue
               rules={{
                 validate: question.obligatorio
                   ? (value) => {
@@ -324,7 +371,6 @@ export const QuestionRenderer = <
             <Controller
               name={fieldName}
               control={control}
-              // ✅ ELIMINADO defaultValue
               rules={{
                 validate: question.obligatorio
                   ? (value) => {
@@ -366,7 +412,6 @@ export const QuestionRenderer = <
             <Controller
               name={fieldName}
               control={control}
-              // ✅ ELIMINADO defaultValue
               rules={{
                 validate: (value) => {
                   const response = getCurrentValue(value);
@@ -414,45 +459,43 @@ export const QuestionRenderer = <
           </>
         );
 
-      case "boolean":
-        return (
-          <>
-            <Controller
-              name={fieldName}
-              control={control}
-              // ✅ ELIMINADO defaultValue
-              render={({ field }) => {
-                const current = getCurrentValue(field.value);
-                return (
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={!!current.value}
-                        onChange={(e) =>
-                          field.onChange(
-                            updateValue(field.value, e.target.checked)
-                          )
-                        }
-                        disabled={readonly}
-                      />
-                    }
-                    label="Sí"
-                  />
-                );
-              }}
+     case "boolean":
+  return (
+    <>
+      <Controller
+        name={fieldName}
+        control={control}
+        
+        render={({ field }) => {
+          const current = getCurrentValue(field.value);
+          const isChecked = Boolean(current.value);
+          
+          return (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={isChecked}
+                  onChange={(e) => {
+                    field.onChange(updateValue(field.value, e.target.checked));
+                  }}
+                  disabled={readonly}
+                />
+              }
+              label="Sí"
             />
-            {renderDescripcionField()}
-            {renderObservacionField()}
-          </>
-        );
-
+          );
+        }}
+      />
+      {renderDescripcionField()}
+      {renderObservacionField()}
+    </>
+  );
       case "date":
         return (
           <>
             <Controller
               name={fieldName}
               control={control}
-              // ✅ ELIMINADO defaultValue
               rules={{
                 validate: question.obligatorio
                   ? (value) => {

@@ -45,7 +45,7 @@ import {
   getInstances,
   GetInstancesFilters,
 } from "@/lib/actions/instance-actions";
-import { descargarExcelIroIsopCliente } from "@/app/actions/client";
+import { descargarExcelIroIsopCliente, descargarPdfIroIsopCliente } from "@/app/actions/client";
 import AutocompleteCustom from "@/components/molecules/autocomplete-custom/AutocompleteCustom";
 
 // Estados de formularios
@@ -225,7 +225,7 @@ export default function ListarInspeccionesIroIsop() {
 
   const handleDescargarPdf = async (id: string) => {
     try {
-      console.log("Descargando PDF para instancia:", id);
+      await descargarPdfIroIsopCliente(id);
     } catch (error) {
       console.error("Error al descargar el PDF:", error);
     }
@@ -562,9 +562,8 @@ export default function ListarInspeccionesIroIsop() {
               <TableHead>
                 <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
                   <TableCell>Template</TableCell>
-                  <TableCell>Área</TableCell> {/* ✅ NUEVA COLUMNA */}
-                  <TableCell>Superintendencia</TableCell>{" "}
-                  {/* ✅ NUEVA COLUMNA */}
+                  <TableCell>Área</TableCell> 
+                  <TableCell>Superintendencia</TableCell>
                   <TableCell>Estado</TableCell>
                   <TableCell>Creado por</TableCell>
                   <TableCell>Fecha Creación</TableCell>
@@ -614,7 +613,6 @@ export default function ListarInspeccionesIroIsop() {
                           </Typography>
                         </TableCell>
 
-                        {/* ✅ NUEVA: Columna de Área */}
                         <TableCell>
                           <Typography
                             variant="body2"
@@ -625,7 +623,6 @@ export default function ListarInspeccionesIroIsop() {
                           </Typography>
                         </TableCell>
 
-                        {/* ✅ NUEVA: Columna de Superintendencia */}
                         <TableCell>
                           <Typography
                             variant="body2"

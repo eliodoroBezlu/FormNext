@@ -38,8 +38,8 @@ import {
 } from "@mui/icons-material"
 import { useRouter } from "next/navigation"
 import { 
-  descargarPdfCliente, 
-  descargarExcelInspeccionesEmergenciaCliente 
+  descargarExcelInspeccionesEmergenciaCliente, 
+  descargarPdfInspeccionesEmergenciaCliente
 } from "@/app/actions/client"
 import { buscarAreas, obtenerExtintoresPorArea, obtenerSistemasEmergenciaReport } from "@/app/actions/inspeccion"
 
@@ -220,7 +220,7 @@ export default function ListaInspecciones() {
 
   const handleDescargarPdf = async (id: string) => {
     try {
-      await descargarPdfCliente(id)
+      await descargarPdfInspeccionesEmergenciaCliente(id)
     } catch (error) {
       console.error("Error al descargar el PDF:", error)
     }
@@ -502,9 +502,9 @@ export default function ListaInspecciones() {
             <Table>
               <TableHead>
                 <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                  <TableCell>Área</TableCell>
-                  <TableCell>Fecha de última modificación</TableCell>
+                  <TableCell>Fecha de Inspección</TableCell>
                   <TableCell>Superintendencia</TableCell>
+                  <TableCell>Área</TableCell>
                   <TableCell>Tag</TableCell>
                   <TableCell>Responsable Edificio</TableCell>
                   <TableCell>Código Documento</TableCell>
@@ -529,9 +529,10 @@ export default function ListaInspecciones() {
                         key={`${inspeccion._id}-${page * rowsPerPage + index}`}
                         sx={{ '&:hover': { backgroundColor: '#f9f9f9' } }}
                       >
-                        <TableCell>{inspeccion.area}</TableCell>
-                        <TableCell>{new Date(inspeccion.fechaUltimaModificacion).toLocaleDateString()}</TableCell>
+                        
+                        <TableCell>{new Date(inspeccion.fechaCreacion).toLocaleDateString()}</TableCell>                     
                         <TableCell>{inspeccion.superintendencia}</TableCell>
+                        <TableCell>{inspeccion.area}</TableCell>
                         <TableCell>{inspeccion.tag}</TableCell>
                         <TableCell>{inspeccion.responsableEdificio}</TableCell>
                         <TableCell>{inspeccion.documentCode}</TableCell>
@@ -557,7 +558,7 @@ export default function ListaInspecciones() {
                           </Tooltip>
                           <Tooltip title="Descargar PDF">
                             <IconButton
-                              onClick={() => handleDescargarPdf(inspeccion.tag)}
+                              onClick={() => handleDescargarPdf(inspeccion._id)}
                               color="secondary"
                               size="small"
                             >

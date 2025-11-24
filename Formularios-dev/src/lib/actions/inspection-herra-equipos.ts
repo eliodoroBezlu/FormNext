@@ -24,7 +24,9 @@ interface ApiResponse<T> {
 // ✅ Tipos para respuestas del backend
 export interface InspectionResponse extends FormDataHerraEquipos {
    _id: string;
+   templateId: string;
   templateCode: string;        // ✅ Asegúrate de que exista
+  templateName: string;
   submittedAt: string;
   submittedBy?: string;        // ✅ Añadido
   location?: string;           // ✅ Añadido
@@ -566,3 +568,4 @@ export async function finalizeInspection(
   
   return updateInProgressInspection(id, formData, "completed");
 }
+

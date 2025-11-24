@@ -20,6 +20,7 @@ import { InspectionFormIroIsop } from "@/components/organisms/inspection-form-ir
 import { BaseCard } from "@/components/molecules/base-card/BaseCard";
 import { TemplateCard } from "@/components/molecules/template-card/TemplateCard";
 import { InspeccionSistemasEmergencia } from "@/components/form-sistemas-emergencia/InspeccionSistemasEmergencia";
+import LlenarFormulariosPage from "@/components/herra_equipos/FormHerraEquipos";
 
 // Interfaz para formularios personalizados
 interface CustomForm {
@@ -56,10 +57,9 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md')); // < 900px
-  const isSmall = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useMediaQuery(theme.breakpoints.down("md")); // < 900px
+  const isSmall = useMediaQuery(theme.breakpoints.down("sm"));
 
   // Cargar templates al montar el componente
   useEffect(() => {
@@ -312,28 +312,32 @@ export default function HomePage() {
           scrollButtons={isMobile ? "auto" : false}
           allowScrollButtonsMobile={true}
           sx={{
-            '& .MuiTab-root': {
+            "& .MuiTab-root": {
               // Usa las mismas escalas de fontSize que tu tema
-              fontSize: isSmall ? '0.8rem' : isMobile ? '0.9rem' : '1rem',
-              minWidth: isSmall ? 'unset' : 160,
+              fontSize: isSmall ? "0.8rem" : isMobile ? "0.9rem" : "1rem",
+              minWidth: isSmall ? "unset" : 160,
               padding: isSmall ? theme.spacing(1, 1.5) : theme.spacing(1.5, 2), // Usa tu spacing
             },
-            '& .MuiTabs-flexContainer': {
-              flexWrap: 'nowrap',
-            }
+            "& .MuiTabs-flexContainer": {
+              flexWrap: "nowrap",
+            },
           }}
         >
-          <Tab 
-            label={isSmall 
-              ? "Herramientas y Equipos" 
-              : "Formularios de Inspección de herramientas y equipos"
-            } 
+          <Tab
+            label={
+              isSmall
+                ? "Sistemas de emergencia"
+                : "Formularios de sistemas de emergencia"
+            }
           />
-          <Tab 
-            label={isSmall 
-              ? "IRO's - ISOP" 
-              : "Formularios IRO's - ISOP"
-            } 
+          <Tab label={isSmall ? "IRO's - ISOP" : "Formularios IRO's - ISOP"} />
+
+          <Tab
+            label={
+              isSmall
+                ? "Herramientas y Equipos"
+                : "Formularios de Inspección de herramientas y equipos"
+            }
           />
         </Tabs>
       </Box>
@@ -354,6 +358,12 @@ export default function HomePage() {
         <Grid container spacing={3}>
           {/* Formularios personalizados - Segunda pestaña */}
           {/* Templates existentes - Primera pestaña */}
+          {tabValue === 2 && (
+            <Grid size={{ xs: 12 }}>
+              <LlenarFormulariosPage/>
+            </Grid>
+          )}
+
           {tabValue === 1 &&
             templates.map((customForm) => (
               <Grid key={customForm._id} size={{ xs: 12, sm: 6, md: 4 }}>

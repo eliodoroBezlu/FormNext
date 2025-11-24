@@ -102,7 +102,7 @@ export const VerificationFields = <
                   <Controller
                     name={fieldKey}
                     control={control}
-                    rules={{ required: "Este campo es obligatorio" }}
+                    //rules={{ required: "Este campo es obligatorio" }}
                     render={({ field: formField }) => (
                       <DatePicker
                         value={formField.value ? dayjs(formField.value as string) : null}
@@ -130,7 +130,7 @@ export const VerificationFields = <
                   <Controller
                     name={fieldKey}
                     control={control}
-                    rules={{ required: "Este campo es obligatorio" }}
+                    //rules={{ required: "Este campo es obligatorio" }}
                     render={({ field: formField }) => (
                       <TimePicker
                         value={formField.value ? dayjs(formField.value as string, 'HH:mm') : null}
@@ -158,7 +158,7 @@ export const VerificationFields = <
                   <Controller
                     name={fieldKey}
                     control={control}
-                    rules={{ required: "Este campo es obligatorio" }}
+                    //rules={{ required: "Este campo es obligatorio" }}
                     render={({ field: formField }) => (
                       <TextField
                         value={formField.value || ""}

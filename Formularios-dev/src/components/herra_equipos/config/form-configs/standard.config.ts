@@ -36,7 +36,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
       hasTrimestre: true,
     },
     alert: {
-      show: true,
+      show: false,
       message: "Recuerde verificar el estado del disco y protecciones",
       variant: "warning",
     },
@@ -100,7 +100,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
       hasTrimestre: true,
     },
     alert: {
-      show: true,
+      show: false,
       message: "Recuerde verificar el estado del disco y protecciones",
       variant: "warning",
     },
@@ -157,7 +157,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
       hasTrimestre: true,
     },
     alert: {
-      show: true,
+      show: false,
       message: "Verificar certificaciones y estado de electrodos",
       variant: "warning",
     },
@@ -669,7 +669,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
       hasTrimestre: false,
     },
     alert: {
-      show: true,
+      show: false,
       message: "Recuerde verificar el estado del disco y protecciones",
       variant: "warning",
     },
@@ -743,7 +743,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
       hasTrimestre: false,
     },
     alert: {
-      show: true,
+      show: false,
       message: "QUÉ DEBE HACER SI LA ESCALERA ESTÁ DEFECTUOSA",
       description:
         "Si usted nota una escalera EN MAL ESTADO O DEFECTOSA NO LA USE, estas deben ser removidas cuanto antes del lugar de trabajo y dar de baja la escalera cortando longitudinalmente.",

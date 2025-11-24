@@ -1,3 +1,4 @@
+// code
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -263,7 +264,7 @@ export default function FormularioDinamicoPage() {
       
       setShowTagVerification(false);
       
-      const newUrl = `/dashboard/form-med-amb/${result.openForm}`;
+      const newUrl = `/dashboard/form-herra-equipos/${result.openForm}`;
       
       setSnackbar({
         open: true,
@@ -385,7 +386,7 @@ export default function FormularioDinamicoPage() {
 
         // Redirigir a lista de andamios en progreso después de 2 segundos
         setTimeout(() => {
-          router.push('/dashboard/form-med-amb');
+          router.push('/dashboard/form-herra-equipos');
         }, 2000);
       } else {
         throw new Error(result.error || 'Error al guardar en progreso');
@@ -457,7 +458,7 @@ export default function FormularioDinamicoPage() {
         });
 
         setTimeout(() => {
-          router.push('/dashboard/form-med-amb');
+          router.push('/dashboard/form-herra-equipos');
         }, 2000);
       } else {
         throw new Error(result.error || 'Error al finalizar inspección');
@@ -515,7 +516,7 @@ export default function FormularioDinamicoPage() {
         console.log("✅ [PAGE] Inspección enviada:", result.data);
         
         setTimeout(() => {
-          router.push('/dashboard/form-med-amb');
+          router.push('/dashboard/form-herra-equipos');
         }, 2000);
       } else {
         throw new Error(result.error || 'Error al enviar formulario');
@@ -541,7 +542,7 @@ export default function FormularioDinamicoPage() {
     sessionStorage.removeItem('preverified_from_form');
     sessionStorage.removeItem('verification_timestamp');
     
-    router.push('/dashboard/form-med-amb');
+    router.push('/dashboard/form-herra-equipos');
   };
 
   // ============================================
@@ -565,7 +566,7 @@ export default function FormularioDinamicoPage() {
         <Button
           variant="outlined"
           startIcon={<ArrowBack />}
-          onClick={() => router.push('/dashboard/form-med-amb')}
+          onClick={() => router.push('/dashboard/form-herra-equipos')}
         >
           Volver a la lista
         </Button>
@@ -664,7 +665,7 @@ export default function FormularioDinamicoPage() {
           sessionStorage.removeItem('preverified_equipment_id');
           sessionStorage.removeItem('preverified_from_form');
           sessionStorage.removeItem('verification_timestamp');
-          router.push('/dashboard/form-med-amb');
+          router.push('/dashboard/form-herra-equipos');
         }}
         sx={{ m: 2 }}
         disabled={saving}

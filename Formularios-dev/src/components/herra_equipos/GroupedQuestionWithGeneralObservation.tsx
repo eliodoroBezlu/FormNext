@@ -40,7 +40,7 @@ export const GroupedQuestionWithGeneralObservation = <T extends FormDataHerraEqu
     return <Typography color="error">Error: Configuración de columnas no encontrada</Typography>
   }
 
-  const fieldName = `${sectionPath}.q${questionIndex}` as FieldPath<T>
+  const fieldName = `responses.${sectionPath}.q${questionIndex}` as FieldPath<T>
   const options = question.responseConfig?.options 
 
   // 🆕 Helper para convertir nombres de colores a hex

@@ -116,7 +116,7 @@ export function InProgressInspectionsList({
     if (onSelectInspection) {
       onSelectInspection(inspection);
     } else {
-      router.push(`/dashboard/form-med-amb/${inspection.templateCode}/${inspection._id}`);
+      router.push(`/dashboard/form-herra-equipos/${inspection.templateCode}/${inspection._id}`);
     }
   };
 

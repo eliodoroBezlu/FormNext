@@ -92,3 +92,71 @@ export async function descargarExcelIroIsopCliente(id: string): Promise<void> {
     throw error;
   }
 }
+
+export async function descargarExcelHerraEquipoCliente(id: string): Promise<void> {
+  try {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    const response = await fetch(`${apiUrl}/inspections-herra-equipos/${id}/excel`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error al descargar el Excel: ${response.status} - ${errorText}`);
+    }
+    
+    const blob = await response.blob();
+    descargarArchivo(blob, `inspeccion-emergencia-${id}.xlsx`);
+  } catch (error) {
+    console.error("Error al descargar el Excel:", error);
+    throw error;
+  }
+}
+
+export async function descargarPdfInspeccionesEmergenciaCliente(id: string): Promise<void> {
+  try {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    const response = await fetch(`${apiUrl}/inspecciones-emergencia/${id}/pdf`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error al descargar el PDF: ${response.status} - ${errorText}`);
+    }
+
+    const blob = await response.blob();
+    descargarArchivo(blob, `inspecciones-emergencia-${id}.pdf`);
+  } catch (error) {
+    console.error('Error al descargar el PDF de instancia:', error);
+    throw error;
+  }
+}
+
+export async function descargarPdfIroIsopCliente(id: string): Promise<void> {
+  try {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    const response = await fetch(`${apiUrl}/instances/${id}/pdf`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error al descargar el PDF: ${response.status} - ${errorText}`);
+    }
+
+    const blob = await response.blob();
+    descargarArchivo(blob, `instancia-${id}.pdf`);
+  } catch (error) {
+    console.error('Error al descargar el PDF de instancia:', error);
+    throw error;
+  }
+}
+
+export async function descargarPdfHerraEquipoCliente(id: string): Promise<void> {
+  try {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    const response = await fetch(`${apiUrl}/inspections-herra-equipos/${id}/pdf`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error al descargar el PDF: ${response.status} - ${errorText}`);
+    }
+
+    const blob = await response.blob();
+    descargarArchivo(blob, `herraequipo-${id}.pdf`);
+  } catch (error) {
+    console.error('Error al descargar el PDF de instancia:', error);
+    throw error;
+  }
+}

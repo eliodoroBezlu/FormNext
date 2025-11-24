@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Box, Typography, Paper } from "@mui/material";
-import { FormDataHerraEquipos, FormTemplateHerraEquipos, SelectableItemConfig } from "./types/IProps";
+import { FormDataHerraEquipos, FormTemplateHerraEquipos, SelectableItemConfig, Section, ResponsesData } from "./types/IProps";
 import { getFormConfig } from "./config/form-config.helpers";
 import { AlertSection } from "./common/AlertSection";
 import { ColorCodeSection } from "./common/ColorCodeSection";
@@ -96,7 +96,76 @@ export function StandardInspectionForm({
     }
   }, [config?.sectionSelector?.enabled]);
 
-  
+  // ===================================================================
+  // REMOVIDO: useEffect que causaba lentitud
+  // La inicialización se hace ahora solo al momento de submit
+  // ===================================================================
+
+  // ===================================================================
+  // NUEVO: Función para asegurar que todos los campos boolean existan
+  // ===================================================================
+  const ensureAllBooleanFields = (
+    data: FormDataHerraEquipos,
+    sections: Section[],
+    //basePath: string = "responses"
+  ): FormDataHerraEquipos => {
+    const result = { ...data };
+    
+    if (!result.responses) {
+      result.responses = {};
+    }
+
+    const processSections = (secs: Section[], path: string) => {
+      secs.forEach((section, sIdx) => {
+        const sectionKey = `section_${sIdx}`;
+        const fullPath = path ? `${path}.${sectionKey}` : sectionKey;
+        
+        // Navegar a la posición correcta en el objeto responses
+        const pathParts = fullPath.split('.');
+        let currentLevel: ResponsesData = result.responses!;
+        
+        for (let i = 0; i < pathParts.length - 1; i++) {
+          if (!currentLevel[pathParts[i]]) {
+            currentLevel[pathParts[i]] = {};
+          }
+          currentLevel = currentLevel[pathParts[i]] as unknown as ResponsesData;
+        }
+        
+        const finalKey = pathParts[pathParts.length - 1];
+        if (!currentLevel[finalKey]) {
+          currentLevel[finalKey] = {};
+        }
+        
+        const sectionData = currentLevel[finalKey];
+
+        // Procesar preguntas
+        if (!section.isParent && section.questions) {
+          section.questions.forEach((question, qIdx) => {
+            if (question.responseConfig.type === "boolean") {
+              const questionKey = `q${qIdx}`;
+              
+              // Si no existe el campo, inicializar con false
+              if (!sectionData[questionKey]) {
+                sectionData[questionKey] = {
+                  value: false,
+                  description: "",
+                  observacion: "",
+                };
+              }
+            }
+          });
+        }
+
+        // Procesar subsecciones recursivamente
+        if (section.subsections && section.subsections.length > 0) {
+          processSections(section.subsections, fullPath);
+        }
+      });
+    };
+
+    processSections(sections, "");
+    return result;
+  };
 
   if (!config) {
     return (
@@ -119,6 +188,9 @@ export function StandardInspectionForm({
     ? filterSectionsBySelections(template.sections, selectedItems)
     : template.sections;
 
+  // ===================================================================
+  // MODIFICADO: handleFormSubmit con ensureAllBooleanFields
+  // ===================================================================
   const handleFormSubmit = (data: FormDataHerraEquipos) => {
     if (config.sectionSelector?.enabled && config.sectionSelector.items) {
       const allConfigs = getAllConfigs(config.sectionSelector.items);
@@ -130,12 +202,16 @@ export function StandardInspectionForm({
       }
     }
 
-    onSubmit(data);
+    // NUEVO: Asegurar que todos los campos boolean existan antes de enviar
+    const completeData = ensureAllBooleanFields(data, template.sections);
+    onSubmit(completeData);
   };
 
   const handleDraftSave = (data: FormDataHerraEquipos) => {
     if (onSaveDraft) {
-      onSaveDraft(data);
+      // También asegurar campos boolean en borradores
+      const completeData = ensureAllBooleanFields(data, template.sections);
+      onSaveDraft(completeData);
     }
   };
 

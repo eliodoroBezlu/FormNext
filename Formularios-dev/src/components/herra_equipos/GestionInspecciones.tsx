@@ -215,7 +215,7 @@ export default function GestionInspecciones() {
         mostrarNotificacion("Inspección duplicada, redirigiendo...", "info");
         
         setTimeout(() => {
-          router.push(`/dashboard/form-med-amb/${inspection.templateCode}`);
+          router.push(`/dashboard/form-herra-equipos/${inspection.templateCode}`);
         }, 1000);
       }
     } catch (error) {
@@ -392,7 +392,7 @@ export default function GestionInspecciones() {
 
           <Button
             variant="contained"
-            onClick={() => router.push("/dashboard/form-med-amb")}
+            onClick={() => router.push("/dashboard/form-herra-equipos")}
             color="primary"
           >
             Nueva Inspección

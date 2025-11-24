@@ -48,9 +48,16 @@ export const NAVIGATION: NavigationItem[] = [
   },
 
   {
-    segment: "form-med-amb",
-    title: "Formulario de Inspección de Medio Ambiente",
+    segment: "form-herra-equipos",
+    title: "Formulario de Inspección de herramientas y equipos",
     icon: "description",
+    //requiredRoles: ['admin'],
+  },
+
+  {
+    segment: "plan-accion",
+    title: "Planes de accion",
+    icon: "settings",
     //requiredRoles: ['admin'],
   },
   {
@@ -75,6 +82,12 @@ export const NAVIGATION: NavigationItem[] = [
       {
         segment: "report-iro-isop",
         title: "IRO's-ISOP",
+        icon: "description",
+        //requiredRoles: ['admin'],
+      },
+      {
+        segment: "report-herra-equipos",
+        title: "Herramientas Equipos",
         icon: "description",
         //requiredRoles: ['admin'],
       },

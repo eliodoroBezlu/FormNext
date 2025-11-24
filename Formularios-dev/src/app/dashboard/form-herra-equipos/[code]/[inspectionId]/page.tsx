@@ -194,7 +194,7 @@ export default function EditInspectionPage() {
         console.log("✅ [EDIT PAGE] Inspección finalizada");
 
         setTimeout(() => {
-          router.push('/dashboard/form-med-amb?tab=in-progress');
+          router.push('/dashboard/form-herra-equipos?tab=in-progress');
         }, 2000);
       } else {
         throw new Error(result.error || 'Error al finalizar inspección');
@@ -243,7 +243,7 @@ export default function EditInspectionPage() {
         <Button
           variant="outlined"
           startIcon={<ArrowBack />}
-          onClick={() => router.push('/dashboard/form-med-amb?tab=in-progress')}
+          onClick={() => router.push('/dashboard/form-herra-equipos?tab=in-progress')}
         >
           Volver a En Progreso
         </Button>
@@ -269,7 +269,7 @@ export default function EditInspectionPage() {
         <Link
           underline="hover"
           color="inherit"
-          href="/dashboard/form-med-amb"
+          href="/dashboard/form-herra-equipos"
           sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
         >
           Formularios
@@ -277,7 +277,7 @@ export default function EditInspectionPage() {
         <Link
           underline="hover"
           color="inherit"
-          href="/dashboard/form-med-amb?tab=in-progress"
+          href="/dashboard/form-herra-equipos?tab=in-progress"
           sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
         >
           <Construction fontSize="small" />
@@ -338,7 +338,7 @@ export default function EditInspectionPage() {
       <Button
         variant="outlined"
         startIcon={<ArrowBack />}
-        onClick={() => router.push('/dashboard/form-med-amb?tab=in-progress')}
+        onClick={() => router.push('/dashboard/form-herra-equipos?tab=in-progress')}
         sx={{ m: 2 }}
         disabled={saving}
       >

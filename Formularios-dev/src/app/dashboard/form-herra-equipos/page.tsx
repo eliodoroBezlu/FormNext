@@ -93,7 +93,7 @@ function LlenarFormulariosContent() {
   };
 
   const handleSelectTemplate = (template: FormTemplateHerraEquipos) => {
-    router.push(`/dashboard/form-med-amb/${template.code}`);
+    router.push(`/dashboard/form-herra-equipos/${template.code}`);
   };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -101,8 +101,8 @@ function LlenarFormulariosContent() {
     
     // Actualizar URL
     const url = newValue === 1 
-      ? '/dashboard/form-med-amb?tab=in-progress'
-      : '/dashboard/form-med-amb';
+      ? '/dashboard/form-herra-equipos?tab=in-progress'
+      : '/dashboard/form-herra-equipos';
     
     router.push(url, { scroll: false });
   };

@@ -152,10 +152,13 @@ export enum InspectionStatus {
   IN_PROGRESS = 'in_progress', // ✅ NUEVO
   COMPLETED = 'completed',
 }
+
+export type ResponsesData = Record<string, Record<string, QuestionResponseUnion>>;
+
 export interface FormDataHerraEquipos {
   verification: Record<string, string | number>;
   generalObservations?: string;
-  responses: Record<string, Record<string, QuestionResponseUnion>>;
+  responses: ResponsesData;
   outOfService?: OutOfServiceData; // 🆕 Usar el tipo unificado
   accesoriosConfig?: AccesoriosConfig
   vehicle?: VehicleData;
@@ -171,7 +174,7 @@ export interface FormDataHerraEquipos {
 export interface FormResponse {
   templateId: string;
   verificationData: Record<string, string | number>;
-  responses: Record<string, Record<string, QuestionResponseUnion>>; // 🆕 Usar el tipo unificado aquí también
+  responses: ResponsesData; // 🆕 Usar el tipo unificado aquí también
   submittedAt: Date;
   status: InspectionStatus;
   
