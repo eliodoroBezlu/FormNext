@@ -51,12 +51,6 @@ export const NAVIGATION: NavigationItem[] = [
     icon: "description",
   },
   {
-    segment: "form-med-amb",
-    title: "Formulario de Inspección de Medio Ambiente",
-    icon: "description",
-    requiredRoles: ["admin"],
-  },
-  {
     segment: "form-herra-equipos",
     title: "Formulario de Inspección de herramientas y equipos",
     icon: "description",
@@ -66,6 +60,7 @@ export const NAVIGATION: NavigationItem[] = [
     segment: "plan-accion",
     title: "Planes de accion",
     icon: "settings",
+    requiredRoles: ["admin", "supervisor", "superintendente"],
   },
   {
     kind: "divider",
@@ -75,28 +70,48 @@ export const NAVIGATION: NavigationItem[] = [
     title: "Analytics",
   },
   {
+    segment: "graphics",
+    title: "graficas",
+    icon: "barChart",
+    requiredRoles: ["admin", "superintendente", "supervisor"],
+    children: [
+      {
+        segment: "emergencyinspections",
+        title: "inspecciones de sistemas de emergencia",
+        icon: "description",
+        requiredRoles: ["admin", "superintendente", "supervisor"],
+      },
+      {
+        segment: "extinguishers",
+        title: "Extintores",
+        icon: "description",
+        requiredRoles: ["admin", "superintendente", "supervisor"],
+      },
+    ],
+  },
+  {
     segment: "reports",
     title: "Reports",
     icon: "barChart",
-    requiredRoles: ["admin"],
+    requiredRoles: ["admin", "superintendente", "supervisor"],
     children: [
       {
         segment: "sistemas-de-emergencia",
         title: "Sistemas de emergencia",
         icon: "description",
-        requiredRoles: ["admin"],
+        requiredRoles: ["admin", "superintendente", "supervisor"],
       },
       {
         segment: "report-iro-isop",
         title: "IRO's-ISOP",
         icon: "description",
-        requiredRoles: ["admin"],
+        requiredRoles: ["admin", "superintendente", "supervisor"],
       },
       {
         segment: "report-herra-equipos",
         title: "Herramientas Equipos",
         icon: "description",
-        requiredRoles: ["admin"],
+        requiredRoles: ["admin", "superintendente", "supervisor"],
       },
     ],
   },

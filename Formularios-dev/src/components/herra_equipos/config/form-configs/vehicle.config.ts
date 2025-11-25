@@ -6,6 +6,12 @@ export const vehicleFormConfigs: Record<string, FormFeatureConfig> = {
     formCode: "3.04.P48.F03",
     formName: "LISTA DE VERIFICACIÓN DE VEHÍCULOS Y EQUIPOS MÓVILES",
     formType: "vehicle",
+    approval: {
+      enabled: true,
+      requiredRoles: ["supervisor", "admin", "superintendente"],
+      allowSelfApproval: false,
+      requiresComments: false,
+    },
     signatures: {
       inspector: {
         enabled: true,
@@ -35,7 +41,7 @@ export const vehicleFormConfigs: Record<string, FormFeatureConfig> = {
             enabled: true,
             type: "autocomplete",
             label: "NOMBRE DEL SUPERVISOR DE LA INSPECCIÓN",
-            required: true,
+            required: false,
             dataSource: "supervisor",
             fieldName: "supervisorSignature.supervisorName",
           },
@@ -43,7 +49,7 @@ export const vehicleFormConfigs: Record<string, FormFeatureConfig> = {
             type: "canvas",
             label: "FIRMA RESPONSABLE VEHICULO",
             enabled: true,
-            required: true,
+            required: false,
             heightPercentage: 30,
             fieldName: "supervisorSignature.supervisorSignature",
           },

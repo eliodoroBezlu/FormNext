@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'supervisor' | 'tecnico' | 'viewer';
+export type UserRole = 'admin' | 'supervisor' | 'tecnico' | 'viewer' | 'superintendente';
 
 export interface RoutePermission {
   path: string;
@@ -32,14 +32,18 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
   
   // Formularios de medio ambiente - solo admin
   { path: '/dashboard/form-med-amb', requiredRoles: ['admin'] },
+  { path: '/dashboard/config', requiredRoles: ['admin'] },
+  { path: '/dashboard/plan-accion', requiredRoles: ['admin', 'supervisor', 'superintendente'] },
   
   // Reportes - admin
-  { path: '/dashboard/reports', requiredRoles: ['admin'] },
-  { path: '/dashboard/reports/sistemas-de-emergencia', requiredRoles: ['admin'] },
-  { path: '/dashboard/reports/report-iro-isop', requiredRoles: ['admin'] },
+  { path: '/dashboard/reports', requiredRoles: ['admin', 'supervisor', 'superintendente'] },
+  { path: '/dashboard/reports/sistemas-de-emergencia', requiredRoles: ['admin', 'supervisor', 'superintendente'] },
+  { path: '/dashboard/reports/report-iro-isop', requiredRoles: ['admin', 'supervisor', 'superintendente'] },
+  { path: '/dashboard/reports/report-herra-equipos', requiredRoles: ['admin', 'supervisor', 'superintendente'] },
 ];
 
 export const ROLE_HIERARCHY: Record<UserRole, UserRole[]> = {
+  superintendente: ['superintendente', 'supervisor', 'tecnico', 'viewer'],
   admin: ['admin', 'supervisor', 'tecnico', 'viewer'],
   supervisor: ['supervisor', 'tecnico', 'viewer'],
   tecnico: ['tecnico', 'viewer'],
@@ -61,6 +65,9 @@ export function getUserRole(roles: string[]): UserRole {
   }
 
   if (roles.includes('tecnico') || roles.includes('technician') || roles.includes('inspector')) {
+    return 'tecnico';
+  }
+  if (roles.includes('superintendente') || roles.includes('superintendent')) {
     return 'tecnico';
   }
   return 'viewer'; // rol por defecto

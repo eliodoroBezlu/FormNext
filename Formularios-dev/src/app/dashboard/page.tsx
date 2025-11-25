@@ -12,13 +12,15 @@ export default function DashboardHome() {
   const getWelcomeMessage = () => {
     switch (userRole) {
       case 'admin':
-        return 'Panel de Administrador - Acceso completo al sistema';
+        return 'Panel de Administrador - Gestión completa del sistema';
       case 'supervisor':
-        return 'Panel de Supervisor - Gestión de operaciones y reportes';
+        return 'Panel de Supervisor ';
       case 'tecnico':
         return 'Panel de Operador - Formularios de inspección y mantenimiento';
       case 'viewer':
         return 'Panel de Visualización - Solo lectura';
+      case 'superintendente':
+        return 'Panel de Superintendente - Supervisión general del sistema';
       default:
         return 'Bienvenido al Dashboard';
     }

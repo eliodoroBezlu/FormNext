@@ -151,3 +151,30 @@ export function SessionValidator({ children }: SessionValidatorProps) {
 
   return <>{children}</>;
 }
+// 'use client';
+
+// import { useSession, signOut } from "next-auth/react";
+// import { useEffect } from "react";
+
+// export function SessionValidator() {
+//   const { data: session, status } = useSession();
+
+//   useEffect(() => {
+//     if (status === "authenticated" && session?.error) {
+//       console.warn("Sesión inválida detectada:", session.error);
+      
+//       // Opcional: puedes diferenciar errores
+//       const errorParam = 
+//         session.error === "SessionExpired" ? "session_expired" :
+//         session.error === "InspectorRenewFailed" ? "inspector_token_failed" :
+//         "session_error";
+
+//       signOut({ 
+//         callbackUrl: `/?error=${errorParam}`,
+//         redirect: true 
+//       });
+//     }
+//   }, [session?.error, status]);
+
+//   return null;
+// }

@@ -1,21 +1,26 @@
-// app/dashboard/form-med-amb/[code]/[inspectionId]/page.tsx
+// app/dashboard/form-herra-equipos/[code]/[inspectionId]/page.tsx
 
 "use client";
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { useUserRole } from '@/hooks/useUserRole';
 import {
-  Box, CircularProgress, Alert, Button, Snackbar, Breadcrumbs, Link
+  Box, CircularProgress, Alert, Button, Snackbar, Breadcrumbs, Link, Paper
 } from '@mui/material';
-import { ArrowBack, Home, Construction } from '@mui/icons-material';
+import { ArrowBack, Home, Pending } from '@mui/icons-material';
 import { getTemplatesHerraEquipos } from '@/lib/actions/template-herra-equipos';
 import { FormTemplateHerraEquipos, FormDataHerraEquipos } from '@/components/herra_equipos/types/IProps';
 import { UnifiedFormRouter } from '@/components/herra_equipos/UnifiedFormRouter';
 import { 
-  finalizeInspection,
   getInspectionById,
+  approveInspection,
+  rejectInspection,
   updateInProgressInspection,
+  finalizeInspection,
 } from '@/lib/actions/inspection-herra-equipos';
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SPECIALIZED_FORMS: Record<string, React.ComponentType<any>> = {
   '1.02.P06.F19': UnifiedFormRouter,
@@ -31,13 +36,15 @@ const SPECIALIZED_FORMS: Record<string, React.ComponentType<any>> = {
   '3.04.P48.F03': UnifiedFormRouter,
   '1.02.P06.F37': UnifiedFormRouter,
   '3.04.P04.F35': UnifiedFormRouter,
-  '1.02.P06.F30': UnifiedFormRouter, // Andamios
+  '1.02.P06.F30': UnifiedFormRouter,
   '1.02.P06.F33': UnifiedFormRouter
 };
 
-export default function EditInspectionPage() {
+export default function InspectionViewPage() {
   const params = useParams();
   const router = useRouter();
+  const { data: session } = useSession();
+  const { hasRole } = useUserRole();
   
   const code = decodeURIComponent(params.code as string);
   const inspectionId = params.inspectionId as string;
@@ -59,6 +66,23 @@ export default function EditInspectionPage() {
     severity: 'success'
   });
 
+  // ✅ Determinar si el usuario puede aprobar
+  const canApproveInspection = () => {
+    if (!existingInspection) return false;
+    
+    // Solo puede aprobar si tiene rol apropiado
+    if (!hasRole('supervisor') && !hasRole('admin') && !hasRole('superintendente')) {
+      return false;
+    }
+    
+    // No puede aprobar su propia inspección
+    if (existingInspection.submittedBy === session?.user?.email) {
+      return false;
+    }
+    
+    return true;
+  };
+
   useEffect(() => {
     loadData();
   }, [code, inspectionId]);
@@ -68,7 +92,7 @@ export default function EditInspectionPage() {
     setError(null);
 
     try {
-      console.log(`🔍 [EDIT PAGE] Cargando inspección - Code: ${code}, ID: ${inspectionId}`);
+      console.log(`🔍 [VIEW PAGE] Cargando inspección - Code: ${code}, ID: ${inspectionId}`);
 
       // 1. Validar que el ID sea válido
       if (!inspectionId || inspectionId.length !== 24) {
@@ -94,10 +118,10 @@ export default function EditInspectionPage() {
         updatedAt: new Date(foundTemplate.updatedAt),
       });
 
-      console.log('✅ [EDIT PAGE] Template cargado:', foundTemplate.code);
+      console.log('✅ [VIEW PAGE] Template cargado:', foundTemplate.code);
 
       // 3. CARGAR INSPECCIÓN EXISTENTE
-      console.log('🔍 [EDIT PAGE] Cargando inspección:', inspectionId);
+      console.log('🔍 [VIEW PAGE] Cargando inspección:', inspectionId);
       
       const inspectionResult = await getInspectionById(inspectionId);
       
@@ -112,18 +136,13 @@ export default function EditInspectionPage() {
 
       setExistingInspection(inspectionResult.data);
       
-     
-      // Mensaje según estado
-      if (inspectionResult.data.status === 'in_progress') {
-        setSnackbar({
-          open: true,
-          message: `🔄 Continuando inspección - ${inspectionResult.data.scaffold?.routineInspections?.length || 0} rutinarias registradas`,
-          severity: 'info'
-        });
-      }
+      console.log('✅ [VIEW PAGE] Inspección cargada:', {
+        status: inspectionResult.data.status,
+        submittedBy: inspectionResult.data.submittedBy,
+      });
 
     } catch (err) {
-      console.error('❌ [EDIT PAGE] Error al cargar datos:', err);
+      console.error('❌ [VIEW PAGE] Error al cargar datos:', err);
       setError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
       setLoading(false);
@@ -131,13 +150,115 @@ export default function EditInspectionPage() {
   };
 
   // ============================================
-  // HANDLERS
+  // HANDLERS DE APROBACIÓN
+  // ============================================
+
+  const handleApprove = async (comments?: string) => {
+    if (!session?.user?.email) {
+      alert("Debe iniciar sesión para aprobar inspecciones");
+      return;
+    }
+
+    if (!window.confirm("¿Está seguro de aprobar esta inspección?")) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      
+      const result = await approveInspection(
+        inspectionId,
+        session.user.email,
+        comments
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || "Error al aprobar la inspección");
+      }
+
+      setSnackbar({
+        open: true,
+        message: '✅ Inspección aprobada exitosamente',
+        severity: 'success'
+      });
+      
+      console.log("✅ [VIEW PAGE] Inspección aprobada");
+      
+      // Recargar la inspección para mostrar el nuevo estado
+      await loadData();
+      
+      // Redirigir después de 2 segundos
+      setTimeout(() => {
+        router.push('/dashboard/form-herra-equipos?tab=pending-approval');
+      }, 2000);
+      
+    } catch (err) {
+      console.error("Error al aprobar:", err);
+      setSnackbar({
+        open: true,
+        message: err instanceof Error ? err.message : 'Error al aprobar',
+        severity: 'error'
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReject = async (reason: string) => {
+    if (!session?.user?.email) {
+      alert("Debe iniciar sesión para rechazar inspecciones");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      
+      const result = await rejectInspection(
+        inspectionId,
+        session.user.email,
+        reason
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || "Error al rechazar la inspección");
+      }
+
+      setSnackbar({
+        open: true,
+        message: 'Inspección rechazada. El inspector será notificado.',
+        severity: 'warning'
+      });
+      
+      console.log("✅ [VIEW PAGE] Inspección rechazada");
+      
+      // Recargar la inspección
+      await loadData();
+      
+      // Redirigir después de 2 segundos
+      setTimeout(() => {
+        router.push('/dashboard/form-herra-equipos?tab=pending-approval');
+      }, 2000);
+      
+    } catch (err) {
+      console.error("Error al rechazar:", err);
+      setSnackbar({
+        open: true,
+        message: err instanceof Error ? err.message : 'Error al rechazar',
+        severity: 'error'
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ============================================
+  // HANDLERS PARA EDICIÓN (si está en progreso)
   // ============================================
 
   const handleSaveProgress = async (data: FormDataHerraEquipos) => {
     if (!template) return;
 
-    console.log("🔄 [EDIT PAGE] Actualizando inspección en progreso:", inspectionId);
+    console.log("🔄 [VIEW PAGE] Actualizando inspección en progreso:", inspectionId);
 
     setSaving(true);
 
@@ -155,15 +276,12 @@ export default function EditInspectionPage() {
           severity: 'success'
         });
 
-        console.log("✅ [EDIT PAGE] Inspección actualizada");
-
-        // Recargar datos
         await loadData();
       } else {
         throw new Error(result.error || 'Error al actualizar inspección');
       }
     } catch (error) {
-      console.error("❌ [EDIT PAGE] Error al actualizar:", error);
+      console.error("❌ [VIEW PAGE] Error al actualizar:", error);
       setSnackbar({
         open: true,
         message: error instanceof Error ? error.message : 'Error al actualizar',
@@ -177,7 +295,7 @@ export default function EditInspectionPage() {
   const handleFinalize = async (data: FormDataHerraEquipos) => {
     if (!template) return;
 
-    console.log("✅ [EDIT PAGE] Finalizando inspección:", inspectionId);
+    console.log("✅ [VIEW PAGE] Finalizando inspección:", inspectionId);
 
     setSaving(true);
 
@@ -191,8 +309,6 @@ export default function EditInspectionPage() {
           severity: 'success'
         });
 
-        console.log("✅ [EDIT PAGE] Inspección finalizada");
-
         setTimeout(() => {
           router.push('/dashboard/form-herra-equipos?tab=in-progress');
         }, 2000);
@@ -200,7 +316,7 @@ export default function EditInspectionPage() {
         throw new Error(result.error || 'Error al finalizar inspección');
       }
     } catch (error) {
-      console.error("❌ [EDIT PAGE] Error al finalizar:", error);
+      console.error("❌ [VIEW PAGE] Error al finalizar:", error);
       setSnackbar({
         open: true,
         message: error instanceof Error ? error.message : 'Error al finalizar',
@@ -209,17 +325,6 @@ export default function EditInspectionPage() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleFinalSubmit = async (data: FormDataHerraEquipos) => {
-    // Para inspecciones en progreso, usar finalizar
-    if (existingInspection?.status === 'in_progress') {
-      return handleFinalize(data);
-    }
-
-    // Si no está en progreso, es un caso edge - no debería pasar
-    console.warn('⚠️ [EDIT PAGE] Submit llamado en inspección no en progreso');
-    return handleFinalize(data);
   };
 
   // ============================================
@@ -243,15 +348,25 @@ export default function EditInspectionPage() {
         <Button
           variant="outlined"
           startIcon={<ArrowBack />}
-          onClick={() => router.push('/dashboard/form-herra-equipos?tab=in-progress')}
+          onClick={() => router.push('/dashboard/form-herra-equipos')}
         >
-          Volver a En Progreso
+          Volver
         </Button>
       </Box>
     );
   }
 
   const SpecializedComponent = SPECIALIZED_FORMS[template.code];
+
+  // ✅ Determinar si es modo vista (readonly) o editable
+  const isViewMode = existingInspection.status === 'pending_approval' || 
+                     existingInspection.status === 'approved' || 
+                     existingInspection.status === 'rejected' ||
+                     existingInspection.status === 'completed';
+
+  const isReadonly = existingInspection.status === 'approved' || 
+                     existingInspection.status === 'rejected' ||
+                     existingInspection.status === 'completed';
 
   return (
     <Box>
@@ -274,15 +389,17 @@ export default function EditInspectionPage() {
         >
           Formularios
         </Link>
-        <Link
-          underline="hover"
-          color="inherit"
-          href="/dashboard/form-herra-equipos?tab=in-progress"
-          sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
-        >
-          <Construction fontSize="small" />
-          En Progreso
-        </Link>
+        {existingInspection.status === 'pending_approval' && (
+          <Link
+            underline="hover"
+            color="inherit"
+            href="/dashboard/form-herra-equipos?tab=pending-approval"
+            sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+          >
+            <Pending fontSize="small" />
+            Pendientes
+          </Link>
+        )}
         <span>{existingInspection.verification?.TAG || 'Inspección'}</span>
       </Breadcrumbs>
 
@@ -319,40 +436,43 @@ export default function EditInspectionPage() {
         >
           <Box textAlign="center" bgcolor="white" p={4} borderRadius={2}>
             <CircularProgress />
-            <Box mt={2}>Guardando...</Box>
+            <Box mt={2}>Procesando...</Box>
           </Box>
         </Box>
       )}
 
-      {/* Alerta de inspección en progreso */}
-      {existingInspection.status === 'in_progress' && (
-        <Alert severity="warning" sx={{ m: 2 }}>
-          🔄 <strong>Continuando inspección en progreso</strong>
-          {existingInspection.verification?.TAG && ` - Equipo: ${existingInspection.verification.TAG}`}
-          {existingInspection.scaffold?.routineInspections && 
-            ` - ${existingInspection.scaffold.routineInspections.length} rutinarias registradas`}
-        </Alert>
-      )}
-
       {/* Botón volver */}
-      <Button
-        variant="outlined"
-        startIcon={<ArrowBack />}
-        onClick={() => router.push('/dashboard/form-herra-equipos?tab=in-progress')}
-        sx={{ m: 2 }}
-        disabled={saving}
-      >
-        Volver a En Progreso
-      </Button>
+      <Paper elevation={0} sx={{ p: 2, m: 2, bgcolor: "background.default" }}>
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBack />}
+          onClick={() => {
+            if (existingInspection.status === 'pending_approval') {
+              router.push('/dashboard/form-herra-equipos?tab=pending-approval');
+            } else if (existingInspection.status === 'in_progress') {
+              router.push('/dashboard/form-herra-equipos?tab=in-progress');
+            } else {
+              router.push('/dashboard/form-herra-equipos');
+            }
+          }}
+          disabled={saving}
+        >
+          Volver
+        </Button>
+      </Paper>
       
       {/* Formulario */}
       {SpecializedComponent ? (
         <SpecializedComponent
           template={template}
-          onSubmit={handleFinalSubmit}
-          onSaveProgress={handleSaveProgress}
-          onFinalize={handleFinalize}
           initialData={existingInspection}
+          onSubmit={() => {}} // No permitir submit normal en vista
+          onSaveProgress={!isReadonly ? handleSaveProgress : undefined}
+          onFinalize={!isReadonly ? handleFinalize : undefined}
+          onApprove={canApproveInspection() ? handleApprove : undefined}
+          onReject={canApproveInspection() ? handleReject : undefined}
+          readonly={isReadonly}
+          isViewMode={isViewMode}
         />
       ) : (
         <Alert severity="error" sx={{ m: 2 }}>

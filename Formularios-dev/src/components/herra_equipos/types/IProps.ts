@@ -151,9 +151,20 @@ export enum InspectionStatus {
   DRAFT = 'draft',
   IN_PROGRESS = 'in_progress', // ✅ NUEVO
   COMPLETED = 'completed',
+  PENDING_APPROVAL = 'pending_approval',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
 }
 
 export type ResponsesData = Record<string, Record<string, QuestionResponseUnion>>;
+
+export interface ApprovalData {
+  status: "pending" | "approved" | "rejected";
+  approvedBy?: string;
+  approvedAt?: string;
+  rejectionReason?: string;
+  supervisorComments?: string;
+}
 
 export interface FormDataHerraEquipos {
   verification: Record<string, string | number>;
@@ -169,6 +180,10 @@ export interface FormDataHerraEquipos {
   inspectorSignature?: Record<string, string | number>;
   supervisorSignature?: Record<string, string | number>;
   status?: InspectionStatus;
+  approval?: ApprovalData;
+  submittedBy?: string;
+  submittedAt?: string;
+  requiresApproval?: boolean;
 }
 
 export interface FormResponse {
@@ -472,6 +487,13 @@ export interface FormFeatureConfig {
   // Additional metadata
   requiresPhotos?: boolean
   allowDraft?: boolean
+
+  approval?: {
+    enabled: boolean;
+    requiredRoles: string[]; // ['supervisor', 'admin', 'superintendente']
+    allowSelfApproval?: boolean; // false por defecto
+    requiresComments?: boolean;
+  };
 }
 
 // Helper type for form config registry

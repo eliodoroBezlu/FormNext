@@ -227,7 +227,7 @@ interface InspectorUser {
   roles: string[];
 }
 
-// 🔥 Renovar token de Client Credentials
+// 🔥 Renovar token de Client Credentials (solo para inspectores)
 async function renewClientCredentialsToken() {
   try {
     console.log('🔄 Renovando token de Client Credentials...');
@@ -401,11 +401,9 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async jwt({ token, account, user, trigger }) {
-      // 🔥 Inspector: Configuración inicial + guardar tiempo de inicio de sesión
+      // 🔥 Inspector: Configuración inicial
       if (account?.provider === "inspector" && user) {
         console.log('🔐 Creando JWT para inspector');
-        const sessionStartTime = Date.now();
-        
         return {
           ...token,
           accessToken: (user as InspectorUser).accessToken,
@@ -414,7 +412,6 @@ export const authOptions: NextAuthOptions = {
           clientRoles: (user as InspectorUser).roles,
           resourceRoles: [],
           isInspector: true,
-          sessionStartTime, // 🔥 Guardar cuándo inició la sesión
           idToken: undefined,
           refreshToken: undefined,
         };
@@ -428,7 +425,6 @@ export const authOptions: NextAuthOptions = {
         token.idToken = account.id_token;
         token.expiresAt = account.expires_at;
         token.isInspector = false;
-        token.sessionStartTime = Date.now(); // 🔥 También para usuarios normales
 
         // Decodificar roles del token inicial
         if (account.access_token) {
@@ -456,24 +452,12 @@ export const authOptions: NextAuthOptions = {
       if (!token.clientRoles) token.clientRoles = [];
       if (!token.resourceRoles) token.resourceRoles = [];
 
-      // 🔥 VERIFICAR LÍMITE MÁXIMO DE 4 HORAS (para todos los usuarios)
-      const sessionStartTime = token.sessionStartTime as number || Date.now();
-      const MAX_SESSION_TIME = 4 * 60 * 60 * 1000; // 4 horas en milisegundos
-      const sessionAge = Date.now() - sessionStartTime;
-      
-      if (sessionAge > MAX_SESSION_TIME) {
-        console.error(`❌ Sesión expiró: han pasado ${Math.floor(sessionAge / 1000 / 60)} minutos desde el inicio`);
-        token.error = 'MaxSessionTimeReached';
-        token.accessToken = undefined;
-        return token;
-      }
-
-      // 🔥 RENOVACIÓN PARA INSPECTORES (automática pero con límite de 4h)
-      if (token.isInspector) {
-        // Renovar si está próximo a expirar (2 minutos antes) o si se solicita manualmente
-        const shouldRenew = 
-          trigger === 'update' || 
-          (token.expiresAt && Date.now() > ((token.expiresAt as number) - 120) * 1000);
+      // 🔥 RENOVACIÓN PARA INSPECTORES (solo cuando se solicita explícitamente via update())
+      if (token.isInspector && trigger === 'update') {
+        console.log('🔄 Solicitud de actualización manual para inspector');
+        
+        // Verificar si el token necesita renovación (5 minutos antes de expirar)
+        const shouldRenew = token.expiresAt && Date.now() > ((token.expiresAt as number) - 300) * 1000;
         
         if (shouldRenew) {
           console.log('🔄 Token de inspector próximo a expirar, renovando...');
@@ -494,7 +478,6 @@ export const authOptions: NextAuthOptions = {
             token.expiresAt = Math.floor(Date.now() / 1000) + newTokens.expires_in;
             token.roles = roles;
             token.clientRoles = roles;
-            // 🔥 Mantener sessionStartTime original (no resetear)
             
             console.log('✅ Token de inspector renovado exitosamente');
             return token;
@@ -505,10 +488,25 @@ export const authOptions: NextAuthOptions = {
           }
         }
         
+        console.log('✅ Token de inspector aún válido, no se requiere renovación');
+        return token;
+      }
+
+      // 🔥 PARA INSPECTORES: Verificar expiración sin renovación automática
+      if (token.isInspector) {
+        // Si el token ya expiró, marcar error
+        if (token.expiresAt && Date.now() >= (token.expiresAt as number) * 1000) {
+          console.error('❌ Token de inspector expirado');
+          token.error = 'InspectorTokenExpired';
+          return token;
+        }
+        
+        // Token aún válido
         return token;
       }
 
       // 🔥 USUARIOS NORMALES: Renovación con refresh token
+      // Verificar si el token aún es válido
       if (token.expiresAt && Date.now() < (token.expiresAt as number) * 1000) {
         return token;
       }
@@ -524,6 +522,7 @@ export const authOptions: NextAuthOptions = {
           token.expiresAt = Math.floor(Date.now() / 1000) + refreshedTokens.expires_in;
           delete token.error;
 
+          // Decodificar el nuevo token para roles actualizados
           try {
             const payload: KeycloakJWTPayload = JSON.parse(
               Buffer.from(refreshedTokens.access_token.split('.')[1], 'base64').toString()
@@ -590,12 +589,13 @@ export const authOptions: NextAuthOptions = {
   
   session: {
     strategy: "jwt",
-    maxAge: 4 * 60 * 60, // 🔥 4 horas máximo
-    updateAge: 5 * 60,   // 🔥 5 minutos entre actualizaciones
+    maxAge: 4 * 60 * 60, // 🔥 4 horas - LA SESIÓN EXPIRA DESPUÉS DE ESTE TIEMPO
+    updateAge: 5 * 60,   // 🔥 5 minutos - Solo se renueva si hay ACTIVIDAD del usuario
   },
   
   events: {
     async signOut({ token }) {
+      // Solo hacer logout en Keycloak si NO es inspector
       if (token?.idToken && !token.isInspector) {
         try {
           console.log('🔓 Realizando logout en Keycloak...');
@@ -617,3 +617,162 @@ export const authOptions: NextAuthOptions = {
     },
   },
 };
+
+// lib/auth.ts
+// import { NextAuthOptions } from "next-auth";
+// import KeycloakProvider from "next-auth/providers/keycloak";
+// import CredentialsProvider from "next-auth/providers/credentials";
+
+// async function renewClientCredentialsToken() {
+//   const res = await fetch(`${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/token`, {
+//     method: "POST",
+//     headers: { "Content-Type": "application/x-www-form-urlencoded" },
+//     body: new URLSearchParams({
+//       grant_type: "client_credentials",
+//       client_id: process.env.KEYCLOAK_ID!,
+//       client_secret: process.env.KEYCLOAK_SECRET!,
+//     }),
+//   });
+//   return res.ok ? await res.json() : null;
+// }
+
+// async function refreshAccessToken(refreshToken: string) {
+//   const res = await fetch(`${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/token`, {
+//     method: "POST",
+//     headers: { "Content-Type": "application/x-www-form-urlencoded" },
+//     body: new URLSearchParams({
+//       grant_type: "refresh_token",
+//       client_id: process.env.KEYCLOAK_ID!,
+//       client_secret: process.env.KEYCLOAK_SECRET!,
+//       refresh_token: refreshToken,
+//     }),
+//   });
+//   return res.ok ? await res.json() : null;
+// }
+
+// export const authOptions: NextAuthOptions = {
+//   secret: process.env.NEXTAUTH_SECRET!, // OBLIGATORIO con JWT
+
+//   session: {
+//     strategy: "jwt" as const,
+//     maxAge: 4 * 60 * 60, // 4 horas máximo
+//   },
+
+//   providers: [
+//     KeycloakProvider({
+//       clientId: process.env.KEYCLOAK_ID!,
+//       clientSecret: process.env.KEYCLOAK_SECRET!,
+//       issuer: process.env.KEYCLOAK_ISSUER!,
+//     }),
+//     CredentialsProvider({
+//       id: "inspector",
+//       name: "Inspector Técnico",
+//       credentials: {},
+//       async authorize() {
+//         const tokens = await fetch(`${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/token`, {
+//           method: "POST",
+//           headers: { "Content-Type": "application/x-www-form-urlencoded" },
+//           body: new URLSearchParams({
+//             grant_type: "client_credentials",
+//             client_id: process.env.KEYCLOAK_ID!,
+//             client_secret: process.env.KEYCLOAK_SECRET!,
+//           }),
+//         }).then(r => r.ok ? r.json() : null);
+
+//         if (!tokens) return null;
+
+//         const payload = JSON.parse(Buffer.from(tokens.access_token.split(".")[1], "base64").toString());
+//         const clientId = process.env.KEYCLOAK_ID || "next-app-client";
+//         const roles = payload.resource_access?.[clientId]?.roles || payload.realm_access?.roles || ["tecnico"];
+
+//         return {
+//           id: "inspector",
+//           name: "Inspector Técnico",
+//           email: "inspector@tecnico.com",
+//           accessToken: tokens.access_token,
+//           expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
+//           roles,
+//         };
+//       },
+//     }),
+//   ],
+
+//   callbacks: {
+//     async jwt({ token, user, account }) {
+//       // Login inicial
+//       if (account && user) {
+//         if (account.provider === "inspector") {
+//           return {
+//             accessToken: (user as any).accessToken,
+//             expiresAt: (user as any).expiresAt,
+//             roles: (user as any).roles,
+//             clientRoles: (user as any).roles,
+//             isInspector: true,
+//             sessionStartTime: Date.now(),
+//           };
+//         }
+
+//         const payload = account.access_token
+//           ? JSON.parse(Buffer.from(account.access_token.split(".")[1], "base64").toString())
+//           : {};
+//         const clientId = process.env.KEYCLOAK_ID || "next-app-client";
+
+//         return {
+//           accessToken: account.access_token!,
+//           refreshToken: account.refresh_token,
+//           expiresAt: account.expires_at,
+//           roles: payload.realm_access?.roles || [],
+//           clientRoles: payload.resource_access?.[clientId]?.roles || [],
+//           isInspector: false,
+//           sessionStartTime: Date.now(),
+//           sub: user.id,
+//         };
+//       }
+
+//       // Límite de 4 horas
+//       if (Date.now() - (token.sessionStartTime as number) > 4 * 60 * 60 * 1000) {
+//         return { ...token, error: "SessionExpired" };
+//       }
+
+//       // Renovación automática si faltan menos de 2 minutos
+//       if (token.expiresAt && Date.now() > (token.expiresAt as number) * 1000 - 120000) {
+//         if (token.isInspector) {
+//           const newTokens = await renewClientCredentialsToken();
+//           if (!newTokens) return { ...token, error: "InspectorRenewFailed" };
+//           return { ...token, accessToken: newTokens.access_token, expiresAt: Math.floor(Date.now() / 1000) + newTokens.expires_in };
+//         }
+
+//         if (token.refreshToken) {
+//           const refreshed = await refreshAccessToken(token.refreshToken as string);
+//           if (!refreshed) return { ...token, error: "RefreshFailed" };
+//           return {
+//             ...token,
+//             accessToken: refreshed.access_token,
+//             refreshToken: refreshed.refresh_token ?? token.refreshToken,
+//             expiresAt: Math.floor(Date.now() / 1000) + refreshed.expires_in,
+//           };
+//         }
+//       }
+
+//       return token;
+//     },
+
+//     async session({ session, token }) {
+//       if (token.error) {
+//         session.error = token.error;
+//         return session;
+//       }
+
+//       session.accessToken = token.accessToken as string;
+//       session.roles = (token.roles as string[]) || [];
+//       session.clientRoles = (token.clientRoles as string[]) || [];
+//       session.isInspector = !!token.isInspector;
+
+//       session.user.id = token.sub || "unknown";
+//       session.user.name = token.name || "Usuario";
+//       session.user.email = token.email || null;
+
+//       return session;
+//     },
+//   },
+// };

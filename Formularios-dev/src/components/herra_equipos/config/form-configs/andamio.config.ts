@@ -7,6 +7,12 @@ export const andamioFormConfigs: Record<string, FormFeatureConfig> = {
     formCode: "1.02.P06.F30",
     formName: "INSPECCIÓN DE ANDAMIOS PERIMETRALES",
     formType: "scaffold",
+    approval: {
+      enabled: true,
+      requiredRoles: ["supervisor", "admin", "superintendente"],
+      allowSelfApproval: false,
+      requiresComments: false,
+    },
     signatures: {
       inspector: {
         enabled: true,
@@ -36,14 +42,14 @@ export const andamioFormConfigs: Record<string, FormFeatureConfig> = {
             enabled: true,
             type: "autocomplete",
             label: "NOMBRE DEL SUPERVISOR DE LA INSPECCIÓN",
-            required: true,
+            required: false,
             dataSource: "supervisor",
             fieldName: "supervisorSignature.supervisorName",
           },
           signature: {
             type: "canvas",
             enabled: true,
-            required: true,
+            required: false,
             heightPercentage: 30,
             fieldName: "supervisorSignature.supervisorSignature",
           },

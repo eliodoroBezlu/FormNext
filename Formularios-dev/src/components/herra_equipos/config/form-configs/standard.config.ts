@@ -6,6 +6,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     formCode: "1.02.P06.F39",
     formName: "Inspección de Amoladora",
     formType: "standard",
+    
     signatures: {
       inspector: {
         enabled: true,
@@ -178,6 +179,12 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     formCode: "2.03.P10.F05",
     formName: "Inspección de Taladro",
     formType: "standard",
+    approval: {
+      enabled: true,
+      requiredRoles: ["supervisor", "admin", "superintendente"],
+      allowSelfApproval: false,
+      requiresComments: false,
+    },
     signatures: {
       inspector: {
         enabled: true,
@@ -215,14 +222,14 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
             enabled: true,
             type: "autocomplete",
             label: "VoBo del  SUPERVISOR DEL ÁREA ( MSC S.A.)",
-            required: true,
+            required: false,
             dataSource: "supervisor",
             fieldName: "supervisorSignature.supervisorName",
           },
           signature: {
             type: "canvas",
             enabled: true,
-            required: true,
+            required: false,
             heightPercentage: 30,
             fieldName: "supervisorSignature.supervisorSignature",
           },
@@ -260,6 +267,13 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     formCode: "1.02.P06.F37",
     formName: "INSPECCION  DE  MAN LIFT",
     formType: "standard",
+
+    approval: {
+      enabled: true,
+      requiredRoles: ["supervisor", "admin", "superintendente"],
+      allowSelfApproval: false,
+      requiresComments: false,
+    },
     signatures: {
       inspector: {
         enabled: true,
@@ -299,7 +313,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
             type: "canvas",
             label: "V°B° SUPERVISOR DE ÁREA",
             enabled: true,
-            required: true,
+            required: false,
             heightPercentage: 30,
             fieldName: "supervisorSignature.supervisorSignature",
           }
@@ -360,6 +374,12 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     formCode: "3.04.P04.F23",
     formName: "VERIFICACIÓN DE PUENTE GRUA CON CABINA",
     formType: "standard",
+    approval: {
+      enabled: true,
+      requiredRoles: ["supervisor", "admin", "superintendente"],
+      allowSelfApproval: false,
+      requiresComments: false,
+    },
     signatures: {
       inspector: {
         enabled: true,
@@ -391,7 +411,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
             enabled: true,
             type: "autocomplete",
             label: "Verificado por ( Nombre y firma)",
-            required: true,
+            required: false,
             dataSource: "supervisor",
             fieldName: "supervisorSignature.supervisorName",
           },
@@ -399,7 +419,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
             type: "canvas",
             label: "V°B° SUPERVISOR DE ÁREA",
             enabled: true,
-            required: true,
+            required: false,
             heightPercentage: 30,
             fieldName: "supervisorSignature.supervisorSignature",
           }
@@ -431,6 +451,12 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     formName:
       "INSPECCION PUENTE GRUA A CONTROL REMOTO Y ACCESORIOS DE IZAJE (Inspección Pre-uso)",
     formType: "standard",
+    approval: {
+      enabled: true,
+      requiredRoles: ["supervisor", "admin", "superintendente"],
+      allowSelfApproval: false,
+      requiresComments: false,
+    },
     signatures: {
       inspector: {
         enabled: true,
@@ -462,7 +488,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
             enabled: true,
             type: "autocomplete",
             label: "Verificado por ( Nombre y firma)",
-            required: true,
+            required: false,
             dataSource: "supervisor",
             fieldName: "supervisorSignature.supervisorName",
           },
@@ -470,7 +496,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
             type: "canvas",
             label: "V°B° SUPERVISOR DE ÁREA",
             enabled: true,
-            required: true,
+            required: false,
             heightPercentage: 30,
             fieldName: "supervisorSignature.supervisorSignature",
           }
@@ -612,6 +638,12 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     formCode: "1.02.P06.F20",
     formName: "INSPECCIÓN DE CILINDROS PARA GASES COMPRIMIDOS",
     formType: "standard",
+    approval: {
+      enabled: true,
+      requiredRoles: ["supervisor", "admin", "superintendente"],
+      allowSelfApproval: false,
+      requiresComments: false,
+    },
     signatures: {
       inspector: {
         enabled: true,
@@ -642,7 +674,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
             enabled: true,
             type: "autocomplete",
             label: "Nombre del Supervisor que recibe y aprueba el check list de inspección",
-            required: true,
+            required: false,
             dataSource: "supervisor",
             fieldName: "supervisorSignature.supervisorName",
           },
@@ -650,7 +682,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
             type: "canvas",
             label: "FIRMA",
             enabled: true,
-            required: true,
+            required: false,
             heightPercentage: 30,
             fieldName: "supervisorSignature.supervisorSignature",
           },
@@ -658,7 +690,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
             enabled: true,
             type: "date",
             label: "Fecha:",
-            required: true,
+            required: false,
             fieldName: "supervisorSignature.supervisorDate",
           },
         },
@@ -694,6 +726,12 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     formCode: "1.02.P06.F33",
     formName: "INSPECCIÓN  DE  ESCALERAS DE MANO",
     formType: "standard",
+    approval: {
+      enabled: true,
+      requiredRoles: ["supervisor", "admin", "superintendente"],
+      allowSelfApproval: false,
+      requiresComments: false,
+    },
     signatures: {
       inspector: {
         enabled: true,

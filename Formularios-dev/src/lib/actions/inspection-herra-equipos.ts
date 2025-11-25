@@ -7,6 +7,8 @@ import {
   AccesoriosConfig,
   VehicleData,
   ScaffoldData,
+  InspectionStatus,
+  ApprovalData,
 } from "@/components/herra_equipos/types/IProps";
 import { getAuthHeaders } from "./helpers";
 
@@ -24,27 +26,30 @@ interface ApiResponse<T> {
 
 // ✅ Tipos para respuestas del backend
 export interface InspectionResponse extends FormDataHerraEquipos {
-   _id: string;
-   templateId: string;
-  templateCode: string;        // ✅ Asegúrate de que exista
+  _id: string;
+  templateId: string;
+  templateCode: string;
   templateName: string;
   submittedAt: string;
-  submittedBy?: string;        // ✅ Añadido
-  location?: string;           // ✅ Añadido
-  project?: string;            // ✅ Añadido
+  submittedBy?: string;
+  location?: string;
+  project?: string;
   updatedAt: string;
+  status: InspectionStatus;
+  approval?: ApprovalData;
 }
 
 export interface InProgressInspection {
   _id: string;
   templateCode: string;
   templateName?: string;
-  status: string;
+  status: InspectionStatus;
   verification: Record<string, string | number>;
   scaffold?: ScaffoldData;
   submittedAt: string;
   submittedBy?: string;
   updatedAt?: string;
+  approval?: ApprovalData;
 }
 
 // ✅ Payload completamente tipado (sin `any`)
@@ -63,11 +68,13 @@ interface InspectionPayload {
   scaffold?: ScaffoldData;
   selectedSubsections?: string[];
   selectedItems?: Record<string, string[]>;
-  status: "draft" | "in_progress" | "completed";
+  status: "draft" | "in_progress" | "completed" | "pending_approval" | "approved" | "rejected";
   submittedAt: string;
   submittedBy?: string;
   location?: string;
   project?: string;
+  requiresApproval?: boolean;
+  approval?: ApprovalData;
 }
 
 async function handleApiResponse<T>(response: Response): Promise<T> {
@@ -141,6 +148,8 @@ function mapFormDataToPayload(
     submittedBy: additionalData?.submittedBy,
     location: additionalData?.location,
     project: additionalData?.project,
+    requiresApproval: formData.requiresApproval,
+    approval: formData.approval,
   };
 }
 
@@ -186,6 +195,129 @@ export async function createInspectionHerraEquipos(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Error desconocido",
+    };
+  }
+}
+
+export async function approveInspection(
+  id: string,
+  approvedBy: string,
+  comments?: string
+): Promise<ApiResponse<InspectionResponse>> {
+  try {
+    const headers = await getAuthHeaders();
+    
+    const approvalData: ApprovalData = {
+      status: "approved",
+      approvedBy,
+      approvedAt: new Date().toISOString(),
+      supervisorComments: comments,
+    };
+
+    const response = await fetch(`${INSPECTIONS_ENDPOINT}/${id}/approve`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({
+        approval: approvalData,
+        status: "approved",
+      }),
+    });
+
+    const result = await handleApiResponse<ApiResponse<InspectionResponse>>(response);
+
+    console.log("✅ [ACTION] Inspección aprobada:", result);
+
+    return {
+      success: true,
+      message: "Inspección aprobada exitosamente",
+      data: result.data,
+    };
+  } catch (error) {
+    console.error("❌ [ACTION] Error al aprobar inspección:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error desconocido",
+    };
+  }
+}
+
+export async function rejectInspection(
+  id: string,
+  rejectedBy: string,
+  reason: string
+): Promise<ApiResponse<InspectionResponse>> {
+  try {
+    const headers = await getAuthHeaders();
+    
+    const approvalData: ApprovalData = {
+      status: "rejected",
+      approvedBy: rejectedBy,
+      approvedAt: new Date().toISOString(),
+      rejectionReason: reason,
+    };
+
+    const response = await fetch(`${INSPECTIONS_ENDPOINT}/${id}/reject`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({
+        approval: approvalData,
+        status: "rejected",
+      }),
+    });
+
+    const result = await handleApiResponse<ApiResponse<InspectionResponse>>(response);
+
+    console.log("✅ [ACTION] Inspección rechazada:", result);
+
+    return {
+      success: true,
+      message: "Inspección rechazada",
+      data: result.data,
+    };
+  } catch (error) {
+    console.error("❌ [ACTION] Error al rechazar inspección:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error desconocido",
+    };
+  }
+}
+
+export async function getPendingApprovals(
+  supervisorEmail?: string
+): Promise<ApiResponse<InspectionResponse[]>> {
+  try {
+    const headers = await getAuthHeaders();
+    
+    const queryParams = new URLSearchParams();
+    queryParams.append("status", "pending_approval");
+    
+    if (supervisorEmail) {
+      queryParams.append("excludeSubmittedBy", supervisorEmail);
+    }
+
+    const url = `${INSPECTIONS_ENDPOINT}?${queryParams.toString()}`;
+    
+    const response = await fetch(url, {
+      method: "GET",
+      headers,
+    });
+
+    const result = await handleApiResponse<ApiResponse<InspectionResponse[]>>(response);
+
+    console.log("📋 [ACTION] Inspecciones pendientes:", result.data?.length || 0);
+
+    return {
+      success: true,
+      data: result.data,
+      count: result.count,
+    };
+  } catch (error) {
+    console.error("❌ [ACTION] Error al obtener pendientes:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error desconocido",
+      data: [],
     };
   }
 }
