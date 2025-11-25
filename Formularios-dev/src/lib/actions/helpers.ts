@@ -1,5 +1,22 @@
 "use server"
 
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth";
+
+
+export async function getAuthHeaders(): Promise<Record<string, string>> {
+  const session = await getServerSession(authOptions);
+  
+  if (!session?.accessToken) {
+    throw new Error("No authentication token available");
+  }
+
+  return {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${session.accessToken}`,
+  };
+}
+
 
 // Helper para manejar respuestas de API
 export async function handleApiResponse<T >(response: Response): Promise<T> {

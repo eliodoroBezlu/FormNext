@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeContextProvider } from "@/styles/ThemeContext";
 import { LocalizationWrapper } from "@/components/LocalizationWrapper";
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "Forms",
@@ -18,11 +19,13 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body>
+        <Providers>
             <ThemeContextProvider>
               <LocalizationWrapper >
                 {children}
               </LocalizationWrapper>
             </ThemeContextProvider>
+        </Providers>
       </body>
     </html>
   );
