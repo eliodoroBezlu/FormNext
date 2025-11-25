@@ -1,8 +1,16 @@
+// app/actions/client-downloads.ts  (o donde lo tengas)
 'use client';
 
 import { API_BASE_URL } from "../constants";
+import { getSession } from "next-auth/react";
 
-// Guardar en app/actions/client.ts
+/**
+ * Helper para obtener el token JWT desde el cliente
+ */
+async function getAuthToken(): Promise<string | null> {
+  const session = await getSession();
+  return session?.accessToken as string | null ?? null;
+}
 
 /**
  * Función para descargar un blob como archivo
@@ -12,160 +20,88 @@ export function descargarArchivo(blob: Blob, nombre: string): void {
   const link = document.createElement("a");
   link.href = url;
   link.download = nombre;
+  document.body.appendChild(link);
   link.click();
+  document.body.removeChild(link);
   window.URL.revokeObjectURL(url);
 }
 
-
-
 /**
- * Descarga un PDF de inspección
+ * Descarga con autenticación (reutilizable)
  */
+async function descargarConAuth(url: string, nombreArchivo: string) {
+  const token = await getAuthToken();
+
+  if (!token) {
+    throw new Error("No estás autenticado. Por favor inicia sesión nuevamente.");
+  }
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      // No necesitas Content-Type aquí porque es una descarga
+    },
+    credentials: "include", // Importante si usas cookies (opcional si usas JWT en header)
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Error ${response.status}: ${errorText || response.statusText}`);
+  }
+
+  const blob = await response.blob();
+  descargarArchivo(blob, nombreArchivo);
+}
+
+// ============= DESCARGAS AUTENTICADAS =============
+
 export async function descargarPdfCliente(id: string): Promise<void> {
-  try {
-    const response = await fetch(`/inspecciones/${id}/pdf`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Error al descargar el PDF: ${response.status} - ${errorText}`);
-    }
-    
-    const blob = await response.blob();
-    descargarArchivo(blob, `inspeccion-${id}.pdf`);
-  } catch (error) {
-    console.error("Error al descargar el PDF:", error);
-    throw error;
-  }
+  await descargarConAuth(`${API_BASE_URL}/inspecciones/${id}/pdf`, `inspeccion-${id}.pdf`);
 }
 
-/**
- * Descarga un Excel de inspección
- */
 export async function descargarExcelCliente(id: string): Promise<void> {
-  try {
-    const response = await fetch(`/inspecciones/${id}/excel`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Error al descargar el Excel: ${response.status} - ${errorText}`);
-    }
-    
-    const blob = await response.blob();
-    descargarArchivo(blob, `inspeccion-${id}.xlsx`);
-  } catch (error) {
-    console.error("Error al descargar el Excel:", error);
-    throw error;
-  }
+  await descargarConAuth(`${API_BASE_URL}/inspecciones/${id}/excel`, `inspeccion-${id}.xlsx`);
 }
-
-/**
- * Descarga un Excel de inspecciones de emergencia
- */
-
 
 export async function descargarExcelInspeccionesEmergenciaCliente(id: string): Promise<void> {
-  try {
-    console.log('🔍 API URL:', API_BASE_URL);
-    console.log('🔍 URL completa:', `${API_BASE_URL}/instances/${id}/excel`);
-    
-    const response = await fetch(`${API_BASE_URL}/instances/${id}/excel`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Error al descargar el Excel: ${response.status} - ${errorText}`);
-    }
-    
-    const blob = await response.blob();
-    descargarArchivo(blob, `inspeccion-emergencia-${id}.xlsx`);
-  } catch (error) {
-    console.error("Error al descargar el Excel:", error);
-    throw error;
-  }
-}
-
-export async function descargarExcelIroIsopCliente(id: string): Promise<void> {
-  try {
-    console.log('🔍 API URL:', API_BASE_URL);
-    console.log('🔍 URL completa:', `${API_BASE_URL}/instances/${id}/excel`);
-    const response = await fetch(`${API_BASE_URL}/instances/${id}/excel`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Error al descargar el Excel: ${response.status} - ${errorText}`);
-    }
-    
-    const blob = await response.blob();
-    descargarArchivo(blob, `inspeccion-emergencia-${id}.xlsx`);
-  } catch (error) {
-    console.error("Error al descargar el Excel:", error);
-    throw error;
-  }
-}
-
-export async function descargarExcelHerraEquipoCliente(id: string): Promise<void> {
-  try {
-    console.log('🔍 API URL:', API_BASE_URL);
-    console.log('🔍 URL completa:', `${API_BASE_URL}/instances/${id}/excel`);
-    const response = await fetch(`${API_BASE_URL}/inspections-herra-equipos/${id}/excel`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Error al descargar el Excel: ${response.status} - ${errorText}`);
-    }
-    
-    const blob = await response.blob();
-    descargarArchivo(blob, `inspeccion-emergencia-${id}.xlsx`);
-  } catch (error) {
-    console.error("Error al descargar el Excel:", error);
-    throw error;
-  }
+  await descargarConAuth(
+    `${API_BASE_URL}/inspecciones-emergencia/${id}/excel`,
+    `inspeccion-emergencia-${id}.xlsx`
+  );
 }
 
 export async function descargarPdfInspeccionesEmergenciaCliente(id: string): Promise<void> {
-  try {
-    console.log('🔍 API URL:', API_BASE_URL);
-    console.log('🔍 URL completa:', `${API_BASE_URL}/instances/${id}/excel`);
-    const response = await fetch(`${API_BASE_URL}/inspecciones-emergencia/${id}/pdf`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Error al descargar el PDF: ${response.status} - ${errorText}`);
-    }
+  await descargarConAuth(
+    `${API_BASE_URL}/inspecciones-emergencia/${id}/pdf`,
+    `inspeccion-emergencia-${id}.pdf`
+  );
+}
 
-    const blob = await response.blob();
-    descargarArchivo(blob, `inspecciones-emergencia-${id}.pdf`);
-  } catch (error) {
-    console.error('Error al descargar el PDF de instancia:', error);
-    throw error;
-  }
+export async function descargarExcelIroIsopCliente(id: string): Promise<void> {
+  await descargarConAuth(
+    `${API_BASE_URL}/instances/${id}/excel`, // Ajusta según tu ruta real
+    `iro-isop-${id}.xlsx`
+  );
 }
 
 export async function descargarPdfIroIsopCliente(id: string): Promise<void> {
-  try {
-    console.log('🔍 API URL:', API_BASE_URL);
-    console.log('🔍 URL completa:', `${API_BASE_URL}/instances/${id}/excel`);
-    const response = await fetch(`${API_BASE_URL}/instances/${id}/pdf`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Error al descargar el PDF: ${response.status} - ${errorText}`);
-    }
+  await descargarConAuth(
+    `${API_BASE_URL}/instances/${id}/pdf`,
+    `iro-isop-${id}.pdf`
+  );
+}
 
-    const blob = await response.blob();
-    descargarArchivo(blob, `instancia-${id}.pdf`);
-  } catch (error) {
-    console.error('Error al descargar el PDF de instancia:', error);
-    throw error;
-  }
+export async function descargarExcelHerraEquipoCliente(id: string): Promise<void> {
+  await descargarConAuth(
+    `${API_BASE_URL}/inspections-herra-equipos/${id}/excel`,
+    `herramienta-equipo-${id}.xlsx`
+  );
 }
 
 export async function descargarPdfHerraEquipoCliente(id: string): Promise<void> {
-  try {
-    console.log('🔍 API URL:', API_BASE_URL);
-    console.log('🔍 URL completa:', `${API_BASE_URL}/instances/${id}/excel`);
-    const response = await fetch(`${API_BASE_URL}/inspections-herra-equipos/${id}/pdf`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Error al descargar el PDF: ${response.status} - ${errorText}`);
-    }
-
-    const blob = await response.blob();
-    descargarArchivo(blob, `herraequipo-${id}.pdf`);
-  } catch (error) {
-    console.error('Error al descargar el PDF de instancia:', error);
-    throw error;
-  }
+  await descargarConAuth(
+    `${API_BASE_URL}/inspections-herra-equipos/${id}/pdf`,
+    `herramienta-equipo-${id}.pdf`
+  );
 }

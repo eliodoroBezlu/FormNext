@@ -217,12 +217,10 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import { AddTareaDTO, CreatePlanDeAccionDTO, PlanDeAccion, TareaObservacion, UpdatePlanDeAccionDTO, UpdateTareaDTO } from '../types/IProps';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-
-
-
 
 export interface GenerarPlanesOptions {
   incluirPuntaje3?: boolean;
@@ -242,9 +240,44 @@ export interface PlanSummary {
 // ==========================================
 
 export function usePlanesAccion() {
+  const { data: session } = useSession();
   const [planes, setPlanes] = useState<PlanDeAccion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ==========================================
+  // HELPER: Obtener headers con autenticación
+  // ==========================================
+  const getAuthHeaders = useCallback((): Record<string, string> => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (session?.accessToken) {
+      headers['Authorization'] = `Bearer ${session.accessToken}`;
+    }
+
+    return headers;
+  }, [session?.accessToken]);
+
+  // ==========================================
+  // HELPER: Manejar errores de autenticación
+  // ==========================================
+  const handleAuthError = useCallback((status: number, errorMessage: string) => {
+    if (status === 401) {
+      setError('Sesión expirada. Por favor, inicia sesión nuevamente.');
+      // Opcional: redirigir automáticamente
+      window.location.href = '/?error=session_expired';
+      throw new Error('Sesión expirada');
+    }
+    
+    if (status === 403) {
+      setError('No tienes permisos para realizar esta acción.');
+      throw new Error('Permisos insuficientes');
+    }
+
+    throw new Error(errorMessage);
+  }, []);
 
   // ==========================================
   // LLAMADAS A LA API
@@ -255,6 +288,11 @@ export function usePlanesAccion() {
    */
   const generarPlanDesdeInstancia = useCallback(
     async (instanceId: string, opciones: GenerarPlanesOptions = {}) => {
+      if (!session?.accessToken) {
+        setError('Debes iniciar sesión para generar un plan');
+        throw new Error('No autenticado');
+      }
+
       setIsLoading(true);
       setError(null);
 
@@ -273,14 +311,12 @@ export function usePlanesAccion() {
 
         const response = await fetch(url, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: getAuthHeaders(),
         });
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.message || 'Error al generar plan');
+          handleAuthError(response.status, errorData.message || 'Error al generar plan');
         }
 
         const plan = await response.json();
@@ -297,7 +333,7 @@ export function usePlanesAccion() {
         setIsLoading(false);
       }
     },
-    []
+    [session?.accessToken, getAuthHeaders, handleAuthError]
   );
 
   /**
@@ -309,6 +345,11 @@ export function usePlanesAccion() {
     superintendencia?: string;
     areaFisica?: string;
   }) => {
+    if (!session?.accessToken) {
+      setError('Debes iniciar sesión para cargar planes');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -324,14 +365,12 @@ export function usePlanesAccion() {
 
       const response = await fetch(url, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al cargar planes');
+        handleAuthError(response.status, errorData.message || 'Error al cargar planes');
       }
 
       const planesData = await response.json();
@@ -342,27 +381,30 @@ export function usePlanesAccion() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [session?.accessToken, getAuthHeaders, handleAuthError]);
 
   /**
    * Crear un nuevo plan vacío
    */
   const createPlan = useCallback(async (data: CreatePlanDeAccionDTO) => {
+    if (!session?.accessToken) {
+      setError('Debes iniciar sesión para crear un plan');
+      throw new Error('No autenticado');
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
       const response = await fetch(`${API_URL}/planes-accion`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(data),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al crear plan');
+        handleAuthError(response.status, errorData.message || 'Error al crear plan');
       }
 
       const newPlan = await response.json();
@@ -377,27 +419,30 @@ export function usePlanesAccion() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [session?.accessToken, getAuthHeaders, handleAuthError]);
 
   /**
    * Actualizar datos organizacionales del plan
    */
   const updatePlan = useCallback(async (planId: string, data: UpdatePlanDeAccionDTO) => {
+    if (!session?.accessToken) {
+      setError('Debes iniciar sesión para actualizar el plan');
+      throw new Error('No autenticado');
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
       const response = await fetch(`${API_URL}/planes-accion/${planId}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(data),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al actualizar plan');
+        handleAuthError(response.status, errorData.message || 'Error al actualizar plan');
       }
 
       const updatedPlan = await response.json();
@@ -414,26 +459,29 @@ export function usePlanesAccion() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [session?.accessToken, getAuthHeaders, handleAuthError]);
 
   /**
    * Eliminar un plan completo
    */
   const deletePlan = useCallback(async (planId: string) => {
+    if (!session?.accessToken) {
+      setError('Debes iniciar sesión para eliminar el plan');
+      throw new Error('No autenticado');
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
       const response = await fetch(`${API_URL}/planes-accion/${planId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al eliminar plan');
+        handleAuthError(response.status, errorData.message || 'Error al eliminar plan');
       }
 
       setPlanes((prev) => prev.filter((plan) => plan._id !== planId));
@@ -444,27 +492,30 @@ export function usePlanesAccion() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [session?.accessToken, getAuthHeaders, handleAuthError]);
 
   /**
    * 🆕 Agregar tarea a un plan existente
    */
   const addTarea = useCallback(async (planId: string, tarea: AddTareaDTO) => {
+    if (!session?.accessToken) {
+      setError('Debes iniciar sesión para agregar una tarea');
+      throw new Error('No autenticado');
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
       const response = await fetch(`${API_URL}/planes-accion/${planId}/tareas`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(tarea),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al agregar tarea');
+        handleAuthError(response.status, errorData.message || 'Error al agregar tarea');
       }
 
       const updatedPlan = await response.json();
@@ -481,107 +532,113 @@ export function usePlanesAccion() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [session?.accessToken, getAuthHeaders, handleAuthError]);
 
   /**
    * 🆕 Actualizar una tarea específica
    */
   const updateTarea = useCallback(
-  async (planId: string, tareaId: string, data: UpdateTareaDTO) => {
-    console.log('🎯 [HOOK] updateTarea llamado');
-    console.log('  📋 planId:', planId);
-    console.log('  📋 tareaId:', tareaId);
-    console.log('  📦 data original:', data);
-    console.log('  📎 evidencias en data:', data.evidencias);
-    
-    // 🔥 Verificar el tipo y contenido de evidencias
-    if (data.evidencias) {
-      console.log('  🔍 Detalles de evidencias:');
-      console.log('    - Tipo:', typeof data.evidencias);
-      console.log('    - Es array?:', Array.isArray(data.evidencias));
-      console.log('    - Longitud:', data.evidencias.length);
-      data.evidencias.forEach((ev, i) => {
-        console.log(`    - [${i}]:`, {
-          nombre: ev.nombre,
-          url: ev.url,
-          nombreTipo: typeof ev.nombre,
-          urlTipo: typeof ev.url,
-          objeto: ev
-        });
-      });
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // 🔥 Crear payload limpio
-      const payload = JSON.stringify(data);
-      console.log('  📤 Payload stringified:', payload);
-      console.log('  📤 Payload parseado:', JSON.parse(payload));
-
-      const response = await fetch(`${API_URL}/planes-accion/${planId}/tareas/${tareaId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: payload,
-      });
-
-      console.log('  📡 Response status:', response.status);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('  ❌ Error response:', errorData);
-        throw new Error(errorData.message || 'Error al actualizar tarea');
+    async (planId: string, tareaId: string, data: UpdateTareaDTO) => {
+      if (!session?.accessToken) {
+        setError('Debes iniciar sesión para actualizar la tarea');
+        throw new Error('No autenticado');
       }
 
-      const updatedPlan = await response.json();
-      console.log('  ✅ Plan actualizado recibido');
-      console.log('  📊 Tareas en plan:', updatedPlan.tareas?.length);
+      console.log('🎯 [HOOK] updateTarea llamado');
+      console.log('  📋 planId:', planId);
+      console.log('  📋 tareaId:', tareaId);
+      console.log('  📦 data original:', data);
+      console.log('  📎 evidencias en data:', data.evidencias);
       
-      // Verificar que las evidencias se guardaron
-      const tareaActualizada = updatedPlan.tareas?.find((t: TareaObservacion) => t._id === tareaId);
-      if (tareaActualizada) {
-        console.log('  ✅ Tarea actualizada encontrada');
-        console.log('  📎 Evidencias guardadas:', tareaActualizada.evidencias);
+      // 🔥 Verificar el tipo y contenido de evidencias
+      if (data.evidencias) {
+        console.log('  🔍 Detalles de evidencias:');
+        console.log('    - Tipo:', typeof data.evidencias);
+        console.log('    - Es array?:', Array.isArray(data.evidencias));
+        console.log('    - Longitud:', data.evidencias.length);
+        data.evidencias.forEach((ev, i) => {
+          console.log(`    - [${i}]:`, {
+            nombre: ev.nombre,
+            url: ev.url,
+            nombreTipo: typeof ev.nombre,
+            urlTipo: typeof ev.url,
+            objeto: ev
+          });
+        });
       }
 
-      setPlanes((prev) =>
-        prev.map((plan) => (plan._id === planId ? updatedPlan : plan))
-      );
+      setIsLoading(true);
+      setError(null);
 
-      return updatedPlan;
-    } catch (err) {
-      console.error('  ❌ Error en updateTarea:', err);
-      const message = err instanceof Error ? err.message : 'Error al actualizar tarea';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  },
-  []
-);
+      try {
+        // 🔥 Crear payload limpio
+        const payload = JSON.stringify(data);
+        console.log('  📤 Payload stringified:', payload);
+        console.log('  📤 Payload parseado:', JSON.parse(payload));
+
+        const response = await fetch(`${API_URL}/planes-accion/${planId}/tareas/${tareaId}`, {
+          method: 'PATCH',
+          headers: getAuthHeaders(),
+          body: payload,
+        });
+
+        console.log('  📡 Response status:', response.status);
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('  ❌ Error response:', errorData);
+          handleAuthError(response.status, errorData.message || 'Error al actualizar tarea');
+        }
+
+        const updatedPlan = await response.json();
+        console.log('  ✅ Plan actualizado recibido');
+        console.log('  📊 Tareas en plan:', updatedPlan.tareas?.length);
+        
+        // Verificar que las evidencias se guardaron
+        const tareaActualizada = updatedPlan.tareas?.find((t: TareaObservacion) => t._id === tareaId);
+        if (tareaActualizada) {
+          console.log('  ✅ Tarea actualizada encontrada');
+          console.log('  📎 Evidencias guardadas:', tareaActualizada.evidencias);
+        }
+
+        setPlanes((prev) =>
+          prev.map((plan) => (plan._id === planId ? updatedPlan : plan))
+        );
+
+        return updatedPlan;
+      } catch (err) {
+        console.error('  ❌ Error en updateTarea:', err);
+        const message = err instanceof Error ? err.message : 'Error al actualizar tarea';
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [session?.accessToken, getAuthHeaders, handleAuthError]
+  );
 
   /**
    * 🆕 Eliminar una tarea
    */
   const deleteTarea = useCallback(async (planId: string, tareaId: string) => {
+    if (!session?.accessToken) {
+      setError('Debes iniciar sesión para eliminar la tarea');
+      throw new Error('No autenticado');
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
       const response = await fetch(`${API_URL}/planes-accion/${planId}/tareas/${tareaId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al eliminar tarea');
+        handleAuthError(response.status, errorData.message || 'Error al eliminar tarea');
       }
 
       const updatedPlan = await response.json();
@@ -598,26 +655,29 @@ export function usePlanesAccion() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [session?.accessToken, getAuthHeaders, handleAuthError]);
 
   /**
    * 🆕 Aprobar una tarea
    */
   const approveTarea = useCallback(async (planId: string, tareaId: string) => {
+    if (!session?.accessToken) {
+      setError('Debes iniciar sesión para aprobar la tarea');
+      throw new Error('No autenticado');
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
       const response = await fetch(`${API_URL}/planes-accion/${planId}/tareas/${tareaId}/aprobar`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al aprobar tarea');
+        handleAuthError(response.status, errorData.message || 'Error al aprobar tarea');
       }
 
       const updatedPlan = await response.json();
@@ -634,26 +694,29 @@ export function usePlanesAccion() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [session?.accessToken, getAuthHeaders, handleAuthError]);
 
   /**
    * Obtener estadísticas del servidor
    */
   const getStats = useCallback(async (): Promise<PlanSummary> => {
+    if (!session?.accessToken) {
+      setError('Debes iniciar sesión para ver estadísticas');
+      throw new Error('No autenticado');
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
       const response = await fetch(`${API_URL}/planes-accion/stats`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al obtener estadísticas');
+        handleAuthError(response.status, errorData.message || 'Error al obtener estadísticas');
       }
 
       return await response.json();
@@ -664,39 +727,46 @@ export function usePlanesAccion() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [session?.accessToken, getAuthHeaders, handleAuthError]);
 
   const loadInspecciones = useCallback(async () => {
-  try {
-    const response = await fetch(`${API_URL}/instances?limit=100`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al cargar inspecciones');
+    if (!session?.accessToken) {
+      console.warn('⚠️ No hay sesión activa para cargar inspecciones');
+      return [];
     }
 
-    const result = await response.json();
-    
-    // 🔥 CORRECCIÓN: Tu API retorna { data: Array, total, page, limit }
-    // Entonces debemos acceder directamente a result.data
-    if (result?.data && Array.isArray(result.data)) {
-      return result.data;
-    } else if (Array.isArray(result)) {
-      return result;
+    try {
+      const response = await fetch(`${API_URL}/instances?limit=100`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          console.error('❌ Error de autenticación al cargar inspecciones');
+          return [];
+        }
+        throw new Error('Error al cargar inspecciones');
+      }
+
+      const result = await response.json();
+      
+      // 🔥 CORRECCIÓN: Tu API retorna { data: Array, total, page, limit }
+      // Entonces debemos acceder directamente a result.data
+      if (result?.data && Array.isArray(result.data)) {
+        return result.data;
+      } else if (Array.isArray(result)) {
+        return result;
+      }
+      
+      console.warn('⚠️ Estructura inesperada:', result);
+      return [];
+      
+    } catch (err) {
+      console.error('❌ Error cargando inspecciones:', err);
+      return [];
     }
-    
-    console.warn('⚠️ Estructura inesperada:', result);
-    return [];
-    
-  } catch (err) {
-    console.error('❌ Error cargando inspecciones:', err);
-    return [];
-  }
-}, []);
+  }, [session?.accessToken, getAuthHeaders]);
 
   /**
    * Calcular resumen global de PLANES (desde estado local)
@@ -724,6 +794,7 @@ export function usePlanesAccion() {
     planes,
     isLoading,
     error,
+    isAuthenticated: !!session?.accessToken, // 🔥 NUEVO: indicador de autenticación
     
     // Operaciones de planes
     loadPlanes,

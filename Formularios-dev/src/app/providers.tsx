@@ -12,6 +12,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       refetchInterval={0} // Desactivar refetch automático
       refetchOnWindowFocus={true} // No refetch al hacer focus en ventana
       refetchWhenOffline={false}
+      basePath="/api/auth"
     >
       <SessionValidator>
         {children}

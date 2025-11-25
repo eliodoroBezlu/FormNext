@@ -1,7 +1,7 @@
 // lib/actions/equipment-tracking.ts
 "use server";
 
-import { handleApiResponse } from "./helpers";
+import { getAuthHeaders, handleApiResponse } from "./helpers";
 import { API_BASE_URL } from "../constants";
 
 export interface CheckEquipmentStatusResponse {
@@ -24,16 +24,15 @@ export async function checkEquipmentStatus(
   templateCode: string
 ) {
   try {
-    console.log(
-      `🔍 [ACTION] Verificando TAG: ${equipmentId} para form: ${templateCode}`
-    );
+    const headers = await getAuthHeaders();
+    
 
     // ✅ USANDO API_BASE_URL y handleApiResponse
     const response = await fetch(
       `${API_BASE_URL}/equipment-tracking/check-status?equipmentId=${equipmentId}&templateCode=${templateCode}`,
       {
         method: "GET",
-        headers: { "Content-Type": "application/json" },
+        headers,
       }
     );
 

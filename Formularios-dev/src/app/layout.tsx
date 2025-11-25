@@ -4,6 +4,8 @@ import "./globals.css";
 import { ThemeContextProvider } from "@/styles/ThemeContext";
 import { LocalizationWrapper } from "@/components/LocalizationWrapper";
 import { Providers } from "./providers";
+import { Suspense } from "react";
+import { SessionErrorHandler } from "@/components/SessionErrorHandler";
 
 export const metadata: Metadata = {
   title: "Forms",
@@ -20,11 +22,15 @@ export default function RootLayout({
     <html lang="es">
       <body>
         <Providers>
-            <ThemeContextProvider>
-              <LocalizationWrapper >
-                {children}
-              </LocalizationWrapper>
-            </ThemeContextProvider>
+          <ThemeContextProvider>
+            <LocalizationWrapper>
+              {/* 🔥 Manejador de errores de sesión con Suspense */}
+              <Suspense fallback={null}>
+                <SessionErrorHandler />
+              </Suspense>
+              {children}
+            </LocalizationWrapper>
+          </ThemeContextProvider>
         </Providers>
       </body>
     </html>

@@ -2,7 +2,7 @@
 "use server"
 
 import { ExtintorBackend } from "@/types/formTypes"
-import {  handleApiResponse } from "./helpers"
+import {  getAuthHeaders, handleApiResponse } from "./helpers"
 import { API_BASE_URL } from "../constants"
 
 // Interfaces
@@ -41,11 +41,11 @@ interface FiltrosExtintor {
  */
 export async function obtenerExtintores(): Promise<ExtintorBackend[]> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/extintor`, {
       method: 'GET',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       cache: 'no-store',
     });
 
@@ -70,12 +70,11 @@ export async function obtenerExtintoresFiltrados(filtros: FiltrosExtintor): Prom
     if (filtros.inspeccionado !== undefined) params.append('inspeccionado', filtros.inspeccionado.toString());
 
     const url = `${API_BASE_URL}/extintor/filtrar?${params.toString()}`;
+    const headers = await getAuthHeaders();
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       cache: 'no-store',
     });
 
@@ -91,11 +90,11 @@ export async function obtenerExtintoresFiltrados(filtros: FiltrosExtintor): Prom
  */
 export async function obtenerExtintorPorId(id: string): Promise<ExtintorBackend> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/extintor/${id}`, {
       method: 'GET',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       cache: 'no-store',
     });
 
@@ -116,11 +115,12 @@ export async function obtenerExtintoresPorArea(area: string): Promise<{
   totalExtintoresActivosArea: number
 }> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/extintor/area/${encodeURIComponent(area)}`, {
+      
       method: 'GET',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       cache: 'no-store',
     });
 
@@ -146,11 +146,11 @@ export async function obtenerExtintoresPorTag(tag: string): Promise<{
   totalExtintoresActivosArea: number
 }> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/extintor/tag/${encodeURIComponent(tag)}`, {
       method: 'GET',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       cache: 'no-store',
     });
 
@@ -171,11 +171,11 @@ export async function obtenerExtintoresPorTag(tag: string): Promise<{
  */
 export async function crearExtintor(extintor: CreateExtintorDto): Promise<ExtintorBackend> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/extintor`, {
       method: 'POST',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(extintor),
       cache: 'no-store',
     });
@@ -195,11 +195,11 @@ export async function crearExtintor(extintor: CreateExtintorDto): Promise<Extint
  */
 export async function actualizarExtintor(id: string, extintor: UpdateExtintorDto): Promise<ExtintorBackend> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/extintor/${id}`, {
       method: 'PATCH',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(extintor),
       cache: 'no-store',
     });
@@ -219,11 +219,11 @@ export async function actualizarExtintor(id: string, extintor: UpdateExtintorDto
  */
 export async function eliminarExtintor(id: string): Promise<{ success: boolean; message: string }> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/extintor/${id}`, {
       method: 'DELETE',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       cache: 'no-store',
     });
 
@@ -243,11 +243,11 @@ export async function eliminarExtintor(id: string): Promise<{ success: boolean; 
  */
 export async function desactivarExtintor(codigo: string): Promise<{ exito: boolean; mensaje: string }> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/extintor/desactivar/${encodeURIComponent(codigo)}`, {
       method: 'PUT',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       cache: 'no-store',
     });
 
@@ -266,11 +266,11 @@ export async function desactivarExtintor(codigo: string): Promise<{ exito: boole
  */
 export async function activarExtintor(id: string): Promise<ExtintorBackend> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/extintor/${id}`, {
       method: 'PATCH',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify({ activo: true }),
       cache: 'no-store',
     });
@@ -290,11 +290,11 @@ export async function activarExtintor(id: string): Promise<ExtintorBackend> {
  */
 export async function marcarExtintoresComoInspeccionados(codigosExtintores: string[]): Promise<{ modified: number }> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/extintor/marcar-inspeccionados`, {
       method: 'PUT',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify({ codigosExtintores }),
       cache: 'no-store',
     });
@@ -314,13 +314,13 @@ export async function marcarExtintoresComoInspeccionados(codigosExtintores: stri
  */
 export async function resetearEstadoInspeccion(codigosExtintores?: string[]): Promise<{ modified: number }> {
   try {
+    const headers = await getAuthHeaders();
+    
     const body = codigosExtintores ? { codigosExtintores } : {};
     
     const response = await fetch(`${API_BASE_URL}/extintor/resetear-inspeccion`, {
       method: 'PUT',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(body),
       cache: 'no-store',
     });
@@ -344,11 +344,11 @@ export async function verificarYCrearExtintores(
   area: string
 ): Promise<{ creados: number; actualizados: number }> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/extintor/verificar-crear`, {
       method: 'POST',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify({ extintores, tag, area }),
       cache: 'no-store',
     });

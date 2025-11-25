@@ -59,6 +59,10 @@ export function getUserRole(roles: string[]): UserRole {
   if (roles.includes('viewer') || roles.includes('readonly')) {
     return 'viewer';
   }
+
+  if (roles.includes('tecnico') || roles.includes('technician') || roles.includes('inspector')) {
+    return 'tecnico';
+  }
   return 'viewer'; // rol por defecto
 }
 

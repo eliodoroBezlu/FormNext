@@ -32,6 +32,7 @@ import { TareaObservacion, AddTareaDTO, UpdateTareaDTO, EvidenciaDto, FormTareaD
 import { FAMILIAS_PELIGRO } from "@/lib/constants";
 import AutocompleteCustom from "@/components/molecules/autocomplete-custom/AutocompleteCustom";
 import { getRecommendedActions } from "../hooks/mlRecommendations";
+import { uploadFile } from "../hooks/uploadActions";
 
 interface TareaFormModalProps {
   open: boolean;
@@ -284,19 +285,8 @@ export function TareaFormModal({
       formData.append("file", file);
       formData.append("folder", "evidencias-tareas");
 
-      // 🔥 Llamar al backend para subir archivo
-      const API_URL =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
-      const response = await fetch(`${API_URL}/upload`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Error al subir archivo");
-      }
-
-      const data = await response.json();
+      // 🔥 Usar la server action con autenticación automática
+      const data = await uploadFile(formData);
 
       // Agregar a la lista de evidencias
       setEvidencias((prev) => [
@@ -310,7 +300,10 @@ export function TareaFormModal({
       console.log("✅ Archivo subido:", data);
     } catch (error) {
       console.error("❌ Error subiendo archivo:", error);
-      alert("Error al subir el archivo");
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "Error al subir el archivo";
+      alert(errorMessage);
     } finally {
       setUploadingFile(false);
     }

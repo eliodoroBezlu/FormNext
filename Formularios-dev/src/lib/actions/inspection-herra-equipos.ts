@@ -8,6 +8,7 @@ import {
   VehicleData,
   ScaffoldData,
 } from "@/components/herra_equipos/types/IProps";
+import { getAuthHeaders } from "./helpers";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 const INSPECTIONS_ENDPOINT = `${API_BASE_URL}/inspections-herra-equipos`;
@@ -160,20 +161,14 @@ export async function createInspectionHerraEquipos(
   }
 ): Promise<ApiResponse<InspectionResponse>> {
   try {
-    console.log("📤 [ACTION] Enviando inspección:", {
-      templateCode,
-      status,
-      hasScaffold: !!formData.scaffold,
-      routineInspectionsCount: formData.scaffold?.routineInspections?.length || 0,
-    });
+    const headers = await getAuthHeaders();
+    
 
     const payload = mapFormDataToPayload(formData, templateId, templateCode, status, additionalData);
 
     const response = await fetch(INSPECTIONS_ENDPOINT, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(payload),
     });
 
@@ -206,7 +201,6 @@ export async function saveDraftInspection(
     project?: string;
   }
 ): Promise<ApiResponse<InspectionResponse>> {
-  console.log("💾 [ACTION] Guardando borrador:", templateCode);
   
   return createInspectionHerraEquipos(
     formData,
@@ -267,9 +261,8 @@ export async function updateInProgressInspection(
   status?: "in_progress" | "completed"
 ): Promise<ApiResponse<InspectionResponse>> {
   try {
-    console.log("🔄 [ACTION] Actualizando inspección en progreso:", id);
-    console.log("🏗️ [ACTION] Scaffold data a actualizar:", formData.scaffold);
-
+    const headers = await getAuthHeaders();
+    
     const updatePayload: Partial<InspectionPayload> = { ...formData };
     if (status) {
       updatePayload.status = status;
@@ -277,9 +270,7 @@ export async function updateInProgressInspection(
 
     const response = await fetch(`${INSPECTIONS_ENDPOINT}/${id}`, {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(updatePayload),
     });
 
@@ -306,6 +297,8 @@ export async function getInProgressInspections(filters?: {
   submittedBy?: string;
 }): Promise<ApiResponse<InProgressInspection[]>> {
   try {
+    const headers = await getAuthHeaders();
+    
     const queryParams = new URLSearchParams();
     queryParams.append("status", "in_progress");
     
@@ -316,9 +309,7 @@ export async function getInProgressInspections(filters?: {
     
     const response = await fetch(url, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
     });
 
     const result = await handleApiResponse<ApiResponse<InProgressInspection[]>>(response);
@@ -348,6 +339,8 @@ export async function getInspectionsHerraEquipos(filters?: {
   submittedBy?: string;
 }): Promise<ApiResponse<InspectionResponse[]>> {
   try {
+    const headers = await getAuthHeaders();
+    
     const queryParams = new URLSearchParams();
     
     if (filters?.status) queryParams.append("status", filters.status);
@@ -360,9 +353,7 @@ export async function getInspectionsHerraEquipos(filters?: {
     
     const response = await fetch(url, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
     });
 
     const result = await handleApiResponse<ApiResponse<InspectionResponse[]>>(response);
@@ -384,11 +375,11 @@ export async function getInspectionsHerraEquipos(filters?: {
 
 export async function getInspectionById(id: string): Promise<ApiResponse<InspectionResponse>> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${INSPECTIONS_ENDPOINT}/${id}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
     });
 
     const result = await handleApiResponse<ApiResponse<InspectionResponse>>(response);
@@ -408,15 +399,15 @@ export async function getInspectionById(id: string): Promise<ApiResponse<Inspect
 
 export async function getDraftInspections(userId?: string): Promise<ApiResponse<InspectionResponse[]>> {
   try {
+    const headers = await getAuthHeaders();
+    
     const url = userId 
       ? `${INSPECTIONS_ENDPOINT}/drafts?userId=${userId}`
       : `${INSPECTIONS_ENDPOINT}/drafts`;
     
     const response = await fetch(url, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
     });
 
     const result = await handleApiResponse<ApiResponse<InspectionResponse[]>>(response);
@@ -442,8 +433,8 @@ export async function updateInspection(
   status?: "draft" | "in_progress" | "completed"
 ): Promise<ApiResponse<InspectionResponse>> {
   try {
-    console.log("🔄 [ACTION] Actualizando inspección:", id);
-
+    const headers = await getAuthHeaders();
+    
     const updatePayload: Partial<InspectionPayload> = { ...formData };
     if (status) {
       updatePayload.status = status;
@@ -451,9 +442,7 @@ export async function updateInspection(
 
     const response = await fetch(`${INSPECTIONS_ENDPOINT}/${id}`, {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(updatePayload),
     });
 
@@ -477,13 +466,12 @@ export async function updateInspection(
 
 export async function deleteInspection(id: string): Promise<ApiResponse<null>> {
   try {
-    console.log("🗑️ [ACTION] Eliminando inspección:", id);
+    const headers = await getAuthHeaders();
+    
 
     const response = await fetch(`${INSPECTIONS_ENDPOINT}/${id}`, {
       method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
     });
 
     const result = await handleApiResponse<ApiResponse<null>>(response);
@@ -506,15 +494,15 @@ export async function deleteInspection(id: string): Promise<ApiResponse<null>> {
 // ✅ Usa `unknown` si la estructura no está definida (seguro y permitido por ESLint)
 export async function getInspectionStats(templateCode?: string): Promise<ApiResponse<Record<string, unknown>>> {
   try {
+    const headers = await getAuthHeaders();
+    
     const url = templateCode
       ? `${INSPECTIONS_ENDPOINT}/stats?templateCode=${templateCode}`
       : `${INSPECTIONS_ENDPOINT}/stats`;
 
     const response = await fetch(url, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
     });
 
     const result = await handleApiResponse<ApiResponse<Record<string, unknown>>>(response);
@@ -536,11 +524,11 @@ export async function getInspectionsByTemplateCode(
   templateCode: string
 ): Promise<ApiResponse<InspectionResponse[]>> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${INSPECTIONS_ENDPOINT}/template/${templateCode}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
     });
 
     const result = await handleApiResponse<ApiResponse<InspectionResponse[]>>(response);

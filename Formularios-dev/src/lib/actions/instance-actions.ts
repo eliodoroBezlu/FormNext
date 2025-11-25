@@ -2,7 +2,7 @@
 
 import { ApiResponse, FormInstance, InspectionTeamMember, SectionResponse, ValoracionCriterio, VerificationList } from "@/types/formTypes"
 import { revalidatePath } from "next/cache"
-import {  handleApiResponse } from "./helpers"
+import {  getAuthHeaders, handleApiResponse } from "./helpers"
 import { API_BASE_URL } from "../constants"
 
 
@@ -46,11 +46,11 @@ interface UpdateInstanceData {
 
 export async function createInstance(instanceData: CreateInstanceData): Promise<ApiResponse<FormInstance>> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/instances`, {
       method: 'POST',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(instanceData),
       cache: 'no-store',
     });
@@ -84,6 +84,8 @@ export async function getInstances(filters?: GetInstancesFilters): Promise<ApiRe
   totalPages: number
 }>> {
   try {
+    const headers = await getAuthHeaders();
+    
     const queryParams = new URLSearchParams();
     
     if (filters) {
@@ -102,9 +104,7 @@ export async function getInstances(filters?: GetInstancesFilters): Promise<ApiRe
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       cache: 'no-store',
     });
 
@@ -133,11 +133,11 @@ export async function getInstances(filters?: GetInstancesFilters): Promise<ApiRe
 // Obtener instancia por ID
 export async function getInstance(id: string): Promise<ApiResponse<FormInstance>> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/instances/${id}`, {
       method: 'GET',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       cache: 'no-store',
     });
 
@@ -166,11 +166,11 @@ export async function getInstance(id: string): Promise<ApiResponse<FormInstance>
 // Actualizar instancia
 export async function updateInstance(id: string, updateData: UpdateInstanceData): Promise<ApiResponse<FormInstance>> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/instances/${id}`, {
       method: 'PATCH',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(updateData),
       cache: 'no-store',
     });
@@ -209,11 +209,11 @@ export async function updateInstanceStatus(
   userId?: string
 ): Promise<ApiResponse<FormInstance>> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/instances/${id}/status`, {
       method: 'PATCH',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify({ status, userId }),
       cache: 'no-store',
     });

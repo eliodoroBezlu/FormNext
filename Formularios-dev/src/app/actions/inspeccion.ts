@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+//import { cookies } from 'next/headers';
 import type {
   FormData,
   InspeccionServiceExport,
@@ -19,24 +20,15 @@ import type {
   QRCompleteResponse,
   QROptions,
 } from "../../types/formTypes";
-import { handleApiResponse } from "@/lib/actions/helpers";
+import {  getAuthHeaders, handleApiResponse } from "@/lib/actions/helpers";
+import { API_BASE_URL } from "@/lib/constants";
 
-// URL base para la API
-const API_URL = process.env.API_URL || "";
-
-// Función para obtener headers
-function getHeaders() {
-  return new Headers({
-    "Content-Type": "application/json",
-  });
-}
-
-// ============= INSPECCIONES =============
-
+// Acciones del servidor que reemplazan a inspeccionService
 export async function crearInspeccion(data: FormData): Promise<FormData> {
-  const response = await fetch(`${API_URL}/inspecciones`, {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/inspecciones`, {
     method: "POST",
-    headers: getHeaders(),
+    headers,
     body: JSON.stringify(data),
     cache: "no-store",
   });
@@ -47,8 +39,9 @@ export async function crearInspeccion(data: FormData): Promise<FormData> {
 }
 
 export async function obtenerInspeccionPorId(id: string): Promise<FormData> {
-  const response = await fetch(`${API_URL}/inspecciones/${id}`, {
-    headers: getHeaders(),
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/inspecciones/${id}`, {
+    headers,
     cache: "no-store",
   });
 
@@ -56,8 +49,9 @@ export async function obtenerInspeccionPorId(id: string): Promise<FormData> {
 }
 
 export async function obtenerTodasInspecciones(): Promise<FormDataExport[]> {
-  const response = await fetch(`${API_URL}/inspecciones`, {
-    headers: getHeaders(),
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/inspecciones`, {
+    headers,
     cache: "no-store",
   });
 
@@ -72,10 +66,11 @@ export async function listarInspecciones(
   totalPages: number;
   currentPage: number;
 }> {
+  const headers = await getAuthHeaders();
   const response = await fetch(
-    `${API_URL}/inspecciones?page=${page}&limit=${limit}`,
+    `${API_BASE_URL}/inspecciones?page=${page}&limit=${limit}`,
     {
-      headers: getHeaders(),
+      headers,
       cache: "no-store",
     }
   );
@@ -91,9 +86,10 @@ export async function actualizarInspeccion(
   id: string,
   data: FormData
 ): Promise<FormDataExport> {
-  const response = await fetch(`${API_URL}/inspecciones/${id}`, {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/inspecciones/${id}`, {
     method: "PUT",
-    headers: getHeaders(),
+    headers,
     body: JSON.stringify(data),
     cache: "no-store",
   });
@@ -104,9 +100,10 @@ export async function actualizarInspeccion(
 }
 
 export async function eliminarInspeccion(id: string): Promise<void> {
-  const response = await fetch(`${API_URL}/inspecciones/${id}`, {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/inspecciones/${id}`, {
     method: "DELETE",
-    headers: getHeaders(),
+    headers,
     cache: "no-store",
   });
 
@@ -115,24 +112,34 @@ export async function eliminarInspeccion(id: string): Promise<void> {
 }
 
 export async function descargarPdf(id: string): Promise<Blob> {
-  const response = await fetch(`${API_URL}/inspecciones/${id}/pdf`, {
-    headers: getHeaders(),
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/inspecciones/${id}/pdf`, {
+    headers,
     cache: "no-store",
   });
 
-  return handleApiResponse<Blob>(response);
+  // Para archivos, necesitamos manejo especial ya que handleApiResponse está optimizado para JSON
+  if (!response.ok) {
+    throw new Error(`Error ${response.status}: ${response.statusText}`);
+  }
+  
+  return response.blob();
 }
 
 export async function descargarExcel(id: string): Promise<Blob> {
-  const response = await fetch(`${API_URL}/inspecciones/${id}/excel`, {
-    headers: getHeaders(),
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/inspecciones/${id}/excel`, {
+    headers,
     cache: "no-store",
   });
 
-  return handleApiResponse<Blob>(response);
+  // Para archivos, necesitamos manejo especial
+  if (!response.ok) {
+    throw new Error(`Error ${response.status}: ${response.statusText}`);
+  }
+  
+  return response.blob();
 }
-
-// ============= INSPECCIONES EMERGENCIA =============
 
 export async function verificarTag(datos: VerificarTagData): Promise<{
   existe: boolean;
@@ -143,11 +150,12 @@ export async function verificarTag(datos: VerificarTagData): Promise<{
   };
   superintendencia: string;
 }> {
+  const headers = await getAuthHeaders();
   const response = await fetch(
-    `${API_URL}/inspecciones-emergencia/verificar-tag`,
+    `${API_BASE_URL}/inspecciones-emergencia/verificar-tag`,
     {
       method: "POST",
-      headers: getHeaders(),
+      headers,
       body: JSON.stringify(datos),
       cache: "no-store",
     }
@@ -167,11 +175,12 @@ export async function verificarTag(datos: VerificarTagData): Promise<{
 export async function crearFormSistemasEmergencia(
   data: FormularioInspeccion
 ): Promise<FormularioInspeccion> {
+  const headers = await getAuthHeaders();
   const response = await fetch(
-    `${API_URL}/inspecciones-emergencia/crear-formulario`,
+    `${API_BASE_URL}/inspecciones-emergencia/crear-formulario`,
     {
       method: "POST",
-      headers: getHeaders(),
+      headers,
       body: JSON.stringify(data),
       cache: "no-store",
     }
@@ -188,11 +197,12 @@ export async function actualizarMesPorTag(
   datosMes: DatosMes,
   area: string
 ): Promise<FormularioInspeccion> {
+  const headers = await getAuthHeaders();
   const response = await fetch(
-    `${API_URL}/inspecciones-emergencia/actualizar-mes/${tag}`,
+    `${API_BASE_URL}/inspecciones-emergencia/actualizar-mes/${tag}`,
     {
       method: "PUT",
-      headers: getHeaders(),
+      headers,
       body: JSON.stringify({ mes, datosMes, area }),
       cache: "no-store",
     }
@@ -218,41 +228,114 @@ export async function obtenerSistemasEmergenciaReport(
   }
 
   const queryString = params.toString();
-  const url = `${API_URL}/inspecciones-emergencia${
+  const url = `${API_BASE_URL}/inspecciones-emergencia${
     queryString ? `?${queryString}` : ""
   }`;
 
+  const headers = await getAuthHeaders();
   const response = await fetch(url, {
-    headers: getHeaders(),
+    headers,
     cache: "no-store",
   });
 
   return handleApiResponse<InspeccionServiceExport[]>(response);
 }
 
-export async function descargarExcelInspeccionesEmergencia(
-  id: string
-): Promise<Blob> {
+export async function buscarTrabajadores(query: string): Promise<Trabajador[]> {
+  const headers = await getAuthHeaders();
   const response = await fetch(
-    `${API_URL}/inspecciones-emergencia/${id}/excel`,
+    `${API_BASE_URL}/trabajadores/buscar?query=${encodeURIComponent(query)}`,
     {
-      headers: getHeaders(),
+      headers,
       cache: "no-store",
     }
   );
 
-  return handleApiResponse<Blob>(response);
+  return handleApiResponse<Trabajador[]>(response);
+}
+
+export async function descargarExcelInspeccionesEmergencia(
+  id: string
+): Promise<Blob> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(
+    `${API_BASE_URL}/inspecciones-emergencia/${id}/excel`,
+    {
+      headers,
+      cache: "no-store",
+    }
+  );
+
+  // Para archivos, manejo especial
+  if (!response.ok) {
+    throw new Error(`Error ${response.status}: ${response.statusText}`);
+  }
+  
+  return response.blob();
+}
+
+export async function buscarAreas(query: string): Promise<string[]> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(
+    `${API_BASE_URL}/area/buscar?query=${encodeURIComponent(query)}`,
+    {
+      headers,
+      cache: "no-store",
+    }
+  );
+
+  return handleApiResponse<string[]>(response);
+}
+
+export async function obtenerAreas(): Promise<string[]> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/area`, {
+    headers,
+    cache: "no-store",
+  });
+
+  return handleApiResponse<string[]>(response);
+}
+
+export async function obtenerTagsPorArea(area: string): Promise<string[]> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(
+    `${API_BASE_URL}/tag/por-area?area=${encodeURIComponent(area)}`,
+    {
+      headers,
+      cache: "no-store",
+    }
+  );
+
+  const data = await handleApiResponse<string[]>(response);
+  return Array.isArray(data) ? data : [];
+}
+
+export async function obtenerExtintoresPorTag(
+  tag: string
+): Promise<ExtintorAreaResponse> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(
+    `${API_BASE_URL}/extintor/tag/${encodeURIComponent(tag)}`,
+    {
+      headers,
+      cache: "no-store",
+    }
+  );
+
+  return handleApiResponse<ExtintorAreaResponse>(response);
 }
 
 export async function actualizarExtintoresPorTag(
   tag: string,
   data: { extintores: InspeccionExtintor[]; area: string }
 ): Promise<{ success: boolean; message: string }> {
+  const headers = await getAuthHeaders();
   const response = await fetch(
-    `${API_URL}/inspecciones-emergencia/actualizar-extintores/${tag}`,
+    `${API_BASE_URL}/inspecciones-emergencia/actualizar-extintores/${tag}`,
     {
       method: "PUT",
-      headers: getHeaders(),
+      headers,
       body: JSON.stringify(data),
       cache: "no-store",
     }
@@ -265,153 +348,15 @@ export async function actualizarExtintoresPorTag(
   return result;
 }
 
-export async function obtenerTagsConEstadoPorAreaYMes(
-  area: string,
-  mesActual: Mes
-): Promise<{ tag: string; inspeccionRealizada: boolean }[]> {
-  const response = await fetch(
-    `${API_URL}/inspecciones-emergencia/tags-con-estado?area=${encodeURIComponent(
-      area
-    )}&mesActual=${encodeURIComponent(mesActual)}`,
-    {
-      headers: getHeaders(),
-      cache: "no-store",
-    }
-  );
-
-  return handleApiResponse<{ tag: string; inspeccionRealizada: boolean }[]>(
-    response
-  );
-}
-
-// ✅ CORREGIDO: Tipar correctamente el retorno
-export async function verificarInspecciones(
-  area: string, 
-  mesActual: string
-): Promise<{
-  totalTags: number;
-  inspeccionadas: number;
-  pendientes: number;
-  porcentajeCompletado: number;
-  tags: Array<{ tag: string; inspeccionRealizada: boolean }>;
-}> {
-  const response = await fetch(
-    `${API_URL}/inspecciones-emergencia/verificar-inspecciones?area=${encodeURIComponent(
-      area
-    )}&mesActual=${encodeURIComponent(mesActual)}`,
-    {
-      headers: getHeaders(),
-      cache: "no-store",
-    }
-  );
-
-  return handleApiResponse<{
-    totalTags: number;
-    inspeccionadas: number;
-    pendientes: number;
-    porcentajeCompletado: number;
-    tags: Array<{ tag: string; inspeccionRealizada: boolean }>;
-  }>(response);
-}
-
-// ============= TRABAJADORES =============
-
-export async function buscarTrabajadores(query: string): Promise<Trabajador[]> {
-  const response = await fetch(
-    `${API_URL}/trabajadores/buscar?query=${encodeURIComponent(query)}`,
-    {
-      headers: getHeaders(),
-      cache: "no-store",
-    }
-  );
-
-  return handleApiResponse<Trabajador[]>(response);
-}
-
-// ============= AREAS =============
-
-export async function buscarAreas(query: string): Promise<string[]> {
-  const response = await fetch(
-    `${API_URL}/area/buscar?query=${encodeURIComponent(query)}`,
-    {
-      headers: getHeaders(),
-      cache: "no-store",
-    }
-  );
-
-  return handleApiResponse<string[]>(response);
-}
-
-export async function obtenerAreas(): Promise<string[]> {
-  const response = await fetch(`${API_URL}/area`, {
-    headers: getHeaders(),
-    cache: "no-store",
-  });
-
-  return handleApiResponse<string[]>(response);
-}
-
-export async function obtenerTagsPorArea(area: string): Promise<string[]> {
-  const response = await fetch(
-    `${API_URL}/tag/por-area?area=${encodeURIComponent(area)}`,
-    {
-      headers: getHeaders(),
-      cache: "no-store",
-    }
-  );
-
-  const data = await handleApiResponse<string[]>(response);
-  return Array.isArray(data) ? data : [];
-}
-
-// ============= EXTINTORES =============
-
-export async function obtenerExtintoresPorTag(
-  tag: string
-): Promise<ExtintorAreaResponse> {
-  console.log('🔍 Frontend - Obteniendo extintores para tag:', tag);
-  console.log('📍 URL:', `${API_URL}/extintor/tag/${encodeURIComponent(tag)}`);
-  
-  const response = await fetch(
-    `${API_URL}/extintor/tag/${encodeURIComponent(tag)}`,
-    {
-      headers: getHeaders(),
-      cache: "no-store",
-    }
-  );
-
-  const data = await handleApiResponse<ExtintorAreaResponse>(response);
-  console.log('✅ Extintores recibidos:', data);
-  return data;
-}
-
-export async function obtenerExtintoresPorArea(
-  area: string
-): Promise<ExtintorAreaResponse> {
-  console.log('🔍 Frontend - Obteniendo extintores para área:', area);
-  console.log('📍 URL:', `${API_URL}/extintor/area/${encodeURIComponent(area)}`);
-  
-  const response = await fetch(
-    `${API_URL}/extintor/area/${encodeURIComponent(area)}`,
-    {
-      headers: getHeaders(),
-      cache: "no-store",
-    }
-  );
-
-  const data = await handleApiResponse<ExtintorAreaResponse>(response);
-  console.log('✅ Extintores recibidos:', data);
-  return data;
-}
-
 export async function desactivarExtintor(
   codigo: string
 ): Promise<{ exito: boolean; mensaje: string }> {
+  const headers = await getAuthHeaders();
   const response = await fetch(
-    `${API_URL}/extintor/desactivar/${encodeURIComponent(codigo)}`,
+    `${API_BASE_URL}/extintor/desactivar/${encodeURIComponent(codigo)}`,
     {
       method: "PUT",
-      headers: getHeaders(),
+      headers,
       cache: "no-store",
     }
   );
@@ -423,14 +368,63 @@ export async function desactivarExtintor(
   return result;
 }
 
-// ============= QR CODES =============
+export async function obtenerTagsConEstadoPorAreaYMes(
+  area: string,
+  mesActual: Mes
+): Promise<{ tag: string; inspeccionRealizada: boolean }[]> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(
+    `${API_BASE_URL}/inspecciones-emergencia/tags-con-estado?area=${encodeURIComponent(
+      area
+    )}&mesActual=${encodeURIComponent(mesActual)}`,
+    {
+      headers,
+      cache: "no-store",
+    }
+  );
+
+  return handleApiResponse<{ tag: string; inspeccionRealizada: boolean }[]>(
+    response
+  );
+}
+
+export async function verificarInspecciones(area: string, mesActual: string) {
+  const headers = await getAuthHeaders();
+  const res = await fetch(
+    `${API_BASE_URL}/inspecciones-emergencia/verificar-inspecciones?area=${encodeURIComponent(
+      area
+    )}&mesActual=${encodeURIComponent(mesActual)}`,
+    {
+      headers,
+      cache: "no-store",
+    }
+  );
+
+  return handleApiResponse(res);
+}
+
+export async function obtenerExtintoresPorArea(
+  area: string
+): Promise<ExtintorAreaResponse> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(
+    `${API_BASE_URL}/extintor/area/${encodeURIComponent(area)}`,
+    {
+      headers,
+      cache: "no-store",
+    }
+  );
+
+  return handleApiResponse<ExtintorAreaResponse>(response);
+}
 
 export async function generarCodigoQR(
   data: QRGenerateRequest
 ): Promise<QRGenerateResponse> {
-  const response = await fetch(`${API_URL}/qr/generate`, {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/qr/generate`, {
     method: "POST",
-    headers: getHeaders(),
+    headers,
     body: JSON.stringify(data),
     cache: "no-store",
   });
@@ -443,9 +437,10 @@ export async function generarCodigoQR(
 export async function generarCodigoQRCompleto(
   data: QRGenerateRequest
 ): Promise<QRCompleteResponse> {
-  const response = await fetch(`${API_URL}/qr/complete`, {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/qr/complete`, {
     method: "POST",
-    headers: getHeaders(),
+    headers,
     body: JSON.stringify(data),
     cache: "no-store",
   });
@@ -467,7 +462,7 @@ export async function obtenerUrlImagenQR(
   if (options?.margin) params.append("margin", options.margin.toString());
   if (forDownload) params.append("download", "true");
 
-  const url = `${API_URL}/qr/image?${params.toString()}`;
+  const url = `${API_BASE_URL}/qr/image?${params.toString()}`;
 
   return { url };
 }
@@ -483,7 +478,7 @@ export async function obtenerUrlSvgQR(
   if (options?.height) params.append("height", options.height.toString());
   if (forDownload) params.append("download", "true");
 
-  const url = `${API_URL}/qr/svg?${params.toString()}`;
+  const url = `${API_BASE_URL}/qr/svg?${params.toString()}`;
 
   return { url };
 }
@@ -498,12 +493,17 @@ export async function descargarImagenQR(
   if (options?.height) params.append("height", options.height.toString());
   if (options?.margin) params.append("margin", options.margin.toString());
 
-  const response = await fetch(`${API_URL}/qr/image?${params.toString()}`, {
-    headers: new Headers(),
+  const response = await fetch(`${API_BASE_URL}/qr/image?${params.toString()}`, {
+    headers: new Headers(), // Sin Content-Type para imágenes
     cache: "no-store",
   });
 
-  return handleApiResponse<Blob>(response);
+  // Para archivos, manejo especial
+  if (!response.ok) {
+    throw new Error(`Error ${response.status}: ${response.statusText}`);
+  }
+  
+  return response.blob();
 }
 
 export async function descargarSvgQR(
@@ -515,12 +515,17 @@ export async function descargarSvgQR(
   if (options?.width) params.append("width", options.width.toString());
   if (options?.height) params.append("height", options.height.toString());
 
-  const response = await fetch(`${API_URL}/qr/svg?${params.toString()}`, {
+  const response = await fetch(`${API_BASE_URL}/qr/svg?${params.toString()}`, {
     headers: new Headers(),
     cache: "no-store",
   });
 
-  return handleApiResponse<Blob>(response);
+  // Para archivos, manejo especial
+  if (!response.ok) {
+    throw new Error(`Error ${response.status}: ${response.statusText}`);
+  }
+  
+  return response.blob();
 }
 
 export async function validarUrl(

@@ -40,9 +40,11 @@ interface ScaffoldData {
   finalConclusion?: "liberado" | "no_liberado";
 }
 
+type VerificationValue = string | number | undefined;
+
 interface VerificationData {
   TAG?: string;
-  [key: string]: string | number | undefined;
+  [key: string]: VerificationValue;
 }
 
 export interface InProgressInspection {
@@ -212,7 +214,7 @@ export function InProgressInspectionsList({
                   <Box display="flex" justifyContent="space-between" alignItems="start" mb={2}>
                     <Box>
                       <Typography variant="h6" color="primary" gutterBottom>
-                        {inspection.verification.TAG || 'Sin TAG'}
+                        {inspection.verification["PROYECTO/Nº DE ORDEN DE TRABAJO"] || 'Sin TAG'}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         {inspection.templateCode}

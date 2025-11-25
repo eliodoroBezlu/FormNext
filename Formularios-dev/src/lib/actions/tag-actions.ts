@@ -1,7 +1,7 @@
 'use server'
 
 import { API_BASE_URL } from "../constants";
-import { handleApiResponse } from "./helpers";
+import { getAuthHeaders, handleApiResponse } from "./helpers";
 
 // Types
 export interface TagBackend {
@@ -23,11 +23,11 @@ export interface TagForm {
 // Obtener todos los tags
 export async function obtenerTags(): Promise<TagBackend[]> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/tag`, {
       method: 'GET',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       cache: 'no-store',
     });
 
@@ -41,11 +41,11 @@ export async function obtenerTags(): Promise<TagBackend[]> {
 // Obtener tag por ID
 export async function obtenerTagPorId(id: string): Promise<TagBackend> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/tag/${id}`, {
       method: 'GET',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       cache: 'no-store',
     });
 
@@ -59,11 +59,11 @@ export async function obtenerTagPorId(id: string): Promise<TagBackend> {
 // Crear nuevo tag
 export async function crearTag(tagData: TagForm): Promise<TagBackend> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/tag`, {
       method: 'POST',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(tagData),
       cache: 'no-store',
     });
@@ -78,11 +78,11 @@ export async function crearTag(tagData: TagForm): Promise<TagBackend> {
 // Actualizar tag existente
 export async function actualizarTag(id: string, tagData: Partial<TagForm>): Promise<TagBackend> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/tag/${id}`, {
       method: 'PATCH',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(tagData),
       cache: 'no-store',
     });
@@ -97,11 +97,11 @@ export async function actualizarTag(id: string, tagData: Partial<TagForm>): Prom
 // Eliminar tag (eliminación física)
 export async function eliminarTag(id: string): Promise<{ message: string }> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/tag/${id}`, {
       method: 'DELETE',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       cache: 'no-store',
     });
 
@@ -115,11 +115,11 @@ export async function eliminarTag(id: string): Promise<{ message: string }> {
 // Desactivar tag (eliminación lógica)
 export async function desactivarTag(id: string): Promise<TagBackend> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/tag/${id}/desactivar`, {
       method: 'PATCH',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       cache: 'no-store',
     });
 
@@ -133,11 +133,11 @@ export async function desactivarTag(id: string): Promise<TagBackend> {
 // Activar tag
 export async function activarTag(id: string): Promise<TagBackend> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/tag/${id}/activar`, {
       method: 'PATCH',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       cache: 'no-store',
     });
 
@@ -151,11 +151,11 @@ export async function activarTag(id: string): Promise<TagBackend> {
 // Obtener tags por área (solo activos)
 export async function obtenerTagsPorArea(area: string): Promise<string[]> {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/tag/por-area?area=${encodeURIComponent(area)}`, {
       method: 'GET',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       cache: 'no-store',
     });
 

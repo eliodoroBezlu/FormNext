@@ -49,7 +49,6 @@ export const NAVIGATION: NavigationItem[] = [
     segment: "formularios-de-inspeccion",
     title: "Formularios de Inspección de Seguridad",
     icon: "description",
-    requiredRoles: ["supervisor"],
   },
   {
     segment: "form-med-amb",
@@ -61,6 +60,7 @@ export const NAVIGATION: NavigationItem[] = [
     segment: "form-herra-equipos",
     title: "Formulario de Inspección de herramientas y equipos",
     icon: "description",
+    
   },
   {
     segment: "plan-accion",

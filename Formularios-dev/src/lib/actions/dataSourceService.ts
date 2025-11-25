@@ -1,6 +1,7 @@
 "use server"
 
 import { API_BASE_URL } from "../constants";
+import { getAuthHeaders } from "./helpers";
 
 export type DataSourceType = 
   | "area" 
@@ -254,12 +255,12 @@ async function fetchFromBackend(endpoint: string): Promise<string[]> {
   try {
     const url = `${API_BASE_URL}${endpoint}`;
     console.log('Fetching from:', url);
+    const headers = await getAuthHeaders();
+    
     
     const response = await fetch(url, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       next: { revalidate: 300 }
     });
 
@@ -296,11 +297,11 @@ async function fetchFromBackend(endpoint: string): Promise<string[]> {
 async function searchFromBackend(endpoint: string, query: string): Promise<string[]> {
   try {
     const url = `${API_BASE_URL}${endpoint}?query=${encodeURIComponent(query)}`;
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(url, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       next: { revalidate: 60 }
     });
 
@@ -402,9 +403,11 @@ export const searchDataBySource = async (
 
 export const revalidateDataSource = async (dataSource: DataSourceType) => {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/revalidate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ dataSource }),
     });
     return response.ok;

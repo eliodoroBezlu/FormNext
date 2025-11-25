@@ -1,7 +1,7 @@
 "use server"
 
 import { FormTemplate } from "@/types/formTypes"
-import {   handleApiResponse } from "./helpers"
+import {   getAuthHeaders, handleApiResponse } from "./helpers"
 import { API_BASE_URL } from "../constants";
 
 
@@ -10,11 +10,11 @@ import { API_BASE_URL } from "../constants";
 // Crear template
 export async function createTemplate(templateData: Omit<FormTemplate, "_id">) {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/templates`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(templateData),
       cache: "no-store",
     });
@@ -39,12 +39,11 @@ export async function createTemplate(templateData: Omit<FormTemplate, "_id">) {
 export async function updateTemplate(_id: string, templateData: Partial<FormTemplate>) {
   try {
     console.log('Updating template:', _id, templateData);
-
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/templates/${_id}`, {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify({
         ...templateData,
         updatedBy: "current-user",
@@ -71,11 +70,11 @@ export async function updateTemplate(_id: string, templateData: Partial<FormTemp
 // Eliminar template
 export async function deleteTemplate(id: string) {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/templates/${id}`, {
       method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       cache: "no-store",
     });
 
@@ -101,6 +100,8 @@ export async function getTemplates(filters?: {
   search?: string
 }) {
   try {
+    const headers = await getAuthHeaders();
+    
     const searchParams = new URLSearchParams();
 
     if (filters?.type) searchParams.append("type", filters.type);
@@ -110,9 +111,7 @@ export async function getTemplates(filters?: {
     
     const response = await fetch(`${API_BASE_URL}/templates?${searchParams.toString()}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       cache: "no-store",
     });
 
@@ -135,11 +134,11 @@ export async function getTemplates(filters?: {
 // Obtener template por ID
 export async function getTemplate(id: string) {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/templates/${id}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       cache: "no-store",
     });
 
@@ -162,11 +161,11 @@ export async function getTemplate(id: string) {
 // Obtener estadísticas de templates
 export async function getTemplateStats() {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/templates/stats`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       cache: "no-store",
     });
 
@@ -189,11 +188,11 @@ export async function getTemplateStats() {
 // Desactivar template
 export async function deactivateTemplate(id: string) {
   try {
+    const headers = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/templates/${id}/deactivate`, {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       cache: "no-store",
     });
 
