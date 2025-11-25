@@ -67,10 +67,24 @@ export default function DashboardLayout({
     setAnchorEl(null);
   };
 
-  const handleSignOut = () => {
-    handleUserMenuClose();
-    signOut();
-  };
+ const handleSignOut = async () => {
+  handleUserMenuClose();
+  
+  // ✅ Obtener id_token de la sesión
+  const { data: session } = await fetch('/api/auth/session').then(r => r.json());
+  const idToken = session?.idToken;
+  
+  if (idToken) {
+    const keycloakLogoutUrl = `${process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER}/protocol/openid-connect/logout`;
+    const redirectUri = window.location.origin;
+    
+    await signOut({ redirect: false });
+    
+    window.location.href = `${keycloakLogoutUrl}?id_token_hint=${encodeURIComponent(idToken)}&post_logout_redirect_uri=${encodeURIComponent(redirectUri)}`;
+  } else {
+    await signOut({ callbackUrl: '/' });
+  }
+};
 
 
   if (!mounted) {

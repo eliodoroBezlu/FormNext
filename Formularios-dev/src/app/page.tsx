@@ -14,17 +14,27 @@ export default function Home() {
   };
 
   const handleSignOut = async () => {
-    // Crear URL de logout de Keycloak
-    const keycloakLogoutUrl = `${process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER}/protocol/openid-connect/logout`;
-    const redirectUri = `${window.location.origin}`;
+    // ✅ Obtener id_token de la sesión
+    const idToken = session?.idToken;
     
-    // Primero cerrar sesión local
-    await signOut({
-      redirect: false, // No redirigir automáticamente
-    });
-    
-    // Luego redirigir a Keycloak para logout completo
-    window.location.href = `${keycloakLogoutUrl}?post_logout_redirect_uri=${encodeURIComponent(redirectUri)}`;
+    if (idToken) {
+      // URL de logout de Keycloak con id_token_hint
+      const keycloakLogoutUrl = `${process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER}/protocol/openid-connect/logout`;
+      const redirectUri = window.location.origin;
+      
+      // Primero cerrar sesión local
+      await signOut({
+        redirect: false,
+      });
+      
+      // Luego redirigir a Keycloak con id_token_hint
+      window.location.href = `${keycloakLogoutUrl}?id_token_hint=${encodeURIComponent(idToken)}&post_logout_redirect_uri=${encodeURIComponent(redirectUri)}`;
+    } else {
+      // Si no hay id_token, hacer logout simple
+      await signOut({
+        callbackUrl: '/',
+      });
+    }
   };
 
   if (status === "loading") {

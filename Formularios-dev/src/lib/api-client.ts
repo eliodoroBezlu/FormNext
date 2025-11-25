@@ -51,29 +51,25 @@ class ApiClient {
     return this.handleApiResponse(response);
   }
 
-   async post<T, D = undefined>(endpoint: string, data?: D): Promise<T> {
+  async post<T>(endpoint: string, data?: any): Promise<T> {
     const headers = await this.getAuthHeaders();
-    
-    const body = data !== undefined ? JSON.stringify(data) : undefined;
     
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: 'POST',
       headers,
-      body,
+      body: data ? JSON.stringify(data) : undefined,
     });
 
     return this.handleApiResponse(response);
   }
 
-    async put<T, D = undefined>(endpoint: string, data?: D): Promise<T> {
+  async put<T>(endpoint: string, data?: any): Promise<T> {
     const headers = await this.getAuthHeaders();
-    
-    const body = data !== undefined ? JSON.stringify(data) : undefined;
     
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: 'PUT',
       headers,
-      body,
+      body: data ? JSON.stringify(data) : undefined,
     });
 
     return this.handleApiResponse(response);
@@ -102,15 +98,13 @@ class ApiClient {
     return this.handleApiResponse(response);
   }
 
-   async postPublic<T, D = undefined>(endpoint: string, data?: D): Promise<T> {
-    const body = data !== undefined ? JSON.stringify(data) : undefined;
-
+  async postPublic<T>(endpoint: string, data?: any): Promise<T> {
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body,
+      body: data ? JSON.stringify(data) : undefined,
     });
 
     return this.handleApiResponse(response);

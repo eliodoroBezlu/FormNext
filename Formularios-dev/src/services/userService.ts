@@ -1,4 +1,4 @@
-import { apiClient } from "../lib/api-client";
+import { apiClient } from "@/lib/api-client";
 
 
 export interface User {
@@ -26,12 +26,12 @@ export class UserService {
     return apiClient.get<User>(`/users/${id}`);
   }
 
-   static async createUser(userData: CreateUserDto): Promise<User> {
-    return apiClient.post<User, CreateUserDto>('/users', userData);
+  static async createUser(userData: CreateUserDto): Promise<User> {
+    return apiClient.post<User>('/users', userData);
   }
 
   static async updateUser(id: string, userData: Partial<CreateUserDto>): Promise<User> {
-    return apiClient.put<User, Partial<CreateUserDto>>(`/users/${id}`, userData);
+    return apiClient.put<User>(`/users/${id}`, userData);
   }
 
   static async deleteUser(id: string): Promise<void> {
@@ -41,11 +41,8 @@ export class UserService {
   static async getCurrentProfile(): Promise<User> {
     return apiClient.get<User>('/auth/profile');
   }
-
-  static async validateToken(token: string): Promise<{ valid: boolean; userInfo?: User }> {
-    return apiClient.postPublic<{ valid: boolean; userInfo?: User }, { token: string }>(
-      '/auth/validate',
-      { token }
-    );
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static async validateToken(token: string): Promise<{ valid: boolean; userInfo?: any }> {
+    return apiClient.postPublic('/auth/validate', { token });
   }
 }

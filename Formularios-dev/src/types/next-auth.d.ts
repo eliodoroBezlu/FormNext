@@ -1,24 +1,33 @@
-// src/types/next-auth.d.ts
-import { DefaultSession } from "next-auth";
+// types/next-auth.d.ts
+import NextAuth, { DefaultSession } from "next-auth";
+import { JWT } from "next-auth/jwt";
 
 declare module "next-auth" {
-  interface Session extends DefaultSession {
-    accessToken?: string
-    roles: string[]
-    clientRoles: string[]
-    resourceRoles: string[]
-    error?: string
+  interface Session {
+    accessToken?: string;
+    idToken?: string; // ✅ AGREGADO
+    error?: string;
+    roles: string[];
+    clientRoles: string[];
+    resourceRoles: string[];
+  }
+
+  interface User {
+    accessToken?: string;
+    idToken?: string; // ✅ AGREGADO
+    refreshToken?: string;
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
-    accessToken?: string
-    refreshToken?: string
-    expiresAt?: number
-    roles: string[]
-    clientRoles: string[]
-    resourceRoles: string[]
-    error?: string
+    accessToken?: string;
+    idToken?: string; // ✅ AGREGADO
+    refreshToken?: string;
+    expiresAt?: number;
+    error?: string;
+    roles?: string[];
+    clientRoles?: string[];
+    resourceRoles?: string[];
   }
 }
