@@ -22,6 +22,7 @@ import type {
 } from "../../types/formTypes";
 import {  getAuthHeaders, handleApiResponse } from "@/lib/actions/helpers";
 import { API_BASE_URL } from "@/lib/constants";
+import { AreaBackend } from "@/lib/actions/area-actions";
 
 // Acciones del servidor que reemplazan a inspeccionService
 export async function crearInspeccion(data: FormData): Promise<FormData> {
@@ -274,6 +275,18 @@ export async function descargarExcelInspeccionesEmergencia(
   return response.blob();
 }
 
+// Agregar este import al inicio del archivo
+
+// ... resto de imports ...
+
+// =====================================================
+// FUNCIONES DE ÁREAS CORREGIDAS
+// =====================================================
+
+/**
+ * Buscar áreas por query - devuelve solo nombres
+ * El backend endpoint /area/buscar devuelve string[]
+ */
 export async function buscarAreas(query: string): Promise<string[]> {
   const headers = await getAuthHeaders();
   const response = await fetch(
@@ -287,6 +300,10 @@ export async function buscarAreas(query: string): Promise<string[]> {
   return handleApiResponse<string[]>(response);
 }
 
+/**
+ * Obtener todas las áreas - devuelve solo nombres de áreas activas
+ * El backend endpoint /area devuelve objetos completos
+ */
 export async function obtenerAreas(): Promise<string[]> {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/area`, {
@@ -294,7 +311,48 @@ export async function obtenerAreas(): Promise<string[]> {
     cache: "no-store",
   });
 
-  return handleApiResponse<string[]>(response);
+  // El backend devuelve objetos completos de tipo AreaBackend[]
+  const areas = await handleApiResponse<AreaBackend[]>(response);
+  
+  // Filtrar solo áreas activas y extraer nombres
+  return areas
+    .filter(area => area.activo)
+    .map(area => area.nombre)
+    .sort(); // Ordenar alfabéticamente
+}
+
+/**
+ * Obtener todas las áreas completas (objetos)
+ * Útil cuando necesitas más información que solo el nombre
+ */
+export async function obtenerAreasCompletas(): Promise<AreaBackend[]> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/area`, {
+    headers,
+    cache: "no-store",
+  });
+
+  return handleApiResponse<AreaBackend[]>(response);
+}
+
+/**
+ * Obtener áreas activas completas con su superintendencia
+ */
+export async function obtenerAreasActivas(): Promise<AreaBackend[]> {
+  const areas = await obtenerAreasCompletas();
+  return areas.filter(area => area.activo);
+}
+
+/**
+ * Obtener áreas por superintendencia
+ */
+export async function obtenerAreasPorSuperintendencia(
+  superintendenciaId: string
+): Promise<AreaBackend[]> {
+  const areas = await obtenerAreasCompletas();
+  return areas.filter(
+    area => area.activo && area.superintendencia._id === superintendenciaId
+  );
 }
 
 export async function obtenerTagsPorArea(area: string): Promise<string[]> {

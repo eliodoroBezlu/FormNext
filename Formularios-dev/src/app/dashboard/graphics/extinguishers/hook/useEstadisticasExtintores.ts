@@ -1,6 +1,7 @@
 // hooks/useExtintoresData.ts
 import { useState, useEffect } from "react";
 import type { Extintor, AreaStats } from "../types/Iprops";
+import { getAuthHeaders } from "@/lib/actions/helpers";
 
 export const useExtintoresData = () => {
   const [extintores, setExtintores] = useState<Extintor[]>([]);
@@ -11,12 +12,10 @@ export const useExtintoresData = () => {
   const fetchExtintores = async (): Promise<void> => {
     try {
       setError(null);
+      const headers = await getAuthHeaders();
       const response = await fetch("/api/forms/extintor/", {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers,
       });
 
       if (!response.ok) {

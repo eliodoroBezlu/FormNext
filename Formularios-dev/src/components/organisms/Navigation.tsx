@@ -86,6 +86,11 @@ export const NAVIGATION: NavigationItem[] = [
         title: "Extintores",
         icon: "description",
         requiredRoles: ["admin", "superintendente", "supervisor"],
+      },{
+        segment: "inspectionschedule",
+        title: "IRO's ISOP",
+        icon: "description",
+        requiredRoles: ["admin", "superintendente", "supervisor"],
       },
     ],
   },

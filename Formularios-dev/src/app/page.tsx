@@ -8,32 +8,14 @@ import { Typography } from "@/components/atoms/Typography";
 export default function Home() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  
-  // 🔥 La renovación automática ahora se maneja en SessionValidator
 
   const handleRedirect = () => {
     router.push("/dashboard");
   };
 
   const handleSignOut = async () => {
-    const idToken = session?.idToken;
-    const isInspector = session?.isInspector;
-
-    if (isInspector) {
-      // Inspector: logout simple sin redirección a Keycloak
-      await signOut({ callbackUrl: "/" });
-    } else if (idToken) {
-      // Usuario normal: logout completo con Keycloak
-      const keycloakLogoutUrl = `${process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER}/protocol/openid-connect/logout`;
-      const redirectUri = window.location.origin;
-
-      await signOut({ redirect: false });
-      window.location.href = `${keycloakLogoutUrl}?id_token_hint=${encodeURIComponent(
-        idToken
-      )}&post_logout_redirect_uri=${encodeURIComponent(redirectUri)}`;
-    } else {
-      await signOut({ callbackUrl: "/" });
-    }
+    // 🔥 Simple: NextAuth maneja todo el logout (incluyendo Keycloak)
+    await signOut({ callbackUrl: "/" });
   };
 
   const handleInspectorLogin = () => {
@@ -76,7 +58,7 @@ export default function Home() {
           
           {session.isInspector && (
             <Alert severity="info" sx={{ mb: 2 }}>
-              Sesión de Inspector Técnico activa (renovación automática cada 5 minutos)
+              Sesión de Inspector Técnico activa (renovación automática cada 15 minutos)
             </Alert>
           )}
 
@@ -113,11 +95,7 @@ export default function Home() {
             onClick={() => signIn("keycloak")}
             sx={{ mr: 2, mb: 2 }}
           >
-            🔑 Iniciar Sesión con Keycloak
-          </Button>
-
-          <Button variant="outlined" color="primary" onClick={handleRedirect}>
-            Ir al Dashboard (sin autenticación)
+            🔑 Iniciar Sesión 
           </Button>
         </Box>
       )}

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Tag, FormularioInspeccion } from '../types/IProps';
+import { getAuthHeaders } from '@/lib/actions/helpers';
+import { API_BASE_URL } from '@/lib/constants';
 
 export const useDashboardData = () => {
   const [tags, setTags] = useState<Tag[]>([]);
@@ -13,21 +15,16 @@ export const useDashboardData = () => {
     try {
       if (showRefresh) setRefreshing(true);
       setError(null);
+      const headers = await getAuthHeaders();
 
       const [tagsResponse, inspeccionesResponse] = await Promise.all([
-        fetch('/api/forms/tag/', {
+        fetch(`${API_BASE_URL}/tag/`, {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
+          headers,
         }),
-        fetch('/api/forms/inspecciones-emergencia/', {
+        fetch(`${API_BASE_URL}/inspecciones-emergencia/`, {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
+          headers,
         }),
       ]);
 

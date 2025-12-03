@@ -117,7 +117,7 @@ export default function GestionTrabajadores() {
     severity: "info",
   });
 
-  const isAdmin = session?.roles?.includes("admin") || session?.clientRoles?.includes("admin");
+  const isAdmin = session?.roles?.includes("admin") ;
 
   useEffect(() => {
     cargarTrabajadores();

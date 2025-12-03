@@ -59,8 +59,6 @@ export async function GET() {
       user: userInfo,
       session: {
         roles: session.roles || [],
-        clientRoles: session.clientRoles || [],
-        resourceRoles: session.resourceRoles || []
       }
     });
 

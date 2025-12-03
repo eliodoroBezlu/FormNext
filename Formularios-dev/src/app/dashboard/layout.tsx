@@ -1,4 +1,3 @@
-
 'use client';
 
 import type React from "react";
@@ -29,7 +28,6 @@ import { lightTheme, darkTheme } from "../../styles/theme";
 import { signOut } from "next-auth/react";
 import CloseIcon from "@mui/icons-material/Close";
 
-
 const drawerWidth = 350;
 
 export default function DashboardLayout({
@@ -41,6 +39,8 @@ export default function DashboardLayout({
   const [mounted, setMounted] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  //const { data: session } = useSession();
+
   useEffect(() => {
     const savedTheme = localStorage.getItem('darkMode');
     if (savedTheme) {
@@ -67,25 +67,12 @@ export default function DashboardLayout({
     setAnchorEl(null);
   };
 
- const handleSignOut = async () => {
-  handleUserMenuClose();
-  
-  // ✅ Obtener id_token de la sesión
-  const { data: session } = await fetch('/api/auth/session').then(r => r.json());
-  const idToken = session?.idToken;
-  
-  if (idToken) {
-    const keycloakLogoutUrl = `${process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER}/protocol/openid-connect/logout`;
-    const redirectUri = window.location.origin;
+  const handleSignOut = async () => {
+    handleUserMenuClose();
     
-    await signOut({ redirect: false });
-    
-    window.location.href = `${keycloakLogoutUrl}?id_token_hint=${encodeURIComponent(idToken)}&post_logout_redirect_uri=${encodeURIComponent(redirectUri)}`;
-  } else {
-    await signOut({ callbackUrl: '/' });
-  }
-};
-
+    // 🔥 Simple: NextAuth maneja todo el logout (incluyendo Keycloak)
+    await signOut({ callbackUrl: "/" });
+  };
 
   if (!mounted) {
     return <div style={{ visibility: 'hidden' }}>{children}</div>;
@@ -93,105 +80,105 @@ export default function DashboardLayout({
 
   return (
     <ProtectedRoute>
-        <ThemeProvider theme={darkMode ? darkTheme : lightTheme}>
-          <CssBaseline />
-          <Box sx={{ display: "flex" }}>
-            <AppBar
-              position="fixed"
-              sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
-            >
-              <Toolbar>
-                <IconButton
-                  color="inherit"
-                  aria-label="open drawer"
-                  edge="start"
-                  onClick={handleDrawerToggle}
-                  sx={{ mr: 2 }}
-                >
-                  <MenuIcon />
-                </IconButton>
-                <Typography
-                  variant="h6"
-                  noWrap
-                  component="div"
-                  sx={{ flexGrow: 1 }}
-                >
-                  Dashboard
-                </Typography>
-                <IconButton color="inherit" onClick={handleThemeToggle}>
-                  {darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
-                </IconButton>
-                <IconButton 
-                  color="inherit" 
-                  onClick={handleUserMenuOpen}
-                  sx={{ ml: 1 }}
-                >
-                  <AccountCircleIcon />
-                </IconButton>
-                <Menu
-                  anchorEl={anchorEl}
-                  open={Boolean(anchorEl)}
-                  onClose={handleUserMenuClose}
-                  anchorOrigin={{
-                    vertical: 'bottom',
-                    horizontal: 'right',
-                  }}
-                  transformOrigin={{
-                    vertical: 'top',
-                    horizontal: 'right',
-                  }}
-                >
-                  <UserInfo />
-                  <Divider />
-                  <MenuItem onClick={handleSignOut}>
-                    <LogoutIcon sx={{ mr: 1 }} />
-                    Cerrar Sesión
-                  </MenuItem>
-                </Menu>
-              </Toolbar>
-            </AppBar>
-            <Drawer
-              variant="temporary"
-              open={open}
-              onClose={handleDrawerToggle}
-              ModalProps={{
-                keepMounted: true,
-              }}
-              sx={{
-                "& .MuiDrawer-paper": {
-                  boxSizing: "border-box",
-                  width: drawerWidth,
-                  height: "100%",
-                  zIndex: (theme) => theme.zIndex.drawer + 2,
-                },
-              }}
-            >
-              <Toolbar sx={{ justifyContent: "flex-end" }}>
-                <IconButton onClick={handleDrawerToggle}>
-                  <CloseIcon />
-                </IconButton>
-              </Toolbar>
-              <Navigation onNavigate={handleDrawerToggle}/>
-            </Drawer>
-            <Box
-              component="main"
-              sx={{
-                flexGrow: 1,
-                p: 3,
-                width: "100%",
-                marginLeft: 0,
-                transition: (theme) =>
-                  theme.transitions.create(["margin", "width"], {
-                    easing: theme.transitions.easing.sharp,
-                    duration: theme.transitions.duration.leavingScreen,
-                  }),
-              }}
-            >
-              <Toolbar />
-              {children}
-            </Box>
+      <ThemeProvider theme={darkMode ? darkTheme : lightTheme}>
+        <CssBaseline />
+        <Box sx={{ display: "flex" }}>
+          <AppBar
+            position="fixed"
+            sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
+          >
+            <Toolbar>
+              <IconButton
+                color="inherit"
+                aria-label="open drawer"
+                edge="start"
+                onClick={handleDrawerToggle}
+                sx={{ mr: 2 }}
+              >
+                <MenuIcon />
+              </IconButton>
+              <Typography
+                variant="h6"
+                noWrap
+                component="div"
+                sx={{ flexGrow: 1 }}
+              >
+                Dashboard
+              </Typography>
+              <IconButton color="inherit" onClick={handleThemeToggle}>
+                {darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
+              </IconButton>
+              <IconButton 
+                color="inherit" 
+                onClick={handleUserMenuOpen}
+                sx={{ ml: 1 }}
+              >
+                <AccountCircleIcon />
+              </IconButton>
+              <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleUserMenuClose}
+                anchorOrigin={{
+                  vertical: 'bottom',
+                  horizontal: 'right',
+                }}
+                transformOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right',
+                }}
+              >
+                <UserInfo />
+                <Divider />
+                <MenuItem onClick={handleSignOut}>
+                  <LogoutIcon sx={{ mr: 1 }} />
+                  Cerrar Sesión
+                </MenuItem>
+              </Menu>
+            </Toolbar>
+          </AppBar>
+          <Drawer
+            variant="temporary"
+            open={open}
+            onClose={handleDrawerToggle}
+            ModalProps={{
+              keepMounted: true,
+            }}
+            sx={{
+              "& .MuiDrawer-paper": {
+                boxSizing: "border-box",
+                width: drawerWidth,
+                height: "100%",
+                zIndex: (theme) => theme.zIndex.drawer + 2,
+              },
+            }}
+          >
+            <Toolbar sx={{ justifyContent: "flex-end" }}>
+              <IconButton onClick={handleDrawerToggle}>
+                <CloseIcon />
+              </IconButton>
+            </Toolbar>
+            <Navigation onNavigate={handleDrawerToggle}/>
+          </Drawer>
+          <Box
+            component="main"
+            sx={{
+              flexGrow: 1,
+              p: 3,
+              width: "100%",
+              marginLeft: 0,
+              transition: (theme) =>
+                theme.transitions.create(["margin", "width"], {
+                  easing: theme.transitions.easing.sharp,
+                  duration: theme.transitions.duration.leavingScreen,
+                }),
+            }}
+          >
+            <Toolbar />
+            {children}
           </Box>
-        </ThemeProvider>
+        </Box>
+      </ThemeProvider>
     </ProtectedRoute>
   );
 }

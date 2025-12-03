@@ -202,421 +202,421 @@
 // };
 
 // lib/auth.ts
-import { NextAuthOptions } from "next-auth";
-import KeycloakProvider from "next-auth/providers/keycloak";
-import CredentialsProvider from "next-auth/providers/credentials";
+// import { NextAuthOptions } from "next-auth";
+// import KeycloakProvider from "next-auth/providers/keycloak";
+// import CredentialsProvider from "next-auth/providers/credentials";
 
-interface KeycloakJWTPayload {
-  realm_access?: {
-    roles: string[]
-  }
-  resource_access?: Record<string, {
-    roles: string[]
-  }>
-  exp?: number;
-  iat?: number;
-}
+// interface KeycloakJWTPayload {
+//   realm_access?: {
+//     roles: string[]
+//   }
+//   resource_access?: Record<string, {
+//     roles: string[]
+//   }>
+//   exp?: number;
+//   iat?: number;
+// }
 
-interface InspectorUser {
-  id: string;
-  name: string;
-  email: string;
-  accessToken: string;
-  refreshToken?: string;
-  expiresAt: number;
-  roles: string[];
-}
+// interface InspectorUser {
+//   id: string;
+//   name: string;
+//   email: string;
+//   accessToken: string;
+//   refreshToken?: string;
+//   expiresAt: number;
+//   roles: string[];
+// }
 
-// 🔥 Renovar token de Client Credentials (solo para inspectores)
-async function renewClientCredentialsToken() {
-  try {
-    console.log('🔄 Renovando token de Client Credentials...');
+// // 🔥 Renovar token de Client Credentials (solo para inspectores)
+// async function renewClientCredentialsToken() {
+//   try {
+//     console.log('🔄 Renovando token de Client Credentials...');
     
-    const response = await fetch(
-      `${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/token`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          grant_type: 'client_credentials',
-          client_id: process.env.KEYCLOAK_ID!,
-          client_secret: process.env.KEYCLOAK_SECRET!,
-        }),
-      }
-    );
+//     const response = await fetch(
+//       `${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/token`,
+//       {
+//         method: 'POST',
+//         headers: {
+//           'Content-Type': 'application/x-www-form-urlencoded',
+//         },
+//         body: new URLSearchParams({
+//           grant_type: 'client_credentials',
+//           client_id: process.env.KEYCLOAK_ID!,
+//           client_secret: process.env.KEYCLOAK_SECRET!,
+//         }),
+//       }
+//     );
 
-    if (!response.ok) {
-      console.error('❌ Error renovando token:', response.status);
-      return null;
-    }
+//     if (!response.ok) {
+//       console.error('❌ Error renovando token:', response.status);
+//       return null;
+//     }
 
-    const tokens = await response.json();
-    console.log('✅ Token renovado exitosamente');
-    return tokens;
-  } catch (error) {
-    console.error('❌ Error en renovación de token:', error);
-    return null;
-  }
-}
+//     const tokens = await response.json();
+//     console.log('✅ Token renovado exitosamente');
+//     return tokens;
+//   } catch (error) {
+//     console.error('❌ Error en renovación de token:', error);
+//     return null;
+//   }
+// }
 
-// Función para refrescar el token (usuarios normales de Keycloak)
-async function refreshAccessToken(refreshToken: string) {
-  try {
-    console.log('🔄 Intentando refrescar token de usuario normal...');
+// // Función para refrescar el token (usuarios normales de Keycloak)
+// async function refreshAccessToken(refreshToken: string) {
+//   try {
+//     console.log('🔄 Intentando refrescar token de usuario normal...');
     
-    const response = await fetch(
-      `${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/token`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          grant_type: 'refresh_token',
-          client_id: process.env.KEYCLOAK_ID!,
-          client_secret: process.env.KEYCLOAK_SECRET!,
-          refresh_token: refreshToken,
-        }),
-      }
-    );
+//     const response = await fetch(
+//       `${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/token`,
+//       {
+//         method: 'POST',
+//         headers: {
+//           'Content-Type': 'application/x-www-form-urlencoded',
+//         },
+//         body: new URLSearchParams({
+//           grant_type: 'refresh_token',
+//           client_id: process.env.KEYCLOAK_ID!,
+//           client_secret: process.env.KEYCLOAK_SECRET!,
+//           refresh_token: refreshToken,
+//         }),
+//       }
+//     );
 
-    if (!response.ok) {
-      console.error('❌ Refresh token falló:', response.status, response.statusText);
-      return null;
-    }
+//     if (!response.ok) {
+//       console.error('❌ Refresh token falló:', response.status, response.statusText);
+//       return null;
+//     }
 
-    const tokens = await response.json();
-    console.log('✅ Token refrescado exitosamente');
-    return tokens;
-  } catch (error) {
-    console.error('❌ Error refrescando token:', error);
-    return null;
-  }
-}
+//     const tokens = await response.json();
+//     console.log('✅ Token refrescado exitosamente');
+//     return tokens;
+//   } catch (error) {
+//     console.error('❌ Error refrescando token:', error);
+//     return null;
+//   }
+// }
 
-export const authOptions: NextAuthOptions = {
-  providers: [
-    KeycloakProvider({
-      clientId: process.env.KEYCLOAK_ID!,
-      clientSecret: process.env.KEYCLOAK_SECRET!,
-      issuer: process.env.KEYCLOAK_ISSUER!,
-    }),
-    CredentialsProvider({
-      id: "inspector",
-      name: "Inspector Técnico",
-      credentials: {},
-      async authorize() {
-        try {
-          console.log('🔑 Obteniendo token técnico para inspector...');
+// export const authOptions: NextAuthOptions = {
+//   providers: [
+//     KeycloakProvider({
+//       clientId: process.env.KEYCLOAK_ID!,
+//       clientSecret: process.env.KEYCLOAK_SECRET!,
+//       issuer: process.env.KEYCLOAK_ISSUER!,
+//     }),
+//     CredentialsProvider({
+//       id: "inspector",
+//       name: "Inspector Técnico",
+//       credentials: {},
+//       async authorize() {
+//         try {
+//           console.log('🔑 Obteniendo token técnico para inspector...');
           
-          const response = await fetch(
-            `${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/token`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/x-www-form-urlencoded" },
-              body: new URLSearchParams({
-                client_id: process.env.KEYCLOAK_ID!,
-                client_secret: process.env.KEYCLOAK_SECRET!,
-                grant_type: "client_credentials",
-              }),
-            }
-          );
+//           const response = await fetch(
+//             `${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/token`,
+//             {
+//               method: "POST",
+//               headers: { "Content-Type": "application/x-www-form-urlencoded" },
+//               body: new URLSearchParams({
+//                 client_id: process.env.KEYCLOAK_ID!,
+//                 client_secret: process.env.KEYCLOAK_SECRET!,
+//                 grant_type: "client_credentials",
+//               }),
+//             }
+//           );
 
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error('❌ Error en Client Credentials Flow:', errorText);
-            return null;
-          }
+//           if (!response.ok) {
+//             const errorText = await response.text();
+//             console.error('❌ Error en Client Credentials Flow:', errorText);
+//             return null;
+//           }
 
-          const tokens = await response.json();
-          const clientId = process.env.KEYCLOAK_ID || "next-app-client";
+//           const tokens = await response.json();
+//           const clientId = process.env.KEYCLOAK_ID || "next-app-client";
 
-          console.log('✅ Token técnico obtenido');
+//           console.log('✅ Token técnico obtenido');
           
-          // Decodificar el token para obtener roles
-          const payload = JSON.parse(
-            Buffer.from(tokens.access_token.split(".")[1], "base64").toString()
-          );
+//           // Decodificar el token para obtener roles
+//           const payload = JSON.parse(
+//             Buffer.from(tokens.access_token.split(".")[1], "base64").toString()
+//           );
           
-          const roles = 
-            payload.resource_access?.[clientId]?.roles || 
-            payload.realm_access?.roles || 
-            ["tecnico"];
+//           const roles = 
+//             payload.resource_access?.[clientId]?.roles || 
+//             payload.realm_access?.roles || 
+//             ["tecnico"];
 
-          console.log('✅ Roles del inspector:', roles);
+//           console.log('✅ Roles del inspector:', roles);
 
-          return {
-            id: "inspector",
-            name: "Inspector Técnico",
-            email: "inspector@tecnico.com",
-            accessToken: tokens.access_token,
-            expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
-            roles,
-          } as InspectorUser;
-        } catch (error) {
-          console.error('❌ Error en authorize de inspector:', error);
-          return null;
-        }
-      },
-    }),
-  ],
+//           return {
+//             id: "inspector",
+//             name: "Inspector Técnico",
+//             email: "inspector@tecnico.com",
+//             accessToken: tokens.access_token,
+//             expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
+//             roles,
+//           } as InspectorUser;
+//         } catch (error) {
+//           console.error('❌ Error en authorize de inspector:', error);
+//           return null;
+//         }
+//       },
+//     }),
+//   ],
   
-  cookies: {
-    sessionToken: {
-      name: process.env.NODE_ENV === 'production' 
-        ? '__Secure-next-auth.session-token' 
-        : 'next-auth.session-token',
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-      },
-    },
-    callbackUrl: {
-      name: process.env.NODE_ENV === 'production'
-        ? '__Secure-next-auth.callback-url'
-        : 'next-auth.callback-url',
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-      },
-    },
-    csrfToken: {
-      name: process.env.NODE_ENV === 'production'
-        ? '__Host-next-auth.csrf-token'
-        : 'next-auth.csrf-token',
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-      },
-    },
-  },
+//   cookies: {
+//     sessionToken: {
+//       name: process.env.NODE_ENV === 'production' 
+//         ? '__Secure-next-auth.session-token' 
+//         : 'next-auth.session-token',
+//       options: {
+//         httpOnly: true,
+//         sameSite: 'lax',
+//         path: '/',
+//         secure: process.env.NODE_ENV === 'production',
+//       },
+//     },
+//     callbackUrl: {
+//       name: process.env.NODE_ENV === 'production'
+//         ? '__Secure-next-auth.callback-url'
+//         : 'next-auth.callback-url',
+//       options: {
+//         httpOnly: true,
+//         sameSite: 'lax',
+//         path: '/',
+//         secure: process.env.NODE_ENV === 'production',
+//       },
+//     },
+//     csrfToken: {
+//       name: process.env.NODE_ENV === 'production'
+//         ? '__Host-next-auth.csrf-token'
+//         : 'next-auth.csrf-token',
+//       options: {
+//         httpOnly: true,
+//         sameSite: 'lax',
+//         path: '/',
+//         secure: process.env.NODE_ENV === 'production',
+//       },
+//     },
+//   },
 
-  callbacks: {
-    async jwt({ token, account, user, trigger }) {
-      // 🔥 Inspector: Configuración inicial
-      if (account?.provider === "inspector" && user) {
-        console.log('🔐 Creando JWT para inspector');
-        return {
-          ...token,
-          accessToken: (user as InspectorUser).accessToken,
-          expiresAt: (user as InspectorUser).expiresAt,
-          roles: (user as InspectorUser).roles,
-          clientRoles: (user as InspectorUser).roles,
-          resourceRoles: [],
-          isInspector: true,
-          idToken: undefined,
-          refreshToken: undefined,
-        };
-      }
+//   callbacks: {
+//     async jwt({ token, account, user, trigger }) {
+//       // 🔥 Inspector: Configuración inicial
+//       if (account?.provider === "inspector" && user) {
+//         console.log('🔐 Creando JWT para inspector');
+//         return {
+//           ...token,
+//           accessToken: (user as InspectorUser).accessToken,
+//           expiresAt: (user as InspectorUser).expiresAt,
+//           roles: (user as InspectorUser).roles,
+//           clientRoles: (user as InspectorUser).roles,
+//           resourceRoles: [],
+//           isInspector: true,
+//           idToken: undefined,
+//           refreshToken: undefined,
+//         };
+//       }
 
-      // Usuario normal de Keycloak: Configuración inicial
-      if (account && account.provider !== "inspector") {
-        console.log('🔐 Configuración inicial de token para usuario Keycloak');
-        token.accessToken = account.access_token;
-        token.refreshToken = account.refresh_token;
-        token.idToken = account.id_token;
-        token.expiresAt = account.expires_at;
-        token.isInspector = false;
+//       // Usuario normal de Keycloak: Configuración inicial
+//       if (account && account.provider !== "inspector") {
+//         console.log('🔐 Configuración inicial de token para usuario Keycloak');
+//         token.accessToken = account.access_token;
+//         token.refreshToken = account.refresh_token;
+//         token.idToken = account.id_token;
+//         token.expiresAt = account.expires_at;
+//         token.isInspector = false;
 
-        // Decodificar roles del token inicial
-        if (account.access_token) {
-          try {
-            const payload: KeycloakJWTPayload = JSON.parse(
-              Buffer.from(account.access_token.split('.')[1], 'base64').toString()
-            );
-            const clientId = process.env.KEYCLOAK_ID || "next-app-client";
+//         // Decodificar roles del token inicial
+//         if (account.access_token) {
+//           try {
+//             const payload: KeycloakJWTPayload = JSON.parse(
+//               Buffer.from(account.access_token.split('.')[1], 'base64').toString()
+//             );
+//             const clientId = process.env.KEYCLOAK_ID || "next-app-client";
             
-            token.roles = payload.realm_access?.roles || [];
-            token.resourceRoles = payload.resource_access?.[clientId]?.roles || [];
-            token.clientRoles = payload.resource_access?.[process.env.KEYCLOAK_ID!]?.roles || [];
-          } catch (error) {
-            console.error('❌ Error decodificando token inicial:', error);
-            token.roles = [];
-            token.clientRoles = [];
-            token.resourceRoles = [];
-          }
-        }
-        return token;
-      }
+//             token.roles = payload.realm_access?.roles || [];
+//             token.resourceRoles = payload.resource_access?.[clientId]?.roles || [];
+//             token.clientRoles = payload.resource_access?.[process.env.KEYCLOAK_ID!]?.roles || [];
+//           } catch (error) {
+//             console.error('❌ Error decodificando token inicial:', error);
+//             token.roles = [];
+//             token.clientRoles = [];
+//             token.resourceRoles = [];
+//           }
+//         }
+//         return token;
+//       }
 
-      // Asegurar que los arrays siempre existan
-      if (!token.roles) token.roles = [];
-      if (!token.clientRoles) token.clientRoles = [];
-      if (!token.resourceRoles) token.resourceRoles = [];
+//       // Asegurar que los arrays siempre existan
+//       if (!token.roles) token.roles = [];
+//       if (!token.clientRoles) token.clientRoles = [];
+//       if (!token.resourceRoles) token.resourceRoles = [];
 
-      // 🔥 RENOVACIÓN PARA INSPECTORES (solo cuando se solicita explícitamente via update())
-      if (token.isInspector && trigger === 'update') {
-        console.log('🔄 Solicitud de actualización manual para inspector');
+//       // 🔥 RENOVACIÓN PARA INSPECTORES (solo cuando se solicita explícitamente via update())
+//       if (token.isInspector && trigger === 'update') {
+//         console.log('🔄 Solicitud de actualización manual para inspector');
         
-        // Verificar si el token necesita renovación (5 minutos antes de expirar)
-        const shouldRenew = token.expiresAt && Date.now() > ((token.expiresAt as number) - 300) * 1000;
+//         // Verificar si el token necesita renovación (5 minutos antes de expirar)
+//         const shouldRenew = token.expiresAt && Date.now() > ((token.expiresAt as number) - 300) * 1000;
         
-        if (shouldRenew) {
-          console.log('🔄 Token de inspector próximo a expirar, renovando...');
-          const newTokens = await renewClientCredentialsToken();
+//         if (shouldRenew) {
+//           console.log('🔄 Token de inspector próximo a expirar, renovando...');
+//           const newTokens = await renewClientCredentialsToken();
           
-          if (newTokens) {
-            const payload = JSON.parse(
-              Buffer.from(newTokens.access_token.split('.')[1], 'base64').toString()
-            );
-            const clientId = process.env.KEYCLOAK_ID || "next-app-client";
+//           if (newTokens) {
+//             const payload = JSON.parse(
+//               Buffer.from(newTokens.access_token.split('.')[1], 'base64').toString()
+//             );
+//             const clientId = process.env.KEYCLOAK_ID || "next-app-client";
             
-            const roles = 
-              payload.resource_access?.[clientId]?.roles || 
-              payload.realm_access?.roles || 
-              ["tecnico"];
+//             const roles = 
+//               payload.resource_access?.[clientId]?.roles || 
+//               payload.realm_access?.roles || 
+//               ["tecnico"];
 
-            token.accessToken = newTokens.access_token;
-            token.expiresAt = Math.floor(Date.now() / 1000) + newTokens.expires_in;
-            token.roles = roles;
-            token.clientRoles = roles;
+//             token.accessToken = newTokens.access_token;
+//             token.expiresAt = Math.floor(Date.now() / 1000) + newTokens.expires_in;
+//             token.roles = roles;
+//             token.clientRoles = roles;
             
-            console.log('✅ Token de inspector renovado exitosamente');
-            return token;
-          } else {
-            console.error('❌ Falló la renovación del token de inspector');
-            token.error = 'InspectorTokenRenewalFailed';
-            return token;
-          }
-        }
+//             console.log('✅ Token de inspector renovado exitosamente');
+//             return token;
+//           } else {
+//             console.error('❌ Falló la renovación del token de inspector');
+//             token.error = 'InspectorTokenRenewalFailed';
+//             return token;
+//           }
+//         }
         
-        console.log('✅ Token de inspector aún válido, no se requiere renovación');
-        return token;
-      }
+//         console.log('✅ Token de inspector aún válido, no se requiere renovación');
+//         return token;
+//       }
 
-      // 🔥 PARA INSPECTORES: Verificar expiración sin renovación automática
-      if (token.isInspector) {
-        // Si el token ya expiró, marcar error
-        if (token.expiresAt && Date.now() >= (token.expiresAt as number) * 1000) {
-          console.error('❌ Token de inspector expirado');
-          token.error = 'InspectorTokenExpired';
-          return token;
-        }
+//       // 🔥 PARA INSPECTORES: Verificar expiración sin renovación automática
+//       if (token.isInspector) {
+//         // Si el token ya expiró, marcar error
+//         if (token.expiresAt && Date.now() >= (token.expiresAt as number) * 1000) {
+//           console.error('❌ Token de inspector expirado');
+//           token.error = 'InspectorTokenExpired';
+//           return token;
+//         }
         
-        // Token aún válido
-        return token;
-      }
+//         // Token aún válido
+//         return token;
+//       }
 
-      // 🔥 USUARIOS NORMALES: Renovación con refresh token
-      // Verificar si el token aún es válido
-      if (token.expiresAt && Date.now() < (token.expiresAt as number) * 1000) {
-        return token;
-      }
+//       // 🔥 USUARIOS NORMALES: Renovación con refresh token
+//       // Verificar si el token aún es válido
+//       if (token.expiresAt && Date.now() < (token.expiresAt as number) * 1000) {
+//         return token;
+//       }
 
-      // Token expirado → Intentar refresh
-      if (token.refreshToken && !token.error) {
-        console.log('🔄 Token expirado, intentando refresh...');
-        const refreshedTokens = await refreshAccessToken(token.refreshToken as string);
+//       // Token expirado → Intentar refresh
+//       if (token.refreshToken && !token.error) {
+//         console.log('🔄 Token expirado, intentando refresh...');
+//         const refreshedTokens = await refreshAccessToken(token.refreshToken as string);
         
-        if (refreshedTokens) {
-          token.accessToken = refreshedTokens.access_token;
-          token.refreshToken = refreshedTokens.refresh_token;
-          token.expiresAt = Math.floor(Date.now() / 1000) + refreshedTokens.expires_in;
-          delete token.error;
+//         if (refreshedTokens) {
+//           token.accessToken = refreshedTokens.access_token;
+//           token.refreshToken = refreshedTokens.refresh_token;
+//           token.expiresAt = Math.floor(Date.now() / 1000) + refreshedTokens.expires_in;
+//           delete token.error;
 
-          // Decodificar el nuevo token para roles actualizados
-          try {
-            const payload: KeycloakJWTPayload = JSON.parse(
-              Buffer.from(refreshedTokens.access_token.split('.')[1], 'base64').toString()
-            );
-            const clientId = process.env.KEYCLOAK_ID || "next-app-client";
+//           // Decodificar el nuevo token para roles actualizados
+//           try {
+//             const payload: KeycloakJWTPayload = JSON.parse(
+//               Buffer.from(refreshedTokens.access_token.split('.')[1], 'base64').toString()
+//             );
+//             const clientId = process.env.KEYCLOAK_ID || "next-app-client";
             
-            token.roles = payload.realm_access?.roles || [];
-            token.resourceRoles = payload.resource_access?.[clientId]?.roles || [];
-            token.clientRoles = payload.resource_access?.[process.env.KEYCLOAK_ID!]?.roles || [];
-          } catch (error) {
-            console.error('❌ Error decodificando token refrescado:', error);
-          }
+//             token.roles = payload.realm_access?.roles || [];
+//             token.resourceRoles = payload.resource_access?.[clientId]?.roles || [];
+//             token.clientRoles = payload.resource_access?.[process.env.KEYCLOAK_ID!]?.roles || [];
+//           } catch (error) {
+//             console.error('❌ Error decodificando token refrescado:', error);
+//           }
 
-          console.log('✅ Token refrescado exitosamente');
-          return token;
-        }
-      }
+//           console.log('✅ Token refrescado exitosamente');
+//           return token;
+//         }
+//       }
 
-      // Si llegamos aquí, el refresh falló
-      console.error('❌ Refresh falló, sesión expirada');
-      token.accessToken = undefined;
-      token.refreshToken = undefined;
-      token.expiresAt = undefined;
-      token.error = 'RefreshTokenExpired';
-      return token;
-    },
+//       // Si llegamos aquí, el refresh falló
+//       console.error('❌ Refresh falló, sesión expirada');
+//       token.accessToken = undefined;
+//       token.refreshToken = undefined;
+//       token.expiresAt = undefined;
+//       token.error = 'RefreshTokenExpired';
+//       return token;
+//     },
     
-    async session({ session, token }) {
-      // Si hay error en el token, marcar sesión como inválida
-      if (token.error) {
-        console.log('⚠️ Sesión marcada como inválida por error:', token.error);
-        session.error = token.error;
-        session.accessToken = undefined;
-        session.roles = [];
-        session.clientRoles = [];
-        session.resourceRoles = [];
-        return session;
-      }
+//     async session({ session, token }) {
+//       // Si hay error en el token, marcar sesión como inválida
+//       if (token.error) {
+//         console.log('⚠️ Sesión marcada como inválida por error:', token.error);
+//         session.error = token.error;
+//         session.accessToken = undefined;
+//         session.roles = [];
+//         session.clientRoles = [];
+//         session.resourceRoles = [];
+//         return session;
+//       }
 
-      // Sesión válida - asignar datos
-      if (typeof token.accessToken === 'string') {
-        session.accessToken = token.accessToken;
-      }
+//       // Sesión válida - asignar datos
+//       if (typeof token.accessToken === 'string') {
+//         session.accessToken = token.accessToken;
+//       }
       
-      if (typeof token.idToken === 'string') {
-        session.idToken = token.idToken;
-      }
+//       if (typeof token.idToken === 'string') {
+//         session.idToken = token.idToken;
+//       }
       
-      session.roles = Array.isArray(token.roles) ? token.roles : [];
-      session.clientRoles = Array.isArray(token.clientRoles) ? token.clientRoles : [];
-      session.resourceRoles = Array.isArray(token.resourceRoles) ? token.resourceRoles : [];
-      session.isInspector = token.isInspector || false;
+//       session.roles = Array.isArray(token.roles) ? token.roles : [];
+//       session.clientRoles = Array.isArray(token.clientRoles) ? token.clientRoles : [];
+//       session.resourceRoles = Array.isArray(token.resourceRoles) ? token.resourceRoles : [];
+//       session.isInspector = token.isInspector || false;
       
-      return session;
-    },
-  },
+//       return session;
+//     },
+//   },
   
-  pages: {
-    signIn: "/",
-    error: "/auth/error",
-  },
+//   pages: {
+//     signIn: "/",
+//     error: "/auth/error",
+//   },
   
-  debug: process.env.NODE_ENV === 'development',
+//   debug: process.env.NODE_ENV === 'development',
   
-  session: {
-    strategy: "jwt",
-    maxAge: 4 * 60 * 60, // 🔥 4 horas - LA SESIÓN EXPIRA DESPUÉS DE ESTE TIEMPO
-    updateAge: 5 * 60,   // 🔥 5 minutos - Solo se renueva si hay ACTIVIDAD del usuario
-  },
+//   session: {
+//     strategy: "jwt",
+//     maxAge: 4 * 60 * 60, // 🔥 4 horas - LA SESIÓN EXPIRA DESPUÉS DE ESTE TIEMPO
+//     updateAge: 5 * 60,   // 🔥 5 minutos - Solo se renueva si hay ACTIVIDAD del usuario
+//   },
   
-  events: {
-    async signOut({ token }) {
-      // Solo hacer logout en Keycloak si NO es inspector
-      if (token?.idToken && !token.isInspector) {
-        try {
-          console.log('🔓 Realizando logout en Keycloak...');
-          const logoutUrl = `${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/logout`;
-          const params = new URLSearchParams({
-            id_token_hint: token.idToken as string,
-          });
+//   events: {
+//     async signOut({ token }) {
+//       // Solo hacer logout en Keycloak si NO es inspector
+//       if (token?.idToken && !token.isInspector) {
+//         try {
+//           console.log('🔓 Realizando logout en Keycloak...');
+//           const logoutUrl = `${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/logout`;
+//           const params = new URLSearchParams({
+//             id_token_hint: token.idToken as string,
+//           });
           
-          await fetch(`${logoutUrl}?${params.toString()}`, {
-            method: 'GET',
-          });
-          console.log('✅ Logout de Keycloak exitoso');
-        } catch (error) {
-          console.error('❌ Error durante logout de Keycloak:', error);
-        }
-      } else if (token?.isInspector) {
-        console.log('🔓 Logout de inspector - no se requiere logout de Keycloak');
-      }
-    },
-  },
-};
+//           await fetch(`${logoutUrl}?${params.toString()}`, {
+//             method: 'GET',
+//           });
+//           console.log('✅ Logout de Keycloak exitoso');
+//         } catch (error) {
+//           console.error('❌ Error durante logout de Keycloak:', error);
+//         }
+//       } else if (token?.isInspector) {
+//         console.log('🔓 Logout de inspector - no se requiere logout de Keycloak');
+//       }
+//     },
+//   },
+// };
 
 // lib/auth.ts
 // import { NextAuthOptions } from "next-auth";
@@ -776,3 +776,412 @@ export const authOptions: NextAuthOptions = {
 //     },
 //   },
 // };
+
+
+import { NextAuthOptions } from "next-auth";
+import KeycloakProvider from "next-auth/providers/keycloak";
+import CredentialsProvider from "next-auth/providers/credentials";
+
+interface KeycloakJWTPayload {
+  realm_access?: {
+    roles: string[]
+  }
+  resource_access?: Record<string, {
+    roles: string[]
+  }>
+  exp?: number;
+  iat?: number;
+}
+
+interface InspectorUser {
+  id: string;
+  name: string;
+  email: string;
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt: number;
+  roles: string[];
+}
+
+// 🔥 Función para extraer solo roles relevantes
+function extractRelevantRoles(payload: KeycloakJWTPayload, clientId: string): string[] {
+  const clientRoles = payload.resource_access?.[clientId]?.roles || [];
+  const realmRoles = payload.realm_access?.roles || [];
+  
+  // Filtrar solo roles importantes (evitar roles genéricos de Keycloak)
+  const irrelevantRoles = ['offline_access', 'uma_authorization', 'default-roles-forms'];
+  
+  const allRoles = [...new Set([...clientRoles, ...realmRoles])];
+  return allRoles.filter(role => !irrelevantRoles.includes(role));
+}
+
+// 🔥 Renovar token de Client Credentials (solo para inspectores)
+async function renewClientCredentialsToken() {
+  try {
+    console.log('🔄 Renovando token de Client Credentials...');
+    
+    const response = await fetch(
+      `${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/token`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          grant_type: 'client_credentials',
+          client_id: process.env.KEYCLOAK_ID!,
+          client_secret: process.env.KEYCLOAK_SECRET!,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      console.error('❌ Error renovando token:', response.status);
+      return null;
+    }
+
+    const tokens = await response.json();
+    console.log('✅ Token renovado exitosamente');
+    return tokens;
+  } catch (error) {
+    console.error('❌ Error en renovación de token:', error);
+    return null;
+  }
+}
+
+// Función para refrescar el token (usuarios normales de Keycloak)
+async function refreshAccessToken(refreshToken: string) {
+  try {
+    console.log('🔄 Intentando refrescar token de usuario normal...');
+    
+    const response = await fetch(
+      `${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/token`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          client_id: process.env.KEYCLOAK_ID!,
+          client_secret: process.env.KEYCLOAK_SECRET!,
+          refresh_token: refreshToken,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      console.error('❌ Refresh token falló:', response.status, response.statusText);
+      return null;
+    }
+
+    const tokens = await response.json();
+    console.log('✅ Token refrescado exitosamente');
+    return tokens;
+  } catch (error) {
+    console.error('❌ Error refrescando token:', error);
+    return null;
+  }
+}
+
+export const authOptions: NextAuthOptions = {
+  providers: [
+    KeycloakProvider({
+      clientId: process.env.KEYCLOAK_ID!,
+      clientSecret: process.env.KEYCLOAK_SECRET!,
+      issuer: process.env.KEYCLOAK_ISSUER!,
+    }),
+    CredentialsProvider({
+      id: "inspector",
+      name: "Inspector Técnico",
+      credentials: {},
+      async authorize() {
+        try {
+          console.log('🔑 Obteniendo token técnico para inspector...');
+          
+          const response = await fetch(
+            `${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/token`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({
+                client_id: process.env.KEYCLOAK_ID!,
+                client_secret: process.env.KEYCLOAK_SECRET!,
+                grant_type: "client_credentials",
+              }),
+            }
+          );
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Error en Client Credentials Flow:', errorText);
+            return null;
+          }
+
+          const tokens = await response.json();
+          const clientId = process.env.KEYCLOAK_ID || "next-app-client";
+
+          console.log('✅ Token técnico obtenido');
+          
+          const payload = JSON.parse(
+            Buffer.from(tokens.access_token.split(".")[1], "base64").toString()
+          );
+          
+          const roles = extractRelevantRoles(payload, clientId);
+          console.log('✅ Roles del inspector:', roles);
+
+          return {
+            id: "inspector",
+            name: "Inspector Técnico",
+            email: "inspector@tecnico.com",
+            accessToken: tokens.access_token,
+            expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
+            roles,
+          } as InspectorUser;
+        } catch (error) {
+          console.error('❌ Error en authorize de inspector:', error);
+          return null;
+        }
+      },
+    }),
+  ],
+  
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production' 
+        ? '__Secure-next-auth.session-token' 
+        : 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
+    callbackUrl: {
+      name: process.env.NODE_ENV === 'production'
+        ? '__Secure-next-auth.callback-url'
+        : 'next-auth.callback-url',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
+    csrfToken: {
+      name: process.env.NODE_ENV === 'production'
+        ? '__Host-next-auth.csrf-token'
+        : 'next-auth.csrf-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
+  },
+
+  callbacks: {
+    async jwt({ token, account, user, trigger }) {
+      // 🔥 Inspector: Configuración inicial
+      if (account?.provider === "inspector" && user) {
+        console.log('🔐 Creando JWT para inspector');
+        return {
+          sub: token.sub,
+          name: token.name,
+          email: token.email,
+          accessToken: (user as InspectorUser).accessToken,
+          expiresAt: (user as InspectorUser).expiresAt,
+          roles: (user as InspectorUser).roles,
+          isInspector: true,
+        };
+      }
+
+      // Usuario normal de Keycloak: Configuración inicial
+      if (account && account.provider !== "inspector") {
+        console.log('🔐 Configuración inicial de token para usuario Keycloak');
+        
+        const clientId = process.env.KEYCLOAK_ID || "next-app-client";
+        
+        // Decodificar roles del token inicial
+        let roles: string[] = [];
+        if (account.access_token) {
+          try {
+            const payload: KeycloakJWTPayload = JSON.parse(
+              Buffer.from(account.access_token.split('.')[1], 'base64').toString()
+            );
+            roles = extractRelevantRoles(payload, clientId);
+          } catch (error) {
+            console.error('❌ Error decodificando token inicial:', error);
+          }
+        }
+
+        return {
+          sub: token.sub,
+          name: token.name,
+          email: token.email,
+          accessToken: account.access_token,
+          refreshToken: account.refresh_token,
+          expiresAt: account.expires_at,
+          roles,
+          isInspector: false,
+        };
+      }
+
+      // Inicializar roles si no existen
+      if (!token.roles) token.roles = [];
+
+      // 🔥 RENOVACIÓN PARA INSPECTORES (solo cuando se solicita explícitamente via update())
+      if (token.isInspector && trigger === 'update') {
+        console.log('🔄 Solicitud de actualización manual para inspector');
+        
+        const shouldRenew = token.expiresAt && Date.now() > ((token.expiresAt as number) - 300) * 1000;
+        
+        if (shouldRenew) {
+          console.log('🔄 Token de inspector próximo a expirar, renovando...');
+          const newTokens = await renewClientCredentialsToken();
+          
+          if (newTokens) {
+            const payload = JSON.parse(
+              Buffer.from(newTokens.access_token.split('.')[1], 'base64').toString()
+            );
+            const clientId = process.env.KEYCLOAK_ID || "next-app-client";
+            const roles = extractRelevantRoles(payload, clientId);
+
+            return {
+              ...token,
+              accessToken: newTokens.access_token,
+              expiresAt: Math.floor(Date.now() / 1000) + newTokens.expires_in,
+              roles,
+            };
+          } else {
+            console.error('❌ Falló la renovación del token de inspector');
+            return { ...token, error: 'InspectorTokenRenewalFailed' };
+          }
+        }
+        
+        console.log('✅ Token de inspector aún válido, no se requiere renovación');
+        return token;
+      }
+
+      // 🔥 PARA INSPECTORES: Verificar expiración sin renovación automática
+      if (token.isInspector) {
+        if (token.expiresAt && Date.now() >= (token.expiresAt as number) * 1000) {
+          console.error('❌ Token de inspector expirado');
+          return { ...token, error: 'InspectorTokenExpired' };
+        }
+        return token;
+      }
+
+      // 🔥 USUARIOS NORMALES: Renovación con refresh token
+      if (token.expiresAt && Date.now() < (token.expiresAt as number) * 1000) {
+        return token;
+      }
+
+      // Token expirado → Intentar refresh
+      if (token.refreshToken && !token.error) {
+        console.log('🔄 Token expirado, intentando refresh...');
+        const refreshedTokens = await refreshAccessToken(token.refreshToken as string);
+        
+        if (refreshedTokens) {
+          // Decodificar el nuevo token para roles actualizados
+          let roles: string[] = [];
+          try {
+            const payload: KeycloakJWTPayload = JSON.parse(
+              Buffer.from(refreshedTokens.access_token.split('.')[1], 'base64').toString()
+            );
+            const clientId = process.env.KEYCLOAK_ID || "next-app-client";
+            roles = extractRelevantRoles(payload, clientId);
+          } catch (error) {
+            console.error('❌ Error decodificando token refrescado:', error);
+          }
+
+          console.log('✅ Token refrescado exitosamente');
+          return {
+            ...token,
+            accessToken: refreshedTokens.access_token,
+            refreshToken: refreshedTokens.refresh_token,
+            expiresAt: Math.floor(Date.now() / 1000) + refreshedTokens.expires_in,
+            roles,
+            error: undefined,
+          };
+        }
+      }
+
+      // Si llegamos aquí, el refresh falló
+      console.error('❌ Refresh falló, sesión expirada');
+      return {
+        ...token,
+        accessToken: undefined,
+        refreshToken: undefined,
+        expiresAt: undefined,
+        error: 'RefreshTokenExpired',
+      };
+    },
+    
+    async session({ session, token }) {
+      // Si hay error en el token, marcar sesión como inválida
+      if (token.error) {
+        console.log('⚠️ Sesión marcada como inválida por error:', token.error);
+        return {
+          ...session,
+          error: token.error,
+          accessToken: undefined,
+          roles: [],
+          isInspector: false,
+        };
+      }
+
+      // Sesión válida - asignar solo datos esenciales
+      return {
+        ...session,
+        accessToken: typeof token.accessToken === 'string' ? token.accessToken : undefined,
+        roles: Array.isArray(token.roles) ? token.roles : [],
+        isInspector: token.isInspector || false,
+      };
+    },
+  },
+  
+  pages: {
+    signIn: "/",
+    error: "/auth/error",
+  },
+  
+  debug: process.env.NODE_ENV === 'development',
+  
+  session: {
+    strategy: "jwt",
+    maxAge: 4 * 60 * 60, // 4 horas
+    updateAge: 5 * 60,   // 5 minutos
+  },
+  
+  events: {
+    async signOut({ token }) {
+      if (token?.accessToken && !token.isInspector) {
+        try {
+          console.log('🔓 Realizando logout en Keycloak...');
+          const logoutUrl = `${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/logout`;
+          
+          // Intentar obtener el id_token del access_token
+          // const payload = JSON.parse(
+          //   Buffer.from((token.accessToken as string).split('.')[1], 'base64').toString()
+          // );
+          
+          const params = new URLSearchParams({
+            client_id: process.env.KEYCLOAK_ID!,
+          });
+          
+          await fetch(`${logoutUrl}?${params.toString()}`, {
+            method: 'GET',
+          });
+          console.log('✅ Logout de Keycloak exitoso');
+        } catch (error) {
+          console.error('❌ Error durante logout de Keycloak:', error);
+        }
+      } else if (token?.isInspector) {
+        console.log('🔓 Logout de inspector - no se requiere logout de Keycloak');
+      }
+    },
+  },
+};

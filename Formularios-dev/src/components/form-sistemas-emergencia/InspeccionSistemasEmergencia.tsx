@@ -26,7 +26,6 @@ import {
 import {
   actualizarExtintoresPorTag,
   obtenerTagsPorArea,
-  buscarAreas,
   obtenerExtintoresPorTag,
   verificarTag,
   actualizarMesPorTag,
@@ -52,6 +51,7 @@ import {
 import { MESES, TAGS_CON_SELECCION_EXTINTORES } from "@/lib/constants";
 import ExtintoresVisualizacion from "./ExtintoresVisualizacion";
 import { SuccessScreen } from "../SucessScreen";
+import { obtenerAreas } from "@/lib/actions/area-actions";
 
 // Helper functions
 
@@ -151,21 +151,33 @@ export const InspeccionSistemasEmergencia = ({
   }, []);
   // Load areas on component mount
   useEffect(() => {
-    const cargarAreas = async () => {
-      try {
-        const areas = await buscarAreas("");
-        setAreaData((prev) => ({ ...prev, areaOptions: areas }));
-      } catch (error) {
-        console.error("Error al cargar áreas:", error);
-        setFormState((prev) => ({
-          ...prev,
-          error: "Error al cargar áreas. Por favor, recargue la página.",
-        }));
-      }
-    };
+  const cargarAreas = async () => {
+    try {
+      setFormState((prev) => ({ ...prev, loading: true }));
+      
+      // Usar obtenerAreas() en lugar de buscarAreas("")
+      const areas = await obtenerAreas();
+      
+      console.log("Áreas cargadas:", areas); // Para debug
+      
+      setAreaData((prev) => ({ 
+        ...prev, 
+        areaOptions: areas 
+      }));
+      
+      setFormState((prev) => ({ ...prev, loading: false }));
+    } catch (error) {
+      console.error("Error al cargar áreas:", error);
+      setFormState((prev) => ({
+        ...prev,
+        error: "Error al cargar áreas. Por favor, recargue la página.",
+        loading: false,
+      }));
+    }
+  };
 
-    cargarAreas();
-  }, []);
+  cargarAreas();
+}, []);
 
   // Update form when month changes
   useEffect(() => {

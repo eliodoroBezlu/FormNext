@@ -6,9 +6,9 @@ export const useUserRole = () => {
   const { data: session, status } = useSession();
   
   const userRole = useMemo((): UserRole | null => {
-    if (!session?.roles && !session?.clientRoles) return null;
+    if (!session?.roles) return null;
     
-    const allRoles = [...(session.roles || []), ...(session.clientRoles || [])];
+    const allRoles = [...(session.roles || [])];
     return getUserRole(allRoles);
   }, [session]);
 

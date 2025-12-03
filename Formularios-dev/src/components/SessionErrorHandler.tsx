@@ -10,15 +10,22 @@ export function SessionErrorHandler() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const errorParam = searchParams.get("error");
-    if (errorParam) {
-      setError(errorParam);
-      setOpen(true);
+    // 🔥 Verificar parámetro de error de forma segura
+    if (searchParams) {
+      const errorParam = searchParams.get("error");
+      if (errorParam) {
+        setError(errorParam);
+        setOpen(true);
 
-      // Limpiar el parámetro de error de la URL sin recargar
-      const url = new URL(window.location.href);
-      url.searchParams.delete("error");
-      window.history.replaceState({}, "", url.toString());
+        // Limpiar el parámetro de error de la URL
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("error");
+          window.history.replaceState({}, "", url.toString());
+        } catch (e) {
+          console.error("Error limpiando URL:", e);
+        }
+      }
     }
   }, [searchParams]);
 
@@ -45,8 +52,8 @@ export function SessionErrorHandler() {
         title: "Sin Sesión",
         description: "Debes iniciar sesión para acceder a esta página.",
       },
-      invalid_token: {
-        title: "Token Inválido",
+      invalid_session: {
+        title: "Sesión Inválida",
         description: "Tu sesión es inválida. Por favor, inicia sesión nuevamente.",
       },
       unauthorized: {
