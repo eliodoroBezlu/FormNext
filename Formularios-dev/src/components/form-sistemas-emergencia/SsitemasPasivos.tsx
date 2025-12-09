@@ -1,15 +1,16 @@
-import { Accordion, AccordionSummary, AccordionDetails, Typography } from "@mui/material"
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore"
-import type { Control } from "react-hook-form"
-import type { FormularioInspeccion, Mes } from "../../types/formTypes"
-import SistemaField from "./SistemaField"
+import { Accordion, AccordionSummary, AccordionDetails, Typography } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import type { Control } from "react-hook-form";
+import type { FormularioInspeccion, Mes } from "../../types/formTypes";
+import SistemaField from "./SistemaField";
 
 interface SistemasPasivosProps {
-  control: Control<FormularioInspeccion>
-  currentMes: Mes
+  control: Control<FormularioInspeccion>;
+  currentMes: Mes;
+  disabled?: boolean; // 🔥 Prop para modo lectura
 }
 
-const SistemasPasivos = ({ control, currentMes }: SistemasPasivosProps) => {
+const SistemasPasivos = ({ control, currentMes, disabled = false }: SistemasPasivosProps) => {
   return (
     <Accordion defaultExpanded>
       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -22,6 +23,7 @@ const SistemasPasivos = ({ control, currentMes }: SistemasPasivosProps) => {
           control={control}
           currentMes={currentMes}
           type="pasivos"
+          disabled={disabled} // 🔥 Pasamos la prop
         />
         <SistemaField
           name="senaleticaViasEvacuacion"
@@ -29,6 +31,7 @@ const SistemasPasivos = ({ control, currentMes }: SistemasPasivosProps) => {
           control={control}
           currentMes={currentMes}
           type="pasivos"
+          disabled={disabled}
         />
         <SistemaField
           name="planosEvacuacion"
@@ -36,6 +39,7 @@ const SistemasPasivos = ({ control, currentMes }: SistemasPasivosProps) => {
           control={control}
           currentMes={currentMes}
           type="pasivos"
+          disabled={disabled}
         />
         <SistemaField
           name="registroPersonalEvacuacion"
@@ -43,6 +47,7 @@ const SistemasPasivos = ({ control, currentMes }: SistemasPasivosProps) => {
           control={control}
           currentMes={currentMes}
           type="pasivos"
+          disabled={disabled}
         />
         <SistemaField
           name="numerosEmergencia"
@@ -50,6 +55,7 @@ const SistemasPasivos = ({ control, currentMes }: SistemasPasivosProps) => {
           control={control}
           currentMes={currentMes}
           type="pasivos"
+          disabled={disabled}
         />
         <SistemaField
           name="luzEmergencia"
@@ -57,6 +63,7 @@ const SistemasPasivos = ({ control, currentMes }: SistemasPasivosProps) => {
           control={control}
           currentMes={currentMes}
           type="pasivos"
+          disabled={disabled}
         />
         <SistemaField
           name="puntoReunion"
@@ -64,11 +71,11 @@ const SistemasPasivos = ({ control, currentMes }: SistemasPasivosProps) => {
           control={control}
           currentMes={currentMes}
           type="pasivos"
+          disabled={disabled}
         />
       </AccordionDetails>
     </Accordion>
-  )
-}
+  );
+};
 
-export default SistemasPasivos
-
+export default SistemasPasivos;

@@ -68,7 +68,7 @@ interface InspectionPayload {
   scaffold?: ScaffoldData;
   selectedSubsections?: string[];
   selectedItems?: Record<string, string[]>;
-  status: "draft" | "in_progress" | "completed" | "pending_approval" | "approved" | "rejected";
+  status: InspectionStatus; 
   submittedAt: string;
   submittedBy?: string;
   location?: string;
@@ -115,7 +115,7 @@ function mapFormDataToPayload(
   formData: FormDataHerraEquipos,
   templateId: string,
   templateCode: string,
-  status: "draft" | "in_progress" | "completed",
+  status: InspectionStatus,  // ✅ Usar el tipo enum
   additionalData?: {
     templateName?: string;
     submittedBy?: string;
@@ -143,13 +143,13 @@ function mapFormDataToPayload(
     scaffold: formData.scaffold,
     selectedSubsections: formData.selectedSubsections,
     selectedItems: formData.selectedItems,
-    status,
+    status,  // ✅ El status viene del enum
     submittedAt: new Date().toISOString(),
     submittedBy: additionalData?.submittedBy,
     location: additionalData?.location,
     project: additionalData?.project,
-    requiresApproval: formData.requiresApproval,
-    approval: formData.approval,
+    requiresApproval: formData.requiresApproval || false,
+    approval: formData.approval,  // ✅ Incluir approval
   };
 }
 
@@ -161,7 +161,7 @@ export async function createInspectionHerraEquipos(
   formData: FormDataHerraEquipos,
   templateId: string,
   templateCode: string,
-  status: "draft" | "in_progress" | "completed" = "completed",
+  status: InspectionStatus = InspectionStatus.COMPLETED,  // ✅ Tipo correcto
   additionalData?: {
     templateName?: string;
     submittedBy?: string;
@@ -172,8 +172,22 @@ export async function createInspectionHerraEquipos(
   try {
     const headers = await getAuthHeaders();
     
+    // ✅ USAR EL STATUS DEL FORMDATA SI EXISTE
+    const finalStatus = formData.status || status;
+    
+    console.log("📤 [ACTION] Guardando con:");
+    console.log("  - formData.status:", formData.status);
+    console.log("  - status param:", status);
+    console.log("  - finalStatus:", finalStatus);
+    console.log("  - requiresApproval:", formData.requiresApproval);
 
-    const payload = mapFormDataToPayload(formData, templateId, templateCode, status, additionalData);
+    const payload = mapFormDataToPayload(
+      formData, 
+      templateId, 
+      templateCode, 
+      finalStatus,
+      additionalData
+    );
 
     const response = await fetch(INSPECTIONS_ENDPOINT, {
       method: "POST",
@@ -183,7 +197,9 @@ export async function createInspectionHerraEquipos(
 
     const result = await handleApiResponse<ApiResponse<InspectionResponse>>(response);
 
-    console.log("✅ [ACTION] Inspección guardada:", result);
+    console.log("✅ [ACTION] Respuesta del servidor:");
+    console.log("  - ID:", result.data?._id);
+    console.log("  - Status guardado:", result.data?.status);
 
     return {
       success: true,
@@ -191,7 +207,7 @@ export async function createInspectionHerraEquipos(
       data: result.data,
     };
   } catch (error) {
-    console.error("❌ [ACTION] Error al guardar inspección:", error);
+    console.error("❌ [ACTION] Error:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Error desconocido",
@@ -338,7 +354,7 @@ export async function saveDraftInspection(
     formData,
     templateId,
     templateCode,
-    "draft",
+    InspectionStatus.DRAFT,
     additionalData
   );
 }
@@ -360,7 +376,7 @@ export async function saveProgressInspection(
     formData,
     templateId,
     templateCode,
-    "in_progress",
+    InspectionStatus.IN_PROGRESS,
     additionalData
   );
 }
@@ -376,13 +392,19 @@ export async function submitInspection(
     project?: string;
   }
 ): Promise<ApiResponse<InspectionResponse>> {
-  console.log("📤 [ACTION] Enviando inspección final:", templateCode);
+  console.log("📤 [ACTION] submitInspection:");
+  console.log("  - formData.status:", formData.status);
+  
+  // ✅ CORRECCIÓN: Usar el status que viene en formData
+  const status = formData.status || InspectionStatus.COMPLETED;
+  
+  console.log("  - Status a usar:", status);
   
   return createInspectionHerraEquipos(
     formData,
     templateId,
     templateCode,
-    "completed",
+    status,  // ✅ Usar el status correcto
     additionalData
   );
 }
@@ -390,7 +412,7 @@ export async function submitInspection(
 export async function updateInProgressInspection(
   id: string,
   formData: Partial<FormDataHerraEquipos>,
-  status?: "in_progress" | "completed"
+  status?: InspectionStatus.IN_PROGRESS | InspectionStatus.COMPLETED,
 ): Promise<ApiResponse<InspectionResponse>> {
   try {
     const headers = await getAuthHeaders();
@@ -562,7 +584,7 @@ export async function getDraftInspections(userId?: string): Promise<ApiResponse<
 export async function updateInspection(
   id: string,
   formData: Partial<FormDataHerraEquipos>,
-  status?: "draft" | "in_progress" | "completed"
+  status?:  InspectionStatus.IN_PROGRESS | InspectionStatus.COMPLETED | InspectionStatus.DRAFT
 ): Promise<ApiResponse<InspectionResponse>> {
   try {
     const headers = await getAuthHeaders();
@@ -686,6 +708,6 @@ export async function finalizeInspection(
 ): Promise<ApiResponse<InspectionResponse>> {
   console.log("✅ [ACTION] Finalizando inspección:", id);
   
-  return updateInProgressInspection(id, formData, "completed");
+  return updateInProgressInspection(id, formData, InspectionStatus.COMPLETED);
 }
 

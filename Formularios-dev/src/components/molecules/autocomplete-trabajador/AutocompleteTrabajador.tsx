@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { TextField, Autocomplete, CircularProgress } from '@mui/material';
+import { getAuthHeaders } from '@/lib/actions/helpers';
 
 export interface TrabajadorOption {
   nomina: string;
@@ -38,12 +39,12 @@ const AutocompleteTrabajador: React.FC<AutocompleteTrabajadorProps> = ({
     const loadTrabajadores = async () => {
       setLoading(true);
       try {
-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/";
         const url = `${API_BASE_URL}/trabajadores/completos`;
-        
+        const headers = await getAuthHeaders();
         const response = await fetch(url, {
           method: "GET",
-          headers: { "Content-Type": "application/json" },
+          headers,
           cache: 'no-store'
         });
 

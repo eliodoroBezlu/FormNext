@@ -73,7 +73,7 @@ export function InspectorSignature({
         },
         signature: {
           enabled: true,
-          type: "text",
+          type: "canvas", // Asegúrate de que sea 'canvas'
           label: "Firma",
           placeholder: "Firma digital o código",
           required: true,
@@ -128,6 +128,7 @@ export function InspectorSignature({
                 }}
                 dataSource={field.dataSource as DataSourceType | undefined}
                 disabled={readonly}
+                {...commonProps} // Pasamos label y errores
               />
             )}
           />
@@ -140,22 +141,26 @@ export function InspectorSignature({
             control={control}
             defaultValue=""
             render={({ field: controllerField }) => (
-              <Box>
+              <Box sx={{ width: "100%" }}>
                 <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
                   {field.label || "Firma"}
                   {field.required && <span style={{ color: "red" }}> *</span>}
                 </Typography>
-                <SignatureField<FormDataHerraEquipos>
-                  fieldName={fieldName as Path<FormDataHerraEquipos>}
-                  control={control}
-                  setValue={setValue}
-                  heightPercentage={field.heightPercentage || 60}
-                  error={commonProps.error}
-                  helperText={commonProps.helperText}
-                  value={controllerField.value as string}
-                  onChange={controllerField.onChange}
-                  disabled={readonly}
-                />
+                
+                {/* 🔥 MEJORA VISUAL: Contenedor con altura mínima para evitar colapso en móviles */}
+                <Box sx={{ minHeight: "200px", width: "100%" }}>
+                    <SignatureField<FormDataHerraEquipos>
+                      fieldName={fieldName as Path<FormDataHerraEquipos>}
+                      control={control}
+                      setValue={setValue}
+                      heightPercentage={field.heightPercentage || 60}
+                      error={commonProps.error}
+                      helperText={commonProps.helperText}
+                      value={controllerField.value as string}
+                      onChange={controllerField.onChange}
+                      disabled={readonly}
+                    />
+                </Box>
               </Box>
             )}
           />
@@ -233,8 +238,20 @@ export function InspectorSignature({
   }
   
   return (
-    <Paper elevation={2} sx={{ p: 3 }}>
-      <Typography variant="h6" gutterBottom>
+    <Paper 
+      elevation={2} 
+      sx={{ 
+        // 🔥 MEJORA RESPONSIVA: Padding reducido en móvil
+        p: { xs: 2, md: 3 },
+        width: "100%",
+        overflow: "hidden" 
+      }}
+    >
+      <Typography 
+        variant="h6" 
+        gutterBottom 
+        sx={{ fontSize: { xs: "1.1rem", md: "1.25rem" } }}
+      >
         {config.title || ""}
       </Typography>
 
@@ -242,18 +259,34 @@ export function InspectorSignature({
         sx={{
           display: "grid",
           gap: 2,
+          // Grid responsivo: 1 columna en móvil, 2 en desktop
           gridTemplateColumns: {
             xs: "1fr",
-            md: allFields.length === 1 ? "1fr" : "repeat(2, 1fr)",
+            md: "repeat(2, 1fr)",
           },
         }}
       >
-        {allFields.map(
-          (item) =>
-            item && (
-              <Box key={item.key}>{renderField(item.key, item.field)}</Box>
-            )
-        )}
+        {allFields.map((item) => {
+           if (!item) return null;
+
+           // Detectamos si es firma o si hay un solo campo en total
+           const isSignature = item.field.type === "canvas";
+           const isSingleField = allFields.length === 1;
+
+           return (
+              <Box 
+                key={item.key}
+                sx={{
+                   // 🔥 MEJORA RESPONSIVA: Firma siempre ocupa todo el ancho
+                   gridColumn: (isSignature || isSingleField) ? "1 / -1" : "auto",
+                   width: "100%",
+                   minWidth: 0
+                }}
+              >
+                {renderField(item.key, item.field)}
+              </Box>
+           )
+        })}
       </Box>
     </Paper>
   );

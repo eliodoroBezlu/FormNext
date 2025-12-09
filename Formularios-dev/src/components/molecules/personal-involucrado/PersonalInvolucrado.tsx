@@ -1,6 +1,4 @@
-// SOLUCIÓN COMPLETA para PersonalInvolucrado.tsx
-
-// 1. Cambiar la interfaz y el componente para que sea genérico:
+// src/components/molecules/personal-involucrado/PersonalInvolucrado.tsx
 
 import React from "react";
 import { Box, Grid, Paper, Typography, TextField, IconButton } from "@mui/material";
@@ -14,21 +12,21 @@ interface PersonalInvolucradoProps<T extends FieldValues> {
   control: Control<T>;
   name: string;
   onTrabajadorSelect: (index: number, trabajador: TrabajadorOption | null) => void;
+  disabled?: boolean; // 🔥 1. Agregamos la prop opcional
 }
 
-// Cambiar de React.FC a función genérica:
 export const PersonalInvolucrado = <T extends FieldValues>({
   control,
   name,
   onTrabajadorSelect,
+  disabled = false, // 🔥 2. Valor por defecto false
 }: PersonalInvolucradoProps<T>) => {
-  // Hook para manejar array dinámico
+  
   const { fields, append, remove } = useFieldArray({
     control,
-    name: name as never, // Necesario para paths dinámicos
+    name: name as never,
   });
 
-  // Agregar nueva fila vacía
   const handleAddRow = () => {
     append({ nombre: "", ci: "" } as never);
   };
@@ -51,7 +49,8 @@ export const PersonalInvolucrado = <T extends FieldValues>({
                   position: "relative",
                 }}
               >
-                {fields.length > 1 && (
+                {/* 🔥 3. Ocultar botón eliminar si está disabled */}
+                {!disabled && fields.length > 1 && (
                   <IconButton
                     size="small"
                     color="error"
@@ -81,6 +80,9 @@ export const PersonalInvolucrado = <T extends FieldValues>({
                   control={control}
                   rules={{
                     validate: (value) => {
+                      // Si está disabled, saltamos validación o la mantenemos según prefieras
+                      if (disabled) return true; 
+
                       const formValues = control._formValues as Record<string, unknown>;
                       const personalArray = formValues[name] as Array<{ ci?: string }>;
                       const ciValue = personalArray?.[index]?.ci;
@@ -96,7 +98,6 @@ export const PersonalInvolucrado = <T extends FieldValues>({
                   }}
                   render={({ field, fieldState: { error } }) => (
                     <AutocompleteTrabajador
-                      
                       label="Nombre y Apellido"
                       placeholder="Seleccione o escriba un nombre"
                       value={field.value || null}
@@ -108,6 +109,7 @@ export const PersonalInvolucrado = <T extends FieldValues>({
                       required={false}
                       error={!!error}
                       helperText={error?.message}
+                      disabled={disabled} // 🔥 4. Pasar disabled al Autocomplete
                     />
                   )}
                 />
@@ -118,6 +120,8 @@ export const PersonalInvolucrado = <T extends FieldValues>({
                   control={control}
                   rules={{
                     validate: (value) => {
+                      if (disabled) return true;
+
                       const formValues = control._formValues as Record<string, unknown>;
                       const personalArray = formValues[name] as Array<{ nombre?: string }>;
                       const nombreValue = personalArray?.[index]?.nombre;
@@ -142,6 +146,7 @@ export const PersonalInvolucrado = <T extends FieldValues>({
                       InputLabelProps={{ shrink: true }}
                       error={!!error}
                       helperText={error?.message}
+                      disabled={disabled} // 🔥 5. Pasar disabled al TextField
                     />
                   )}
                 />
@@ -150,19 +155,22 @@ export const PersonalInvolucrado = <T extends FieldValues>({
           ))}
         </Grid>
 
-        <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
-          <Button
-            variant="outlined"
-            startIcon={<Add />}
-            onClick={handleAddRow}
-            sx={{
-              fontSize: { xs: "0.8rem", sm: "0.875rem" },
-              padding: { xs: "6px 12px", sm: "8px 16px" },
-            }}
-          >
-            Agregar Persona
-          </Button>
-        </Box>
+        {/* 🔥 6. Ocultar botón Agregar si está disabled */}
+        {!disabled && (
+          <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
+            <Button
+              variant="outlined"
+              startIcon={<Add />}
+              onClick={handleAddRow}
+              sx={{
+                fontSize: { xs: "0.8rem", sm: "0.875rem" },
+                padding: { xs: "6px 12px", sm: "8px 16px" },
+              }}
+            >
+              Agregar Persona
+            </Button>
+          </Box>
+        )}
       </Paper>
     </Box>
   );

@@ -45,15 +45,19 @@ export function StandardInspectionForm({
   template,
   onSubmit,
   onSaveDraft,
-  onApprove,
-  onReject,
   readonly = false,
   initialData,
   isViewMode = false,
 }: StandardInspectionFormProps) {
   const config = getFormConfig(template.code);
   const { data: session } = useSession();
-  const {  hasRole } = useUserRole();
+  const { hasRole } = useUserRole();
+
+  // ✅ 1. ESTADO NUEVO: Para capturar la decisión del Checkbox de Aprobación
+  const [approvalDecision, setApprovalDecision] = useState<{
+    status: "approved" | "rejected" | null;
+    comments: string;
+  }>({ status: null, comments: "" });
 
   const [selectedItems, setSelectedItems] = useState<Record<string, string[]>>(
     initialData?.selectedItems || {}
@@ -85,7 +89,6 @@ export function StandardInspectionForm({
     items: SelectableItemConfig[]
   ): Record<string, string[]> => {
     const defaults: Record<string, string[]> = {};
-
     items.forEach((item) => {
       if (item.defaultSelected && item.defaultSelected.length > 0) {
         defaults[item.sectionTitle] = item.defaultSelected;
@@ -94,7 +97,6 @@ export function StandardInspectionForm({
         Object.assign(defaults, initDefaults(item.nested));
       }
     });
-
     return defaults;
   };
 
@@ -108,6 +110,19 @@ export function StandardInspectionForm({
       }
     });
     return allConfigs;
+  };
+
+  const shouldShowApprovalSection = () => {
+    if (!config?.approval?.enabled) return false;
+    if (!initialData) return false;
+
+    const approvalStatuses = [
+      InspectionStatus.PENDING_APPROVAL,
+      InspectionStatus.APPROVED,
+      InspectionStatus.REJECTED,
+    ];
+
+    return approvalStatuses.includes(initialData.status as InspectionStatus);
   };
 
   useEffect(() => {
@@ -126,7 +141,6 @@ export function StandardInspectionForm({
     sections: Section[]
   ): FormDataHerraEquipos => {
     const result = { ...data };
-
     if (!result.responses) {
       result.responses = {};
     }
@@ -135,7 +149,6 @@ export function StandardInspectionForm({
       secs.forEach((section, sIdx) => {
         const sectionKey = `section_${sIdx}`;
         const fullPath = path ? `${path}.${sectionKey}` : sectionKey;
-
         const pathParts = fullPath.split(".");
         let currentLevel: ResponsesData = result.responses!;
 
@@ -157,7 +170,6 @@ export function StandardInspectionForm({
           section.questions.forEach((question, qIdx) => {
             if (question.responseConfig.type === "boolean") {
               const questionKey = `q${qIdx}`;
-
               if (!sectionData[questionKey]) {
                 sectionData[questionKey] = {
                   value: false,
@@ -189,12 +201,10 @@ export function StandardInspectionForm({
     );
   }
 
-  // ✅ Verificar si el usuario puede aprobar
   const canApprove = () => {
     if (!config.approval?.enabled) return false;
     if (!config.approval.requiredRoles) return false;
 
-    // Verificar si el usuario tiene uno de los roles requeridos
     const hasRequiredRole = config.approval.requiredRoles.some((role) =>
       hasRole(
         role as
@@ -208,7 +218,6 @@ export function StandardInspectionForm({
 
     if (!hasRequiredRole) return false;
 
-    // Si no permite auto-aprobación, verificar que no sea el mismo usuario
     if (!config.approval.allowSelfApproval) {
       return initialData?.submittedBy !== session?.user?.email;
     }
@@ -227,32 +236,82 @@ export function StandardInspectionForm({
     ? filterSectionsBySelections(template.sections, selectedItems)
     : template.sections;
 
+
+  // ✅ 2. INTERCEPTORES DE APROBACIÓN (Guardar decisión localmente)
+  const handleLocalApprove = (comments?: string) => {
+    console.log("✅ Checkbox marcado: Aprobar");
+    setApprovalDecision({ status: "approved", comments: comments || "" });
+  };
+
+  const handleLocalReject = (reason: string) => {
+    console.log("❌ Checkbox marcado: Rechazar");
+    setApprovalDecision({ status: "rejected", comments: reason });
+  };
+
+
+  // ✅ 3. LÓGICA DE ENVÍO MODIFICADA
   const handleFormSubmit = (data: FormDataHerraEquipos) => {
     if (config.sectionSelector?.enabled && config.sectionSelector.items) {
       const allConfigs = getAllConfigs(config.sectionSelector.items);
       const validation = validateRequiredSelections(selectedItems, allConfigs);
-
       if (!validation.valid) {
-        alert(
-          `Debe seleccionar al menos un item en: ${validation.missing.join(
-            ", "
-          )}`
-        );
+        alert(`Debe seleccionar al menos un item en: ${validation.missing.join(", ")}`);
         return;
       }
     }
 
     const completeData = ensureAllBooleanFields(data, template.sections);
+    const isNewForm = !initialData || !initialData._id;
+    const requiresApproval = config.approval?.enabled === true;
 
-    // ✅ Determinar el estado basado en si requiere aprobación
-    if (config.approval?.enabled && !isViewMode) {
-      completeData.status = InspectionStatus.PENDING_APPROVAL;
-      completeData.requiresApproval = true;
+    // --- NUEVA LÓGICA DE ESTADO ---
+    if (requiresApproval && !isViewMode) {
+        
+        // PRIORIDAD 1: Si el usuario marcó el checkbox de aprobar/rechazar
+        if (approvalDecision.status === 'approved' && canApprove()) {
+             console.log("✅ [SUBMIT] Aplicando Aprobación Local");
+             completeData.status = InspectionStatus.APPROVED;
+             completeData.approval = {
+                 ...completeData.approval,
+                 status: 'approved',
+                 approvedBy: session?.user?.email || "Supervisor",
+                 approvedAt: new Date().toISOString(),
+                 supervisorComments: approvalDecision.comments
+             };
+        } 
+        else if (approvalDecision.status === 'rejected' && canApprove()) {
+             console.log("❌ [SUBMIT] Aplicando Rechazo Local");
+             completeData.status = InspectionStatus.REJECTED;
+             completeData.approval = {
+                 ...completeData.approval,
+                 status: 'rejected',
+                 approvedBy: session?.user?.email || "Supervisor",
+                 approvedAt: new Date().toISOString(),
+                 rejectionReason: approvalDecision.comments
+             };
+        }
+        // PRIORIDAD 2: Si es un formulario nuevo
+        else if (isNewForm) {
+            console.log("🆕 [SUBMIT] Nuevo formulario -> Pendiente");
+            completeData.status = InspectionStatus.PENDING_APPROVAL;
+            completeData.requiresApproval = true;
+            completeData.approval = { status: "pending" };
+        } 
+        // PRIORIDAD 3: Mantener estado existente (Edición sin cambios de aprobación)
+        else {
+            console.log("🔄 [SUBMIT] Edición sin decisión -> Mantener Status:", initialData?.status);
+            completeData.status = initialData?.status || InspectionStatus.COMPLETED;
+            completeData.requiresApproval = initialData?.requiresApproval || false;
+            completeData.approval = initialData?.approval;
+        }
+
     } else {
-      completeData.status = InspectionStatus.COMPLETED;
-      completeData.requiresApproval = false;
+        // Caso sin aprobación habilitada
+        completeData.status = InspectionStatus.COMPLETED;
+        completeData.requiresApproval = false;
     }
 
+    console.log("📤 Enviando Status Final:", completeData.status);
     onSubmit(completeData);
   };
 
@@ -264,21 +323,7 @@ export function StandardInspectionForm({
     }
   };
 
-  const handleApprove = (comments?: string) => {
-    if (onApprove) {
-      onApprove(comments);
-    }
-  };
-
-  const handleReject = (reason: string) => {
-    if (onReject) {
-      onReject(reason);
-    }
-  };
-
-  // ✅ Determinar si se debe mostrar la firma del supervisor
   const showSupervisorSignature = () => {
-    // No mostrar si no está habilitada
     if (
       !config.signatures ||
       typeof config.signatures.supervisor !== "object" ||
@@ -286,26 +331,15 @@ export function StandardInspectionForm({
     ) {
       return false;
     }
-    // En modo vista, siempre mostrar si existe
     if (isViewMode) return true;
-
-    // Si requiere aprobación y está aprobado, mostrar
-    if (config.approval?.enabled && initialData?.status === "approved") {
-      return true;
-    }
-
-    // Si el usuario puede aprobar y está en estado pendiente, mostrar
-    if (
-      config.approval?.enabled &&
-      initialData?.status === "pending_approval" &&
-      canApprove()
-    ) {
-      return true;
-    }
-
-    // Si no requiere aprobación, mostrar normalmente
     if (!config.approval?.enabled) return true;
 
+    if (initialData) {
+      if (initialData.status === "approved") return true;
+      if (initialData.status === "pending_approval" && canApprove()) {
+        return true;
+      }
+    }
     return false;
   };
 
@@ -324,24 +358,11 @@ export function StandardInspectionForm({
         </Typography>
       </Box>
 
-      {/* ✅ Alerta sobre aprobación requerida */}
       {config.approval?.enabled && !isViewMode && !initialData && (
         <Alert severity="info">
           Esta inspección requiere aprobación de un supervisor antes de ser
           finalizada.
         </Alert>
-      )}
-
-      {/* ✅ Sección de aprobación (solo en modo vista y si está habilitada) */}
-      {isViewMode && config.approval?.enabled && initialData?.status && (
-        <ApprovalSection
-          status={initialData.status}
-          approval={initialData.approval}
-          canApprove={canApprove()}
-          onApprove={handleApprove}
-          onReject={handleReject}
-          readonly={readonly || initialData.status === "approved"}
-        />
       )}
 
       <VerificationFields
@@ -435,7 +456,6 @@ export function StandardInspectionForm({
         />
       )}
 
-      {/* ✅ Firma del supervisor solo si corresponde */}
       {showSupervisorSignature() && (
         <SupervisorSignature
           register={register}
@@ -446,7 +466,22 @@ export function StandardInspectionForm({
         />
       )}
 
-      {/* ✅ Botones de acción según el contexto */}
+      {shouldShowApprovalSection() && (
+        <ApprovalSection
+          status={initialData!.status || InspectionStatus.PENDING_APPROVAL}
+          approval={initialData!.approval}
+          canApprove={canApprove()}
+          // ✅ AQUI EL CAMBIO CLAVE: Usamos los handlers locales
+          onApprove={handleLocalApprove}
+          onReject={handleLocalReject}
+          readonly={
+            readonly ||
+            initialData!.status === InspectionStatus.APPROVED ||
+            initialData!.status === InspectionStatus.REJECTED
+          }
+        />
+      )}
+
       {!isViewMode && (
         <SaveSubmitButtons
           onSaveDraft={

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Box, Typography, Grid, Fab, Tabs, Tab, Alert, CircularProgress, Chip, Button } from "@mui/material"
 import { Add, Edit, Delete, Description, Visibility } from "@mui/icons-material"
 import { FormInstance, FormTemplate } from "@/types/formTypes"
-import { deleteTemplate, getTemplates, getTemplate } from "@/lib/actions/template-actions"
+import { deleteTemplate, getTemplates, getTemplateById } from "@/lib/actions/template-actions"
 import { FormBuilder } from "@/components/organisms/form-builder/FormBuilder"
 import { InspectionFormIroIsop } from "@/components/organisms/inspection-form-iro-isop/InspectionFormIroIsop"
 import { TemplateCard } from "@/components/molecules/template-card/TemplateCard"
@@ -75,7 +75,7 @@ export default function HomePage() {
     
     try {
       // Cargar el template completo con todos los detalles
-      const result = await getTemplate(template._id)
+      const result = await getTemplateById(template._id)
       
       if (result.success && result.data) {
         setSelectedTemplate(result.data as FormTemplate)
@@ -96,7 +96,7 @@ export default function HomePage() {
     
     try {
       // Cargar el template completo con todos los detalles
-      const result = await getTemplate(template._id)
+      const result = await getTemplateById(template._id)
       
       if (result.success && result.data) {
         setSelectedTemplate(result.data as FormTemplate)

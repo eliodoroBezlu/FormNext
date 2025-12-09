@@ -73,24 +73,24 @@ export const NAVIGATION: NavigationItem[] = [
     segment: "graphics",
     title: "graficas",
     icon: "barChart",
-    requiredRoles: ["admin", "superintendente", "supervisor"],
+    requiredRoles: ["admin", "superintendente"],
     children: [
       {
         segment: "emergencyinspections",
         title: "inspecciones de sistemas de emergencia",
         icon: "description",
-        requiredRoles: ["admin", "superintendente", "supervisor"],
+        requiredRoles: ["admin", "superintendente"],
       },
       {
         segment: "extinguishers",
         title: "Extintores",
         icon: "description",
-        requiredRoles: ["admin", "superintendente", "supervisor"],
+        requiredRoles: ["admin", "superintendente"],
       },{
         segment: "inspectionschedule",
         title: "IRO's ISOP",
         icon: "description",
-        requiredRoles: ["admin", "superintendente", "supervisor"],
+        requiredRoles: ["admin", "superintendente"],
       },
     ],
   },

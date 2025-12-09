@@ -332,8 +332,9 @@
 
 //   return <>{children}</>;
 // }
-
+// components/SessionValidator.tsx
 "use client";
+
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -351,8 +352,11 @@ export function SessionValidator({ children }: SessionValidatorProps) {
   const { data: session, status, update } = useSession();
   const router = useRouter();
   const pathname = usePathname();
+  
+  // Referencias para intervalos y control de actividad
   const updateIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const hasInitialized = useRef(false);
+  const lastActivityCheck = useRef<number>(Date.now()); // Para evitar spam de updates
 
   // 🔥 1. MANEJO DE ERRORES DE SESIÓN (máxima prioridad)
   useEffect(() => {
@@ -398,9 +402,6 @@ export function SessionValidator({ children }: SessionValidatorProps) {
       // Log inicial (solo una vez)
       if (!hasInitialized.current) {
         console.log("🔧 Iniciando sistema de renovación automática para inspector");
-        console.log("ℹ️ Configuración:");
-        console.log(`   - Intervalo de verificación: ${RENEWAL_INTERVALS.INSPECTOR / 60000} minutos`);
-        console.log(`   - Umbral de renovación: ${SESSION_CONFIG.INSPECTOR_RENEWAL_THRESHOLD / 60000} minutos antes de expirar`);
         hasInitialized.current = true;
       }
 
@@ -412,41 +413,14 @@ export function SessionValidator({ children }: SessionValidatorProps) {
           const expiresAt = payload.exp * 1000;
           const now = Date.now();
           const timeLeft = expiresAt - now;
-          const timeLeftMinutes = Math.floor(timeLeft / 60000);
-          const timeLeftSeconds = Math.floor((timeLeft % 60000) / 1000);
           
-          // 🔥 Log detallado del estado del token
-          const tokenAge = now - (payload.iat * 1000);
-          const tokenAgeMinutes = Math.floor(tokenAge / 60000);
-          
-          console.group(`🔍 Verificación de token (Inspector)`);
-          console.log(`⏱️  Token emitido hace: ${tokenAgeMinutes} minutos`);
-          console.log(`⏳ Tiempo restante: ${timeLeftMinutes}m ${timeLeftSeconds}s`);
-          console.log(`📊 Próxima verificación: en ${RENEWAL_INTERVALS.INSPECTOR / 60000} minutos`);
-          
-          // 🔥 Renovar si quedan menos de 2 minutos (umbral configurado)
+          // 🔥 Renovar si quedan menos del umbral configurado
           if (timeLeft < SESSION_CONFIG.INSPECTOR_RENEWAL_THRESHOLD) {
-            console.log(`🔄 RENOVANDO: Quedan solo ${timeLeftMinutes}m ${timeLeftSeconds}s`);
-            console.log(`📍 Umbral configurado: ${SESSION_CONFIG.INSPECTOR_RENEWAL_THRESHOLD / 60000} minutos`);
-            
-            const renovationStart = Date.now();
+            console.log(`🔄 INSPECTOR: Renovando token (Quedan ${(timeLeft/60000).toFixed(2)} min)`);
             await update();
-            const renovationTime = Date.now() - renovationStart;
-            
-            console.log(`✅ Token renovado exitosamente en ${renovationTime}ms`);
-            console.groupEnd();
-          } else {
-            console.log(`✅ Token válido - No requiere renovación`);
-            console.groupEnd();
           }
         } catch (error) {
-          console.groupEnd();
-          console.error("❌ Error en verificación/renovación de token:", error);
-          // Si hay error crítico, cerrar sesión
-          signOut({
-            callbackUrl: "/?error=token_error",
-            redirect: true,
-          });
+          console.error("❌ Error en renovación automática de inspector:", error);
         }
       };
 
@@ -455,73 +429,94 @@ export function SessionValidator({ children }: SessionValidatorProps) {
         checkAndUpdate, 
         RENEWAL_INTERVALS.INSPECTOR
       );
-
-      const intervalMinutes = RENEWAL_INTERVALS.INSPECTOR / 60000;
-      console.log(`✅ Intervalo configurado: verificación cada ${intervalMinutes} minutos`);
       
-      // 🔥 Verificación inmediata al montar
+      // Verificación inmediata al montar
       checkAndUpdate();
     } else {
-      // Reset del flag si no es inspector o hay error
       hasInitialized.current = false;
     }
 
-    // Cleanup al desmontar o cambiar de sesión
+    // Cleanup
     return () => {
       if (updateIntervalRef.current) {
         clearInterval(updateIntervalRef.current);
         updateIntervalRef.current = null;
-        hasInitialized.current = false;
       }
     };
   }, [status, session?.isInspector, session?.error, session?.accessToken, update]);
 
-  // 🔥 3. VALIDACIÓN DE TOKEN EXPIRADO (capa adicional de seguridad)
-  // Aplica a todos los usuarios (normales e inspectores)
+  // 🔥 3. VALIDACIÓN DE TOKEN EXPIRADO (Seguridad pasiva)
   useEffect(() => {
-    if (
-      status === "authenticated" &&
-      session?.accessToken &&
-      !session?.error
-    ) {
+    if (status === "authenticated" && session?.accessToken && !session?.error) {
       try {
-        // Decodificar token para verificar expiración
         const payload = JSON.parse(atob(session.accessToken.split(".")[1]));
         const expiresAt = payload.exp * 1000;
-        const timeLeft = expiresAt - Date.now();
-
-        // Si ya expiró (no debería pasar gracias a la renovación automática)
-        if (timeLeft < 0) {
-          const userType = session.isInspector ? "inspector" : "usuario";
-          console.error(`❌ Token de ${userType} expirado detectado en cliente`);
-          signOut({
-            callbackUrl: "/?error=token_expired",
-            redirect: true,
-          });
+        
+        if (Date.now() >= expiresAt) {
+          console.error("❌ Token expirado detectado en cliente");
+          signOut({ callbackUrl: "/?error=token_expired" });
         }
       } catch (error) {
         console.error("❌ Error decodificando token:", error);
-        // Solo cerrar sesión si es un error crítico
-        signOut({
-          callbackUrl: "/?error=invalid_token",
-          redirect: true,
-        });
       }
     }
-  }, [status, session?.accessToken, session?.error, session?.isInspector]);
+  }, [status, session?.accessToken, session?.error]);
 
   // 🔥 4. REDIRECCIÓN EN RUTAS PROTEGIDAS SI HAY ERROR
   useEffect(() => {
     if (session?.error && status === "authenticated") {
-      // Verificar si estamos en una ruta protegida
       if (isProtectedRoute(pathname)) {
-        console.log(
-          "🔄 Redirigiendo desde ruta protegida por error de sesión..."
-        );
         router.push("/?error=session_expired");
       }
     }
   }, [session?.error, status, pathname, router]);
+
+  // 🔥 5. LISTENER DE ACTIVIDAD (Sliding Session)
+  // Detecta interacción real del usuario para forzar renovación si el token está "viejo"
+  useEffect(() => {
+    // Si no estamos autenticados o hay error, no hacemos nada
+    if (status !== "authenticated" || !session?.accessToken || session.error) return;
+
+    // Eventos que consideramos "actividad"
+    const events = ["click", "keydown", "scroll", "mousemove"];
+    
+    // Función optimizada (Throttled) para no saturar
+    const handleUserActivity = async () => {
+      const now = Date.now();
+      // Solo verificamos máximo 1 vez cada 30 segundos
+      if (now - lastActivityCheck.current < 30000) return;
+      
+      lastActivityCheck.current = now;
+
+      try {
+        // Decodificar token
+        const payload = JSON.parse(atob(session.accessToken!.split(".")[1]));
+        const expiresAt = payload.exp * 1000;
+        const timeLeft = expiresAt - now;
+        
+        // LÓGICA DE RENOVACIÓN POR ACTIVIDAD:
+        // Si al usuario le queda menos tiempo del definido en SLIDING_WINDOW_THRESHOLD (ej. 5 min)
+        // Y está interactuando, forzamos la renovación.
+        if (timeLeft < SESSION_CONFIG.SLIDING_WINDOW_THRESHOLD && timeLeft > 0) {
+          console.log("🖱️ Actividad detectada con token próximo a vencer -> Extendiendo sesión...");
+          
+          // Al llamar a update, NextAuth usa el refresh_token, lo que avisa a Keycloak
+          // de que el usuario sigue vivo, reseteando el contador de 'Idle Session'.
+          await update(); 
+        }
+      } catch (e) {
+        console.error("Error verificando actividad:", e);
+      }
+    };
+
+    // Agregar listeners
+    events.forEach((event) => window.addEventListener(event, handleUserActivity));
+
+    // Limpieza
+    return () => {
+      events.forEach((event) => window.removeEventListener(event, handleUserActivity));
+    };
+  }, [status, session, update]);
 
   return <>{children}</>;
 }

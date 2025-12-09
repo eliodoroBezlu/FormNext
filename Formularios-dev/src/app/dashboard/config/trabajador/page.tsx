@@ -881,8 +881,9 @@ export default function GestionTrabajadores() {
                           label="Roles del Usuario"
                         >
                           <MenuItem value="user">Usuario</MenuItem>
-                          <MenuItem value="inspector">Inspector</MenuItem>
+                          <MenuItem value="tecnico">Inspector</MenuItem>
                           <MenuItem value="supervisor">Supervisor</MenuItem>
+                          <MenuItem value="superintendente">Superintendente</MenuItem>
                           <MenuItem value="admin">Administrador</MenuItem>
                         </Select>
                       </FormControl>
@@ -1003,8 +1004,9 @@ export default function GestionTrabajadores() {
                   label="Roles del Usuario"
                 >
                   <MenuItem value="user">Usuario</MenuItem>
-                  <MenuItem value="inspector">Inspector</MenuItem>
+                  <MenuItem value="tecnico">Inspector</MenuItem>
                   <MenuItem value="supervisor">Supervisor</MenuItem>
+                  <MenuItem value="superintendente">Superintendente</MenuItem>
                   <MenuItem value="admin">Administrador</MenuItem>
                 </Select>
               </FormControl>

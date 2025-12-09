@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
 import { getTemplatesHerraEquipos } from '@/lib/actions/template-herra-equipos';
-import { FormTemplateHerraEquipos, FormDataHerraEquipos } from '@/components/herra_equipos/types/IProps';
+import { FormTemplateHerraEquipos, FormDataHerraEquipos, InspectionStatus } from '@/components/herra_equipos/types/IProps';
 import { UnifiedFormRouter } from '@/components/herra_equipos/UnifiedFormRouter';
 import { getInspectionById, InspectionResponse, updateInspection } from '@/lib/actions/inspection-herra-equipos';
 
@@ -127,7 +127,7 @@ export default function EditarInspeccionPage() {
       const result = await updateInspection(
         inspectionId,
         data,
-        "draft" // Mantener como borrador al actualizar
+        InspectionStatus.DRAFT, // Mantener como borrador al actualizar
       );
 
       if (result.success && result.data) {
@@ -168,7 +168,7 @@ export default function EditarInspeccionPage() {
       const result = await updateInspection(
         inspectionId,
         data,
-        "completed" // Cambiar a completado
+        InspectionStatus.COMPLETED // Cambiar a completado
       );
 
       if (result.success) {

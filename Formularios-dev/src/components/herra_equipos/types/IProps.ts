@@ -167,6 +167,7 @@ export interface ApprovalData {
 }
 
 export interface FormDataHerraEquipos {
+  _id?: string;
   verification: Record<string, string | number>;
   generalObservations?: string;
   responses: ResponsesData;

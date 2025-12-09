@@ -1,6 +1,6 @@
 "use server"
 
-import { FormTemplate } from "@/types/formTypes"
+import { ApiResponse, FormTemplate } from "@/types/formTypes"
 import {   getAuthHeaders, handleApiResponse } from "./helpers"
 import { API_BASE_URL } from "../constants";
 
@@ -132,7 +132,7 @@ export async function getTemplates(filters?: {
 }
 
 // Obtener template por ID
-export async function getTemplate(id: string) {
+export async function getTemplateById(id: string): Promise<ApiResponse<FormTemplate>> {
   try {
     const headers = await getAuthHeaders();
     
@@ -142,7 +142,8 @@ export async function getTemplate(id: string) {
       cache: "no-store",
     });
 
-    const result = await handleApiResponse(response);
+    // 🔥 También tipamos el handleApiResponse
+    const result = await handleApiResponse<FormTemplate>(response);
 
     return {
       success: true,
@@ -153,7 +154,7 @@ export async function getTemplate(id: string) {
     return {
       success: false,
       error: error instanceof Error ? error.message : "Error al obtener el template",
-      data: null,
+      // data: null, // TypeScript prefiere que omitas data si falló, o uses undefined
     };
   }
 }

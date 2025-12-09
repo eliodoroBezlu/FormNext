@@ -131,7 +131,7 @@ export async function getInstances(filters?: GetInstancesFilters): Promise<ApiRe
 }
 
 // Obtener instancia por ID
-export async function getInstance(id: string): Promise<ApiResponse<FormInstance>> {
+export async function getInstanceById(id: string): Promise<ApiResponse<FormInstance>> {
   try {
     const headers = await getAuthHeaders();
     
@@ -151,7 +151,6 @@ export async function getInstance(id: string): Promise<ApiResponse<FormInstance>
   } catch (error) {
     console.error('Error fetching instance:', error);
     
-    // Manejo específico para instancia no encontrada
     const errorMessage = error instanceof Error && error.message.includes('404')
       ? 'Instancia no encontrada'
       : error instanceof Error ? error.message : 'Error desconocido al obtener instancia';

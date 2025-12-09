@@ -50,29 +50,33 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
   homeLabel = "Ir al Dashboard",
 }) => {
   const router = useRouter();
-  const [countdown, setCountdown] = useState(redirectDelay / 1000);
+  // Convertimos ms a segundos para el contador visual
+  const [countdown, setCountdown] = useState(Math.ceil(redirectDelay / 1000));
   const [show, setShow] = useState(false);
 
+  // Animación de entrada
   useEffect(() => {
-    // Animación de entrada
     setShow(true);
+  }, []);
 
-    // Auto-redirect
-    if (autoRedirect) {
+  // 🔥 1. EFECTO DEL TEMPORIZADOR (Solo baja el contador)
+  useEffect(() => {
+    if (autoRedirect && countdown > 0) {
       const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            router.push(redirectPath);
-            return 0;
-          }
-          return prev - 1;
-        });
+        setCountdown((prev) => prev - 1);
       }, 1000);
 
       return () => clearInterval(timer);
     }
-  }, [autoRedirect, redirectPath, redirectDelay, router]);
+  }, [autoRedirect, countdown]);
+
+  // 🔥 2. EFECTO DE REDIRECCIÓN (Solo navega cuando llega a 0)
+  useEffect(() => {
+    if (autoRedirect && countdown === 0) {
+      // Hacemos el push aquí, fuera del ciclo de renderizado del estado
+      router.push(redirectPath);
+    }
+  }, [autoRedirect, countdown, redirectPath, router]);
 
   const handleViewDetails = () => {
     if (onViewDetails) {
@@ -196,7 +200,7 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
               </Typography>
 
               {/* Countdown para auto-redirect */}
-              {autoRedirect && countdown > 0 && (
+              {autoRedirect && (
                 <Box
                   sx={{
                     mb: 3,
@@ -204,6 +208,7 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
                     bgcolor: "rgba(255,255,255,0.2)",
                     borderRadius: 2,
                     backdropFilter: "blur(10px)",
+                    display: "inline-block",
                   }}
                 >
                   <Typography variant="body2">

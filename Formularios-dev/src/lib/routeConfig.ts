@@ -56,10 +56,8 @@
 // } as const;
 
 
-/**
- * Configuración centralizada de rutas protegidas
- * Usada por SessionValidator y Middleware
- */
+// lib/routeConfig.ts
+
 export const PROTECTED_ROUTES = [
   "/dashboard",
   "/profile",
@@ -109,10 +107,10 @@ export const RENEWAL_INTERVALS = {
   INSPECTOR: 3 * 60 * 1000, // 3 minutos
   
   /**
-   * Usuario normal: No necesita renovación automática
-   * Los tokens se renuevan con refresh_token solo cuando hay actividad
+   * Usuario normal: No necesita renovación automática por intervalo
+   * Los tokens se renuevan con refresh_token solo cuando hay actividad (ver SessionValidator)
    */
-  REGULAR_USER: 0, // Solo con actividad
+  REGULAR_USER: 0, 
 } as const;
 
 /**
@@ -123,28 +121,31 @@ export const SESSION_CONFIG = {
   /**
    * Tiempo máximo de vida de la sesión (4 horas)
    * Debe coincidir con Keycloak SSO Session Max
-   * Después de este tiempo, la sesión EXPIRA sin importar la actividad
    */
   MAX_AGE: 4 * 60 * 60, // 4 horas en segundos
   
   /**
    * Intervalo de actualización de sesión (5 minutos)
-   * La sesión se renueva cada 5 minutos SOLO si hay actividad del usuario
-   * Debe ser <= Keycloak Access Token Lifespan para renovar antes de expirar
    */
   UPDATE_AGE: 5 * 60, // 5 minutos en segundos
   
   /**
    * Umbral para renovación de token de inspector (2 minutos antes)
-   * Se renueva cuando quedan menos de 2 minutos para expirar
    */
-  INSPECTOR_RENEWAL_THRESHOLD: 2 * 60 * 1000, // 2 minutos en milisegundos
+  INSPECTOR_RENEWAL_THRESHOLD: 2 * 60 * 1000, // 2 minutos en ms
   
   /**
-   * Tiempo de advertencia antes de expiración (1 minuto)
-   * Se usa en SessionValidator para avisar al usuario (opcional)
+   * 🔥 NUEVO: Umbral de ventana deslizante (5 minutos)
+   * Si el usuario interactúa y al token le queda menos de este tiempo,
+   * se fuerza una renovación para mantener viva la sesión en Keycloak.
+   * Recomendado: Igual al Access Token Lifespan de Keycloak.
    */
-  TOKEN_EXPIRY_WARNING: 60 * 1000, // 1 minuto en milisegundos
+  SLIDING_WINDOW_THRESHOLD: 5 * 60 * 1000, // 5 minutos en ms
+
+  /**
+   * Tiempo de advertencia antes de expiración (1 minuto)
+   */
+  TOKEN_EXPIRY_WARNING: 60 * 1000, // 1 minuto en ms
 } as const;
 
 /**
@@ -153,10 +154,10 @@ export const SESSION_CONFIG = {
  */
 export const KEYCLOAK_RECOMMENDED_CONFIG = {
   // Realm Settings → Tokens
-  ACCESS_TOKEN_LIFESPAN: "5 minutos", // ⚠️ IMPORTANTE
+  ACCESS_TOKEN_LIFESPAN: "5 minutos", // ⚠️ CRÍTICO para que funcione el sliding session
   SSO_SESSION_IDLE: "45 minutos",
   SSO_SESSION_MAX: "4 horas",
   
   // Client Settings → Advanced (para inspector)
-  INSPECTOR_ACCESS_TOKEN: "5 minutos", // Mismo que el realm
+  INSPECTOR_ACCESS_TOKEN: "5 minutos", 
 } as const;

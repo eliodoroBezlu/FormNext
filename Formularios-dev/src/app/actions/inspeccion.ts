@@ -626,3 +626,15 @@ export async function generarMultiplesQR(
     }
   });
 }
+
+export async function obtenerInspeccionEmergenciaPorId(id: string): Promise<FormularioInspeccion> {
+  const headers = await getAuthHeaders();
+  // Tu controller tiene @Get(':id') en InspeccionesEmergenciaController
+  const response = await fetch(`${API_BASE_URL}/inspecciones-emergencia/${id}`, {
+    headers,
+    cache: "no-store",
+  });
+
+  // Usamos handleApiResponse que ya tienes importado
+  return handleApiResponse<FormularioInspeccion>(response);
+}

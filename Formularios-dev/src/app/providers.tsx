@@ -9,8 +9,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider
       // Refrescar la sesión cada 5 minutos
-      refetchInterval={0} // Desactivar refetch automático
-      refetchOnWindowFocus={false} // No refetch al hacer focus en ventana
+      refetchInterval={4*60} // Desactivar refetch automático
+      refetchOnWindowFocus={true} // No refetch al hacer focus en ventana
       refetchWhenOffline={false}
       basePath="/api/auth"
     >

@@ -182,8 +182,8 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     approval: {
       enabled: true,
       requiredRoles: ["supervisor", "admin", "superintendente"],
-      allowSelfApproval: false,
-      requiresComments: false,
+      allowSelfApproval: true,
+      requiresComments: true,
     },
     signatures: {
       inspector: {
