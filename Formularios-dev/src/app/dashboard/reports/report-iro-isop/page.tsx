@@ -482,7 +482,7 @@ export default function ListarInspeccionesIroIsop() {
                   instancias.map((instancia) => {
                     const estado = obtenerEstadoConfig(instancia.status || "borrador");
                     const vl = instancia.verificationList || {};
-                    const area = vl["Área"] || vl["area"] || "-";
+                    const area = vl["Área"] || vl["area"] || vl["Area Física"]||"-";
                     const superint = vl["Superintendencia"] || vl["superintendencia"] || "-";
 
                     return (
