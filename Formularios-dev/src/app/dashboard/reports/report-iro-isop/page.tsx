@@ -2,7 +2,6 @@
 
 import type React from "react";
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react"; // 🔥 Hook para roles
 import {
   Box,
   Paper,
@@ -49,6 +48,7 @@ import {
 } from "@/lib/actions/instance-actions";
 import { descargarExcelIroIsopCliente, descargarPdfIroIsopCliente } from "@/lib/actions/client";
 import AutocompleteCustom from "@/components/molecules/autocomplete-custom/AutocompleteCustom";
+import { useUserRole } from "@/hooks/useUserRole";
 
 // Configuración visual de los estados
 const ESTADOS_FORMULARIO = [
@@ -59,7 +59,7 @@ const ESTADOS_FORMULARIO = [
 ];
 
 export default function ListarInspeccionesIroIsop() {
-  const { data: session } = useSession(); // 🔥 Obtener sesión
+  const { user,  isLoading: authLoading } = useUserRole()
   const router = useRouter();
 
   // Estados de datos
@@ -90,14 +90,14 @@ export default function ListarInspeccionesIroIsop() {
 
   // 🔥 LÓGICA DE PERMISOS CORREGIDA (Fix TS2339)
   const puedeGestionar = () => {
-    if (!session) return false;
+    if (!user || authLoading) return false;
 
     const rolesPermitidos = ["admin", "supervisor", "superintendente"];
     
     // 🔥 TRUCO: Casteamos a 'any' para evitar el error de TypeScript
     // y buscamos los roles en session.roles o session.user.roles
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const customSession = session as any;
+    const customSession = user as any;
     const rolesUsuario = customSession.roles || customSession.user?.roles || [];
     
     if (Array.isArray(rolesUsuario)) {

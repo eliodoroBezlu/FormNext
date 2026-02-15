@@ -10,6 +10,7 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
   // Rutas públicas del dashboard
   { path: '/dashboard', requiredRoles: [] },
   
+  
   // Formularios de inspección de seguridad - solo supervisor
   { path: '/dashboard/inspeccion-sistemas-emergencia', requiredRoles: ['supervisor'] },
   { path: '/dashboard/inspeccion-sistemas-emergencia/formulario-insp-herr-equi', requiredRoles: ['supervisor'] },

@@ -2,14 +2,21 @@
 'use client';
 
 import { API_BASE_URL } from "../constants";
-import { getSession } from "next-auth/react";
+
 
 /**
- * Helper para obtener el token JWT desde el cliente
+ * Helper para obtener el access_token desde las cookies del cliente
+ * IMPORTANTE: Este token ya fue validado por el middleware
  */
-async function getAuthToken(): Promise<string | null> {
-  const session = await getSession();
-  return session?.accessToken as string | null ?? null;
+function getAccessToken(): string | null {
+  if (typeof document === 'undefined') return null;
+  
+  const cookies = document.cookie.split(';');
+  const accessTokenCookie = cookies.find(c => c.trim().startsWith('access_token='));
+  
+  if (!accessTokenCookie) return null;
+  
+  return accessTokenCookie.split('=')[1];
 }
 
 /**
@@ -27,41 +34,86 @@ export function descargarArchivo(blob: Blob, nombre: string): void {
 }
 
 /**
- * Descarga con autenticación (reutilizable)
+ * Descarga con autenticación usando cookies httpOnly
+ * 
+ * IMPORTANTE: Como el access_token está en una cookie httpOnly,
+ * el navegador lo enviará automáticamente con credentials: 'include'
  */
 async function descargarConAuth(url: string, nombreArchivo: string) {
-  const token = await getAuthToken();
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('📥 [DESCARGA] Iniciando descarga...');
+  console.log('  🌐 URL:', url);
+  console.log('  📄 Archivo:', nombreArchivo);
 
+  // Verificar que haya token (opcional, para feedback al usuario)
+  const token = getAccessToken();
+  
   if (!token) {
+    console.error('❌ [DESCARGA] No hay access token');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     throw new Error("No estás autenticado. Por favor inicia sesión nuevamente.");
   }
 
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      // No necesitas Content-Type aquí porque es una descarga
-    },
-    credentials: "include", // Importante si usas cookies (opcional si usas JWT en header)
-  });
+  console.log('✅ [DESCARGA] Token encontrado:', token.slice(0, 15) + '...');
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Error ${response.status}: ${errorText || response.statusText}`);
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      credentials: "include", // ✅ CRÍTICO: Envía cookies httpOnly automáticamente
+      cache: "no-store",
+    });
+
+    console.log('📨 [DESCARGA] Respuesta:', {
+      status: response.status,
+      ok: response.ok,
+      contentType: response.headers.get('content-type'),
+    });
+
+    if (response.status === 401) {
+      console.error('🔒 [DESCARGA] 401 - Sesión expirada');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      throw new Error("Sesión expirada. Por favor inicia sesión nuevamente.");
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ [DESCARGA] Error:', errorText);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      throw new Error(`Error ${response.status}: ${errorText || response.statusText}`);
+    }
+
+    const blob = await response.blob();
+    console.log('✅ [DESCARGA] Blob recibido:', {
+      size: blob.size,
+      type: blob.type,
+    });
+
+    descargarArchivo(blob, nombreArchivo);
+    
+    console.log('✅ [DESCARGA] Descarga completada');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+  } catch (error) {
+    console.error('💥 [DESCARGA] Error:', error);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    throw error;
   }
-
-  const blob = await response.blob();
-  descargarArchivo(blob, nombreArchivo);
 }
 
 // ============= DESCARGAS AUTENTICADAS =============
 
 export async function descargarPdfCliente(id: string): Promise<void> {
-  await descargarConAuth(`${API_BASE_URL}/inspecciones/${id}/pdf`, `inspeccion-${id}.pdf`);
+  await descargarConAuth(
+    `${API_BASE_URL}/inspecciones/${id}/pdf`, 
+    `inspeccion-${id}.pdf`
+  );
 }
 
 export async function descargarExcelCliente(id: string): Promise<void> {
-  await descargarConAuth(`${API_BASE_URL}/inspecciones/${id}/excel`, `inspeccion-${id}.xlsx`);
+  await descargarConAuth(
+    `${API_BASE_URL}/inspecciones/${id}/excel`, 
+    `inspeccion-${id}.xlsx`
+  );
 }
 
 export async function descargarExcelInspeccionesEmergenciaCliente(id: string): Promise<void> {
@@ -80,7 +132,7 @@ export async function descargarPdfInspeccionesEmergenciaCliente(id: string): Pro
 
 export async function descargarExcelIroIsopCliente(id: string): Promise<void> {
   await descargarConAuth(
-    `${API_BASE_URL}/instances/${id}/excel`, // Ajusta según tu ruta real
+    `${API_BASE_URL}/instances/${id}/excel`,
     `iro-isop-${id}.xlsx`
   );
 }

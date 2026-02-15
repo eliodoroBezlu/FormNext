@@ -1,13 +1,13 @@
 // components/UserInfo.tsx - Componente para mostrar info del usuario
-import { useSession } from "next-auth/react";
+
 import { Box, Chip, Avatar, Typography } from "@mui/material";
 import { useUserRole } from "@/hooks/useUserRole";
 
 export function UserInfo() {
-  const { data: session } = useSession();
+  const { user, isLoading: authLoading } = useUserRole()
   const { userRole } = useUserRole();
 
-  if (!session) return null;
+  if (!user || authLoading) return null;
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -32,14 +32,14 @@ export function UserInfo() {
   return (
     <Box display="flex" alignItems="center" gap={2} p={2}>
       <Avatar 
-        src={session.user?.image || undefined}
-        alt={session.user?.name || 'Usuario'}
+        src={undefined}
+        alt={user.username || 'Usuario'}
       >
-        {session.user?.name?.[0] || session.user?.email?.[0] || 'U'}
+        {user?.username?.[0] || user.email?.[0] || 'U'}
       </Avatar>
       <Box>
         <Typography variant="subtitle2">
-          {session.user?.name || session.user?.email}
+          {user?.username || user.email}
         </Typography>
         {userRole && (
           <Chip 

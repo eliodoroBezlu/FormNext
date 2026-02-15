@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Box, Typography, Paper, Alert } from "@mui/material";
-import { useSession } from "next-auth/react";
 import { useUserRole } from "@/hooks/useUserRole";
 import {
   FormDataHerraEquipos,
@@ -50,8 +49,7 @@ export function StandardInspectionForm({
   isViewMode = false,
 }: StandardInspectionFormProps) {
   const config = getFormConfig(template.code);
-  const { data: session } = useSession();
-  const { hasRole } = useUserRole();
+  const { user, hasRole} = useUserRole();
 
   // ✅ 1. ESTADO NUEVO: Para capturar la decisión del Checkbox de Aprobación
   const [approvalDecision, setApprovalDecision] = useState<{
@@ -219,7 +217,7 @@ export function StandardInspectionForm({
     if (!hasRequiredRole) return false;
 
     if (!config.approval.allowSelfApproval) {
-      return initialData?.submittedBy !== session?.user?.email;
+      return initialData?.submittedBy !== user?.email;
     }
 
     return true;
@@ -274,7 +272,7 @@ export function StandardInspectionForm({
              completeData.approval = {
                  ...completeData.approval,
                  status: 'approved',
-                 approvedBy: session?.user?.email || "Supervisor",
+                 approvedBy: user?.username || "Supervisor",
                  approvedAt: new Date().toISOString(),
                  supervisorComments: approvalDecision.comments
              };
@@ -285,7 +283,7 @@ export function StandardInspectionForm({
              completeData.approval = {
                  ...completeData.approval,
                  status: 'rejected',
-                 approvedBy: session?.user?.email || "Supervisor",
+                 approvedBy: user?.username || "Supervisor",
                  approvedAt: new Date().toISOString(),
                  rejectionReason: approvalDecision.comments
              };

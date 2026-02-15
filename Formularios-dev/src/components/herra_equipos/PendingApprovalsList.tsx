@@ -3,7 +3,6 @@
 
 // import React, { useEffect, useState } from "react";
 // import { useRouter } from "next/navigation";
-// import { useSession } from "next-auth/react";
 // import {
 //   Box,
 //   Card,
@@ -252,12 +251,11 @@
 //     </Box>
 //   );
 // }
-
 "use client";
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   Box,
   Card,
@@ -288,36 +286,43 @@ interface PendingApprovalsListProps {
   onApprovalChange?: () => void;
 }
 
-export function PendingApprovalsList({}: PendingApprovalsListProps) {
+export function PendingApprovalsList({ onApprovalChange }: PendingApprovalsListProps) {
   const router = useRouter();
-  const { data: session } = useSession();
+  
+  // ✅ Usar el hook actualizado
+  const { user, isLoading: authLoading } = useUserRole();
 
   const [inspections, setInspections] = useState<InspectionResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   // Estado para loading de botones individuales
-  //const [processingId, setProcessingId] = useState<string | null>(null);
+  // const [processingId, setProcessingId] = useState<string | null>(null);
 
+  // ✅ Cargar solo cuando el usuario esté disponible
   useEffect(() => {
-    loadPendingInspections();
-  }, []);
+    if (!authLoading && user) {
+      loadPendingInspections();
+    }
+  }, [authLoading, user]);
 
   const loadPendingInspections = async () => {
+    // ✅ Verificar que user existe
+    if (!user) return;
+
     try {
       setLoading(true);
       setError(null);
       
-      const result = await getPendingApprovals(session?.user?.name || "");
+      // ✅ Usar user.username en lugar de session.user.name
+      const result = await getPendingApprovals(user.username);
       
       if (!result.success) {
         throw new Error(result.error || "Error al cargar inspecciones pendientes");
       }
 
       setInspections(result.data || []);
-      
-      // 🔥 CORRECCIÓN: No llamamos a onApprovalChange() aquí.
-      // Solo queremos refrescar datos, no disparar el mensaje de éxito.
+      onApprovalChange?.();
       
     } catch (err) {
       console.error("Error al cargar pendientes:", err);
@@ -332,39 +337,65 @@ export function PendingApprovalsList({}: PendingApprovalsListProps) {
     router.push(`/dashboard/form-herra-equipos/${inspection.templateCode}/${inspection._id}`);
   };
 
-  /* * 🔥 OPCIONAL: Función para aprobación rápida desde la lista.
+  /* 🔥 OPCIONAL: Función para aprobación rápida desde la lista.
    * Si descomentas esto e importas la acción, podrás aprobar directo 
    * y verás la SuccessScreen del padre.
    */
   /*
   const handleQuickApprove = async (e: React.MouseEvent, inspection: InspectionResponse) => {
     e.stopPropagation(); // Evitar click en la card
+    
+    if (!user) return;
+    
     setProcessingId(inspection._id);
     try {
-        const result = await approveInspection(inspection._id, session?.user?.name || "Admin");
-        if (result.success) {
-            // 1. Recargar lista local
-            await loadPendingInspections();
-            // 2. Avisar al padre (Aquí sí se dispara SuccessScreen)
-            if (onApprovalChange) onApprovalChange();
-        }
+      const result = await approveInspection(inspection._id, user.username);
+      if (result.success) {
+        // 1. Recargar lista local
+        await loadPendingInspections();
+        // 2. Avisar al padre (Aquí sí se dispara SuccessScreen)
+        if (onApprovalChange) onApprovalChange();
+      }
     } catch(err) {
-        console.error(err);
+      console.error(err);
     } finally {
-        setProcessingId(null);
+      setProcessingId(null);
     }
   }
   */
 
-  if (loading) {
+  // ✅ Loading de autenticación
+  if (authLoading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "200px" }}>
         <CircularProgress />
+        <Typography ml={2}>Verificando permisos...</Typography>
       </Box>
     );
   }
 
-  if (error) return <Alert severity="error">{error}</Alert>;
+  // ✅ Sin usuario
+  if (!user) {
+    return (
+      <Alert severity="error">
+        No se pudo obtener información del usuario. Por favor, inicia sesión nuevamente.
+      </Alert>
+    );
+  }
+
+  // Loading de datos
+  if (loading) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "200px" }}>
+        <CircularProgress />
+        <Typography ml={2}>Cargando inspecciones...</Typography>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return <Alert severity="error">{error}</Alert>;
+  }
 
   if (inspections.length === 0) {
     return (
@@ -388,6 +419,12 @@ export function PendingApprovalsList({}: PendingApprovalsListProps) {
         <Typography variant="h6" gutterBottom>
           Inspecciones Pendientes ({inspections.length})
         </Typography>
+        {/* Debug info (solo en desarrollo) */}
+        {process.env.NODE_ENV === 'development' && (
+          <Typography variant="caption" color="text.secondary">
+            Cargadas para: {user.username}
+          </Typography>
+        )}
       </Box>
 
       <Grid container spacing={3}>
@@ -403,67 +440,66 @@ export function PendingApprovalsList({}: PendingApprovalsListProps) {
             >
               <CardContent>
                 <Grid container spacing={2} alignItems="center">
-                    {/* Información Principal */}
-                    <Grid size={{ xs:12, md:8 }} >
-                        <Typography variant="h6" component="div" gutterBottom>
-                            {inspection.templateName || inspection.templateCode}
-                        </Typography>
-                        
-                        <Stack direction="row" spacing={1} sx={{ mb: 1.5 }}>
-                            <Chip label="Pendiente" color="warning" size="small" icon={<AccessTime />} />
-                            <Chip label={inspection.templateCode} size="small" variant="outlined" />
-                        </Stack>
+                  {/* Información Principal */}
+                  <Grid size={{ xs:12, md:8 }}>
+                    <Typography variant="h6" component="div" gutterBottom>
+                      {inspection.templateName || inspection.templateCode}
+                    </Typography>
+                    
+                    <Stack direction="row" spacing={1} sx={{ mb: 1.5 }}>
+                      <Chip label="Pendiente" color="warning" size="small" icon={<AccessTime />} />
+                      <Chip label={inspection.templateCode} size="small" variant="outlined" />
+                    </Stack>
 
-                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} color="text.secondary">
-                            {inspection.submittedBy && (
-                                <Box display="flex" alignItems="center" gap={0.5}>
-                                    <Person fontSize="small" />
-                                    <Typography variant="body2">{inspection.submittedBy}</Typography>
-                                </Box>
-                            )}
-                            {inspection.submittedAt && (
-                                <Box display="flex" alignItems="center" gap={0.5}>
-                                    <CalendarToday fontSize="small" />
-                                    <Typography variant="body2">
-                                        {new Date(inspection.submittedAt).toLocaleDateString("es-ES")}
-                                    </Typography>
-                                </Box>
-                            )}
-                            {inspection.location && (
-                                <Box display="flex" alignItems="center" gap={0.5}>
-                                    <LocationOn fontSize="small" />
-                                    <Typography variant="body2">{inspection.location}</Typography>
-                                </Box>
-                            )}
-                        </Stack>
-                    </Grid>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} color="text.secondary">
+                      {inspection.submittedBy && (
+                        <Box display="flex" alignItems="center" gap={0.5}>
+                          <Person fontSize="small" />
+                          <Typography variant="body2">{inspection.submittedBy}</Typography>
+                        </Box>
+                      )}
+                      {inspection.submittedAt && (
+                        <Box display="flex" alignItems="center" gap={0.5}>
+                          <CalendarToday fontSize="small" />
+                          <Typography variant="body2">
+                            {new Date(inspection.submittedAt).toLocaleDateString("es-ES")}
+                          </Typography>
+                        </Box>
+                      )}
+                      {inspection.location && (
+                        <Box display="flex" alignItems="center" gap={0.5}>
+                          <LocationOn fontSize="small" />
+                          <Typography variant="body2">{inspection.location}</Typography>
+                        </Box>
+                      )}
+                    </Stack>
+                  </Grid>
 
-                    {/* Botones de Acción */}
-                    <Grid size={{ xs:12, md:4 }}sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, gap: 2 }}>
-                        
-                        {/* Botón Revisar (Navegación) */}
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            endIcon={<ArrowForward />}
-                            onClick={() => handleViewInspection(inspection)}
-                        >
-                            Revisar Detalle
-                        </Button>
+                  {/* Botones de Acción */}
+                  <Grid size={{ xs:12, md:4 }} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, gap: 2 }}>
+                    {/* Botón Revisar (Navegación) */}
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      endIcon={<ArrowForward />}
+                      onClick={() => handleViewInspection(inspection)}
+                    >
+                      Revisar Detalle
+                    </Button>
 
-                        {/* Botón Aprobación Rápida (Opcional - Descomentar lógica arriba para activar)
-                        <Tooltip title="Aprobación Rápida">
-                            <Button 
-                                variant="outlined" 
-                                color="success"
-                                onClick={(e) => handleQuickApprove(e, inspection)}
-                                disabled={!!processingId}
-                            >
-                                {processingId === inspection._id ? <CircularProgress size={24} /> : <ThumbUpAlt />}
-                            </Button>
-                        </Tooltip> 
-                        */}
-                    </Grid>
+                    {/* Botón Aprobación Rápida (Opcional - Descomentar lógica arriba para activar)
+                    <Tooltip title="Aprobación Rápida">
+                      <Button 
+                        variant="outlined" 
+                        color="success"
+                        onClick={(e) => handleQuickApprove(e, inspection)}
+                        disabled={!!processingId}
+                      >
+                        {processingId === inspection._id ? <CircularProgress size={24} /> : <ThumbUpAlt />}
+                      </Button>
+                    </Tooltip> 
+                    */}
+                  </Grid>
                 </Grid>
               </CardContent>
             </Card>

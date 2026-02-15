@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
 import {
   Box,
   Paper,
@@ -55,6 +54,7 @@ import {
   obtenerTrabajadorPorId,
 } from "@/lib/actions/trabajador-actions";
 import UserManagementModal from "@/components/organisms/user/UserManagementModal";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const initialFormData: TrabajadorForm = {
   ci: "",
@@ -70,7 +70,7 @@ const initialFormData: TrabajadorForm = {
 };
 
 export default function GestionTrabajadores() {
-  const { data: session } = useSession();
+  const { user } = useUserRole()
   const [trabajadores, setTrabajadores] = useState<Trabajador[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -117,8 +117,7 @@ export default function GestionTrabajadores() {
     severity: "info",
   });
 
-  const isAdmin = session?.roles?.includes("admin") ;
-
+  const isAdmin = user?.roles?.includes("admin");
   useEffect(() => {
     cargarTrabajadores();
   }, []);

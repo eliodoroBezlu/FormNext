@@ -1,79 +1,94 @@
-"use server"
+// lib/actions/helpers.ts
+"use server";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "../auth";
+import { cookies } from "next/headers";
 
-
+/**
+ * Obtiene los headers de autenticación para llamadas al backend.
+ * 
+ * IMPORTANTE: Esta función NO hace refresh porque el Middleware ya lo maneja.
+ * Si no hay access_token aquí, simplemente lanzamos un error y dejamos que 
+ * el Middleware (en la próxima navegación) maneje la redirección.
+ */
 export async function getAuthHeaders(): Promise<Record<string, string>> {
-  const session = await getServerSession(authOptions);
-  
-  if (!session?.accessToken) {
-    throw new Error("No authentication token available");
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+
+  console.log("🔍 [HEADERS] Estado de token:", {
+    accessToken: accessToken ? `✅ ${accessToken.slice(0, 15)}...` : "❌ AUSENTE",
+  });
+
+  // Si no hay access token, lanzar error
+  // El Middleware manejará la redirección en la próxima navegación
+  if (!accessToken) {
+    console.error("❌ [HEADERS] Sin access token");
+    throw new Error("Sesión expirada. Por favor, recarga la página.");
   }
 
   return {
     "Content-Type": "application/json",
-    "Authorization": `Bearer ${session.accessToken}`,
+    Cookie: `access_token=${accessToken}`,
   };
 }
 
+/**
+ * Maneja la respuesta de una llamada a la API.
+ * Parsea JSON, maneja errores.
+ * 
+ * IMPORTANTE: Si recibe 401, NO redirige. Solo lanza un error.
+ * El usuario verá el error en la UI y al recargar la página,
+ * el Middleware manejará el refresh/redirección.
+ */
+export async function handleApiResponse<T>(response: Response): Promise<T> {
+  console.log("📨 [API] Respuesta:", {
+    status: response.status,
+    ok: response.ok,
+    url: response.url,
+  });
 
-// Helper para manejar respuestas de API
-export async function handleApiResponse<T >(response: Response): Promise<T> {
+  // Si recibimos 401, lanzar error amigable
+  if (response.status === 401) {
+    console.error("🔒 [API] 401 → Token expiró durante la acción");
+    throw new Error(
+      "Tu sesión expiró mientras se procesaba la acción. Por favor, recarga la página e intenta nuevamente."
+    );
+  }
+
+  // Manejar otros errores HTTP
   if (!response.ok) {
-    // Primero intentar obtener el texto completo (más robusto)
-    const errorText = await response.text().catch(() => '');
-    let errorMessage = `Error ${response.status}: ${response.statusText}`;
+    let errorMessage = `HTTP ${response.status}`;
     
-    if (errorText) {
-      try {
-        // Intentar parsear como JSON para obtener mensaje estructurado
-        const errorJson = JSON.parse(errorText);
-        errorMessage = errorJson.message || errorJson.error || errorMessage;
-      } catch {
-        // Si no es JSON válido, usar el texto tal como viene
-        // Esto maneja casos donde el servidor devuelve texto plano
-        errorMessage = errorText.length > 200 
-          ? `${errorText.substring(0, 200)}...` 
-          : errorText;
-      }
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorData.error || errorMessage;
+    } catch {
+      errorMessage = (await response.text().catch(() => "")) || errorMessage;
     }
     
+    console.error(`❌ [API] Error:`, errorMessage);
     throw new Error(errorMessage);
   }
 
-  // Manejar diferentes tipos de respuesta exitosa
-  const contentType = response.headers.get('content-type');
-  
-  // Respuesta vacía (204 No Content)
-  if (response.status === 204) {
-    return {} as T;
-  }
-  
-  // Si es JSON, parsearlo
-  if (contentType?.includes('application/json')) {
+  // Parsear respuesta según Content-Type
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
     return response.json();
   }
   
-  // Si es un blob (archivos), retornarlo como tal
-  if (contentType && (
-    contentType.includes('application/pdf') ||
-    contentType.includes('application/vnd.openxmlformats') ||
-    contentType.includes('image/') ||
-    contentType.includes('text/csv') ||
-    contentType.includes('application/octet-stream')
-  )) {
-    return response.blob() as T;
+  if (contentType.includes("text/")) {
+    return response.text() as unknown as T;
   }
   
-  // Por defecto, intentar JSON
+  if (contentType.includes("image/") || contentType.includes("application/pdf")) {
+    return response.blob() as unknown as T;
+  }
+
+  // Fallback: intentar parsear como JSON
   try {
     return response.json();
   } catch {
-    // Si falla, retornar como texto
-    return response.text() as T;
+    return {} as T;
   }
 }
-
-
 

@@ -37,33 +37,33 @@
 //   }
 // }
 
-import "next-auth";
-import "next-auth/jwt";
+// import "next-auth";
+// import "next-auth/jwt";
 
-declare module "next-auth" {
-  interface Session {
-    accessToken?: string;
-    roles?: string[];
-    error?: string;
-    isInspector?: boolean;
-  }
+// declare module "next-auth" {
+//   interface Session {
+//     accessToken?: string;
+//     roles?: string[];
+//     error?: string;
+//     isInspector?: boolean;
+//   }
 
-  interface User {
-    id: string;
-    accessToken?: string;
-    refreshToken?: string;
-    expiresAt?: number;
-    roles?: string[];
-  }
-}
+//   interface User {
+//     id: string;
+//     accessToken?: string;
+//     refreshToken?: string;
+//     expiresAt?: number;
+//     roles?: string[];
+//   }
+// }
 
-declare module "next-auth/jwt" {
-  interface JWT {
-    accessToken?: string;
-    refreshToken?: string;
-    expiresAt?: number;
-    roles?: string[];
-    error?: string;
-    isInspector?: boolean;
-  }
-}
+// declare module "next-auth/jwt" {
+//   interface JWT {
+//     accessToken?: string;
+//     refreshToken?: string;
+//     expiresAt?: number;
+//     roles?: string[];
+//     error?: string;
+//     isInspector?: boolean;
+//   }
+// }

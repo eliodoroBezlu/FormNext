@@ -214,13 +214,17 @@
 // hooks/use-planes-accion.ts
 
 // hooks/use-planes-accion.ts
-'use client';
+"use server";
 
-import { useState, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
-import { AddTareaDTO, CreatePlanDeAccionDTO, PlanDeAccion, TareaObservacion, UpdatePlanDeAccionDTO, UpdateTareaDTO } from '../types/IProps';
+import { getAuthHeaders, handleApiResponse } from "@/lib/actions/helpers";
+import { AddTareaDTO, CreatePlanDeAccionDTO, PlanDeAccion, UpdatePlanDeAccionDTO, UpdateTareaDTO } from "../types/IProps";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
+const API_URL = process.env.API_URL || "http://localhost:3002";
+
+// ==========================================
+// TIPOS
+// ==========================================
 
 export interface GenerarPlanesOptions {
   incluirPuntaje3?: boolean;
@@ -235,586 +239,446 @@ export interface PlanSummary {
   porcentajeCierre: number;
 }
 
+export interface PlanesFilters {
+  estado?: string;
+  vicepresidencia?: string;
+  superintendencia?: string;
+  areaFisica?: string;
+}
+
+export interface ActionResult<
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+T = any
+> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+}
+
 // ==========================================
-// HOOK PRINCIPAL
+// PLANES - CRUD
 // ==========================================
 
-export function usePlanesAccion() {
-  const { data: session } = useSession();
-  const [planes, setPlanes] = useState<PlanDeAccion[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // ==========================================
-  // HELPER: Obtener headers con autenticación
-  // ==========================================
-  const getAuthHeaders = useCallback((): Record<string, string> => {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-
-    if (session?.accessToken) {
-      headers['Authorization'] = `Bearer ${session.accessToken}`;
-    }
-
-    return headers;
-  }, [session?.accessToken]);
-
-  // ==========================================
-  // HELPER: Manejar errores de autenticación
-  // ==========================================
-  const handleAuthError = useCallback((status: number, errorMessage: string) => {
-    if (status === 401) {
-      setError('Sesión expirada. Por favor, inicia sesión nuevamente.');
-      // Opcional: redirigir automáticamente
-      window.location.href = '/?error=session_expired';
-      throw new Error('Sesión expirada');
-    }
+/**
+ * Obtener lista de planes con filtros opcionales
+ */
+export async function obtenerPlanes(
+  filters?: PlanesFilters
+): Promise<PlanDeAccion[]> {
+  try {
+    const headers = await getAuthHeaders();
     
-    if (status === 403) {
-      setError('No tienes permisos para realizar esta acción.');
-      throw new Error('Permisos insuficientes');
-    }
-
-    throw new Error(errorMessage);
-  }, []);
-
-  // ==========================================
-  // LLAMADAS A LA API
-  // ==========================================
-
-  /**
-   * 🔥 Generar plan desde una inspección
-   */
-  const generarPlanDesdeInstancia = useCallback(
-    async (instanceId: string, opciones: GenerarPlanesOptions = {}) => {
-      if (!session?.accessToken) {
-        setError('Debes iniciar sesión para generar un plan');
-        throw new Error('No autenticado');
-      }
-
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const params = new URLSearchParams();
-        
-        if (opciones.incluirPuntaje3 !== undefined) {
-          params.append('incluirPuntaje3', String(opciones.incluirPuntaje3));
-        }
-        
-        if (opciones.incluirSoloConComentario !== undefined) {
-          params.append('incluirSoloConComentario', String(opciones.incluirSoloConComentario));
-        }
-
-        const url = `${API_URL}/planes-accion/generar-desde-instancia/${instanceId}?${params.toString()}`;
-
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: getAuthHeaders(),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          handleAuthError(response.status, errorData.message || 'Error al generar plan');
-        }
-
-        const plan = await response.json();
-        
-        // Actualizar lista local
-        setPlanes((prev) => [plan, ...prev]);
-        
-        return plan;
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Error al generar plan';
-        setError(message);
-        throw err;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [session?.accessToken, getAuthHeaders, handleAuthError]
-  );
-
-  /**
-   * Cargar lista de planes
-   */
-  const loadPlanes = useCallback(async (filters?: {
-    estado?: string;
-    vicepresidencia?: string;
-    superintendencia?: string;
-    areaFisica?: string;
-  }) => {
-    if (!session?.accessToken) {
-      setError('Debes iniciar sesión para cargar planes');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const params = new URLSearchParams();
-      
-      if (filters?.estado) params.append('estado', filters.estado);
-      if (filters?.vicepresidencia) params.append('vicepresidencia', filters.vicepresidencia);
-      if (filters?.superintendencia) params.append('superintendencia', filters.superintendencia);
-      if (filters?.areaFisica) params.append('areaFisica', filters.areaFisica);
-
-      const url = `${API_URL}/planes-accion?${params.toString()}`;
-
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: getAuthHeaders(),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        handleAuthError(response.status, errorData.message || 'Error al cargar planes');
-      }
-
-      const planesData = await response.json();
-      setPlanes(planesData);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error al cargar planes';
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [session?.accessToken, getAuthHeaders, handleAuthError]);
-
-  /**
-   * Crear un nuevo plan vacío
-   */
-  const createPlan = useCallback(async (data: CreatePlanDeAccionDTO) => {
-    if (!session?.accessToken) {
-      setError('Debes iniciar sesión para crear un plan');
-      throw new Error('No autenticado');
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${API_URL}/planes-accion`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        handleAuthError(response.status, errorData.message || 'Error al crear plan');
-      }
-
-      const newPlan = await response.json();
-      
-      setPlanes((prev) => [newPlan, ...prev]);
-      
-      return newPlan;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error al crear plan';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [session?.accessToken, getAuthHeaders, handleAuthError]);
-
-  /**
-   * Actualizar datos organizacionales del plan
-   */
-  const updatePlan = useCallback(async (planId: string, data: UpdatePlanDeAccionDTO) => {
-    if (!session?.accessToken) {
-      setError('Debes iniciar sesión para actualizar el plan');
-      throw new Error('No autenticado');
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${API_URL}/planes-accion/${planId}`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        handleAuthError(response.status, errorData.message || 'Error al actualizar plan');
-      }
-
-      const updatedPlan = await response.json();
-      
-      setPlanes((prev) =>
-        prev.map((plan) => (plan._id === planId ? updatedPlan : plan))
-      );
-
-      return updatedPlan;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error al actualizar plan';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [session?.accessToken, getAuthHeaders, handleAuthError]);
-
-  /**
-   * Eliminar un plan completo
-   */
-  const deletePlan = useCallback(async (planId: string) => {
-    if (!session?.accessToken) {
-      setError('Debes iniciar sesión para eliminar el plan');
-      throw new Error('No autenticado');
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${API_URL}/planes-accion/${planId}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        handleAuthError(response.status, errorData.message || 'Error al eliminar plan');
-      }
-
-      setPlanes((prev) => prev.filter((plan) => plan._id !== planId));
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error al eliminar plan';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [session?.accessToken, getAuthHeaders, handleAuthError]);
-
-  /**
-   * 🆕 Agregar tarea a un plan existente
-   */
-  const addTarea = useCallback(async (planId: string, tarea: AddTareaDTO) => {
-    if (!session?.accessToken) {
-      setError('Debes iniciar sesión para agregar una tarea');
-      throw new Error('No autenticado');
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${API_URL}/planes-accion/${planId}/tareas`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(tarea),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        handleAuthError(response.status, errorData.message || 'Error al agregar tarea');
-      }
-
-      const updatedPlan = await response.json();
-      
-      setPlanes((prev) =>
-        prev.map((plan) => (plan._id === planId ? updatedPlan : plan))
-      );
-
-      return updatedPlan;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error al agregar tarea';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [session?.accessToken, getAuthHeaders, handleAuthError]);
-
-  /**
-   * 🆕 Actualizar una tarea específica
-   */
-  const updateTarea = useCallback(
-    async (planId: string, tareaId: string, data: UpdateTareaDTO) => {
-      if (!session?.accessToken) {
-        setError('Debes iniciar sesión para actualizar la tarea');
-        throw new Error('No autenticado');
-      }
-
-      console.log('🎯 [HOOK] updateTarea llamado');
-      console.log('  📋 planId:', planId);
-      console.log('  📋 tareaId:', tareaId);
-      console.log('  📦 data original:', data);
-      console.log('  📎 evidencias en data:', data.evidencias);
-      
-      // 🔥 Verificar el tipo y contenido de evidencias
-      if (data.evidencias) {
-        console.log('  🔍 Detalles de evidencias:');
-        console.log('    - Tipo:', typeof data.evidencias);
-        console.log('    - Es array?:', Array.isArray(data.evidencias));
-        console.log('    - Longitud:', data.evidencias.length);
-        data.evidencias.forEach((ev, i) => {
-          console.log(`    - [${i}]:`, {
-            nombre: ev.nombre,
-            url: ev.url,
-            nombreTipo: typeof ev.nombre,
-            urlTipo: typeof ev.url,
-            objeto: ev
-          });
-        });
-      }
-
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        // 🔥 Crear payload limpio
-        const payload = JSON.stringify(data);
-        console.log('  📤 Payload stringified:', payload);
-        console.log('  📤 Payload parseado:', JSON.parse(payload));
-
-        const response = await fetch(`${API_URL}/planes-accion/${planId}/tareas/${tareaId}`, {
-          method: 'PATCH',
-          headers: getAuthHeaders(),
-          body: payload,
-        });
-
-        console.log('  📡 Response status:', response.status);
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error('  ❌ Error response:', errorData);
-          handleAuthError(response.status, errorData.message || 'Error al actualizar tarea');
-        }
-
-        const updatedPlan = await response.json();
-        console.log('  ✅ Plan actualizado recibido');
-        console.log('  📊 Tareas en plan:', updatedPlan.tareas?.length);
-        
-        // Verificar que las evidencias se guardaron
-        const tareaActualizada = updatedPlan.tareas?.find((t: TareaObservacion) => t._id === tareaId);
-        if (tareaActualizada) {
-          console.log('  ✅ Tarea actualizada encontrada');
-          console.log('  📎 Evidencias guardadas:', tareaActualizada.evidencias);
-        }
-
-        setPlanes((prev) =>
-          prev.map((plan) => (plan._id === planId ? updatedPlan : plan))
-        );
-
-        return updatedPlan;
-      } catch (err) {
-        console.error('  ❌ Error en updateTarea:', err);
-        const message = err instanceof Error ? err.message : 'Error al actualizar tarea';
-        setError(message);
-        throw err;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [session?.accessToken, getAuthHeaders, handleAuthError]
-  );
-
-  /**
-   * 🆕 Eliminar una tarea
-   */
-  const deleteTarea = useCallback(async (planId: string, tareaId: string) => {
-    if (!session?.accessToken) {
-      setError('Debes iniciar sesión para eliminar la tarea');
-      throw new Error('No autenticado');
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${API_URL}/planes-accion/${planId}/tareas/${tareaId}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        handleAuthError(response.status, errorData.message || 'Error al eliminar tarea');
-      }
-
-      const updatedPlan = await response.json();
-      
-      setPlanes((prev) =>
-        prev.map((plan) => (plan._id === planId ? updatedPlan : plan))
-      );
-
-      return updatedPlan;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error al eliminar tarea';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [session?.accessToken, getAuthHeaders, handleAuthError]);
-
-  /**
-   * 🆕 Aprobar una tarea
-   */
-  const approveTarea = useCallback(async (planId: string, tareaId: string) => {
-    if (!session?.accessToken) {
-      setError('Debes iniciar sesión para aprobar la tarea');
-      throw new Error('No autenticado');
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${API_URL}/planes-accion/${planId}/tareas/${tareaId}/aprobar`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        handleAuthError(response.status, errorData.message || 'Error al aprobar tarea');
-      }
-
-      const updatedPlan = await response.json();
-      
-      setPlanes((prev) =>
-        prev.map((plan) => (plan._id === planId ? updatedPlan : plan))
-      );
-
-      return updatedPlan;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error al aprobar tarea';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [session?.accessToken, getAuthHeaders, handleAuthError]);
-
-  /**
-   * Obtener estadísticas del servidor
-   */
-  const getStats = useCallback(async (): Promise<PlanSummary> => {
-    if (!session?.accessToken) {
-      setError('Debes iniciar sesión para ver estadísticas');
-      throw new Error('No autenticado');
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${API_URL}/planes-accion/stats`, {
-        method: 'GET',
-        headers: getAuthHeaders(),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        handleAuthError(response.status, errorData.message || 'Error al obtener estadísticas');
-      }
-
-      return await response.json();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error al obtener estadísticas';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [session?.accessToken, getAuthHeaders, handleAuthError]);
-
-  const loadInspecciones = useCallback(async () => {
-    if (!session?.accessToken) {
-      console.warn('⚠️ No hay sesión activa para cargar inspecciones');
-      return [];
-    }
-
-    try {
-      const response = await fetch(`${API_URL}/instances?limit=100`, {
-        method: 'GET',
-        headers: getAuthHeaders(),
-      });
-
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          console.error('❌ Error de autenticación al cargar inspecciones');
-          return [];
-        }
-        throw new Error('Error al cargar inspecciones');
-      }
-
-      const result = await response.json();
-      
-      // 🔥 CORRECCIÓN: Tu API retorna { data: Array, total, page, limit }
-      // Entonces debemos acceder directamente a result.data
-      if (result?.data && Array.isArray(result.data)) {
-        return result.data;
-      } else if (Array.isArray(result)) {
-        return result;
-      }
-      
-      console.warn('⚠️ Estructura inesperada:', result);
-      return [];
-      
-    } catch (err) {
-      console.error('❌ Error cargando inspecciones:', err);
-      return [];
-    }
-  }, [session?.accessToken, getAuthHeaders]);
-
-  /**
-   * Calcular resumen global de PLANES (desde estado local)
-   */
-  const calculateGlobalSummary = useCallback((): PlanSummary => {
-    const planesAbiertos = planes.filter((p) => p.estado === 'abierto').length;
-    const planesEnProgreso = planes.filter((p) => p.estado === 'en-progreso').length;
-    const planesCerrados = planes.filter((p) => p.estado === 'cerrado').length;
-    const totalPlanes = planes.length;
-
-    const sumaPorcentajes = planes.reduce((acc, plan) => acc + plan.porcentajeCierre, 0);
-    const porcentajeCierre = totalPlanes > 0 ? Math.round(sumaPorcentajes / totalPlanes) : 0;
+    const params = new URLSearchParams();
+    if (filters?.estado) params.append("estado", filters.estado);
+    if (filters?.vicepresidencia) params.append("vicepresidencia", filters.vicepresidencia);
+    if (filters?.superintendencia) params.append("superintendencia", filters.superintendencia);
+    if (filters?.areaFisica) params.append("areaFisica", filters.areaFisica);
+
+    const url = `${API_URL}/planes-accion${params.toString() ? `?${params}` : ""}`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    });
+
+    return await handleApiResponse<PlanDeAccion[]>(response);
+  } catch (error) {
+    console.error("Error obteniendo planes:", error);
+    throw error;
+  }
+}
+
+/**
+ * Obtener un plan específico por ID
+ */
+export async function obtenerPlanPorId(planId: string): Promise<PlanDeAccion> {
+  try {
+    const headers = await getAuthHeaders();
+
+    const response = await fetch(`${API_URL}/planes-accion/${planId}`, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    });
+
+    return await handleApiResponse<PlanDeAccion>(response);
+  } catch (error) {
+    console.error("Error obteniendo plan:", error);
+    throw error;
+  }
+}
+
+/**
+ * Crear un nuevo plan vacío
+ */
+export async function crearPlan(
+  data: CreatePlanDeAccionDTO
+): Promise<ActionResult<PlanDeAccion>> {
+  try {
+    const headers = await getAuthHeaders();
+
+    const response = await fetch(`${API_URL}/planes-accion`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(data),
+    });
+
+    const plan = await handleApiResponse<PlanDeAccion>(response);
 
     return {
-      totalPlanes,
-      planesAbiertos,
-      planesEnProgreso,
-      planesCerrados,
-      porcentajeCierre,
+      success: true,
+      data: plan,
+      message: "Plan creado exitosamente",
     };
-  }, [planes]);
+  } catch (error) {
+    console.error("Error creando plan:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error al crear plan",
+    };
+  }
+}
 
-  return {
-    // Estado
-    planes,
-    isLoading,
-    error,
-    isAuthenticated: !!session?.accessToken, // 🔥 NUEVO: indicador de autenticación
-    
-    // Operaciones de planes
-    loadPlanes,
-    createPlan,
-    updatePlan,
-    deletePlan,
-    
-    // Operaciones de tareas
-    addTarea,
-    updateTarea,
-    deleteTarea,
-    approveTarea,
-    
-    // Generación automática
-    generarPlanDesdeInstancia,
-    
-    // Estadísticas
-    calculateGlobalSummary,
-    getStats,
+/**
+ * Actualizar datos organizacionales del plan
+ */
+export async function actualizarPlan(
+  planId: string,
+  data: UpdatePlanDeAccionDTO
+): Promise<ActionResult<PlanDeAccion>> {
+  try {
+    const headers = await getAuthHeaders();
 
-    loadInspecciones,
-  };
+    const response = await fetch(`${API_URL}/planes-accion/${planId}`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify(data),
+    });
+
+    const plan = await handleApiResponse<PlanDeAccion>(response);
+
+    return {
+      success: true,
+      data: plan,
+      message: "Plan actualizado exitosamente",
+    };
+  } catch (error) {
+    console.error("Error actualizando plan:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error al actualizar plan",
+    };
+  }
+}
+
+/**
+ * Eliminar un plan completo
+ */
+export async function eliminarPlan(
+  planId: string
+): Promise<ActionResult<void>> {
+  try {
+    const headers = await getAuthHeaders();
+
+    const response = await fetch(`${API_URL}/planes-accion/${planId}`, {
+      method: "DELETE",
+      headers,
+    });
+
+    await handleApiResponse<void>(response);
+
+    return {
+      success: true,
+      message: "Plan eliminado exitosamente",
+    };
+  } catch (error) {
+    console.error("Error eliminando plan:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error al eliminar plan",
+    };
+  }
+}
+
+// ==========================================
+// GENERACIÓN AUTOMÁTICA
+// ==========================================
+
+/**
+ * Generar plan desde una inspección
+ */
+export async function generarPlanDesdeInstancia(
+  instanceId: string,
+  opciones: GenerarPlanesOptions = {}
+): Promise<ActionResult<PlanDeAccion>> {
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("🎯 [GENERAR PLAN] Iniciando...");
+  console.log("  📋 Instance ID:", instanceId);
+  console.log("  ⚙️ Opciones:", opciones);
+
+  try {
+    const headers = await getAuthHeaders();
+
+    const params = new URLSearchParams();
+    if (opciones.incluirPuntaje3 !== undefined) {
+      params.append("incluirPuntaje3", String(opciones.incluirPuntaje3));
+    }
+    if (opciones.incluirSoloConComentario !== undefined) {
+      params.append("incluirSoloConComentario", String(opciones.incluirSoloConComentario));
+    }
+
+    const url = `${API_URL}/planes-accion/generar-desde-instancia/${instanceId}${
+      params.toString() ? `?${params}` : ""
+    }`;
+
+    console.log("  🌐 URL:", url);
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+    });
+
+    const plan = await handleApiResponse<PlanDeAccion>(response);
+
+    console.log("✅ [GENERAR PLAN] Plan creado:", plan._id);
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+    return {
+      success: true,
+      data: plan,
+      message: "Plan generado exitosamente",
+    };
+  } catch (error) {
+    console.error("❌ [GENERAR PLAN] Error:", error);
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error al generar plan",
+    };
+  }
+}
+
+// ==========================================
+// TAREAS - CRUD
+// ==========================================
+
+/**
+ * Agregar tarea a un plan existente
+ */
+export async function agregarTarea(
+  planId: string,
+  tarea: AddTareaDTO
+): Promise<ActionResult<PlanDeAccion>> {
+  try {
+    const headers = await getAuthHeaders();
+
+    const response = await fetch(`${API_URL}/planes-accion/${planId}/tareas`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(tarea),
+    });
+
+    const plan = await handleApiResponse<PlanDeAccion>(response);
+
+    return {
+      success: true,
+      data: plan,
+      message: "Tarea agregada exitosamente",
+    };
+  } catch (error) {
+    console.error("Error agregando tarea:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error al agregar tarea",
+    };
+  }
+}
+
+/**
+ * Actualizar una tarea específica
+ */
+export async function actualizarTarea(
+  planId: string,
+  tareaId: string,
+  data: UpdateTareaDTO
+): Promise<ActionResult<PlanDeAccion>> {
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("🎯 [ACTUALIZAR TAREA] Iniciando...");
+  console.log("  📋 Plan ID:", planId);
+  console.log("  📋 Tarea ID:", tareaId);
+  console.log("  📦 Data:", data);
+  
+  if (data.evidencias) {
+    console.log("  📎 Evidencias:", data.evidencias.length);
+    data.evidencias.forEach((ev, i) => {
+      console.log(`    [${i}]:`, { nombre: ev.nombre, url: ev.url });
+    });
+  }
+
+  try {
+    const headers = await getAuthHeaders();
+
+    const response = await fetch(
+      `${API_URL}/planes-accion/${planId}/tareas/${tareaId}`,
+      {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify(data),
+      }
+    );
+
+    const plan = await handleApiResponse<PlanDeAccion>(response);
+
+    console.log("✅ [ACTUALIZAR TAREA] Tarea actualizada exitosamente");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+    return {
+      success: true,
+      data: plan,
+      message: "Tarea actualizada exitosamente",
+    };
+  } catch (error) {
+    console.error("❌ [ACTUALIZAR TAREA] Error:", error);
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error al actualizar tarea",
+    };
+  }
+}
+
+/**
+ * Eliminar una tarea
+ */
+export async function eliminarTarea(
+  planId: string,
+  tareaId: string
+): Promise<ActionResult<PlanDeAccion>> {
+  try {
+    const headers = await getAuthHeaders();
+
+    const response = await fetch(
+      `${API_URL}/planes-accion/${planId}/tareas/${tareaId}`,
+      {
+        method: "DELETE",
+        headers,
+      }
+    );
+
+    const plan = await handleApiResponse<PlanDeAccion>(response);
+
+    return {
+      success: true,
+      data: plan,
+      message: "Tarea eliminada exitosamente",
+    };
+  } catch (error) {
+    console.error("Error eliminando tarea:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error al eliminar tarea",
+    };
+  }
+}
+
+/**
+ * Aprobar una tarea
+ */
+export async function aprobarTarea(
+  planId: string,
+  tareaId: string
+): Promise<ActionResult<PlanDeAccion>> {
+  try {
+    const headers = await getAuthHeaders();
+
+    const response = await fetch(
+      `${API_URL}/planes-accion/${planId}/tareas/${tareaId}/aprobar`,
+      {
+        method: "PATCH",
+        headers,
+      }
+    );
+
+    const plan = await handleApiResponse<PlanDeAccion>(response);
+
+    return {
+      success: true,
+      data: plan,
+      message: "Tarea aprobada exitosamente",
+    };
+  } catch (error) {
+    console.error("Error aprobando tarea:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error al aprobar tarea",
+    };
+  }
+}
+
+// ==========================================
+// ESTADÍSTICAS
+// ==========================================
+
+/**
+ * Obtener estadísticas de planes
+ */
+export async function obtenerEstadisticas(): Promise<PlanSummary> {
+  try {
+    const headers = await getAuthHeaders();
+
+    const response = await fetch(`${API_URL}/planes-accion/stats`, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    });
+
+    return await handleApiResponse<PlanSummary>(response);
+  } catch (error) {
+    console.error("Error obteniendo estadísticas:", error);
+    throw error;
+  }
+}
+
+// ==========================================
+// INSPECCIONES (para dropdown)
+// ==========================================
+
+/**
+ * Obtener lista de inspecciones disponibles
+ */
+export async function obtenerInspecciones(): Promise<
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+any[]
+
+> {
+  try {
+    const headers = await getAuthHeaders();
+
+    const response = await fetch(`${API_URL}/instances?limit=100`, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    });
+
+    const result = await handleApiResponse<
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    any
+    
+    >(response);
+
+    // Tu API retorna { data: Array, total, page, limit }
+    if (result?.data && Array.isArray(result.data)) {
+      return result.data;
+    } else if (Array.isArray(result)) {
+      return result;
+    }
+
+    console.warn("⚠️ Estructura inesperada de inspecciones:", result);
+    return [];
+  } catch (error) {
+    console.error("Error obteniendo inspecciones:", error);
+    return [];
+  }
 }

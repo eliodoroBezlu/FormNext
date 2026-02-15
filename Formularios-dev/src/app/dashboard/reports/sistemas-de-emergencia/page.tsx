@@ -601,7 +601,6 @@
 
 import type React from "react";
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react"; // 🔥 Hook de sesión
 import {
   Box,
   Paper,
@@ -653,6 +652,7 @@ import type {
   FiltrosInspeccion,
   InspeccionServiceExport,
 } from "@/types/formTypes";
+import { useUserRole } from "@/hooks/useUserRole";
 
 // Lista de meses para el filtro
 const MESES = [
@@ -670,7 +670,7 @@ const SUPERINTENDENCIAS = [
 ];
 
 export default function ListaInspecciones() {
-  const { data: session } = useSession(); // 🔥 Obtener sesión
+  const { user, isLoading: authLoading } = useUserRole()
   const router = useRouter();
 
   // Estados de datos
@@ -704,18 +704,16 @@ export default function ListaInspecciones() {
 
   // 🔥 LÓGICA DE PERMISOS
   const puedeGestionar = () => {
-    if (!session) return false;
+    if (!user || authLoading) return false;
 
     const rolesPermitidos = ["admin", "supervisor", "superintendente"];
     // Casteo seguro para acceder a roles
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const customSession = session as any;
-    const rolesUsuario = customSession.roles || customSession.user?.roles || [];
 
-    if (Array.isArray(rolesUsuario)) {
-      return rolesUsuario.some((rol: string) => rolesPermitidos.includes(rol));
+    if (Array.isArray(user.roles)) {
+      return user.roles.some((rol: string) => rolesPermitidos.includes(rol));
     }
-    return rolesPermitidos.includes(rolesUsuario as string);
+    return rolesPermitidos.includes(user.roles as string);
   };
 
   const tienePermisos = puedeGestionar();

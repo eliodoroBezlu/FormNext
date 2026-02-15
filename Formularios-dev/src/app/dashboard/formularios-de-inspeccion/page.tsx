@@ -693,7 +693,7 @@ export default function HomePage() {
         onSave={handleSaveInstanceIroIsop} // Llama a nuestra función de éxito
         onCancel={() => setCurrentView("list")}
       />
-    );
+    );  
   }
 
   // 3. FORMULARIO PERSONALIZADO (Sistemas Emergencia)

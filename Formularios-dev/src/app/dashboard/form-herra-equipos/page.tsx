@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { 
   Box, Typography, Card, CardContent, Button, 
@@ -33,8 +32,8 @@ function TabPanel({ children, value, index }: TabPanelProps) {
 function LlenarFormulariosContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
-  const { hasRole } = useUserRole();
+  
+  const { user, hasRole } = useUserRole()
   
   const canViewApprovals = hasRole('supervisor') || hasRole('admin') || hasRole('superintendente');
 
@@ -81,7 +80,7 @@ function LlenarFormulariosContent() {
       const [inProgressResult, pendingResult] = await Promise.all([
         getInProgressInspections({ templateCode: SCAFFOLD_FORM }),
         canViewApprovals 
-          ? getPendingApprovals(session?.user?.name || "")
+          ? getPendingApprovals(user?.username || "")
           : Promise.resolve({ success: true, data: [] })
       ]);
 
@@ -299,7 +298,10 @@ function LlenarFormulariosContent() {
       {/* Tab 2: Pendientes de aprobación */}
       {canViewApprovals && (
         <TabPanel value={selectedTab} index={2}>
-          <PendingApprovalsList onApprovalChange={refreshCounts} />
+          <PendingApprovalsList 
+          // onApprovalChange={refreshCounts}
+          
+          />
         </TabPanel>
       )}
     </Box>

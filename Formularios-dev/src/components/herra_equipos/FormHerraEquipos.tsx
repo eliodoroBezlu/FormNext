@@ -353,12 +353,10 @@
 //     </Suspense>
 //   );
 // }
-
 "use client";
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { 
   Box, Typography, Card, CardContent, Button, 
@@ -375,7 +373,7 @@ import { FormTemplateHerraEquipos } from '@/components/herra_equipos/types/IProp
 // Componentes Hijos
 import { InProgressInspectionsList } from '@/components/herra_equipos/InProgressInspectionsList';
 import { PendingApprovalsList } from '@/components/herra_equipos/PendingApprovalsList';
-import { SuccessScreen } from '@/components/SucessScreen'; // 🔥 Importamos la pantalla de éxito
+import { SuccessScreen } from '@/components/SucessScreen';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -394,8 +392,9 @@ function TabPanel({ children, value, index }: TabPanelProps) {
 function LlenarFormulariosContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
-  const { hasRole } = useUserRole();
+  
+  // ✅ Usar el hook actualizado con datos reales
+  const { user, hasRole, isLoading: authLoading } = useUserRole();
   
   // Roles permitidos para aprobar
   const canViewApprovals = hasRole('supervisor') || hasRole('admin') || hasRole('superintendente');
@@ -412,7 +411,7 @@ function LlenarFormulariosContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 🔥 Estados para Pantalla de Éxito
+  // Estados para Pantalla de Éxito
   const [showSuccess, setShowSuccess] = useState(false);
   const [successData, setSuccessData] = useState({ title: '', message: '' });
 
@@ -448,11 +447,14 @@ function LlenarFormulariosContent() {
   // REFRESCAR SOLO CONTADORES
   // ========================================
   const refreshCounts = async () => {
+    // ✅ Esperar a que el usuario esté disponible
+    if (!user) return;
+
     try {
       const [inProgressResult, pendingResult] = await Promise.all([
         getInProgressInspections({ templateCode: SCAFFOLD_FORM }),
         canViewApprovals 
-          ? getPendingApprovals(session?.user?.name || "")
+          ? getPendingApprovals(user.username) // ✅ Usar username del usuario real
           : Promise.resolve({ success: true, data: [] })
       ]);
 
@@ -477,11 +479,14 @@ function LlenarFormulariosContent() {
   };
 
   // ========================================
-  // Carga inicial
+  // Carga inicial (esperar a que el usuario esté disponible)
   // ========================================
   useEffect(() => {
-    loadInitialData();
-  }, []);
+    // ✅ Solo cargar datos cuando el usuario esté disponible
+    if (!authLoading && user) {
+      loadInitialData();
+    }
+  }, [authLoading, user]);
 
   // ========================================
   // Sincronizar tab con URL
@@ -508,10 +513,10 @@ function LlenarFormulariosContent() {
 
   // Refrescar al cambiar a tab de aprobaciones
   useEffect(() => {
-    if (selectedTab === 2 && canViewApprovals) {
+    if (selectedTab === 2 && canViewApprovals && user) {
       refreshCounts();
     }
-  }, [selectedTab, canViewApprovals]);
+  }, [selectedTab, canViewApprovals, user]);
 
   // ========================================
   // Cambio de tab
@@ -542,31 +547,53 @@ function LlenarFormulariosContent() {
   // RENDERIZADO CONDICIONAL
   // ========================================
 
-  // 1. Pantalla de Éxito
-  if (showSuccess) {
-    return (
-        <SuccessScreen
-            title={successData.title}
-            message={successData.message}
-            subtitle="Los cambios se han guardado correctamente en el sistema."
-            autoRedirect={false} 
-            onBackToList={() => setShowSuccess(false)}
-            listLabel="Volver a la Lista"
-            onGoHome={() => router.push('/dashboard')}
-        />
-    );
-  }
-
-  // 2. Loading
-  if (loading) {
+  // 1. Loading de autenticación
+  if (authLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
+        <Typography ml={2}>Verificando autenticación...</Typography>
       </Box>
     );
   }
 
-  // 3. Error
+  // 2. Sin usuario (no debería pasar por el Middleware, pero por seguridad)
+  if (!user) {
+    return (
+      <Box p={3}>
+        <Alert severity="error">
+          No se pudo obtener información del usuario. Por favor, inicia sesión nuevamente.
+        </Alert>
+      </Box>
+    );
+  }
+
+  // 3. Pantalla de Éxito
+  if (showSuccess) {
+    return (
+      <SuccessScreen
+        title={successData.title}
+        message={successData.message}
+        subtitle="Los cambios se han guardado correctamente en el sistema."
+        autoRedirect={false} 
+        onBackToList={() => setShowSuccess(false)}
+        listLabel="Volver a la Lista"
+        onGoHome={() => router.push('/dashboard')}
+      />
+    );
+  }
+
+  // 4. Loading de datos
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+        <Typography ml={2}>Cargando formularios...</Typography>
+      </Box>
+    );
+  }
+
+  // 5. Error
   if (error) {
     return (
       <Box p={3}>
@@ -577,9 +604,16 @@ function LlenarFormulariosContent() {
     );
   }
 
-  // 4. Contenido Principal
+  // 6. Contenido Principal
   return (
     <Box p={3}>
+      {/* Info del Usuario (opcional, para debug) */}
+      {process.env.NODE_ENV === 'development' && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Usuario: {user.username} | Roles: {user.roles.join(', ')}
+        </Alert>
+      )}
+
       {/* Tabs Header */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={selectedTab} onChange={handleTabChange} aria-label="inspections tabs">
@@ -621,7 +655,7 @@ function LlenarFormulariosContent() {
               const isScaffold = template.code === SCAFFOLD_FORM;
               
               return (
-                <Grid size={{xs:12, md:4}}key={template._id}>
+                <Grid size={{xs:12, md:4}} key={template._id}>
                   <Card sx={{ 
                     height: '100%', 
                     display: 'flex', 
@@ -692,9 +726,8 @@ function LlenarFormulariosContent() {
       {/* Tab 1: En progreso */}
       <TabPanel value={selectedTab} index={1}>
         <InProgressInspectionsList 
-            filterByTemplateCode={SCAFFOLD_FORM} 
-            // Conectamos el handler por si agregas acciones aquí en el futuro
-            onActionSuccess={(msg) => handleOperationSuccess(msg, "¡Inspección Actualizada!")}
+          filterByTemplateCode={SCAFFOLD_FORM} 
+          onActionSuccess={(msg) => handleOperationSuccess(msg, "¡Inspección Actualizada!")}
         />
       </TabPanel>
 
@@ -702,9 +735,8 @@ function LlenarFormulariosContent() {
       {canViewApprovals && (
         <TabPanel value={selectedTab} index={2}>
           <PendingApprovalsList 
-            // Este callback se llama cuando apruebas algo exitosamente
             onApprovalChange={() => {
-                handleOperationSuccess("La inspección ha sido aprobada correctamente.", "¡Aprobación Exitosa!");
+              handleOperationSuccess("La inspección ha sido aprobada correctamente.", "¡Aprobación Exitosa!");
             }} 
           />
         </TabPanel>
