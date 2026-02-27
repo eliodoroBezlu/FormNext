@@ -113,7 +113,7 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
 
 function mapFormDataToPayload(
   formData: FormDataHerraEquipos,
-  templateId: string,
+  templateId: string | { _id: string },
   templateCode: string,
   status: InspectionStatus,  // ✅ Usar el tipo enum
   additionalData?: {
@@ -128,8 +128,16 @@ function mapFormDataToPayload(
       ? formData.responses
       : {};
 
+      const resolvedTemplateId = 
+    typeof templateId === 'object' && templateId !== null
+      ? (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        templateId as any
+      )._id
+      : templateId;
+
   return {
-    templateId,
+    templateId: resolvedTemplateId,
     templateCode,
     templateName: additionalData?.templateName,
     verification: formData.verification || {},
@@ -418,6 +426,15 @@ export async function updateInProgressInspection(
     const headers = await getAuthHeaders();
     
     const updatePayload: Partial<InspectionPayload> = { ...formData };
+
+    // ✅ CORRECCIÓN: Resolver templateId si viene como objeto populado
+    if (updatePayload.templateId && typeof updatePayload.templateId === 'object') {
+      updatePayload.templateId = (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        updatePayload.templateId as any
+      )._id;
+    }
+
     if (status) {
       updatePayload.status = status;
     }
@@ -429,8 +446,6 @@ export async function updateInProgressInspection(
     });
 
     const result = await handleApiResponse<ApiResponse<InspectionResponse>>(response);
-
-    console.log("✅ [ACTION] Inspección actualizada:", result);
 
     return {
       success: true,
@@ -584,12 +599,21 @@ export async function getDraftInspections(userId?: string): Promise<ApiResponse<
 export async function updateInspection(
   id: string,
   formData: Partial<FormDataHerraEquipos>,
-  status?:  InspectionStatus.IN_PROGRESS | InspectionStatus.COMPLETED | InspectionStatus.DRAFT
+  status?: InspectionStatus.IN_PROGRESS | InspectionStatus.COMPLETED | InspectionStatus.DRAFT
 ): Promise<ApiResponse<InspectionResponse>> {
   try {
     const headers = await getAuthHeaders();
     
     const updatePayload: Partial<InspectionPayload> = { ...formData };
+    
+    // ✅ CORRECCIÓN: Resolver templateId si viene como objeto populado
+    if (updatePayload.templateId && typeof updatePayload.templateId === 'object') {
+      updatePayload.templateId = (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        updatePayload.templateId as any
+      )._id;
+    }
+    
     if (status) {
       updatePayload.status = status;
     }
@@ -601,8 +625,6 @@ export async function updateInspection(
     });
 
     const result = await handleApiResponse<ApiResponse<InspectionResponse>>(response);
-
-    console.log("✅ [ACTION] Inspección actualizada:", result);
 
     return {
       success: true,

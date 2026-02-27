@@ -344,7 +344,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
       responseType: "yes-no", // Solo SI/NO
       required: false,
 
-      header: {
+      footer: {
         enabled: true,
 
         fields: [
@@ -815,5 +815,162 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
         },
       ],
     },
+  },
+
+  "1.02.P06.F19": {
+    formCode: "1.02.P06.F19",
+    formName: "LISTA DE CHEQUEO SISTEMAS DE PROTECCIÓN CONTRA CAÍDAS (SPCC)",
+    formType: "standard",
+    approval: {
+      enabled: true,
+      requiredRoles: ["supervisor", "admin", "superintendente"],
+      allowSelfApproval: true,
+      requiresComments: true,
+    },
+    signatures: {
+      inspector: {
+        enabled: true,
+        title: "Persona que realiza la Inspección",
+        fields: {
+          name: {
+            enabled: true,
+            type: "autocomplete",
+            dataSource: "trabajador",
+            label: "Persona que realiza la Inspección",
+            required: true,
+            fieldName: "inspectorSignature.inspectorName",
+          },
+          signature: {
+            type: "canvas",
+            enabled: true,
+            required: true,
+            heightPercentage: 30,
+            fieldName: "inspectorSignature.inspectorSignature",
+          },
+          date: {
+            enabled: true,
+            type: "date",
+            label: "Fecha",
+            required: true,
+            fieldName: "inspectorSignature.inspectionDate",
+          },
+        },
+      },
+      supervisor: {
+        enabled: true,
+        title: "Supervisor del área",
+        fields: {
+          name: {
+            enabled: true,
+            type: "autocomplete",
+            label: "Supervisor del área",
+            required: false,
+            dataSource: "supervisor",
+            fieldName: "supervisorSignature.supervisorName",
+          },
+          signature: {
+            type: "canvas",
+            enabled: true,
+            required: false,
+            heightPercentage: 30,
+            fieldName: "supervisorSignature.supervisorSignature",
+          },
+          date: {
+            enabled: true,
+            type: "date",
+            label: "Fecha de VoBo del Supervisor",
+            required: true,
+            fieldName: "supervisorSignature.supervisorDate",
+          },
+        },
+      },
+    },
+
+    outOfService: {
+      enabled: true,
+
+      label: "Fuera de Servicio:",
+      responseType: "yes-no", // Solo SI/NO
+      required: false,
+
+      footer: {
+        enabled: true,
+
+        fields: [
+          {
+            type: "radioGroup",
+            label: "Arnés de cuerpo entero operativo",
+            required: true,
+            fieldName: "outOfService.statusArnes",
+            responseType: "yes-no",
+          },
+          {
+            type: "text",
+            label: "COD",
+            required: true,
+            fieldName: "outOfService.codArnes",
+          },
+          {
+            type: "radioGroup",
+            label: "Auto retráctil personal operativo",
+            required: true,
+            fieldName: "outOfService.statusAutoRetractil",
+            responseType: "yes-no",
+          },
+          {
+            type: "text",
+            label: "COD",
+            required: true,
+            fieldName: "outOfService.codAutoRetractil",
+          },
+          {
+            type: "radioGroup",
+            label: "Conector de anclaje operativo",
+            required: true,
+            fieldName: "outOfService.statusConectorAnclaje",
+            responseType: "yes-no",
+          },
+          {
+            type: "text",
+            label: "COD",
+            required: true,
+            fieldName: "outOfService.codConectorAnclaje",
+          },
+          {
+            type: "radioGroup",
+            label: "Conector operativo",
+            required: true,
+            fieldName: "outOfService.statusConector",
+            responseType: "yes-no",
+          },
+          {
+            type: "text",
+            label: "COD",
+            required: true,
+            fieldName: "outOfService.codConector",
+          },
+
+          
+        ],
+      },
+    },
+    colorCode: {
+      enabled: false,
+      hasTrimestre: false,
+    },
+    conclusion: {
+      enabled: false,
+    },
+    questionObservations: {
+      enabled: true,
+      required: false,
+    },
+    generalObservations: {
+      enabled: false,
+      required: false, // Obligatorio para este formulario
+      label: "Observaciones Finales (Opcional)",
+    },
+    requiresPhotos: false,
+    allowDraft: true,
   },
 };

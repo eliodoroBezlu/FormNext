@@ -1,23 +1,8 @@
-// app/actions/client-downloads.ts  (o donde lo tengas)
+// app/actions/client-downloads.ts
 'use client';
 
+// Asegúrate de que API_BASE_URL sea correcta (ej. http://localhost:3002 o tu proxy)
 import { API_BASE_URL } from "../constants";
-
-
-/**
- * Helper para obtener el access_token desde las cookies del cliente
- * IMPORTANTE: Este token ya fue validado por el middleware
- */
-function getAccessToken(): string | null {
-  if (typeof document === 'undefined') return null;
-  
-  const cookies = document.cookie.split(';');
-  const accessTokenCookie = cookies.find(c => c.trim().startsWith('access_token='));
-  
-  if (!accessTokenCookie) return null;
-  
-  return accessTokenCookie.split('=')[1];
-}
 
 /**
  * Función para descargar un blob como archivo
@@ -35,72 +20,57 @@ export function descargarArchivo(blob: Blob, nombre: string): void {
 
 /**
  * Descarga con autenticación usando cookies httpOnly
- * 
- * IMPORTANTE: Como el access_token está en una cookie httpOnly,
- * el navegador lo enviará automáticamente con credentials: 'include'
  */
 async function descargarConAuth(url: string, nombreArchivo: string) {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('📥 [DESCARGA] Iniciando descarga...');
   console.log('  🌐 URL:', url);
-  console.log('  📄 Archivo:', nombreArchivo);
 
-  // Verificar que haya token (opcional, para feedback al usuario)
-  const token = getAccessToken();
-  
-  if (!token) {
-    console.error('❌ [DESCARGA] No hay access token');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    throw new Error("No estás autenticado. Por favor inicia sesión nuevamente.");
-  }
-
-  console.log('✅ [DESCARGA] Token encontrado:', token.slice(0, 15) + '...');
+  // 🗑️ ELIMINADO: getAccessToken() 
+  // No podemos leer la cookie HttpOnly desde JS, y no es necesario.
+  // El navegador la enviará sola.
 
   try {
     const response = await fetch(url, {
       method: "GET",
-      credentials: "include", // ✅ CRÍTICO: Envía cookies httpOnly automáticamente
+      // ✅ ESTO ES LA MAGIA:
+      // Le dice al navegador: "Envía las cookies (incluso las ocultas) a este dominio"
+      credentials: "include", 
       cache: "no-store",
     });
 
     console.log('📨 [DESCARGA] Respuesta:', {
       status: response.status,
       ok: response.ok,
-      contentType: response.headers.get('content-type'),
     });
 
+    // Si el backend dice 401, es que la cookie expiró o no existe
     if (response.status === 401) {
       console.error('🔒 [DESCARGA] 401 - Sesión expirada');
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      // Opcional: Redirigir al login aquí si quieres
+      window.location.href = '/login'; 
       throw new Error("Sesión expirada. Por favor inicia sesión nuevamente.");
     }
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ [DESCARGA] Error:', errorText);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       throw new Error(`Error ${response.status}: ${errorText || response.statusText}`);
     }
 
     const blob = await response.blob();
-    console.log('✅ [DESCARGA] Blob recibido:', {
-      size: blob.size,
-      type: blob.type,
-    });
+    console.log('✅ [DESCARGA] Blob recibido, tamaño:', blob.size);
 
     descargarArchivo(blob, nombreArchivo);
     
-    console.log('✅ [DESCARGA] Descarga completada');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('✅ [DESCARGA] Completada');
 
   } catch (error) {
     console.error('💥 [DESCARGA] Error:', error);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     throw error;
   }
 }
 
-// ============= DESCARGAS AUTENTICADAS =============
+// ============= DESCARGAS AUTENTICADAS (Igual que antes) =============
 
 export async function descargarPdfCliente(id: string): Promise<void> {
   await descargarConAuth(
