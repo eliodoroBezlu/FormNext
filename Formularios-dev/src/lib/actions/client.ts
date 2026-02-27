@@ -21,51 +21,40 @@ export function descargarArchivo(blob: Blob, nombre: string): void {
 /**
  * Descarga con autenticación usando cookies httpOnly
  */
-async function descargarConAuth(url: string, nombreArchivo: string) {
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('📥 [DESCARGA] Iniciando descarga...');
-  console.log('  🌐 URL:', url);
+async function descargarConAuth(backendUrl: string, nombreArchivo: string) {
+  console.log("📥 [DESCARGA] Iniciando...");
 
-  // 🗑️ ELIMINADO: getAccessToken() 
-  // No podemos leer la cookie HttpOnly desde JS, y no es necesario.
-  // El navegador la enviará sola.
+  // Extraer solo el path desde la URL del backend
+  // Ej: https://backend.railway.app/instances/123/excel → /instances/123/excel
+  const path = new URL(backendUrl).pathname;
+  const proxyUrl = `/api/download${path}`;
+
+  console.log("  🌐 Proxy URL:", proxyUrl);
 
   try {
-    const response = await fetch(url, {
+    const response = await fetch(proxyUrl, {
       method: "GET",
-      // ✅ ESTO ES LA MAGIA:
-      // Le dice al navegador: "Envía las cookies (incluso las ocultas) a este dominio"
-      credentials: "include", 
       cache: "no-store",
     });
 
-    console.log('📨 [DESCARGA] Respuesta:', {
-      status: response.status,
-      ok: response.ok,
-    });
+    console.log("📨 [DESCARGA] Status:", response.status);
 
-    // Si el backend dice 401, es que la cookie expiró o no existe
     if (response.status === 401) {
-      console.error('🔒 [DESCARGA] 401 - Sesión expirada');
-      // Opcional: Redirigir al login aquí si quieres
-      window.location.href = '/login'; 
-      throw new Error("Sesión expirada. Por favor inicia sesión nuevamente.");
+      console.error("🔒 [DESCARGA] Sesión expirada");
+      window.location.href = "/login";
+      throw new Error("Sesión expirada.");
     }
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Error ${response.status}: ${errorText || response.statusText}`);
+      throw new Error(`Error ${response.status}: ${errorText}`);
     }
 
     const blob = await response.blob();
-    console.log('✅ [DESCARGA] Blob recibido, tamaño:', blob.size);
-
+    console.log("✅ [DESCARGA] Blob recibido, tamaño:", blob.size);
     descargarArchivo(blob, nombreArchivo);
-    
-    console.log('✅ [DESCARGA] Completada');
-
   } catch (error) {
-    console.error('💥 [DESCARGA] Error:', error);
+    console.error("💥 [DESCARGA] Error:", error);
     throw error;
   }
 }
