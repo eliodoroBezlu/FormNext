@@ -384,6 +384,19 @@ export function StandardInspectionForm({
         />
       )}
 
+      {config.outOfService?.enabled && (
+        <Box>
+          <OutOfServiceSection
+            config={config.outOfService}
+            register={register}
+            control={control}
+            errors={errors}
+            readonly={readonly}
+            section="header"
+          />
+        </Box>
+      )}
+
       {config.sectionSelector?.enabled &&
         config.sectionSelector.items &&
         !readonly && (

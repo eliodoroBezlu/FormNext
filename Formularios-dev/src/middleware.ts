@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const API_URL = process.env.API_URL || 'http://localhost:3002';
+const API_URL = process.env.API_URL || 'http://localhost:3002' || 'http://127.0.0.1:3002';
 
 /**
  * Decodifica el payload de un JWT sin verificar la firma

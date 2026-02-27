@@ -14,14 +14,17 @@ import {
   Alert,
   AlertTitle,
   CircularProgress,
-  Avatar
+  Avatar,
+  Divider
 } from '@mui/material';
 import { 
   Login as LoginIcon,
   Person as PersonIcon,
-  Lock as LockIcon
+  Lock as LockIcon,
+  Build as BuildIcon
 } from '@mui/icons-material';
 import { loginAction } from '@/app/actions/auth';
+import { inspectorLoginAction } from '@/app/actions/auth';
 import Verify2FAForm from './Verify2faform';
 
 interface LoginResult {
@@ -36,6 +39,7 @@ interface LoginResult {
 export default function LoginForm() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isPendingTecnico, startTransitionTecnico] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [requires2FA, setRequires2FA] = useState(false);
   const [tempToken, setTempToken] = useState<string>('');
@@ -59,6 +63,21 @@ export default function LoginForm() {
         }
       } else {
         setError(result.error || 'Error al iniciar sesión');
+      }
+    });
+  }
+
+  function handleTecnicoLogin() {
+    setError(null);
+
+    startTransitionTecnico(async () => {
+      const result = await inspectorLoginAction();
+
+      if (result.success) {
+        router.push('/dashboard');
+        router.refresh();
+      } else {
+        setError(result.error || 'Error al iniciar sesión como técnico');
       }
     });
   }
@@ -117,7 +136,7 @@ export default function LoginForm() {
           name="username"
           required
           autoComplete="username"
-          disabled={isPending}
+          disabled={isPending || isPendingTecnico}
           InputProps={{
             startAdornment: (
               <PersonIcon sx={{ color: 'action.active', mr: 1 }} />
@@ -134,7 +153,7 @@ export default function LoginForm() {
           name="password"
           required
           autoComplete="current-password"
-          disabled={isPending}
+          disabled={isPending || isPendingTecnico}
           InputProps={{
             startAdornment: (
               <LockIcon sx={{ color: 'action.active', mr: 1 }} />
@@ -169,7 +188,7 @@ export default function LoginForm() {
           fullWidth
           variant="contained"
           size="large"
-          disabled={isPending}
+          disabled={isPending || isPendingTecnico}
           sx={{
             py: 1.5,
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -197,6 +216,38 @@ export default function LoginForm() {
           O
         </Typography>
       </Divider> */}
+
+      {/* Separador para botón técnico */}
+      <Divider sx={{ my: 3 }}>
+        <Typography variant="body2" color="text.secondary">
+          o
+        </Typography>
+      </Divider>
+
+      {/* Botón Técnico */}
+      <Button
+        fullWidth
+        variant="contained"
+        size="large"
+        onClick={handleTecnicoLogin}
+        disabled={isPending || isPendingTecnico}
+        startIcon={
+          isPendingTecnico 
+            ? <CircularProgress size={20} color="inherit" /> 
+            : <BuildIcon />
+        }
+        sx={{
+          py: 1.5,
+          background: 'linear-gradient(135deg, #43a047 0%, #1b5e20 100%)',
+          '&:hover': {
+            background: 'linear-gradient(135deg, #388e3c 0%, #145214 100%)',
+          },
+          fontWeight: 600,
+          fontSize: '1rem'
+        }}
+      >
+        {isPendingTecnico ? 'Iniciando sesión...' : 'Iniciar como Técnico'}
+      </Button>
 
       {/* Footer */}
       {/* <Box sx={{ textAlign: 'center' }}>
