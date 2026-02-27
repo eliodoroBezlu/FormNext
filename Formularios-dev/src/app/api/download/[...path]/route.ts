@@ -6,8 +6,10 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }  // ✅ Promise aquí
 ) {
+  const { path } = await params;  // ✅ await aquí
+  
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
 
@@ -18,7 +20,7 @@ export async function GET(
     );
   }
 
-  const backendPath = params.path.join("/");
+  const backendPath = path.join("/");
   const url = `${API_BASE_URL}/${backendPath}`;
 
   console.log("📥 [DOWNLOAD PROXY] →", url);
