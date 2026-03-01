@@ -282,7 +282,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
           name: {
             enabled: false,
             type: "autocomplete",
-            dataSource: "OPERADOR",
+            dataSource: "trabajador",
             label: "NOMBRE DEL RESPONSABLE DE LA INSPECCIÓN",
             required: true,
             fieldName: "inspectorSignature.inspectorName",

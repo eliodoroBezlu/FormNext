@@ -163,40 +163,72 @@ export async function getInstanceById(id: string): Promise<ApiResponse<FormInsta
 }
 
 // Actualizar instancia
-export async function updateInstance(id: string, updateData: UpdateInstanceData): Promise<ApiResponse<FormInstance>> {
+// En tus tipos, agrega esto si no lo tienes
+interface PopulatedTemplateId {
+  _id: string;
+  name?: string;
+  code?: string;
+}
+
+type TemplateIdField = string | PopulatedTemplateId;
+
+interface UpdateInstanceDataClean extends Omit<UpdateInstanceData, 'templateId'> {
+  templateId?: TemplateIdField;
+}
+
+function resolveTemplateId(templateId: TemplateIdField): string {
+  if (typeof templateId === 'object' && '_id' in templateId) {
+    return String(templateId._id);
+  }
+  return templateId;
+}
+
+export async function updateInstance(
+  id: string,
+  updateData: UpdateInstanceData & { templateId?: TemplateIdField }
+): Promise<ApiResponse<FormInstance>> {
   try {
     const headers = await getAuthHeaders();
-    
+
+    // ✅ Resolver templateId sin usar any
+    const cleanData: UpdateInstanceDataClean = {
+      ...updateData,
+      ...(updateData.templateId && {
+        templateId: resolveTemplateId(updateData.templateId),
+      }),
+    };
+
     const response = await fetch(`${API_BASE_URL}/instances/${id}`, {
       method: 'PATCH',
       headers,
-      body: JSON.stringify(updateData),
+      body: JSON.stringify(cleanData),
       cache: 'no-store',
     });
 
     const data = await handleApiResponse<FormInstance>(response);
-    
-    // Revalidar las páginas relacionadas
+
     revalidatePath('/instances');
     revalidatePath(`/instances/${id}`);
     revalidatePath('/dashboard');
-    
+
     return {
       success: true,
-      data: data,
-      message: 'Instancia actualizada exitosamente'
+      data,
+      message: 'Instancia actualizada exitosamente',
     };
   } catch (error) {
     console.error('Error updating instance:', error);
-    
-    // Manejo específico para instancia no encontrada
-    const errorMessage = error instanceof Error && error.message.includes('404')
-      ? 'Instancia no encontrada'
-      : error instanceof Error ? error.message : 'Error desconocido al actualizar instancia';
-    
+
+    const errorMessage =
+      error instanceof Error && error.message.includes('404')
+        ? 'Instancia no encontrada'
+        : error instanceof Error
+          ? error.message
+          : 'Error desconocido al actualizar instancia';
+
     return {
       success: false,
-      error: errorMessage
+      error: errorMessage,
     };
   }
 }

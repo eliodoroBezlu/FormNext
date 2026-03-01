@@ -20,6 +20,22 @@ export async function obtenerTrabajadores(): Promise<Trabajador[]> {
   }
 }
 
+// Obtener todos los trabajadores completos
+export async function obtenerTrabajadoresCompletos(): Promise<Trabajador[]> {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/trabajadores/completos`, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    });
+    return await handleApiResponse<Trabajador[]>(response);
+  } catch (error) {
+    console.error("Error obteniendo trabajadores completos:", error);
+    throw error;
+  }
+}
+
 // Obtener trabajador por ID
 export async function obtenerTrabajadorPorId(id: string): Promise<Trabajador> {
   try {

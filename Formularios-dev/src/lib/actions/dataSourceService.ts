@@ -304,6 +304,7 @@ async function searchFromBackend(endpoint: string, query: string): Promise<strin
       headers,
       next: { revalidate: 60 }
     });
+    console.log('Raw data received:', response);
 
     if (!response.ok) {
       console.error(`Error searching from ${url}: ${response.statusText}`);
@@ -389,6 +390,7 @@ export const searchDataBySource = async (
   }
   
   if (dataSource === 'trabajador') {
+    console.log('Searching for trabajador:', query);
     return await searchFromBackend('/trabajadores/buscar/autocomplete', query);
   }
   

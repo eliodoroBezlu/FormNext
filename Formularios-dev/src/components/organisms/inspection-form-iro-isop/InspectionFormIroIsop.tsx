@@ -2107,12 +2107,13 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
   const [metricsTrigger, setMetricsTrigger] = useState(0);
 
   const sectionResponses = useMemo(() => {
-    const sections = getValues("sections");
-    return sections.map((section) => ({
-      maxPoints: section.maxPoints,
-      responses: section.questions.map((q) => q.response),
-    }));
-  }, [metricsTrigger, getValues]);
+  const sections = getValues("sections");
+  return sections.map((section) => ({
+    maxPoints: section.maxPoints,
+    totalQuestions: section.questions.length,
+    questions: section.questions,
+  }));
+}, [metricsTrigger, getValues]);
 
   const handleMarkSectionAsNotApplicable = useCallback(
     (sectionIndex: number) => {
@@ -2152,34 +2153,41 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
   );
 
   const previewMetrics = useMemo(() => {
-    let totalObtained = 0;
-    let totalApplicable = 0;
-    let totalNA = 0;
+  let totalObtained = 0;
+  let totalApplicable = 0;
+  let totalNA = 0;
 
-    sectionResponses.forEach((section) => {
-      let sectionObtained = 0;
-      section.responses.forEach((response) => {
-        if (response === "N/A") {
-          totalNA++;
-        } else if (response !== "") {
-          const points = Number(response);
-          if (!isNaN(points)) sectionObtained += points;
-        }
-      });
-      totalObtained += sectionObtained;
-      totalApplicable += section.maxPoints;
+  sectionResponses.forEach((section) => {
+    const pointsPerQuestion =
+      section.totalQuestions > 0 ? section.maxPoints / section.totalQuestions : 0;
+
+    let sectionObtained = 0;
+    let sectionNaCount = 0;
+
+    section.questions.forEach((q) => {
+      if (q.response === "N/A") {
+        sectionNaCount++;
+        totalNA++;
+      } else if (q.response !== "") {
+        const points = Number(q.response);
+        if (!isNaN(points)) sectionObtained += points;
+      }
     });
 
-    const compliance =
-      totalApplicable > 0 ? (totalObtained / totalApplicable) * 100 : 0;
+    totalObtained += sectionObtained;
+    // ✅ Aplicable global también descuenta N/A
+    totalApplicable += section.maxPoints - sectionNaCount * pointsPerQuestion;
+  });
 
-    return {
-      totalObtained: totalObtained.toFixed(2),
-      totalApplicable: totalApplicable.toFixed(2),
-      totalNA,
-      compliance: compliance.toFixed(2),
-    };
-  }, [sectionResponses]);
+  const compliance = totalApplicable > 0 ? (totalObtained / totalApplicable) * 100 : 0;
+
+  return {
+    totalObtained: totalObtained.toFixed(2),
+    totalApplicable: totalApplicable.toFixed(2),
+    totalNA,
+    compliance: compliance.toFixed(2),
+  };
+}, [sectionResponses]);
 
   const onSubmit = useCallback(
     (data: InspectionFormData) => {
@@ -2271,26 +2279,33 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
   }, [appendTeamMember]);
 
   const calculateSectionMetrics = useCallback(
-    (questions: QuestionResponse[], maxPoints: number) => {
-      let obtained = 0;
-      let na = 0;
-      questions.forEach((q) => {
-        if (q.response === "N/A") {
-          na++;
-        } else if (q.response !== "") {
-          const points = Number(q.response);
-          if (!isNaN(points)) obtained += points;
-        }
-      });
-      const compliance = maxPoints > 0 ? (obtained / maxPoints) * 100 : 0;
-      return {
-        obtained: obtained.toFixed(2),
-        na,
-        compliance: compliance.toFixed(2),
-      };
-    },
-    []
-  );
+  (questions: QuestionResponse[], maxPoints: number) => {
+    const pointsPerQuestion = questions.length > 0 ? maxPoints / questions.length : 0;
+    let obtained = 0;
+    let naCount = 0;
+
+    questions.forEach((q) => {
+      if (q.response === "N/A") {
+        naCount++;
+      } else if (q.response !== "") {
+        const points = Number(q.response);
+        if (!isNaN(points)) obtained += points;
+      }
+    });
+
+    // ✅ Descontamos los puntos de preguntas N/A del denominador
+    const applicable = maxPoints - naCount * pointsPerQuestion;
+    const compliance = applicable > 0 ? (obtained / applicable) * 100 : 0;
+
+    return {
+      obtained: obtained.toFixed(2),
+      applicable: applicable.toFixed(2),
+      na: naCount,
+      compliance: compliance.toFixed(2),
+    };
+  },
+  []
+);
 
   const renderSections = (
     sections: Section[],
