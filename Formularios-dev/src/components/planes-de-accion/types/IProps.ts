@@ -13,12 +13,12 @@ export interface TareaObservacion {
   fechaCumplimientoAcordada: Date;
   fechaCumplimientoEfectiva?: Date;
   diasRetraso: number;
-  estado: 'abierto' | 'en-progreso' | 'cerrado';
+  estado: "abierto" | "en-progreso" | "cerrado";
   aprobado: boolean;
   evidencias?: EvidenciaDto[];
-  
+  //instanceId?: string;
   // Trazabilidad con la inspección (se llenan automáticamente al generar desde inspección)
-  instanceId?: string;
+
   sectionId?: string;
   sectionTitle?: string;
   questionText?: string;
@@ -32,30 +32,30 @@ export interface FormTareaData extends AddTareaDTO {
 
 export interface PlanDeAccion {
   _id: string;
-  
+  instanceId?: string;
   // Datos organizacionales que agrupan las tareas
   vicepresidencia: string;
   superintendenciaSenior: string;
   superintendencia: string;
   areaFisica: string;
-  
+
   // Lista de tareas/observaciones del plan
   tareas: TareaObservacion[];
-  
+
   // Metadatos calculados automáticamente
   totalTareas: number;
   tareasAbiertas: number;
   tareasEnProgreso: number;
   tareasCerradas: number;
   porcentajeCierre: number;
-  
+
   // Estado general del plan (derivado de las tareas)
-  estado: 'abierto' | 'en-progreso' | 'cerrado';
-  
+  estado: "abierto" | "en-progreso" | "cerrado";
+
   // Fechas
   fechaCreacion: Date;
   fechaUltimaActualizacion: Date;
-  
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,9 +65,12 @@ export interface CreatePlanDeAccionDTO {
   superintendenciaSenior: string;
   superintendencia: string;
   areaFisica: string;
-  
+
   // Opcional: crear con tareas iniciales
-  tareas?: Omit<TareaObservacion, '_id' | 'numeroItem' | 'diasRetraso' | 'estado' | 'aprobado'>[];
+  tareas?: Omit<
+    TareaObservacion,
+    "_id" | "numeroItem" | "diasRetraso" | "estado" | "aprobado"
+  >[];
 }
 
 export interface UpdatePlanDeAccionDTO {
@@ -96,7 +99,16 @@ export interface EvidenciaDto {
   nombre: string;
   url: string;
 }
-export interface UpdateTareaDTO extends Partial<Omit<TareaObservacion, '_id' | 'numeroItem' | 'fechaHallazgo' | 'fechaCumplimientoAcordada' | 'fechaCumplimientoEfectiva'>> {
+export interface UpdateTareaDTO extends Partial<
+  Omit<
+    TareaObservacion,
+    | "_id"
+    | "numeroItem"
+    | "fechaHallazgo"
+    | "fechaCumplimientoAcordada"
+    | "fechaCumplimientoEfectiva"
+  >
+> {
   // 🔥 Permitir que las fechas sean string o Date (el backend las convierte)
   fechaHallazgo?: Date | string;
   fechaCumplimientoAcordada?: Date | string;

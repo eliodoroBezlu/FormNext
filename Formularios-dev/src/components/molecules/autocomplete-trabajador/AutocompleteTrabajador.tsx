@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { TextField, Autocomplete, CircularProgress } from '@mui/material';
-import { obtenerTrabajadoresCompletos } from '@/lib/actions/trabajador-actions';
+import { TextField, Autocomplete, CircularProgress } from "@mui/material";
+import { obtenerTrabajadoresCompletos } from "@/lib/actions/trabajador-actions";
+import { useEffect, useState } from "react";
 
 export interface TrabajadorOption {
   nomina: string;
@@ -12,7 +12,10 @@ interface AutocompleteTrabajadorProps {
   label?: string;
   placeholder?: string;
   value?: string | null;
-  onChange?: (nomina: string | null, trabajadorCompleto?: TrabajadorOption) => void;
+  onChange?: (
+    nomina: string | null,
+    trabajadorCompleto?: TrabajadorOption,
+  ) => void;
   onBlur?: () => void;
   error?: boolean;
   helperText?: string;
@@ -21,118 +24,125 @@ interface AutocompleteTrabajadorProps {
 }
 
 const AutocompleteTrabajador: React.FC<AutocompleteTrabajadorProps> = ({
-  label = 'Trabajador',
-  placeholder = 'Seleccione o escriba un nombre',
+  label = "Trabajador",
+  placeholder = "Seleccione o escriba un nombre",
   value = null,
   onChange,
   onBlur,
   error = false,
   helperText,
   disabled = false,
-  required = false
+  required = false,
 }) => {
   const [options, setOptions] = useState<TrabajadorOption[]>([]);
   const [loading, setLoading] = useState(false);
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
 
   useEffect(() => {
     const loadTrabajadores = async () => {
       setLoading(true);
       try {
         const data = await obtenerTrabajadoresCompletos();
-        
-
         if (Array.isArray(data) && data.length > 0) {
-          const filtered = data.filter(t => t.nomina && t.ci);
+          const filtered = data.filter((t) => t.nomina && t.ci);
           setOptions(filtered);
         } else {
-          console.warn('⚠️ Data no es un array o está vacía');
           setOptions([]);
         }
       } catch (error) {
-        console.error('❌ Error cargando trabajadores:', error);
+        console.error("❌ Error cargando trabajadores:", error);
         setOptions([]);
       } finally {
         setLoading(false);
       }
     };
-
     loadTrabajadores();
   }, []);
 
-  const handleChange = (_event: React.SyntheticEvent, newValue: TrabajadorOption | string | null) => {
+  // ✅ Sincronizar inputValue cuando value cambia externamente
+  useEffect(() => {
+    if (value && value !== inputValue) {
+      setInputValue(value);
+    }
+    if (!value) {
+      setInputValue("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
 
-    
+  const handleChange = (
+    _event: React.SyntheticEvent,
+    newValue: TrabajadorOption | string | null,
+  ) => {
     if (!newValue) {
       onChange?.(null);
       return;
     }
-
-    // Si es un objeto (selección de la lista)
-    if (typeof newValue === 'object') {
+    if (typeof newValue === "object") {
       onChange?.(newValue.nomina, newValue);
     } else {
       onChange?.(newValue, undefined);
     }
   };
 
-  // Mostrar SOLO la nomina
-  const getOptionLabel = (option: TrabajadorOption | string): string => {
-    if (typeof option === 'string') return option;
-    return option.nomina;
-  };
+  const handleInputChange = (
+    _event: React.SyntheticEvent,
+    newInputValue: string,
+  ) => {
+    setInputValue(newInputValue);
 
-  // Comparación simplificada
-  const isOptionEqualToValue = (option: TrabajadorOption | string, value: TrabajadorOption | string): boolean => {
-    
-    // Si ambos son strings, comparar directamente
-    if (typeof option === 'string' && typeof value === 'string') {
-      const result = option === value;
-      return result;
+    if (newInputValue.trim() !== "") {
+      const found = options.find(
+        (opt) => opt.nomina.toLowerCase() === newInputValue.toLowerCase(),
+      );
+      if (found) {
+        onChange?.(found.nomina, found);
+      } else {
+        onChange?.(newInputValue, undefined);
+      }
+    } else {
+      onChange?.(null);
     }
-    // Si option es objeto y value es string, comparar por nomina
-    if (typeof option === 'object' && typeof value === 'string') {
-      const result = option.nomina === value;
-      return result;
-    }
-    // Si value es objeto y option es string, comparar por nomina
-    if (typeof option === 'string' && typeof value === 'object') {
-      const result = option === value.nomina;
-      return result;
-    }
-    // Si ambos son objetos, comparar por CI
-    if (typeof option === 'object' && typeof value === 'object') {
-      const result = option.ci === value.ci;
-      return result;
-    }
-    return false;
-  };
-
-  // Mejorar getCurrentValue
-  const getCurrentValue = (): TrabajadorOption | string | null => {
-    
-    if (!value) {
-      return null;
-    }
-    
-    // Buscar en las opciones si coincide la nomina
-    const found = options.find(opt => opt.nomina === value);
-    
-    if (found) {
-      return found;
-    }
-    
-    return value;
   };
 
   const handleBlur = () => {
-    
-    // Si hay un inputValue diferente al value, disparar onChange
-    if (inputValue && inputValue !== value) {
-      onChange?.(inputValue, undefined);
+    if (inputValue && inputValue.trim() !== "") {
+      const found = options.find(
+        (opt) => opt.nomina.toLowerCase() === inputValue.toLowerCase(),
+      );
+      if (found) {
+        onChange?.(found.nomina, found);
+      } else {
+        onChange?.(inputValue, undefined);
+      }
     }
-    
     onBlur?.();
+  };
+
+  const getOptionLabel = (option: TrabajadorOption | string): string => {
+    if (typeof option === "string") return option;
+    return option.nomina;
+  };
+
+  const isOptionEqualToValue = (
+    option: TrabajadorOption | string,
+    value: TrabajadorOption | string,
+  ): boolean => {
+    if (typeof option === "string" && typeof value === "string")
+      return option === value;
+    if (typeof option === "object" && typeof value === "string")
+      return option.nomina === value;
+    if (typeof option === "string" && typeof value === "object")
+      return option === value.nomina;
+    if (typeof option === "object" && typeof value === "object")
+      return option.ci === value.ci;
+    return false;
+  };
+
+  const getCurrentValue = (): TrabajadorOption | string | null => {
+    if (!value) return null;
+    const found = options.find((opt) => opt.nomina === value);
+    return found ?? value;
   };
 
   return (
@@ -143,21 +153,22 @@ const AutocompleteTrabajador: React.FC<AutocompleteTrabajadorProps> = ({
       onChange={handleChange}
       onBlur={handleBlur}
       inputValue={inputValue}
-      onInputChange={(event, newInputValue) => {
-        setInputValue(newInputValue);
-      }}
+      onInputChange={handleInputChange}
       loading={loading}
       disabled={disabled}
       getOptionLabel={getOptionLabel}
       isOptionEqualToValue={isOptionEqualToValue}
       filterOptions={(options, params) => {
-        const filtered = options.filter(option => {
-          if (typeof option === 'string') {
-            return option.toLowerCase().includes(params.inputValue.toLowerCase());
+        return options.filter((option) => {
+          if (typeof option === "string") {
+            return option
+              .toLowerCase()
+              .includes(params.inputValue.toLowerCase());
           }
-          return option.nomina.toLowerCase().includes(params.inputValue.toLowerCase());
+          return option.nomina
+            .toLowerCase()
+            .includes(params.inputValue.toLowerCase());
         });
-        return filtered;
       }}
       renderInput={(params) => (
         <TextField
@@ -171,7 +182,9 @@ const AutocompleteTrabajador: React.FC<AutocompleteTrabajadorProps> = ({
             ...params.InputProps,
             endAdornment: (
               <>
-                {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                {loading ? (
+                  <CircularProgress color="inherit" size={20} />
+                ) : null}
                 {params.InputProps.endAdornment}
               </>
             ),

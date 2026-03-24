@@ -28,7 +28,14 @@ import {
   AttachFile as AttachFileIcon,
 } from "@mui/icons-material";
 import dayjs from "dayjs";
-import { TareaObservacion, AddTareaDTO, UpdateTareaDTO, EvidenciaDto, FormTareaData } from "../types/IProps";
+import {
+  TareaObservacion,
+  AddTareaDTO,
+  UpdateTareaDTO,
+  EvidenciaDto,
+  FormTareaData,
+  PlanDeAccion,
+} from "../types/IProps";
 import { FAMILIAS_PELIGRO } from "@/lib/constants";
 import AutocompleteCustom from "@/components/molecules/autocomplete-custom/AutocompleteCustom";
 import { getRecommendedActions } from "../hooks/mlRecommendations";
@@ -38,6 +45,7 @@ interface TareaFormModalProps {
   open: boolean;
   isLoading: boolean;
   tarea?: TareaObservacion | null;
+  plan?: PlanDeAccion | null;
   onClose: () => void;
   onSubmit: (data: AddTareaDTO | UpdateTareaDTO) => Promise<void>;
 }
@@ -46,6 +54,7 @@ export function TareaFormModal({
   open,
   isLoading,
   tarea,
+  plan,
   onClose,
   onSubmit,
 }: TareaFormModalProps) {
@@ -150,7 +159,7 @@ export function TareaFormModal({
         accionPropuesta: tarea.accionPropuesta ?? "",
         responsableAreaCierre: tarea.responsableAreaCierre ?? "",
         fechaCumplimientoAcordada: toDateInputValue(
-          tarea.fechaCumplimientoAcordada
+          tarea.fechaCumplimientoAcordada,
         ),
         fechaCumplimientoEfectiva: tarea.fechaCumplimientoEfectiva
           ? toDateInputValue(tarea.fechaCumplimientoEfectiva)
@@ -172,7 +181,7 @@ export function TareaFormModal({
       ) {
         console.log(
           "🤖 Cargando recomendaciones para descripción existente:",
-          tarea.descripcionObservacion
+          tarea.descripcionObservacion,
         );
         fetchMLRecommendations(tarea.descripcionObservacion);
       }
@@ -199,7 +208,7 @@ export function TareaFormModal({
     }
   }, [open, tarea, reset, fetchMLRecommendations]);
 
-  const esGeneradaDesdeInspeccion = tarea?.instanceId !== undefined;
+  const esGeneradaDesdeInspeccion = plan?.instanceId !== undefined;
   const estaAprobada = tarea?.aprobado === true;
   const estadoActual = watch("estado") || tarea?.estado || "abierto";
 
@@ -214,7 +223,7 @@ export function TareaFormModal({
   useEffect(() => {
     console.log(
       "🔄 useEffect disparado - descripcion:",
-      descripcionObservacion
+      descripcionObservacion,
     );
 
     // Solo ejecutar si NO es una tarea generada desde inspección
@@ -239,7 +248,11 @@ export function TareaFormModal({
       console.log("🧹 Limpiando timer");
       clearTimeout(timer);
     };
-  }, [descripcionObservacion, esGeneradaDesdeInspeccion, fetchMLRecommendations]);
+  }, [
+    descripcionObservacion,
+    esGeneradaDesdeInspeccion,
+    fetchMLRecommendations,
+  ]);
 
   const fechaAcordada = watch("fechaCumplimientoAcordada");
   const fechaEfectiva = watch("fechaCumplimientoEfectiva");
@@ -272,7 +285,7 @@ export function TareaFormModal({
 
   // 🔥 Función para subir archivo al backend
   const handleFileUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
@@ -300,9 +313,8 @@ export function TareaFormModal({
       console.log("✅ Archivo subido:", data);
     } catch (error) {
       console.error("❌ Error subiendo archivo:", error);
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : "Error al subir el archivo";
+      const errorMessage =
+        error instanceof Error ? error.message : "Error al subir el archivo";
       alert(errorMessage);
     } finally {
       setUploadingFile(false);
@@ -337,7 +349,7 @@ export function TareaFormModal({
         };
         console.log(
           "📦 Campos editables a enviar:",
-          JSON.stringify(camposEditables, null, 2)
+          JSON.stringify(camposEditables, null, 2),
         );
         // 🔥 Lógica automática de cambio de estado
         if (estadoActual === "abierto") {
@@ -361,7 +373,7 @@ export function TareaFormModal({
 
         console.log(
           "✅ Enviando solo campos editables (UpdateTareaDTO):",
-          camposEditables
+          camposEditables,
         );
         await onSubmit(camposEditables);
       } else {
@@ -633,8 +645,8 @@ export function TareaFormModal({
                       (estaAprobada
                         ? "No se puede editar (tarea aprobada)"
                         : !esEstadoAbierto
-                        ? "Solo editable en estado Abierto"
-                        : "")
+                          ? "Solo editable en estado Abierto"
+                          : "")
                     }
                     required
                   />
@@ -662,7 +674,7 @@ export function TareaFormModal({
                     setSelectedRecommendationIndex(index >= 0 ? index : null);
                     console.log(
                       "📊 Índice de recomendación:",
-                      index >= 0 ? index : "manual"
+                      index >= 0 ? index : "manual",
                     );
                   }}
                   onInputChange={(_event, newInputValue, reason) => {
@@ -670,7 +682,7 @@ export function TareaFormModal({
                       "⌨️ onInputChange - Valor:",
                       newInputValue,
                       "Razón:",
-                      reason
+                      reason,
                     );
 
                     if (reason === "input") {
@@ -697,8 +709,8 @@ export function TareaFormModal({
                         (loadingML
                           ? "Generando recomendaciones..."
                           : mlRecommendations.length > 0
-                          ? `✨ ${mlRecommendations.length} opciones de IA disponibles - También puede escribir su propia acción`
-                          : "Escriba una descripción de 10+ caracteres para ver recomendaciones de IA")
+                            ? `✨ ${mlRecommendations.length} opciones de IA disponibles - También puede escribir su propia acción`
+                            : "Escriba una descripción de 10+ caracteres para ver recomendaciones de IA")
                       }
                       required
                       InputProps={{
@@ -712,7 +724,10 @@ export function TareaFormModal({
                     />
                   )}
                   renderOption={(props, option) => {
-                    const { key, ...otherProps } = props as React.HTMLAttributes<HTMLLIElement> & { key: string };
+                    const { key, ...otherProps } =
+                      props as React.HTMLAttributes<HTMLLIElement> & {
+                        key: string;
+                      };
                     return (
                       <li key={key} {...otherProps}>
                         <Box
@@ -784,8 +799,8 @@ export function TareaFormModal({
                     (estaAprobada
                       ? "No se puede editar (tarea aprobada)"
                       : !esEstadoAbierto
-                      ? "Solo editable en estado Abierto"
-                      : "")
+                        ? "Solo editable en estado Abierto"
+                        : "")
                   }
                   disabled={estaAprobada || !esEstadoAbierto}
                   required
@@ -813,8 +828,8 @@ export function TareaFormModal({
                   (estaAprobada
                     ? "No se puede editar (tarea aprobada)"
                     : !esEstadoAbierto
-                    ? "Solo editable en estado Abierto"
-                    : "")
+                      ? "Solo editable en estado Abierto"
+                      : "")
                 }
                 sx={
                   estaAprobada || !esEstadoAbierto ? { bgcolor: "#f5f5f5" } : {}
@@ -841,8 +856,8 @@ export function TareaFormModal({
                   estaAprobada
                     ? "No se puede editar (tarea aprobada)"
                     : !esEstadoEnProgreso
-                    ? "Solo editable en estado En Progreso"
-                    : "Completa esta fecha para cerrar la tarea"
+                      ? "Solo editable en estado En Progreso"
+                      : "Completa esta fecha para cerrar la tarea"
                 }
                 sx={
                   estaAprobada || !esEstadoEnProgreso

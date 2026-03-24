@@ -10,7 +10,7 @@ export const andamioFormConfigs: Record<string, FormFeatureConfig> = {
     approval: {
       enabled: true,
       requiredRoles: ["supervisor", "admin", "superintendente"],
-      allowSelfApproval: false,
+      allowSelfApproval: true,
       requiresComments: false,
     },
     signatures: {

@@ -54,10 +54,10 @@
 //       }
 
 //       const planesGenerados = await response.json();
-      
+
 //       // Agregar los nuevos planes al estado
 //       setPlanes(prev => [...planesGenerados, ...prev]);
-      
+
 //       return planesGenerados;
 //     } catch (err) {
 //       const message = err instanceof Error ? err.message : 'Error al generar planes';
@@ -74,7 +74,7 @@
 //   const cargarInspecciones = useCallback(async () => {
 //     try {
 //       const response = await fetch(`${API_URL}/instances?limit=100`);
-      
+
 //       if (!response.ok) {
 //         throw new Error('Error al cargar inspecciones');
 //       }
@@ -217,8 +217,18 @@
 "use server";
 
 import { getAuthHeaders, handleApiResponse } from "@/lib/actions/helpers";
-import { AddTareaDTO, CreatePlanDeAccionDTO, PlanDeAccion, UpdatePlanDeAccionDTO, UpdateTareaDTO } from "../types/IProps";
-
+import {
+  AddTareaDTO,
+  CreatePlanDeAccionDTO,
+  PlanDeAccion,
+  UpdatePlanDeAccionDTO,
+  UpdateTareaDTO,
+} from "../types/IProps";
+import {
+  FormInstance,
+  SectionResponse,
+  QuestionResponse,
+} from "@/types/formTypes";
 
 const API_URL = process.env.API_URL || "http://localhost:3002";
 
@@ -246,10 +256,7 @@ export interface PlanesFilters {
   areaFisica?: string;
 }
 
-export interface ActionResult<
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-T = any
-> {
+export interface ActionResult<T> {
   success: boolean;
   data?: T;
   message?: string;
@@ -260,19 +267,18 @@ T = any
 // PLANES - CRUD
 // ==========================================
 
-/**
- * Obtener lista de planes con filtros opcionales
- */
 export async function obtenerPlanes(
-  filters?: PlanesFilters
+  filters?: PlanesFilters,
 ): Promise<PlanDeAccion[]> {
   try {
     const headers = await getAuthHeaders();
-    
+
     const params = new URLSearchParams();
     if (filters?.estado) params.append("estado", filters.estado);
-    if (filters?.vicepresidencia) params.append("vicepresidencia", filters.vicepresidencia);
-    if (filters?.superintendencia) params.append("superintendencia", filters.superintendencia);
+    if (filters?.vicepresidencia)
+      params.append("vicepresidencia", filters.vicepresidencia);
+    if (filters?.superintendencia)
+      params.append("superintendencia", filters.superintendencia);
     if (filters?.areaFisica) params.append("areaFisica", filters.areaFisica);
 
     const url = `${API_URL}/planes-accion${params.toString() ? `?${params}` : ""}`;
@@ -290,9 +296,6 @@ export async function obtenerPlanes(
   }
 }
 
-/**
- * Obtener un plan específico por ID
- */
 export async function obtenerPlanPorId(planId: string): Promise<PlanDeAccion> {
   try {
     const headers = await getAuthHeaders();
@@ -310,11 +313,8 @@ export async function obtenerPlanPorId(planId: string): Promise<PlanDeAccion> {
   }
 }
 
-/**
- * Crear un nuevo plan vacío
- */
 export async function crearPlan(
-  data: CreatePlanDeAccionDTO
+  data: CreatePlanDeAccionDTO,
 ): Promise<ActionResult<PlanDeAccion>> {
   try {
     const headers = await getAuthHeaders();
@@ -341,12 +341,9 @@ export async function crearPlan(
   }
 }
 
-/**
- * Actualizar datos organizacionales del plan
- */
 export async function actualizarPlan(
   planId: string,
-  data: UpdatePlanDeAccionDTO
+  data: UpdatePlanDeAccionDTO,
 ): Promise<ActionResult<PlanDeAccion>> {
   try {
     const headers = await getAuthHeaders();
@@ -368,16 +365,14 @@ export async function actualizarPlan(
     console.error("Error actualizando plan:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al actualizar plan",
+      error:
+        error instanceof Error ? error.message : "Error al actualizar plan",
     };
   }
 }
 
-/**
- * Eliminar un plan completo
- */
 export async function eliminarPlan(
-  planId: string
+  planId: string,
 ): Promise<ActionResult<void>> {
   try {
     const headers = await getAuthHeaders();
@@ -406,12 +401,9 @@ export async function eliminarPlan(
 // GENERACIÓN AUTOMÁTICA
 // ==========================================
 
-/**
- * Generar plan desde una inspección
- */
 export async function generarPlanDesdeInstancia(
   instanceId: string,
-  opciones: GenerarPlanesOptions = {}
+  opciones: GenerarPlanesOptions = {},
 ): Promise<ActionResult<PlanDeAccion>> {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("🎯 [GENERAR PLAN] Iniciando...");
@@ -426,7 +418,10 @@ export async function generarPlanDesdeInstancia(
       params.append("incluirPuntaje3", String(opciones.incluirPuntaje3));
     }
     if (opciones.incluirSoloConComentario !== undefined) {
-      params.append("incluirSoloConComentario", String(opciones.incluirSoloConComentario));
+      params.append(
+        "incluirSoloConComentario",
+        String(opciones.incluirSoloConComentario),
+      );
     }
 
     const url = `${API_URL}/planes-accion/generar-desde-instancia/${instanceId}${
@@ -464,12 +459,9 @@ export async function generarPlanDesdeInstancia(
 // TAREAS - CRUD
 // ==========================================
 
-/**
- * Agregar tarea a un plan existente
- */
 export async function agregarTarea(
   planId: string,
-  tarea: AddTareaDTO
+  tarea: AddTareaDTO,
 ): Promise<ActionResult<PlanDeAccion>> {
   try {
     const headers = await getAuthHeaders();
@@ -496,20 +488,17 @@ export async function agregarTarea(
   }
 }
 
-/**
- * Actualizar una tarea específica
- */
 export async function actualizarTarea(
   planId: string,
   tareaId: string,
-  data: UpdateTareaDTO
+  data: UpdateTareaDTO,
 ): Promise<ActionResult<PlanDeAccion>> {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("🎯 [ACTUALIZAR TAREA] Iniciando...");
   console.log("  📋 Plan ID:", planId);
   console.log("  📋 Tarea ID:", tareaId);
   console.log("  📦 Data:", data);
-  
+
   if (data.evidencias) {
     console.log("  📎 Evidencias:", data.evidencias.length);
     data.evidencias.forEach((ev, i) => {
@@ -526,7 +515,7 @@ export async function actualizarTarea(
         method: "PATCH",
         headers,
         body: JSON.stringify(data),
-      }
+      },
     );
 
     const plan = await handleApiResponse<PlanDeAccion>(response);
@@ -544,17 +533,15 @@ export async function actualizarTarea(
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al actualizar tarea",
+      error:
+        error instanceof Error ? error.message : "Error al actualizar tarea",
     };
   }
 }
 
-/**
- * Eliminar una tarea
- */
 export async function eliminarTarea(
   planId: string,
-  tareaId: string
+  tareaId: string,
 ): Promise<ActionResult<PlanDeAccion>> {
   try {
     const headers = await getAuthHeaders();
@@ -564,7 +551,7 @@ export async function eliminarTarea(
       {
         method: "DELETE",
         headers,
-      }
+      },
     );
 
     const plan = await handleApiResponse<PlanDeAccion>(response);
@@ -583,12 +570,9 @@ export async function eliminarTarea(
   }
 }
 
-/**
- * Aprobar una tarea
- */
 export async function aprobarTarea(
   planId: string,
-  tareaId: string
+  tareaId: string,
 ): Promise<ActionResult<PlanDeAccion>> {
   try {
     const headers = await getAuthHeaders();
@@ -598,7 +582,7 @@ export async function aprobarTarea(
       {
         method: "PATCH",
         headers,
-      }
+      },
     );
 
     const plan = await handleApiResponse<PlanDeAccion>(response);
@@ -621,9 +605,6 @@ export async function aprobarTarea(
 // ESTADÍSTICAS
 // ==========================================
 
-/**
- * Obtener estadísticas de planes
- */
 export async function obtenerEstadisticas(): Promise<PlanSummary> {
   try {
     const headers = await getAuthHeaders();
@@ -645,14 +626,16 @@ export async function obtenerEstadisticas(): Promise<PlanSummary> {
 // INSPECCIONES (para dropdown)
 // ==========================================
 
-/**
- * Obtener lista de inspecciones disponibles
- */
-export async function obtenerInspecciones(): Promise<
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-any[]
+export type PopulatedFormInstance = Omit<
+  FormInstance,
+  "templateId" | "createdAt" | "updatedAt"
+> & {
+  templateId?: { name?: string };
+  createdAt: string;
+  updatedAt: string;
+};
 
-> {
+export async function obtenerInspecciones(): Promise<PopulatedFormInstance[]> {
   try {
     const headers = await getAuthHeaders();
 
@@ -662,21 +645,53 @@ any[]
       cache: "no-store",
     });
 
-    const result = await handleApiResponse<
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    any
-    
-    >(response);
+    const result = await handleApiResponse<unknown>(response);
 
-    // Tu API retorna { data: Array, total, page, limit }
-    if (result?.data && Array.isArray(result.data)) {
-      return result.data;
-    } else if (Array.isArray(result)) {
-      return result;
-    }
+    const resultObj = result as Record<string, unknown>;
 
-    console.warn("⚠️ Estructura inesperada de inspecciones:", result);
-    return [];
+    const instancias: PopulatedFormInstance[] =
+      resultObj &&
+      typeof resultObj === "object" &&
+      "data" in resultObj &&
+      Array.isArray(resultObj.data)
+        ? (resultObj.data as PopulatedFormInstance[])
+        : Array.isArray(result)
+          ? (result as PopulatedFormInstance[])
+          : [];
+
+    // ✅ Solo inspecciones con al menos una pregunta con puntaje 0, 1 o 2
+    const inspeccionesConObservaciones = instancias.filter((instancia) => {
+      if (!instancia.sections || !Array.isArray(instancia.sections))
+        return false;
+
+      return instancia.sections.some((section: SectionResponse) => {
+        if (!section.questions || !Array.isArray(section.questions))
+          return false;
+
+        return section.questions.some((question: QuestionResponse) => {
+          const response = question.response;
+
+          if (
+            response === "N/A" ||
+            response === "" ||
+            response === null ||
+            response === undefined
+          )
+            return false;
+
+          const puntaje = Number(response);
+          return (
+            !isNaN(puntaje) && (puntaje === 0 || puntaje === 1 || puntaje === 2)
+          );
+        });
+      });
+    });
+
+    console.log(
+      `✅ Inspecciones con observaciones críticas: ${inspeccionesConObservaciones.length} de ${instancias.length}`,
+    );
+
+    return inspeccionesConObservaciones;
   } catch (error) {
     console.error("Error obteniendo inspecciones:", error);
     return [];

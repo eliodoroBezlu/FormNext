@@ -3,47 +3,15 @@
 import type React from "react";
 import { useState } from "react";
 import {
-  Box,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  Typography,
-  CircularProgress,
-  Tooltip,
-  TablePagination,
-  TextField,
-  Grid,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Select,
-  Button,
-  Container,
-  Chip,
-  Card,
-  CardContent,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Alert,
-  Snackbar,
+  Box, Paper, Typography, Grid, MenuItem,
+  FormControl, InputLabel, Select, Button,
+  Container, Chip, Card, CardContent, TextField,
+  Dialog, DialogTitle, DialogContent, DialogActions,
 } from "@mui/material";
 import {
-  Visibility as VisibilityIcon,
-  PictureAsPdf as PdfIcon,
-  TableChart as ExcelIcon,
-  Edit as EditIcon,
   Search as SearchIcon,
   Clear as ClearIcon,
   Assignment as FormIcon,
-  Delete as DeleteIcon,
-  ContentCopy as CopyIcon,
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
 import {
@@ -52,15 +20,17 @@ import {
   getInspectionsHerraEquipos,
   InspectionResponse,
 } from "@/lib/actions/inspection-herra-equipos";
-import { descargarExcelHerraEquipoCliente, descargarPdfHerraEquipoCliente } from "@/lib/actions/client";
+import {
+  descargarExcelHerraEquipoCliente,
+  descargarPdfHerraEquipoCliente,
+} from "@/lib/actions/client";
 
-// Estados de formularios
-// const ESTADOS_FORMULARIO = [
-//   { value: "draft", label: "Borrador", color: "default" as const },
-//   { value: "completed", label: "Completado", color: "success" as const },
-// ];
+// ✅ Componentes comunes
+import { ReportTable, ReportColumn } from "@/components/reports/common/ReportTable";
+import { ReportActionButtons } from "@/components/reports/common/ReportActionButtons";
+import { ReportStateHandler } from "@/components/reports/common/ReportStateHandler";
+import { ReportSnackbar, useReportNotification } from "@/components/reports/common/ReportSnackbar";
 
-// Mapeo de templates para mostrar nombres legibles
 const TEMPLATE_NAMES: Record<string, string> = {
   "1.02.P06.F20": "Inspección de Cilindros",
   "1.02.P06.F39": "Inspección de Amoladora",
@@ -78,7 +48,6 @@ const TEMPLATE_NAMES: Record<string, string> = {
   "1.02.P06.F37": "Inspección Man Lift",
 };
 
-// Campos de verificación dinámicos por template
 const VERIFICATION_FIELD_NAMES: Record<string, string> = {
   "3.04.P48.F03": "PLACA",
   "1.02.P06.F37": "PLACA/N° INTERNO",
@@ -95,79 +64,89 @@ const VERIFICATION_FIELD_NAMES: Record<string, string> = {
   "1.02.P06.F30": "PROYECTO/Nº DE ORDEN DE TRABAJO",
 };
 
-export default function ListarInspeccionHerraEquipos() {
-  const [inspections, setInspections] = useState<InspectionResponse[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalItems, setTotalItems] = useState(0);
+// ── Helpers de extracción de campos dinámicos ─────────────────────────────
+const getEquipmentId = (i: InspectionResponse): string => {
+  const field = VERIFICATION_FIELD_NAMES[i.templateCode];
+  if (!field || !i.verification) return "N/A";
+  return i.verification[field]?.toString() || "N/A";
+};
 
-  // Estado para controlar la visibilidad de resultados
+const getSuperintendenciaOGerencia = (i: InspectionResponse): string => {
+  if (!i.verification) return "N/A";
+  const v = i.verification;
+  return (
+    v["SUPERINTENDENCIA"] ||
+    v["DIRECCIÓN/GERENCIA"] ||
+    v["Gerencia"] ||
+    v["DIRECCIÓN/GERENCIA y/o SUPERINTENDENCIA"] ||
+    v["Vicepresidencia/Gerencia"] ||
+    v["Dirección/Gerencia"] ||
+    v["EMPRESA"] ||
+    "N/A"
+  ).toString();
+};
+
+const getArea = (i: InspectionResponse): string => {
+  if (!i.verification) return "N/A";
+  const v = i.verification;
+  return (
+    v["ÁREA"] || v["Área"] || v["Area"] || v["AREA"] ||
+    v["AREA FÍSICA DE UBICACIÓN DE LA ESCALERA"] ||
+    v["UBICACIÓN FÍSICA DEL EQUIPO"] ||
+    "N/A"
+  ).toString();
+};
+
+export default function ListarInspeccionHerraEquipos() {
+  const router = useRouter();
+  const { notification, mostrar, cerrar } = useReportNotification();
+
+  const [inspections, setInspections] = useState<InspectionResponse[]>([]);
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState<string | null>(null);
+  const [totalItems, setTotalItems]   = useState(0);
   const [mostrarResultados, setMostrarResultados] = useState(false);
 
-  // Estados para los 5 filtros principales
+  // Filtros
   const [templateNameFilter, setTemplateNameFilter] = useState("");
   const [templateCodeFilter, setTemplateCodeFilter] = useState("");
-  const [equipmentIdFilter, setEquipmentIdFilter] = useState("");
-  const [startDateFilter, setStartDateFilter] = useState("");
-  const [endDateFilter, setEndDateFilter] = useState("");
+  const [equipmentIdFilter, setEquipmentIdFilter]   = useState("");
+  const [startDateFilter, setStartDateFilter]       = useState("");
+  const [endDateFilter, setEndDateFilter]           = useState("");
 
-  // Estados para modal de vista detallada
-  const [openDetailModal, setOpenDetailModal] = useState(false);
+  // Modal de detalle
+  const [openDetailModal, setOpenDetailModal]       = useState(false);
   const [selectedInspection, setSelectedInspection] = useState<InspectionResponse | null>(null);
 
-  // Estado para notificaciones
-  const [notification, setNotification] = useState<{
-    open: boolean;
-    message: string;
-    severity: "success" | "error" | "warning" | "info";
-  }>({
-    open: false,
-    message: "",
-    severity: "info",
-  });
-
-  const router = useRouter();
-
+  // ── Búsqueda ──────────────────────────────────────────────────────────────
   const buscarInspecciones = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Construir filtros para el backend
-      const filters: {
-        templateCode?: string;
-        startDate?: string;
-        endDate?: string;
-      } = {};
-
+      const filters: { templateCode?: string; startDate?: string; endDate?: string } = {};
       if (templateCodeFilter) filters.templateCode = templateCodeFilter;
-      if (startDateFilter) filters.startDate = startDateFilter;
-      if (endDateFilter) filters.endDate = endDateFilter;
-
-      console.log("Enviando filtros:", filters);
+      if (startDateFilter)    filters.startDate    = startDateFilter;
+      if (endDateFilter)      filters.endDate      = endDateFilter;
 
       const response = await getInspectionsHerraEquipos(filters);
-      console.log("Response completa:", response);
 
       if (response.success && response.data) {
         let filtradas = response.data;
 
-        // Aplicar filtros del lado del cliente
         if (templateNameFilter.trim()) {
-          filtradas = filtradas.filter((insp) =>
-            insp.templateName?.toLowerCase().includes(templateNameFilter.toLowerCase().trim())
+          filtradas = filtradas.filter((i) =>
+            i.templateName?.toLowerCase().includes(templateNameFilter.toLowerCase().trim())
           );
         }
-
         if (equipmentIdFilter.trim()) {
-          filtradas = filtradas.filter((insp) => {
-            const fieldName = VERIFICATION_FIELD_NAMES[insp.templateCode];
-            if (!fieldName || !insp.verification) return false;
-            
-            const value = insp.verification[fieldName];
-            return value?.toString().toLowerCase().includes(equipmentIdFilter.toLowerCase().trim());
+          filtradas = filtradas.filter((i) => {
+            const field = VERIFICATION_FIELD_NAMES[i.templateCode];
+            if (!field || !i.verification) return false;
+            return i.verification[field]
+              ?.toString()
+              .toLowerCase()
+              .includes(equipmentIdFilter.toLowerCase().trim());
           });
         }
 
@@ -175,14 +154,13 @@ export default function ListarInspeccionHerraEquipos() {
         setTotalItems(filtradas.length);
         setMostrarResultados(true);
       } else {
-        console.error("Error en response:", response);
         setInspections([]);
         setError(response.error || "Error desconocido");
         setMostrarResultados(false);
       }
-    } catch (error) {
-      console.error("Error al buscar inspecciones:", error);
-      setError("No se pudieron cargar las inspecciones con los filtros seleccionados");
+    } catch (err) {
+      console.error(err);
+      setError("No se pudieron cargar las inspecciones");
       setInspections([]);
       setMostrarResultados(false);
     } finally {
@@ -199,69 +177,41 @@ export default function ListarInspeccionHerraEquipos() {
     setInspections([]);
     setMostrarResultados(false);
     setError(null);
-    setPage(0);
     setTotalItems(0);
   };
 
-  const handleChangePage = (event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newRowsPerPage = parseInt(event.target.value, 10);
-    setRowsPerPage(newRowsPerPage);
-    setPage(0);
-  };
-
+  // ── Acciones ──────────────────────────────────────────────────────────────
   const handleVerDetalle = async (inspection: InspectionResponse) => {
     try {
       setLoading(true);
       const result = await getInspectionById(inspection._id);
-
       if (result.success && result.data) {
         setSelectedInspection(result.data);
         setOpenDetailModal(true);
-      } else {
-        throw new Error(result.error || "Error al cargar detalle");
-      }
-    } catch (error) {
-      console.error("Error al cargar detalle:", error);
-      mostrarNotificacion("Error al cargar el detalle de la inspección", "error");
+      } else throw new Error(result.error || "Error al cargar detalle");
+    } catch (err) {
+      console.error(err);
+      mostrar("Error al cargar el detalle de la inspección", "error");
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleEditar = (inspection: InspectionResponse) => {
-    router.push(`/dashboard/config/inspecciones/editar/${inspection._id}`);
   };
 
   const handleDuplicar = async (inspection: InspectionResponse) => {
     try {
       setLoading(true);
       const result = await getInspectionById(inspection._id);
-
       if (result.success && result.data) {
-        const draftData = {
-          ...result.data,
-          status: "draft",
-          submittedAt: new Date().toISOString(),
-        };
-
         localStorage.setItem(
           `draft_duplicate_${inspection.templateCode}`,
-          JSON.stringify(draftData)
+          JSON.stringify({ ...result.data, status: "draft", submittedAt: new Date().toISOString() })
         );
-
-        mostrarNotificacion("Inspección duplicada, redirigiendo...", "info");
-
-        setTimeout(() => {
-          router.push(`/dashboard/form-herra-equipos/${inspection.templateCode}`);
-        }, 1000);
+        mostrar("Inspección duplicada, redirigiendo...", "info");
+        setTimeout(() => router.push(`/dashboard/form-herra-equipos/${inspection.templateCode}`), 1000);
       }
-    } catch (error) {
-      console.error("Error al duplicar:", error);
-      mostrarNotificacion("Error al duplicar la inspección", "error");
+    } catch (err) {
+      console.error(err);
+      mostrar("Error al duplicar la inspección", "error");
     } finally {
       setLoading(false);
     }
@@ -269,23 +219,16 @@ export default function ListarInspeccionHerraEquipos() {
 
   const handleEliminar = async (id: string) => {
     if (!confirm("¿Estás seguro de que quieres eliminar esta inspección?")) return;
-
     try {
       setLoading(true);
       const result = await deleteInspection(id);
-
       if (result.success) {
-        mostrarNotificacion("Inspección eliminada correctamente", "success");
+        mostrar("Inspección eliminada correctamente", "success");
         await buscarInspecciones();
-      } else {
-        throw new Error(result.error || "Error al eliminar");
-      }
-    } catch (error) {
-      console.error("Error al eliminar inspección:", error);
-      mostrarNotificacion(
-        error instanceof Error ? error.message : "Error al eliminar la inspección",
-        "error"
-      );
+      } else throw new Error(result.error || "Error al eliminar");
+    } catch (err) {
+      console.error(err);
+      mostrar(err instanceof Error ? err.message : "Error al eliminar", "error");
     } finally {
       setLoading(false);
     }
@@ -294,93 +237,94 @@ export default function ListarInspeccionHerraEquipos() {
   const handleDescargarPdf = async (id: string) => {
     try {
       await descargarPdfHerraEquipoCliente(id);
-      console.log("Descargando PDF para inspección:", id);
-      mostrarNotificacion("Descargando pdf", "info");
-    } catch (error) {
-      console.error("Error al descargar el PDF:", error);
-      mostrarNotificacion("Error al descargar el PDF", "error");
+      mostrar("Descargando PDF...", "info");
+    } catch (err) {
+      console.error(err);
+      mostrar("Error al descargar el PDF", "error");
     }
   };
 
   const handleDescargarExcel = async (id: string) => {
     try {
       setLoading(true);
-      mostrarNotificacion("Generando archivo Excel...", "info");
+      mostrar("Generando archivo Excel...", "info");
       await descargarExcelHerraEquipoCliente(id);
-    } catch (error) {
-      console.error("Error al descargar el Excel:", error);
-      mostrarNotificacion(
-        error instanceof Error ? error.message : "Error al descargar el Excel",
-        "error"
-      );
+    } catch (err) {
+      console.error(err);
+      mostrar(err instanceof Error ? err.message : "Error al descargar el Excel", "error");
     } finally {
       setLoading(false);
     }
   };
 
- 
-
-  const mostrarNotificacion = (
-    message: string,
-    severity: "success" | "error" | "warning" | "info"
-  ) => {
-    setNotification({
-      open: true,
-      message,
-      severity,
-    });
-  };
-
-  const cerrarNotificacion = () => {
-    setNotification((prev) => ({ ...prev, open: false }));
-  };
-
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      buscarInspecciones();
-    }
+    if (e.key === "Enter") buscarInspecciones();
   };
 
-  const getEquipmentId = (inspection: InspectionResponse): string => {
-    const fieldName = VERIFICATION_FIELD_NAMES[inspection.templateCode];
-    if (!fieldName || !inspection.verification) return "N/A";
-    const value = inspection.verification[fieldName];
-    return value ? value.toString() : "N/A";
-  };
-
-  const getSuperintendenciaOGerencia = (inspection: InspectionResponse): string => {
-    if (!inspection.verification) return "N/A";
-    
-    const superintendencia = inspection.verification["SUPERINTENDENCIA"];
-    const gerencia = inspection.verification["DIRECCIÓN/GERENCIA"] || 
-                     inspection.verification["Gerencia"] ||
-                     inspection.verification["DIRECCIÓN/GERENCIA y/o SUPERINTENDENCIA"] ||
-                     inspection.verification["Vicepresidencia/Gerencia"] ||
-                     inspection.verification["SUPERINTENDENCIA"] ||
-                     inspection.verification["Dirección/Gerencia"] ||
-                     inspection.verification["EMPRESA"];
-    
-    return (superintendencia?.toString() || gerencia?.toString() || "N/A");
-  };
-
-  const getArea = (inspection: InspectionResponse): string => {
-    if (!inspection.verification) return "N/A";
-    
-    const area = inspection.verification["ÁREA"] || 
-                 inspection.verification["Área"] ||
-                 inspection.verification["Area"] ||
-                 inspection.verification["AREA"] ||
-                 inspection.verification["AREA FÍSICA DE UBICACIÓN DE LA ESCALERA"] ||
-                 inspection.verification["UBICACIÓN FÍSICA DEL EQUIPO"];
-    
-    return area ? area.toString() : "N/A";
-  };
-
-  // Calcular inspecciones paginadas
-  const inspeccionesPaginadas = inspections.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
+  // ── Columnas ──────────────────────────────────────────────────────────────
+  const columnas: ReportColumn<InspectionResponse>[] = [
+    {
+      key: "submittedAt",
+      label: "Fecha Inspección",
+      render: (row) =>
+        row.submittedAt
+          ? new Date(row.submittedAt).toLocaleDateString("es-ES", {
+              day: "2-digit", month: "2-digit", year: "numeric",
+            })
+          : "N/A",
+    },
+    {
+      key: "superintendencia",
+      label: "Superintendencia/Gerencia",
+      render: (row) => getSuperintendenciaOGerencia(row),
+    },
+    { key: "area", label: "Área", render: (row) => getArea(row) },
+    {
+      key: "templateName",
+      label: "Tipo de Inspección",
+      render: (row) => (
+        <Typography variant="body2" fontWeight="medium">
+          {TEMPLATE_NAMES[row.templateCode] || row.templateName || "N/A"}
+        </Typography>
+      ),
+    },
+    {
+      key: "templateCode",
+      label: "Código + Revisión",
+      render: (row) => (
+        <Box>
+          <Typography variant="body2" fontWeight="bold">{row.templateCode}</Typography>
+          <Typography variant="caption" color="textSecondary">
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            Rev. {(row.templateId as any)?.revision || "N/A"}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      key: "equipmentId",
+      label: "TAG/Placa/Código",
+      render: (row) => (
+        <Chip label={getEquipmentId(row)} size="small" color="primary" variant="outlined" />
+      ),
+    },
+    {
+      key: "acciones",
+      label: "Acciones",
+      align: "center",
+      render: (row) => (
+        <ReportActionButtons
+          onView={() => handleVerDetalle(row)}
+          onEdit={() => router.push(`/dashboard/config/inspecciones/editar/${row._id}`)}
+          onDuplicate={() => handleDuplicar(row)}
+          onDownloadPdf={() => handleDescargarPdf(row._id)}
+          onDownloadExcel={() => handleDescargarExcel(row._id)}
+          onDelete={() => handleEliminar(row._id)}
+          show={{ duplicate: true, delete: true }}
+        />
+      ),
+    },
+  ];
 
   return (
     <Container maxWidth="xl">
@@ -388,60 +332,47 @@ export default function ListarInspeccionHerraEquipos() {
         Gestión de Inspecciones - Herramientas y Equipos
       </Typography>
 
-      {/* PANEL DE FILTROS - 5 CAMPOS */}
+      {/* ── Filtros ── */}
       <Paper elevation={3} sx={{ mb: 4, p: 3, borderRadius: "8px" }}>
         <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
           Filtros de búsqueda
         </Typography>
-
         <Grid container spacing={3}>
-          {/* Nombre del Formulario */}
           <Grid size={{ xs: 12, md: 3 }}>
             <FormControl fullWidth size="small">
-              <InputLabel id="template-name-filter-label">Nombre del Formulario</InputLabel>
+              <InputLabel>Nombre del Formulario</InputLabel>
               <Select
-                labelId="template-name-filter-label"
                 value={templateNameFilter}
                 onChange={(e) => setTemplateNameFilter(e.target.value)}
                 label="Nombre del Formulario"
               >
                 <MenuItem value="">Todos</MenuItem>
                 {Object.entries(TEMPLATE_NAMES).map(([code, name]) => (
-                  <MenuItem key={code} value={name}>
-                    {name}
-                  </MenuItem>
+                  <MenuItem key={code} value={name}>{name}</MenuItem>
                 ))}
               </Select>
             </FormControl>
           </Grid>
 
-          {/* Código del Formulario */}
           <Grid size={{ xs: 12, md: 2 }}>
             <FormControl fullWidth size="small">
-              <InputLabel id="template-code-filter-label">Código</InputLabel>
+              <InputLabel>Código</InputLabel>
               <Select
-                labelId="template-code-filter-label"
                 value={templateCodeFilter}
                 onChange={(e) => setTemplateCodeFilter(e.target.value)}
                 label="Código"
               >
                 <MenuItem value="">Todos</MenuItem>
                 {Object.keys(TEMPLATE_NAMES).map((code) => (
-                  <MenuItem key={code} value={code}>
-                    {code}
-                  </MenuItem>
+                  <MenuItem key={code} value={code}>{code}</MenuItem>
                 ))}
               </Select>
             </FormControl>
           </Grid>
 
-          {/* Campo de Verificación (TAG, Placa, Código, etc.) */}
           <Grid size={{ xs: 12, md: 3 }}>
             <TextField
-              fullWidth
-              label="TAG / Placa / Código"
-              variant="outlined"
-              size="small"
+              fullWidth label="TAG / Placa / Código" size="small"
               value={equipmentIdFilter}
               onChange={(e) => setEquipmentIdFilter(e.target.value)}
               onKeyPress={handleKeyPress}
@@ -449,47 +380,26 @@ export default function ListarInspeccionHerraEquipos() {
             />
           </Grid>
 
-          {/* Fecha desde */}
           <Grid size={{ xs: 12, md: 2 }}>
             <TextField
-              fullWidth
-              label="Fecha desde"
-              type="date"
-              variant="outlined"
-              size="small"
+              fullWidth label="Fecha desde" type="date" size="small"
               value={startDateFilter}
               onChange={(e) => setStartDateFilter(e.target.value)}
               InputLabelProps={{ shrink: true }}
             />
           </Grid>
 
-          {/* Fecha hasta */}
           <Grid size={{ xs: 12, md: 2 }}>
             <TextField
-              fullWidth
-              label="Fecha hasta"
-              type="date"
-              variant="outlined"
-              size="small"
+              fullWidth label="Fecha hasta" type="date" size="small"
               value={endDateFilter}
               onChange={(e) => setEndDateFilter(e.target.value)}
               InputLabelProps={{ shrink: true }}
             />
           </Grid>
 
-          {/* Botones de acción */}
-          <Grid
-            size={{ xs: 12 }}
-            display="flex"
-            justifyContent="flex-end"
-            alignItems="center"
-            gap={1}
-          >
-            <Button
-              variant="outlined"
-              startIcon={<ClearIcon />}
-              onClick={limpiarFiltros}
-            >
+          <Grid size={{ xs: 12 }} display="flex" justifyContent="flex-end" gap={1}>
+            <Button variant="outlined" startIcon={<ClearIcon />} onClick={limpiarFiltros}>
               Limpiar
             </Button>
             <Button
@@ -504,235 +414,51 @@ export default function ListarInspeccionHerraEquipos() {
         </Grid>
       </Paper>
 
-      {/* Estado de carga */}
-      {loading && (
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-          <CircularProgress />
-        </Box>
-      )}
+      {/* ── Loading / Error ── */}
+      <ReportStateHandler loading={loading} error={error}>
 
-      {/* Estado de error */}
-      {error && (
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100px">
-          <Typography color="error">{error}</Typography>
-        </Box>
-      )}
-
-      {/* ESTADÍSTICAS RÁPIDAS */}
-      {mostrarResultados && !loading && inspections.length > 0 && (
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Card>
-              <CardContent sx={{ textAlign: "center" }}>
-                <Typography color="textSecondary" gutterBottom>
-                  Total Inspecciones
-                </Typography>
-                <Typography variant="h4">{totalItems}</Typography>
-              </CardContent>
-            </Card>
+        {/* ── Estadísticas ── */}
+        {mostrarResultados && inspections.length > 0 && (
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            {[
+              { label: "Total Inspecciones", value: totalItems,                                              color: "text.primary"  },
+              { label: "Completadas",         value: inspections.filter(i => i.status === "completed").length, color: "success.main"  },
+              { label: "En Borrador",         value: inspections.filter(i => i.status === "draft").length,    color: "warning.main"  },
+            ].map((stat) => (
+              <Grid key={stat.label} size={{ xs: 12, md: 4 }}>
+                <Card>
+                  <CardContent sx={{ textAlign: "center" }}>
+                    <Typography color="textSecondary" gutterBottom>{stat.label}</Typography>
+                    <Typography variant="h4" color={stat.color}>{stat.value}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
           </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Card>
-              <CardContent sx={{ textAlign: "center" }}>
-                <Typography color="textSecondary" gutterBottom>
-                  Completadas
-                </Typography>
-                <Typography variant="h4" color="success.main">
-                  {inspections.filter((i) => i.status === "completed").length}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Card>
-              <CardContent sx={{ textAlign: "center" }}>
-                <Typography color="textSecondary" gutterBottom>
-                  En Borrador
-                </Typography>
-                <Typography variant="h4" color="warning.main">
-                  {inspections.filter((i) => i.status === "draft").length}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      )}
+        )}
 
-      {/* TABLA DE RESULTADOS */}
-      {mostrarResultados && !loading && (
-        <Paper elevation={2} sx={{ borderRadius: "8px" }}>
-          <Box
-            sx={{
-              p: 2,
-              borderBottom: "1px solid #e0e0e0",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Typography variant="h6">
-              Resultados ({totalItems})
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<FormIcon />}
-              onClick={() => router.push("/dashboard/form-herra-equipos")}
-              color="primary"
-            >
-              Nueva Inspección
-            </Button>
-          </Box>
+        {/* ── Tabla ── */}
+        {mostrarResultados && (
+          <ReportTable
+            title="Resultados"
+            titleExtra={
+              <Button
+                variant="contained"
+                startIcon={<FormIcon />}
+                onClick={() => router.push("/dashboard/form-herra-equipos")}
+              >
+                Nueva Inspección
+              </Button>
+            }
+            columns={columnas}
+            rows={inspections}
+            rowKey={(row) => row._id}
+            emptyMessage="No se encontraron inspecciones con los criterios de búsqueda"
+          />
+        )}
+      </ReportStateHandler>
 
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
-                  <TableCell>Fecha Inspección</TableCell>
-                  <TableCell>Superintendencia/Gerencia</TableCell>
-                  <TableCell>Área</TableCell>
-                  <TableCell>Tipo de Inspección</TableCell>
-                  <TableCell>Código + Revisión</TableCell>
-                  <TableCell>TAG/Placa/Código</TableCell>
-                  <TableCell align="center">Acciones</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {inspeccionesPaginadas.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                      <Typography variant="body1" color="textSecondary">
-                        No se encontraron inspecciones con los criterios de búsqueda
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  inspeccionesPaginadas.map((inspection) => {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                   // const template = inspection.templateId as any;
-                    
-                    return (
-                      <TableRow
-                        key={inspection._id}
-                        sx={{ "&:hover": { backgroundColor: "#f9f9f9" } }}
-                      >
-                        <TableCell>
-                          {inspection.submittedAt
-                            ? new Date(inspection.submittedAt).toLocaleDateString("es-ES", {
-                                day: "2-digit",
-                                month: "2-digit",
-                                year: "numeric",
-                              })
-                            : "N/A"}
-                        </TableCell>
-                        <TableCell>{getSuperintendenciaOGerencia(inspection)}</TableCell>
-                        <TableCell>{getArea(inspection)}</TableCell>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight="medium">
-                            {TEMPLATE_NAMES[inspection.templateCode] || inspection.templateName || "N/A"}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Box>
-                            <Typography variant="body2" fontWeight="bold">
-                              {inspection.templateCode}
-                            </Typography>
-                            <Typography variant="caption" color="textSecondary">
-                              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                              Rev. {(inspection.templateId as any)?.revision || "N/A"}
-                            </Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={getEquipmentId(inspection)}
-                            size="small"
-                            color="primary"
-                            variant="outlined"
-                          />
-                        </TableCell>
-                        <TableCell align="center">
-                          <Tooltip title="Ver detalle">
-                            <IconButton
-                              onClick={() => handleVerDetalle(inspection)}
-                              color="primary"
-                              size="small"
-                            >
-                              <VisibilityIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Editar">
-                            <IconButton
-                              onClick={() => handleEditar(inspection)}
-                              color="primary"
-                              size="small"
-                            >
-                              <EditIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Duplicar">
-                            <IconButton
-                              onClick={() => handleDuplicar(inspection)}
-                              color="secondary"
-                              size="small"
-                            >
-                              <CopyIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Descargar PDF">
-                            <IconButton
-                              onClick={() => handleDescargarPdf(inspection._id)}
-                              color="secondary"
-                              size="small"
-                            >
-                              <PdfIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Descargar Excel">
-                            <IconButton
-                              onClick={() => handleDescargarExcel(inspection._id)}
-                              color="success"
-                              size="small"
-                            >
-                              <ExcelIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Eliminar">
-                            <IconButton
-                              onClick={() => handleEliminar(inspection._id)}
-                              color="error"
-                              size="small"
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </Tooltip>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-          {totalItems > 0 && (
-            <TablePagination
-              rowsPerPageOptions={[5, 10, 25, 50]}
-              component="div"
-              count={totalItems}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={handleChangePage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-              labelRowsPerPage="Filas por página"
-              labelDisplayedRows={({ from, to, count }) =>
-                `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
-              }
-            />
-          )}
-        </Paper>
-      )}
-
-      {/* MODAL DE DETALLE */}
+      {/* ── Modal de Detalle ── */}
       <Dialog
         open={openDetailModal}
         onClose={() => setOpenDetailModal(false)}
@@ -743,64 +469,32 @@ export default function ListarInspeccionHerraEquipos() {
         <DialogContent>
           {selectedInspection && (
             <Box>
-              <Typography variant="h6" gutterBottom>
-                Información General
-              </Typography>
+              <Typography variant="h6" gutterBottom>Información General</Typography>
               <Grid container spacing={2}>
+                {[
+                  { label: "Código Template", value: selectedInspection.templateCode || "N/A" },
+                  { label: "Superintendencia/Gerencia", value: getSuperintendenciaOGerencia(selectedInspection) },
+                  { label: "Área", value: getArea(selectedInspection) },
+                ].map(({ label, value }) => (
+                  <Grid key={label} size={{ xs: 6 }}>
+                    <Typography variant="body2" color="textSecondary">{label}:</Typography>
+                    <Typography variant="body1">{value}</Typography>
+                  </Grid>
+                ))}
                 <Grid size={{ xs: 6 }}>
-                  <Typography variant="body2" color="textSecondary">
-                    Código Template:
-                  </Typography>
-                  <Typography variant="body1">
-                    {selectedInspection.templateCode || "N/A"}
-                  </Typography>
-                </Grid>
-                <Grid size={{ xs: 6 }}>
-                  <Typography variant="body2" color="textSecondary">
-                    Estado:
-                  </Typography>
+                  <Typography variant="body2" color="textSecondary">Estado:</Typography>
                   <Chip
-                    label={
-                      selectedInspection.status === "completed"
-                        ? "Completado"
-                        : "Borrador"
-                    }
-                    color={
-                      selectedInspection.status === "completed" ? "success" : "warning"
-                    }
+                    label={selectedInspection.status === "completed" ? "Completado" : "Borrador"}
+                    color={selectedInspection.status === "completed" ? "success" : "warning"}
                     size="small"
                   />
-                </Grid>
-                <Grid size={{ xs: 6 }}>
-                  <Typography variant="body2" color="textSecondary">
-                    Superintendencia/Gerencia:
-                  </Typography>
-                  <Typography variant="body1">
-                    {getSuperintendenciaOGerencia(selectedInspection)}
-                  </Typography>
-                </Grid>
-                <Grid size={{ xs: 6 }}>
-                  <Typography variant="body2" color="textSecondary">
-                    Área:
-                  </Typography>
-                  <Typography variant="body1">
-                    {getArea(selectedInspection)}
-                  </Typography>
                 </Grid>
               </Grid>
 
               <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
                 Datos de Verificación
               </Typography>
-              <Box
-                sx={{
-                  bgcolor: "#f5f5f5",
-                  p: 2,
-                  borderRadius: 1,
-                  maxHeight: 300,
-                  overflow: "auto",
-                }}
-              >
+              <Box sx={{ bgcolor: "#f5f5f5", p: 2, borderRadius: 1, maxHeight: 300, overflow: "auto" }}>
                 <pre>{JSON.stringify(selectedInspection.verification, null, 2)}</pre>
               </Box>
 
@@ -822,22 +516,8 @@ export default function ListarInspeccionHerraEquipos() {
         </DialogActions>
       </Dialog>
 
-      {/* NOTIFICACIONES */}
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={6000}
-        onClose={cerrarNotificacion}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
-      >
-        <Alert
-          onClose={cerrarNotificacion}
-          severity={notification.severity}
-          variant="filled"
-          sx={{ width: "100%" }}
-        >
-          {notification.message}
-        </Alert>
-      </Snackbar>
+      {/* ── Notificaciones ── */}
+      <ReportSnackbar notification={notification} onClose={cerrar} />
     </Container>
   );
 }

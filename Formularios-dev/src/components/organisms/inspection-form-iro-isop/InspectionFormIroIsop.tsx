@@ -1808,7 +1808,7 @@ interface QuestionItemProps {
   onResponseChange: (
     sectionIndex: number,
     questionIndex: number,
-    value: string
+    value: string,
   ) => void;
   readonly?: boolean;
 }
@@ -1939,7 +1939,7 @@ const QuestionItem = React.memo<QuestionItemProps>(
         </Grid>
       </Paper>
     );
-  }
+  },
 );
 
 QuestionItem.displayName = "QuestionItem";
@@ -2027,7 +2027,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
 
   const allFlatSections = useMemo(
     () => flattenSections(template.sections),
-    [template.sections, flattenSections]
+    [template.sections, flattenSections],
   );
 
   const createInitialSections = useCallback((): SectionResponse[] => {
@@ -2035,7 +2035,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
     return flatSections.map((section) => {
       if (!section._id) {
         throw new Error(
-          `La sección "${section.title}" no tiene _id. No se puede inicializar.`
+          `La sección "${section.title}" no tiene _id. No se puede inicializar.`,
         );
       }
       return {
@@ -2057,7 +2057,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
   }, [template.sections, flattenSections]);
 
   // 🔥 2. INICIALIZACIÓN DEL FORMULARIO CON DATOS
-  const { control, handleSubmit, setValue, getValues } =
+  const { control, handleSubmit, setValue, getValues, trigger } =
     useForm<InspectionFormData>({
       defaultValues: initialData
         ? {
@@ -2074,7 +2074,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
             verificationList: template.verificationFields
               .filter(
                 (field): field is VerificationField & { _id: string } =>
-                  !!field._id
+                  !!field._id,
               )
               .reduce((acc, field) => {
                 acc[field.label] = "";
@@ -2090,7 +2090,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
             aspectosAdicionales: "",
             personalInvolucrado:
               template.code === "1.02.P06.F46"
-                ? Array(4).fill({ nombre: "", ci: "" })
+                ? Array(1).fill({ nombre: "", ci: "" })
                 : [],
           },
     });
@@ -2107,13 +2107,13 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
   const [metricsTrigger, setMetricsTrigger] = useState(0);
 
   const sectionResponses = useMemo(() => {
-  const sections = getValues("sections");
-  return sections.map((section) => ({
-    maxPoints: section.maxPoints,
-    totalQuestions: section.questions.length,
-    questions: section.questions,
-  }));
-}, [metricsTrigger, getValues]);
+    const sections = getValues("sections");
+    return sections.map((section) => ({
+      maxPoints: section.maxPoints,
+      totalQuestions: section.questions.length,
+      questions: section.questions,
+    }));
+  }, [metricsTrigger, getValues]);
 
   const handleMarkSectionAsNotApplicable = useCallback(
     (sectionIndex: number) => {
@@ -2123,7 +2123,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
         (question) => ({
           ...question,
           response: "N/A" as ValoracionValue,
-        })
+        }),
       );
       setValue(`sections.${sectionIndex}.questions`, updatedQuestions, {
         shouldValidate: false,
@@ -2131,7 +2131,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
       });
       setMetricsTrigger((prev) => prev + 1);
     },
-    [getValues, setValue, readonly]
+    [getValues, setValue, readonly],
   );
 
   const handleUpdateQuestionResponse = useCallback(
@@ -2145,49 +2145,52 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
       setValue(
         `sections.${sectionIndex}.questions.${questionIndex}.response`,
         sanitizedResponse,
-        { shouldValidate: false, shouldDirty: true }
+        { shouldValidate: false, shouldDirty: true },
       );
       setMetricsTrigger((prev) => prev + 1);
     },
-    [setValue, readonly]
+    [setValue, readonly],
   );
 
   const previewMetrics = useMemo(() => {
-  let totalObtained = 0;
-  let totalApplicable = 0;
-  let totalNA = 0;
+    let totalObtained = 0;
+    let totalApplicable = 0;
+    let totalNA = 0;
 
-  sectionResponses.forEach((section) => {
-    const pointsPerQuestion =
-      section.totalQuestions > 0 ? section.maxPoints / section.totalQuestions : 0;
+    sectionResponses.forEach((section) => {
+      const pointsPerQuestion =
+        section.totalQuestions > 0
+          ? section.maxPoints / section.totalQuestions
+          : 0;
 
-    let sectionObtained = 0;
-    let sectionNaCount = 0;
+      let sectionObtained = 0;
+      let sectionNaCount = 0;
 
-    section.questions.forEach((q) => {
-      if (q.response === "N/A") {
-        sectionNaCount++;
-        totalNA++;
-      } else if (q.response !== "") {
-        const points = Number(q.response);
-        if (!isNaN(points)) sectionObtained += points;
-      }
+      section.questions.forEach((q) => {
+        if (q.response === "N/A") {
+          sectionNaCount++;
+          totalNA++;
+        } else if (q.response !== "") {
+          const points = Number(q.response);
+          if (!isNaN(points)) sectionObtained += points;
+        }
+      });
+
+      totalObtained += sectionObtained;
+      // ✅ Aplicable global también descuenta N/A
+      totalApplicable += section.maxPoints - sectionNaCount * pointsPerQuestion;
     });
 
-    totalObtained += sectionObtained;
-    // ✅ Aplicable global también descuenta N/A
-    totalApplicable += section.maxPoints - sectionNaCount * pointsPerQuestion;
-  });
+    const compliance =
+      totalApplicable > 0 ? (totalObtained / totalApplicable) * 100 : 0;
 
-  const compliance = totalApplicable > 0 ? (totalObtained / totalApplicable) * 100 : 0;
-
-  return {
-    totalObtained: totalObtained.toFixed(2),
-    totalApplicable: totalApplicable.toFixed(2),
-    totalNA,
-    compliance: compliance.toFixed(2),
-  };
-}, [sectionResponses]);
+    return {
+      totalObtained: totalObtained.toFixed(2),
+      totalApplicable: totalApplicable.toFixed(2),
+      totalNA,
+      compliance: compliance.toFixed(2),
+    };
+  }, [sectionResponses]);
 
   const onSubmit = useCallback(
     (data: InspectionFormData) => {
@@ -2266,12 +2269,12 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
           setError(
             err instanceof Error
               ? err.message
-              : "Error inesperado al guardar el formulario"
+              : "Error inesperado al guardar el formulario",
           );
         }
       });
     },
-    [template._id, onSave, readonly, isEditMode, initialData]
+    [template._id, onSave, readonly, isEditMode, initialData],
   );
 
   const addTeamMember = useCallback(() => {
@@ -2279,37 +2282,38 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
   }, [appendTeamMember]);
 
   const calculateSectionMetrics = useCallback(
-  (questions: QuestionResponse[], maxPoints: number) => {
-    const pointsPerQuestion = questions.length > 0 ? maxPoints / questions.length : 0;
-    let obtained = 0;
-    let naCount = 0;
+    (questions: QuestionResponse[], maxPoints: number) => {
+      const pointsPerQuestion =
+        questions.length > 0 ? maxPoints / questions.length : 0;
+      let obtained = 0;
+      let naCount = 0;
 
-    questions.forEach((q) => {
-      if (q.response === "N/A") {
-        naCount++;
-      } else if (q.response !== "") {
-        const points = Number(q.response);
-        if (!isNaN(points)) obtained += points;
-      }
-    });
+      questions.forEach((q) => {
+        if (q.response === "N/A") {
+          naCount++;
+        } else if (q.response !== "") {
+          const points = Number(q.response);
+          if (!isNaN(points)) obtained += points;
+        }
+      });
 
-    // ✅ Descontamos los puntos de preguntas N/A del denominador
-    const applicable = maxPoints - naCount * pointsPerQuestion;
-    const compliance = applicable > 0 ? (obtained / applicable) * 100 : 0;
+      // ✅ Descontamos los puntos de preguntas N/A del denominador
+      const applicable = maxPoints - naCount * pointsPerQuestion;
+      const compliance = applicable > 0 ? (obtained / applicable) * 100 : 0;
 
-    return {
-      obtained: obtained.toFixed(2),
-      applicable: applicable.toFixed(2),
-      na: naCount,
-      compliance: compliance.toFixed(2),
-    };
-  },
-  []
-);
+      return {
+        obtained: obtained.toFixed(2),
+        applicable: applicable.toFixed(2),
+        na: naCount,
+        compliance: compliance.toFixed(2),
+      };
+    },
+    [],
+  );
 
   const renderSections = (
     sections: Section[],
-    level: number = 0
+    level: number = 0,
   ): React.ReactNode => {
     const currentSections = getValues("sections");
     return sections.map((section, index) => {
@@ -2374,11 +2378,11 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
 
       const sectionData = currentSections[flatIndex];
       const isCompleted = sectionData?.questions?.every(
-        (q) => q.response && q.response !== ""
+        (q) => q.response && q.response !== "",
       );
       const sectionMetrics = calculateSectionMetrics(
         sectionData?.questions || [],
-        section.maxPoints
+        section.maxPoints,
       );
 
       return (
@@ -2643,7 +2647,7 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
                             if (trabajador?.puesto)
                               setValue(
                                 `inspectionTeam.${index}.cargo`,
-                                trabajador.puesto
+                                trabajador.puesto,
                               );
                           }}
                           error={!!error}
@@ -2800,19 +2804,11 @@ export const InspectionFormIroIsop: React.FC<InspectionFormProps> = ({
               <PersonalInvolucrado<InspectionFormData>
                 control={control}
                 name="personalInvolucrado"
+                setValue={setValue}
+                trigger={trigger}
                 disabled={readonly}
-                onTrabajadorSelect={(index, trabajador) => {
-                  if (readonly) return;
-                  if (trabajador) {
-                    setValue(
-                      `personalInvolucrado.${index}.nombre`,
-                      trabajador.nomina
-                    );
-                    setValue(`personalInvolucrado.${index}.ci`, trabajador.ci);
-                  } else {
-                    setValue(`personalInvolucrado.${index}.nombre`, "");
-                    setValue(`personalInvolucrado.${index}.ci`, "");
-                  }
+                onTrabajadorSelect={() => {
+                  // Ya no necesita hacer nada — PersonalInvolucrado lo maneja internamente
                 }}
               />
             </AccordionDetails>
