@@ -6,7 +6,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     formCode: "1.02.P06.F39",
     formName: "Inspección de Amoladora",
     formType: "standard",
-    
+
     signatures: {
       inspector: {
         enabled: true,
@@ -69,7 +69,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     formCode: "1.02.P06.F40",
     formName: "Inspección de Esmeril",
     formType: "standard",
-    
+
     signatures: {
       inspector: {
         enabled: true,
@@ -93,7 +93,6 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
       },
       supervisor: {
         enabled: false,
-        
       },
     },
     colorCode: {
@@ -126,7 +125,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     formCode: "1.02.P06.F42",
     formName: "Inspección de Soldadura",
     formType: "standard",
-    
+
     signatures: {
       inspector: {
         enabled: true,
@@ -150,7 +149,6 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
       },
       supervisor: {
         enabled: false,
-        
       },
     },
     colorCode: {
@@ -271,7 +269,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     approval: {
       enabled: true,
       requiredRoles: ["supervisor", "admin", "superintendente"],
-      allowSelfApproval: false,
+      allowSelfApproval: true,
       requiresComments: false,
     },
     signatures: {
@@ -316,7 +314,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
             required: false,
             heightPercentage: 30,
             fieldName: "supervisorSignature.supervisorSignature",
-          }
+          },
         },
       },
     },
@@ -361,8 +359,6 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
             required: false,
             fieldName: "outOfService.fechaCorrecion",
           },
-
-          
         ],
       },
     },
@@ -377,7 +373,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     approval: {
       enabled: true,
       requiredRoles: ["supervisor", "admin", "superintendente"],
-      allowSelfApproval: false,
+      allowSelfApproval: true,
       requiresComments: false,
     },
     signatures: {
@@ -422,7 +418,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
             required: false,
             heightPercentage: 30,
             fieldName: "supervisorSignature.supervisorSignature",
-          }
+          },
         },
       },
     },
@@ -454,7 +450,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     approval: {
       enabled: true,
       requiredRoles: ["supervisor", "admin", "superintendente"],
-      allowSelfApproval: false,
+      allowSelfApproval: true,
       requiresComments: false,
     },
     signatures: {
@@ -499,7 +495,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
             required: false,
             heightPercentage: 30,
             fieldName: "supervisorSignature.supervisorSignature",
-          }
+          },
         },
       },
     },
@@ -641,7 +637,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     approval: {
       enabled: true,
       requiredRoles: ["supervisor", "admin", "superintendente"],
-      allowSelfApproval: false,
+      allowSelfApproval: true,
       requiresComments: false,
     },
     signatures: {
@@ -653,7 +649,8 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
             enabled: true,
             type: "autocomplete",
             dataSource: "trabajador",
-            label: "Nombre y firma del responsable del trabajo que realiza la inspección",
+            label:
+              "Nombre y firma del responsable del trabajo que realiza la inspección",
             required: true,
             fieldName: "inspectorSignature.inspectorName",
           },
@@ -673,7 +670,8 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
           name: {
             enabled: true,
             type: "autocomplete",
-            label: "Nombre del Supervisor que recibe y aprueba el check list de inspección",
+            label:
+              "Nombre del Supervisor que recibe y aprueba el check list de inspección",
             required: false,
             dataSource: "supervisor",
             fieldName: "supervisorSignature.supervisorName",
@@ -729,7 +727,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     approval: {
       enabled: true,
       requiredRoles: ["supervisor", "admin", "superintendente"],
-      allowSelfApproval: false,
+      allowSelfApproval: true,
       requiresComments: false,
     },
     signatures: {
@@ -949,8 +947,6 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
             required: true,
             fieldName: "outOfService.codConector",
           },
-
-          
         ],
       },
     },
