@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Box } from "@mui/material";
+import { Alert, Typography } from "@mui/material";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
@@ -11,41 +11,31 @@ interface AlertSectionProps {
 }
 
 export function AlertSection({ config }: AlertSectionProps) {
-  if (!config.show || !config.message) {
-    return null;
-  }
+  if (!config.show || !config.message) return null;
 
-  const getSeverity = () => {
-    switch (config.variant) {
-      case "destructive":
-        return "error";
-      case "warning":
-        return "warning";
-      default:
-        return "info";
-    }
+  const severityMap = {
+    destructive: "error" as const,
+    warning: "warning" as const,
+    default: "info" as const,
+  };
+  const iconMap = {
+    destructive: <ErrorOutlineIcon />,
+    warning: <WarningAmberIcon />,
+    default: <InfoOutlinedIcon />,
   };
 
-  const getIcon = () => {
-    switch (config.variant) {
-      case "destructive":
-        return <ErrorOutlineIcon />;
-      case "warning":
-        return <WarningAmberIcon />;
-      default:
-        return <InfoOutlinedIcon />;
-    }
-  };
+  const variant = config.variant ?? "default";
+  const severity = severityMap[variant] ?? "info";
+  const icon = iconMap[variant] ?? <InfoOutlinedIcon />;
 
   return (
-    <Box>
-      <Alert severity={getSeverity()} icon={getIcon()}>
-        {config.message}
-      </Alert>
-
-      <Alert severity={getSeverity()} icon={getIcon()}>
-        {config.description}
-      </Alert>
-    </Box>
+    <Alert severity={severity} icon={icon}>
+      {config.message}
+      {config.description && (
+        <Typography variant="body2" sx={{ mt: 0.5, opacity: 0.9 }}>
+          {config.description}
+        </Typography>
+      )}
+    </Alert>
   );
 }

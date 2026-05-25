@@ -53,6 +53,7 @@ export default function DashboardControlSemestralr() {
 
   useEffect(() => {
     cargarDatosControl();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [año]);
 
   const cargarDatosControl = async () => {

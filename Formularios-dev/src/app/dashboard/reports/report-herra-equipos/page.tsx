@@ -40,6 +40,8 @@ import {
 } from "@/lib/actions/client";
 
 // ✅ Componentes comunes
+import { Can } from "@/components/common/Can";
+import { Permission } from "@/lib/permissions";
 import {
   ReportTable,
   ReportColumn,
@@ -172,13 +174,16 @@ export default function ListarInspeccionHerraEquipos() {
           );
         }
         if (equipmentIdFilter.trim()) {
+          const searchLower = equipmentIdFilter.toLowerCase().trim();
           filtradas = filtradas.filter((i) => {
-            const field = VERIFICATION_FIELD_NAMES[i.templateCode];
-            if (!field || !i.verification) return false;
-            return i.verification[field]
-              ?.toString()
-              .toLowerCase()
-              .includes(equipmentIdFilter.toLowerCase().trim());
+            const haystack = [
+              // ✅ Busca dinámicamente en TODOS los campos de verification
+              ...Object.keys(i.verification || {}),
+              ...Object.values(i.verification || {}).map((v) => String(v)),
+            ]
+              .join(" ")
+              .toLowerCase();
+            return haystack.includes(searchLower);
           });
         }
 
@@ -437,12 +442,12 @@ export default function ListarInspeccionHerraEquipos() {
           <Grid size={{ xs: 12, md: 3 }}>
             <TextField
               fullWidth
-              label="TAG / Placa / Código"
+              label="Búsqueda (TAG, Placa, Valores)"
               size="small"
               value={equipmentIdFilter}
               onChange={(e) => setEquipmentIdFilter(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Ej: TAG-123, ABC-001"
+              placeholder="Buscar en verificación..."
             />
           </Grid>
 
@@ -539,13 +544,15 @@ export default function ListarInspeccionHerraEquipos() {
           <ReportTable
             title="Resultados"
             titleExtra={
-              <Button
-                variant="contained"
-                startIcon={<FormIcon />}
-                onClick={() => router.push("/dashboard/form-herra-equipos")}
-              >
-                Nueva Inspección
-              </Button>
+              <Can perform={Permission.CREATE_FORM}>
+                <Button
+                  variant="contained"
+                  startIcon={<FormIcon />}
+                  onClick={() => router.push("/dashboard/form-herra-equipos")}
+                >
+                  Nueva Inspección
+                </Button>
+              </Can>
             }
             columns={columnas}
             rows={inspections}

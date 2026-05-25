@@ -2,7 +2,8 @@
 
 import { API_BASE_URL } from "@/lib/constants"; 
 import {  getAuthHeaders, handleApiResponse } from "./helpers";
-import { FormBuilderDataHerraEquipos } from "@/components/herra_equipos/QuestionBuilder";
+import { FormBuilderDataHerraEquipos } from "@/components/herra_equipos/domain/models/BuilderTypes";
+import { revalidatePath } from "next/cache";
 
 // Tipos de respuesta
 export type TemplateHerraEquipo = FormBuilderDataHerraEquipos & {
@@ -27,9 +28,11 @@ export async function createTemplateHerraEquipo(
     });
 
     const result = await handleApiResponse<TemplateHerraEquipo>(response);
+    revalidatePath("/dashboard/form-herra-equipos");
+    revalidatePath("/dashboard/forms-builder");
     return { success: true, data: result };
   } catch (error) {
-    console.error("Error creating template:", error);
+    console.error("❌ [TEMPLATE_ACTION] Error al crear plantilla:", error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Error desconocido al crear el template" 
@@ -114,9 +117,11 @@ export async function updateTemplateHerraEquipo(
     });
 
     const result = await handleApiResponse<TemplateHerraEquipo>(response);
+    revalidatePath("/dashboard/form-herra-equipos");
+    revalidatePath("/dashboard/forms-builder");
     return { success: true, data: result };
   } catch (error) {
-    console.error(`Error updating template ${id}:`, error);
+    console.error(`❌ [TEMPLATE_ACTION] Error al actualizar plantilla ${id}:`, error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Error al actualizar el template" 
@@ -141,14 +146,18 @@ export async function deleteTemplateHerraEquipo(
 
     // DELETE en tu backend devuelve 204 No Content
     if (response.status === 204) {
+      revalidatePath("/dashboard/form-herra-equipos");
+      revalidatePath("/dashboard/forms-builder");
       return { success: true };
     }
 
     // Si no es 204, intentamos manejar como error
     await handleApiResponse(response); // esto lanzará error si no es ok
+    revalidatePath("/dashboard/form-herra-equipos");
+    revalidatePath("/dashboard/forms-builder");
     return { success: true };
   } catch (error) {
-    console.error(`Error deleting template ${id}:`, error);
+    console.error(`❌ [TEMPLATE_ACTION] Error al eliminar plantilla ${id}:`, error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Error al eliminar el template" 

@@ -58,12 +58,17 @@ const AutocompleteCustom: React.FC<AutocompleteCustomProps> = ({
     onChange?.(newValue);
   };
 
+  const handleInputChange = (_event: React.SyntheticEvent, newInputValue: string) => {
+    onChange?.(newInputValue || null);
+  };
+
   return (
     <Autocomplete
       freeSolo
       options={options}
       value={value}
       onChange={handleChange}
+      onInputChange={handleInputChange}
       onBlur={onBlur}
       loading={loading}
       disabled={disabled}

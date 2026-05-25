@@ -67,7 +67,6 @@ export default function EditarInspeccionPage() {
 
     try {
       // 1. Cargar la inspección existente
-      console.log("🔍 Cargando inspección con ID:", inspectionId);
       const inspectionResult = await getInspectionById(inspectionId);
       
       if (!inspectionResult.success || !inspectionResult.data) {
@@ -76,8 +75,6 @@ export default function EditarInspeccionPage() {
 
       const inspection = inspectionResult.data;
       setInspectionData(inspection);
-      
-      console.log("✅ Inspección cargada:", inspection);
 
       // 2. Cargar el template correspondiente
       const templatesResult = await getTemplatesHerraEquipos();
@@ -93,7 +90,6 @@ export default function EditarInspeccionPage() {
             createdAt: new Date(foundTemplate.createdAt),
             updatedAt: new Date(foundTemplate.updatedAt),
           });
-          console.log("✅ Template cargado:", foundTemplate.code);
         } else {
           throw new Error(`Template con código ${inspection.templateCode} no encontrado`);
         }
@@ -101,7 +97,6 @@ export default function EditarInspeccionPage() {
         throw new Error(templatesResult.error || 'Error al cargar templates');
       }
     } catch (error) {
-      console.error("❌ Error al cargar datos:", error);
       setError(error instanceof Error ? error.message : 'Error al cargar la inspección');
     } finally {
       setLoading(false);
@@ -111,15 +106,6 @@ export default function EditarInspeccionPage() {
   // ✅ Handler para actualizar (similar a guardar borrador)
   const handleUpdate = async (data: FormDataHerraEquipos) => {
     if (!inspectionData) return;
-
-    console.log("=".repeat(60));
-    console.log("🔄 [EDITAR] ACTUALIZAR INSPECCIÓN");
-    console.log("=".repeat(60));
-    console.log("Inspection ID:", inspectionId);
-    console.log("Template Code:", inspectionData.templateCode);
-    console.log("\n📦 Datos actualizados:");
-    console.log(data);
-    console.log("=".repeat(60));
 
     setSaving(true);
 
@@ -143,7 +129,6 @@ export default function EditarInspeccionPage() {
         throw new Error(result.error || 'Error al actualizar inspección');
       }
     } catch (error) {
-      console.error("❌ Error al actualizar:", error);
       setSnackbar({
         open: true,
         message: error instanceof Error ? error.message : 'Error al actualizar',
@@ -157,10 +142,6 @@ export default function EditarInspeccionPage() {
   // ✅ Handler para submit final (cambiar a completado)
   const handleFinalSubmit = async (data: FormDataHerraEquipos) => {
     if (!inspectionData) return;
-
-    console.log("=".repeat(60));
-    console.log("📤 [EDITAR] FINALIZAR INSPECCIÓN");
-    console.log("=".repeat(60));
 
     setSaving(true);
 
@@ -178,8 +159,6 @@ export default function EditarInspeccionPage() {
           severity: 'success'
         });
         
-        console.log("✅ Inspección completada:", result.data);
-        
         // Redirigir después de 2 segundos
         setTimeout(() => {
           router.push('/dashboard/config/inspecciones/gestion');
@@ -188,7 +167,6 @@ export default function EditarInspeccionPage() {
         throw new Error(result.error || 'Error al completar inspección');
       }
     } catch (error) {
-      console.error("❌ Error al finalizar:", error);
       setSnackbar({
         open: true,
         message: error instanceof Error ? error.message : 'Error al finalizar',

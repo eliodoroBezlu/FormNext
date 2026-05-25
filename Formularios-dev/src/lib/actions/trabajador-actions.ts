@@ -51,14 +51,30 @@ export async function obtenerTrabajadorPorId(id: string): Promise<Trabajador> {
   }
 }
 
+// Obtener trabajador por username (para resolver el área del usuario autenticado)
+export async function obtenerTrabajadorPorUsername(
+  username: string
+): Promise<Trabajador | null> {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(
+      `${API_BASE_URL}/trabajadores/by-username/${encodeURIComponent(username)}`,
+      { method: "GET", headers, cache: "no-store" }
+    );
+    if (response.status === 404) return null;
+    return await handleApiResponse<Trabajador>(response);
+  } catch (error) {
+    console.error("Error obteniendo trabajador por username:", error);
+    return null;
+  }
+}
+
+
 // Crear trabajador básico
-export async function crearTrabajador(trabajadorData: {
-  ci: string;
-  nomina: string;
-  puesto: string;
-  fecha_ingreso: string;
-  superintendencia: string;
-}) {
+export async function crearTrabajador(
+  trabajadorData: Pick<TrabajadorForm, 'ci' | 'nomina' | 'puesto' | 'fecha_ingreso' | 'superintendencia' | 'area'>
+    & Partial<Pick<TrabajadorForm, 'jde' | 'no_bloque' | 'no_habitacion' | 'residencia' | 'celular'>>
+) {
   try {
     const headers = await getAuthHeaders();
     const response = await fetch(`${API_BASE_URL}/trabajadores`, {
@@ -75,17 +91,10 @@ export async function crearTrabajador(trabajadorData: {
 }
 
 // Crear trabajador con usuario (extiende TrabajadorForm)
-export async function crearTrabajadorConUsuario(trabajadorData: {
-  ci: string;
-  nomina: string;
-  puesto: string;
-  fecha_ingreso: string;
-  superintendencia: string;
-  email: string;
-  username?: string;
-  crear_usuario_keycloak: boolean;
-  roles?: string[];
-}) {
+export async function crearTrabajadorConUsuario(
+  trabajadorData: Pick<TrabajadorForm, 'ci' | 'nomina' | 'puesto' | 'fecha_ingreso' | 'superintendencia' | 'area' | 'email' | 'crear_usuario_keycloak'>
+    & Partial<Pick<TrabajadorForm, 'username' | 'roles' | 'jde' | 'no_bloque' | 'no_habitacion' | 'residencia' | 'celular'>>
+) {
   try {
     const headers = await getAuthHeaders();
     const response = await fetch(`${API_BASE_URL}/trabajadores/with-user`, {
@@ -223,6 +232,27 @@ export async function actualizarRolesUsuario(
     return await handleApiResponse(response);
   } catch (error) {
     console.error("Error actualizando roles:", error);
+    throw error;
+  }
+}
+
+export async function actualizarPermisosUsuario(
+  trabajadorId: string,
+  permissionsData: { permissions: string[] }
+) {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(
+      `${API_BASE_URL}/trabajadores/${trabajadorId}/user/permissions`,
+      {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify(permissionsData),
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error actualizando permisos extras:", error);
     throw error;
   }
 }

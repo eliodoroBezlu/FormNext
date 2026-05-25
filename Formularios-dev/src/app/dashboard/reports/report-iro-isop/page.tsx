@@ -35,9 +35,10 @@ import {
   descargarPdfIroIsopCliente,
 } from "@/lib/actions/client";
 import AutocompleteCustom from "@/components/molecules/autocomplete-custom/AutocompleteCustom";
-import { useUserRole } from "@/hooks/useUserRole";
 
 // ✅ Componentes comunes
+import { Can } from "@/components/common/Can";
+import { Permission } from "@/lib/permissions";
 import {
   ReportTable,
   ReportColumn,
@@ -53,7 +54,6 @@ const ESTADOS_FORMULARIO = [
 ];
 
 export default function ListarInspeccionesIroIsop() {
-  const { user, isLoading: authLoading } = useUserRole();
   const router = useRouter();
 
   const [instancias, setInstancias] = useState<FormInstance[]>([]);
@@ -78,17 +78,10 @@ export default function ListarInspeccionesIroIsop() {
   const [maxComplianceFilter, setMaxComplianceFilter] = useState("");
   const [areaFilter, setAreaFilter] = useState("");
   const [superintendenciaFilter, setSuperintendenciaFilter] = useState("");
+  const [searchFilter, setSearchFilter] = useState("");
 
   // ── Permisos ──────────────────────────────────────────────────────────────
-  const tienePermisos = (() => {
-    if (!user || authLoading) return false;
-    const rolesPermitidos = ["admin", "supervisor", "superintendente"];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const roles = (user as any).roles ?? (user as any).user?.roles ?? [];
-    return Array.isArray(roles)
-      ? roles.some((r: string) => rolesPermitidos.includes(r))
-      : rolesPermitidos.includes(roles as string);
-  })();
+  // (Migrados al sistema granular de permisos)
 
   useEffect(() => {
     const cargarTemplates = async () => {
@@ -138,16 +131,39 @@ export default function ListarInspeccionesIroIsop() {
       const response = await getInstances(filters);
 
       if (response.success && response.data) {
-        if (Array.isArray(response.data.data)) {
-          setInstancias(response.data.data);
-          setTotalItems(response.data.total ?? response.data.data.length);
-          if (response.data.page) setPage(response.data.page - 1);
-        } else if (Array.isArray(response.data)) {
-          setInstancias(response.data);
-          setTotalItems(response.data.length);
-        } else {
-          setInstancias([]);
+        let fetchedData = Array.isArray(response.data.data)
+          ? response.data.data
+          : Array.isArray(response.data)
+            ? response.data
+            : [];
+
+        if (searchFilter.trim()) {
+          const searchLower = searchFilter.toLowerCase().trim();
+          fetchedData = fetchedData.filter((i) => {
+            const haystack = [
+              // ✅ Busca dinámicamente en TODOS los campos de verificationList
+              ...Object.keys(i.verificationList || {}),
+              ...Object.values(i.verificationList || {}).map((v) => String(v)),
+            ]
+              .join(" ")
+              .toLowerCase();
+            return haystack.includes(searchLower);
+          });
         }
+
+        setInstancias(fetchedData);
+
+        if (Array.isArray(response.data.data)) {
+          setTotalItems(
+            searchFilter.trim()
+              ? fetchedData.length
+              : (response.data.total ?? fetchedData.length),
+          );
+          if (response.data.page) setPage(response.data.page - 1);
+        } else {
+          setTotalItems(fetchedData.length);
+        }
+
         setMostrarResultados(true);
       } else {
         setInstancias([]);
@@ -173,6 +189,7 @@ export default function ListarInspeccionesIroIsop() {
     setMaxComplianceFilter("");
     setAreaFilter("");
     setSuperintendenciaFilter("");
+    setSearchFilter("");
     setInstancias([]);
     setMostrarResultados(false);
     setError(null);
@@ -292,7 +309,6 @@ export default function ListarInspeccionesIroIsop() {
       align: "center",
       render: (row) => (
         <ReportActionButtons
-          hasPermission={tienePermisos}
           onView={() =>
             router.push(
               `/dashboard/reports/report-iro-isop/editar/${row._id}?mode=view`,
@@ -458,6 +474,19 @@ export default function ListarInspeccionesIroIsop() {
             />
           </Grid>
 
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField
+              fullWidth
+              label="Búsqueda (valores de verificación)"
+              variant="outlined"
+              size="small"
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Buscar..."
+            />
+          </Grid>
+
           <Grid
             size={{ xs: 12 }}
             display="flex"
@@ -535,7 +564,7 @@ export default function ListarInspeccionesIroIsop() {
           <ReportTable
             title="Resultados"
             titleExtra={
-              tienePermisos ? (
+              <Can perform={Permission.CREATE_FORM}>
                 <Button
                   variant="contained"
                   startIcon={<FormIcon />}
@@ -545,7 +574,7 @@ export default function ListarInspeccionesIroIsop() {
                 >
                   Nueva Instancia
                 </Button>
-              ) : undefined
+              </Can>
             }
             columns={columnas}
             rows={instancias}

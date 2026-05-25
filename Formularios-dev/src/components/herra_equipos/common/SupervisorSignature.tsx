@@ -112,6 +112,11 @@ export function SupervisorSignature({
             name={fieldName as Path<FormDataHerraEquipos>}
             control={control}
             defaultValue=""
+            rules={{
+              required: field.required
+                ? `${field.label || key} es obligatorio`
+                : false,
+            }}
             render={({ field: controllerField }) => (
               <AutocompleteCustom
                 {...commonProps}
@@ -132,6 +137,11 @@ export function SupervisorSignature({
             name={fieldName as Path<FormDataHerraEquipos>}
             control={control}
             defaultValue=""
+            rules={{
+              required: field.required
+                ? `${field.label || key} es obligatorio`
+                : false,
+            }}
             render={({ field: controllerField }) => (
               <Box sx={{ width: "100%" }}>
                 <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
@@ -228,18 +238,19 @@ export function SupervisorSignature({
   }
 
   return (
-    <Paper 
-      elevation={2} 
-      sx={{ 
-        // Padding responsivo: menos en móvil (2 = 16px), más en desktop (3 = 24px)
+    <Paper
+      className="supervisor-signature-section"
+      elevation={2}
+      sx={{
         p: { xs: 2, md: 3 },
         width: "100%",
-        overflow: "hidden" // Evita scroll horizontal indeseado
+        overflow: "hidden"
       }}
     >
       <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: "1.1rem", md: "1.25rem" } }}>
         {config.title || ""}
       </Typography>
+
 
       <Box
         sx={{

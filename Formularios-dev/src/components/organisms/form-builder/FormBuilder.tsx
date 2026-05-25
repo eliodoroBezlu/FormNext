@@ -81,13 +81,13 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
       revision: "Rev. 1",
       type: "interna",
       verificationFields: [
-        { label: "Gerencia", type: "text", dataSource: "" }, 
-        { label: "Supervisor", type: "text", dataSource: "" },
-        { label: "Inspección N°", type: "text", dataSource: "" },
-        { label: "Superintendencia", type: "text", dataSource: "" },
-        { label: "Lugar", type: "text", dataSource: "" },
-        { label: "Fecha Inspección", type: "date", dataSource: "" },
-        { label: "Área", type: "text", dataSource: "" },
+        { label: "Gerencia", type: "text", dataSource: "", required: false }, 
+        { label: "Supervisor", type: "text", dataSource: "", required: false },
+        { label: "Inspección N°", type: "text", dataSource: "", required: false },
+        { label: "Superintendencia", type: "text", dataSource: "", required: false },
+        { label: "Lugar", type: "text", dataSource: "", required: false },
+        { label: "Fecha Inspección", type: "date", dataSource: "", required: false },
+        { label: "Área", type: "text", dataSource: "", required: false },
       ],
       sections: [],
       simpleSections: [],
@@ -106,6 +106,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
             label: field.label || "",
             type: field.type || "text",
             dataSource: field.dataSource || "", 
+            required: Boolean(field.required),
           })
         ),
         sections: template.sections || [],
@@ -270,6 +271,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
       label: "",
       type: "text",
       dataSource: "",
+      required: false,
     });
   }, [appendVerificationField]);
 
@@ -646,8 +648,25 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
                     />
                   </Grid>
                 )}
+
+                <Grid
+                  size={{
+                    xs: 6,
+                    sm: 2,
+                  }}
+                  sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+                >
+                  <FormField
+                    name={`verificationFields.${index}.required`}
+                    control={control}
+                    type="checkbox"
+                    label="Requerido"
+                    disabled={isReadOnly}
+                  />
+                </Grid>
+
                 {!isReadOnly && (
-                  <Grid size={{ xs: 1 }}>
+                  <Grid size={{ xs: 6, sm: 1 }} sx={{ display: "flex", justifyContent: "center" }}>
                     <IconButton
                       color="error"
                       onClick={() => removeVerificationField(index)}

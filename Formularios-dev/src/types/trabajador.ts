@@ -5,6 +5,12 @@ export interface Trabajador {
   puesto: string;
   fecha_ingreso: string;
   superintendencia: string;
+  area: string;
+  jde?: string;
+  no_bloque?: string;
+  no_habitacion?: string;
+  residencia?: string;
+  celular?: string;
   keycloak_user_id?: string;
   username?: string;
   tiene_acceso_sistema: boolean;
@@ -20,6 +26,12 @@ export interface TrabajadorForm {
   puesto: string;
   fecha_ingreso: string;
   superintendencia: string;
+  area: string;
+  jde?: string;
+  no_bloque?: string;
+  no_habitacion?: string;
+  residencia?: string;
+  celular?: string;
   email?: string;
   username?: string;
   crear_usuario_keycloak: boolean;

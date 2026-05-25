@@ -118,6 +118,11 @@ export function InspectorSignature({
             name={fieldName as Path<FormDataHerraEquipos>}
             control={control}
             defaultValue=""
+            rules={{
+              required: field.required
+                ? `${field.label || key} es obligatorio`
+                : false,
+            }}
             render={({ field: controllerField }) => (
               <AutocompleteCustom
                 value={controllerField.value as string | null}
@@ -140,6 +145,11 @@ export function InspectorSignature({
             name={fieldName as Path<FormDataHerraEquipos>}
             control={control}
             defaultValue=""
+            rules={{
+              required: field.required
+                ? `${field.label || key} es obligatorio`
+                : false,
+            }}
             render={({ field: controllerField }) => (
               <Box sx={{ width: "100%" }}>
                 <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>

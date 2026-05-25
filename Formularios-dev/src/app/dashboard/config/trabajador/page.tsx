@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import React, { useEffect, useState } from "react";
 import {
@@ -55,6 +55,8 @@ import {
 } from "@/lib/actions/trabajador-actions";
 import UserManagementModal from "@/components/organisms/user/UserManagementModal";
 import { useUserRole } from "@/hooks/useUserRole";
+import { Can } from "@/components/common/Can";
+import { Permission } from "@/lib/permissions";
 
 const initialFormData: TrabajadorForm = {
   ci: "",
@@ -62,6 +64,12 @@ const initialFormData: TrabajadorForm = {
   puesto: "",
   fecha_ingreso: "",
   superintendencia: "",
+  area: "",
+  jde: "",
+  no_bloque: "",
+  no_habitacion: "",
+  residencia: "",
+  celular: "",
   email: "",
   username: "",
   crear_usuario_keycloak: false,
@@ -70,7 +78,8 @@ const initialFormData: TrabajadorForm = {
 };
 
 export default function GestionTrabajadores() {
-  const { user } = useUserRole()
+  const { user } = useUserRole();
+  const isAdmin = user?.roles?.includes("admin");
   const [trabajadores, setTrabajadores] = useState<Trabajador[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -80,7 +89,9 @@ export default function GestionTrabajadores() {
 
   // Estados para el modal principal
   const [openModal, setOpenModal] = useState(false);
-  const [editingTrabajador, setEditingTrabajador] = useState<Trabajador | null>(null);
+  const [editingTrabajador, setEditingTrabajador] = useState<Trabajador | null>(
+    null,
+  );
   const [formData, setFormData] = useState<TrabajadorForm>(initialFormData);
 
   // Estados para filtros
@@ -93,7 +104,8 @@ export default function GestionTrabajadores() {
 
   // Estados para modal de crear usuario
   const [openCreateUserModal, setOpenCreateUserModal] = useState(false);
-  const [selectedWorkerForUser, setSelectedWorkerForUser] = useState<Trabajador | null>(null);
+  const [selectedWorkerForUser, setSelectedWorkerForUser] =
+    useState<Trabajador | null>(null);
   const [createUserForm, setCreateUserForm] = useState({
     email: "",
     username: "",
@@ -104,7 +116,8 @@ export default function GestionTrabajadores() {
 
   // Estados para modal de gestión avanzada
   const [openUserManagementModal, setOpenUserManagementModal] = useState(false);
-  const [selectedWorkerForManagement, setSelectedWorkerForManagement] = useState<Trabajador | null>(null);
+  const [selectedWorkerForManagement, setSelectedWorkerForManagement] =
+    useState<Trabajador | null>(null);
 
   // Estado para notificaciones
   const [notification, setNotification] = useState<{
@@ -117,13 +130,14 @@ export default function GestionTrabajadores() {
     severity: "info",
   });
 
-  const isAdmin = user?.roles?.includes("admin");
   useEffect(() => {
     cargarTrabajadores();
   }, []);
 
   // Validación de contraseña
-  const validatePassword = (password: string): { isValid: boolean; message: string } => {
+  const validatePassword = (
+    password: string,
+  ): { isValid: boolean; message: string } => {
     if (password.length < 8) {
       return { isValid: false, message: "Mínimo 8 caracteres" };
     }
@@ -150,7 +164,14 @@ export default function GestionTrabajadores() {
   };
 
   const validateForm = (): boolean => {
-    const requiredFields = ["ci", "nomina", "puesto", "fecha_ingreso", "superintendencia"];
+    const requiredFields = [
+      "ci",
+      "nomina",
+      "puesto",
+      "fecha_ingreso",
+      "superintendencia",
+      "area",
+    ];
 
     for (const field of requiredFields) {
       if (!formData[field as keyof TrabajadorForm]?.toString().trim()) {
@@ -166,7 +187,10 @@ export default function GestionTrabajadores() {
     }
 
     if (formData.crear_usuario_keycloak && !formData.email?.trim()) {
-      mostrarNotificacion("El email es requerido cuando se crea un usuario del sistema", "error");
+      mostrarNotificacion(
+        "El email es requerido cuando se crea un usuario del sistema",
+        "error",
+      );
       return false;
     }
 
@@ -181,7 +205,10 @@ export default function GestionTrabajadores() {
     if (formData.username && formData.username.trim()) {
       const usernamePattern = /^[a-zA-Z0-9._-]+$/;
       if (!usernamePattern.test(formData.username)) {
-        mostrarNotificacion("El username solo puede contener letras, números, puntos, guiones y guiones bajos", "error");
+        mostrarNotificacion(
+          "El username solo puede contener letras, números, puntos, guiones y guiones bajos",
+          "error",
+        );
         return false;
       }
     }
@@ -197,7 +224,14 @@ export default function GestionTrabajadores() {
   };
 
   const validateFormBasic = (): boolean => {
-    const requiredFields = ["ci", "nomina", "puesto", "fecha_ingreso", "superintendencia"];
+    const requiredFields = [
+      "ci",
+      "nomina",
+      "puesto",
+      "fecha_ingreso",
+      "superintendencia",
+      "area",
+    ];
 
     for (const field of requiredFields) {
       if (!formData[field as keyof TrabajadorForm]?.toString().trim()) {
@@ -231,20 +265,28 @@ export default function GestionTrabajadores() {
     let filtrados = trabajadores;
 
     if (ciFilter.trim()) {
-      filtrados = filtrados.filter((t) => t.ci.toLowerCase().includes(ciFilter.toLowerCase().trim()));
+      filtrados = filtrados.filter((t) =>
+        t.ci.toLowerCase().includes(ciFilter.toLowerCase().trim()),
+      );
     }
 
     if (nominaFilter.trim()) {
-      filtrados = filtrados.filter((t) => t.nomina.toLowerCase().includes(nominaFilter.toLowerCase().trim()));
+      filtrados = filtrados.filter((t) =>
+        t.nomina.toLowerCase().includes(nominaFilter.toLowerCase().trim()),
+      );
     }
 
     if (puestoFilter.trim()) {
-      filtrados = filtrados.filter((t) => t.puesto.toLowerCase().includes(puestoFilter.toLowerCase().trim()));
+      filtrados = filtrados.filter((t) =>
+        t.puesto.toLowerCase().includes(puestoFilter.toLowerCase().trim()),
+      );
     }
 
     if (superintendenciaFilter.trim()) {
       filtrados = filtrados.filter((t) =>
-        t.superintendencia.toLowerCase().includes(superintendenciaFilter.toLowerCase().trim())
+        t.superintendencia
+          .toLowerCase()
+          .includes(superintendenciaFilter.toLowerCase().trim()),
       );
     }
 
@@ -275,7 +317,9 @@ export default function GestionTrabajadores() {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     setRowsPerPage(Number.parseInt(event.target.value, 10));
     setPage(0);
   };
@@ -283,7 +327,9 @@ export default function GestionTrabajadores() {
   const abrirModal = async (trabajador?: Trabajador) => {
     if (trabajador) {
       try {
-        const trabajadorActualizado = await obtenerTrabajadorPorId(trabajador._id);
+        const trabajadorActualizado = await obtenerTrabajadorPorId(
+          trabajador._id,
+        );
         setEditingTrabajador(trabajadorActualizado);
         setFormData({
           ci: trabajadorActualizado.ci,
@@ -291,6 +337,12 @@ export default function GestionTrabajadores() {
           puesto: trabajadorActualizado.puesto,
           fecha_ingreso: trabajadorActualizado.fecha_ingreso.split("T")[0],
           superintendencia: trabajadorActualizado.superintendencia,
+          area: trabajadorActualizado.area || "",
+          jde: trabajadorActualizado.jde || "",
+          no_bloque: trabajadorActualizado.no_bloque || "",
+          no_habitacion: trabajadorActualizado.no_habitacion || "",
+          residencia: trabajadorActualizado.residencia || "",
+          celular: trabajadorActualizado.celular || "",
           email: "",
           username: trabajadorActualizado.username || "",
           crear_usuario_keycloak: false,
@@ -306,6 +358,12 @@ export default function GestionTrabajadores() {
           puesto: trabajador.puesto,
           fecha_ingreso: trabajador.fecha_ingreso.split("T")[0],
           superintendencia: trabajador.superintendencia,
+          area: trabajador.area || "",
+          jde: trabajador.jde || "",
+          no_bloque: trabajador.no_bloque || "",
+          no_habitacion: trabajador.no_habitacion || "",
+          residencia: trabajador.residencia || "",
+          celular: trabajador.celular || "",
           email: "",
           username: trabajador.username || "",
           crear_usuario_keycloak: false,
@@ -340,6 +398,12 @@ export default function GestionTrabajadores() {
           puesto: formData.puesto,
           fecha_ingreso: formData.fecha_ingreso,
           superintendencia: formData.superintendencia,
+          area: formData.area,
+          jde: formData.jde || undefined,
+          no_bloque: formData.no_bloque || undefined,
+          no_habitacion: formData.no_habitacion || undefined,
+          residencia: formData.residencia || undefined,
+          celular: formData.celular || undefined,
           activo: formData.activo,
         };
         await actualizarTrabajador(editingTrabajador._id, updateData);
@@ -352,12 +416,21 @@ export default function GestionTrabajadores() {
             puesto: formData.puesto,
             fecha_ingreso: formData.fecha_ingreso,
             superintendencia: formData.superintendencia,
+            area: formData.area,
             email: formData.email!,
             username: formData.username || "",
             crear_usuario_keycloak: true,
             roles: formData.roles || ["user"],
+            jde: formData.jde || undefined,
+            no_bloque: formData.no_bloque || undefined,
+            no_habitacion: formData.no_habitacion || undefined,
+            residencia: formData.residencia || undefined,
+            celular: formData.celular || undefined,
           });
-          mostrarNotificacion("Trabajador y usuario creados correctamente", "success");
+          mostrarNotificacion(
+            "Trabajador y usuario creados correctamente",
+            "success",
+          );
         } else {
           await crearTrabajador({
             ci: formData.ci,
@@ -365,6 +438,12 @@ export default function GestionTrabajadores() {
             puesto: formData.puesto,
             fecha_ingreso: formData.fecha_ingreso,
             superintendencia: formData.superintendencia,
+            area: formData.area,
+            jde: formData.jde || undefined,
+            no_bloque: formData.no_bloque || undefined,
+            no_habitacion: formData.no_habitacion || undefined,
+            residencia: formData.residencia || undefined,
+            celular: formData.celular || undefined,
           });
           mostrarNotificacion("Trabajador creado correctamente", "success");
         }
@@ -375,8 +454,10 @@ export default function GestionTrabajadores() {
     } catch (error) {
       console.error("Error al guardar trabajador:", error);
       mostrarNotificacion(
-        error instanceof Error ? error.message : "Error al guardar el trabajador",
-        "error"
+        error instanceof Error
+          ? error.message
+          : "Error al guardar el trabajador",
+        "error",
       );
     } finally {
       setSubmitting(false);
@@ -384,7 +465,8 @@ export default function GestionTrabajadores() {
   };
 
   const handleEliminarTrabajador = async (id: string) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar este trabajador?")) return;
+    if (!confirm("¿Estás seguro de que quieres eliminar este trabajador?"))
+      return;
 
     try {
       setLoading(true);
@@ -394,8 +476,10 @@ export default function GestionTrabajadores() {
     } catch (error) {
       console.error("Error al eliminar trabajador:", error);
       mostrarNotificacion(
-        error instanceof Error ? error.message : "Error al eliminar el trabajador",
-        "error"
+        error instanceof Error
+          ? error.message
+          : "Error al eliminar el trabajador",
+        "error",
       );
     } finally {
       setLoading(false);
@@ -444,18 +528,23 @@ export default function GestionTrabajadores() {
         password: createUserForm.password,
         temporary_password: createUserForm.temporary_password,
         roles: createUserForm.roles,
-        ...(createUserForm.email?.trim() && { email: createUserForm.email.trim() }),
+        ...(createUserForm.email?.trim() && {
+          email: createUserForm.email.trim(),
+        }),
       };
 
       await crearUsuarioParaTrabajadorExistente(requestData);
-      mostrarNotificacion("Usuario creado correctamente para el trabajador", "success");
+      mostrarNotificacion(
+        "Usuario creado correctamente para el trabajador",
+        "success",
+      );
       cerrarModalCrearUsuario();
       await cargarTrabajadores();
     } catch (error) {
       console.error("Error al crear usuario:", error);
       mostrarNotificacion(
         error instanceof Error ? error.message : "Error al crear el usuario",
-        "error"
+        "error",
       );
     } finally {
       setSubmitting(false);
@@ -472,7 +561,10 @@ export default function GestionTrabajadores() {
     setSelectedWorkerForManagement(null);
   };
 
-  const mostrarNotificacion = (message: string, severity: "success" | "error" | "warning" | "info") => {
+  const mostrarNotificacion = (
+    message: string,
+    severity: "success" | "error" | "warning" | "info",
+  ) => {
     setNotification({ open: true, message, severity });
   };
 
@@ -495,7 +587,7 @@ export default function GestionTrabajadores() {
         </Typography>
 
         <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid size={{xs:12, md:4}}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <TextField
               fullWidth
               label="CI"
@@ -506,7 +598,7 @@ export default function GestionTrabajadores() {
             />
           </Grid>
 
-          <Grid size={{xs:12, md:4}}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <TextField
               fullWidth
               label="Nómina"
@@ -517,7 +609,7 @@ export default function GestionTrabajadores() {
             />
           </Grid>
 
-          <Grid size={{xs:12, md:4}}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <TextField
               fullWidth
               label="Puesto"
@@ -528,7 +620,7 @@ export default function GestionTrabajadores() {
             />
           </Grid>
 
-          <Grid size={{xs:12, md:4}}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <TextField
               fullWidth
               label="Superintendencia"
@@ -539,10 +631,14 @@ export default function GestionTrabajadores() {
             />
           </Grid>
 
-          <Grid size={{xs:12, md:4}}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Estado</InputLabel>
-              <Select value={activoFilter} onChange={(e) => setActivoFilter(e.target.value)} label="Estado">
+              <Select
+                value={activoFilter}
+                onChange={(e) => setActivoFilter(e.target.value)}
+                label="Estado"
+              >
                 <MenuItem value="">Todos</MenuItem>
                 <MenuItem value="true">Activo</MenuItem>
                 <MenuItem value="false">Inactivo</MenuItem>
@@ -550,7 +646,7 @@ export default function GestionTrabajadores() {
             </FormControl>
           </Grid>
 
-          <Grid size={{xs:12, md:4}}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Usuario Sistema</InputLabel>
               <Select
@@ -568,20 +664,26 @@ export default function GestionTrabajadores() {
 
         <Box display="flex" justifyContent="space-between" alignItems="center">
           <Box display="flex" gap={1}>
-            <Button variant="outlined" startIcon={<ClearIcon />} onClick={limpiarFiltros}>
+            <Button
+              variant="outlined"
+              startIcon={<ClearIcon />}
+              onClick={limpiarFiltros}
+            >
               Limpiar Filtros
             </Button>
           </Box>
 
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => abrirModal()}
-            color="primary"
-            disabled={loading}
-          >
-            Nuevo Trabajador
-          </Button>
+          <Can perform={Permission.CREATE_WORKER}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => abrirModal()}
+              color="primary"
+              disabled={loading}
+            >
+              Nuevo Trabajador
+            </Button>
+          </Can>
         </Box>
       </Paper>
 
@@ -596,17 +698,29 @@ export default function GestionTrabajadores() {
             alignItems: "center",
           }}
         >
-          <Typography variant="h6">Trabajadores ({trabajadoresMostrados.length})</Typography>
+          <Typography variant="h6">
+            Trabajadores ({trabajadoresMostrados.length})
+          </Typography>
         </Box>
 
         {loading && (
-          <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+          <Box
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
+            minHeight="200px"
+          >
             <CircularProgress />
           </Box>
         )}
 
         {error && (
-          <Box display="flex" justifyContent="center" alignItems="center" minHeight="100px">
+          <Box
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
+            minHeight="100px"
+          >
             <Typography color="error">{error}</Typography>
           </Box>
         )}
@@ -632,15 +746,22 @@ export default function GestionTrabajadores() {
                     <TableRow>
                       <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                         <Typography variant="body1" color="textSecondary">
-                          No se encontraron trabajadores con los filtros aplicados
+                          No se encontraron trabajadores con los filtros
+                          aplicados
                         </Typography>
                       </TableCell>
                     </TableRow>
                   ) : (
                     trabajadoresMostrados
-                      .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                      .slice(
+                        page * rowsPerPage,
+                        page * rowsPerPage + rowsPerPage,
+                      )
                       .map((trabajador) => (
-                        <TableRow key={trabajador._id} sx={{ "&:hover": { backgroundColor: "#f9f9f9" } }}>
+                        <TableRow
+                          key={trabajador._id}
+                          sx={{ "&:hover": { backgroundColor: "#f9f9f9" } }}
+                        >
                           <TableCell>
                             <Typography variant="body2" fontWeight="medium">
                               {trabajador.ci}
@@ -658,14 +779,28 @@ export default function GestionTrabajadores() {
                           </TableCell>
                           <TableCell align="center">
                             <Chip
-                              label={trabajador.tiene_acceso_sistema ? "Con Usuario" : "Sin Usuario"}
-                              color={trabajador.tiene_acceso_sistema ? "primary" : "default"}
+                              label={
+                                trabajador.tiene_acceso_sistema
+                                  ? "Con Usuario"
+                                  : "Sin Usuario"
+                              }
+                              color={
+                                trabajador.tiene_acceso_sistema
+                                  ? "primary"
+                                  : "default"
+                              }
                               size="small"
-                              icon={trabajador.tiene_acceso_sistema ? <PersonIcon /> : undefined}
+                              icon={
+                                trabajador.tiene_acceso_sistema ? (
+                                  <PersonIcon />
+                                ) : undefined
+                              }
                             />
                           </TableCell>
                           <TableCell align="center">
-                            {new Date(trabajador.fecha_ingreso).toLocaleDateString()}
+                            {new Date(
+                              trabajador.fecha_ingreso,
+                            ).toLocaleDateString()}
                           </TableCell>
                           <TableCell align="center">
                             <Tooltip title="Ver detalle">
@@ -674,47 +809,57 @@ export default function GestionTrabajadores() {
                               </IconButton>
                             </Tooltip>
 
-                            <Tooltip title="Editar">
-                              <IconButton
-                                onClick={() => abrirModal(trabajador)}
-                                color="primary"
-                                size="small"
-                                disabled={loading}
-                              >
-                                <EditIcon />
-                              </IconButton>
-                            </Tooltip>
-
-                            {isAdmin && !trabajador.tiene_acceso_sistema && (
-                              <Tooltip title="Crear Usuario del Sistema">
+                            <Can perform={Permission.UPDATE_WORKER}>
+                              <Tooltip title="Editar">
                                 <IconButton
-                                  onClick={() => abrirModalCrearUsuario(trabajador)}
-                                  color="success"
+                                  onClick={() => abrirModal(trabajador)}
+                                  color="primary"
                                   size="small"
                                   disabled={loading}
                                 >
-                                  <PersonAddIcon />
+                                  <EditIcon />
                                 </IconButton>
                               </Tooltip>
-                            )}
+                            </Can>
 
-                            {isAdmin && trabajador.tiene_acceso_sistema && (
-                              <Tooltip title="Gestión Avanzada de Usuario">
-                                <IconButton
-                                  onClick={() => abrirModalGestionUsuario(trabajador)}
-                                  color="secondary"
-                                  size="small"
-                                  disabled={loading}
-                                >
-                                  <SettingsIcon />
-                                </IconButton>
-                              </Tooltip>
-                            )}
+                            <Can perform={Permission.MANAGE_WORKER_USER}>
+                              {!trabajador.tiene_acceso_sistema && (
+                                <Tooltip title="Crear Usuario del Sistema">
+                                  <IconButton
+                                    onClick={() =>
+                                      abrirModalCrearUsuario(trabajador)
+                                    }
+                                    color="success"
+                                    size="small"
+                                    disabled={loading}
+                                  >
+                                    <PersonAddIcon />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
 
-                            {isAdmin && (
+                              {trabajador.tiene_acceso_sistema && (
+                                <Tooltip title="Gestión Avanzada de Usuario">
+                                  <IconButton
+                                    onClick={() =>
+                                      abrirModalGestionUsuario(trabajador)
+                                    }
+                                    color="secondary"
+                                    size="small"
+                                    disabled={loading}
+                                  >
+                                    <SettingsIcon />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                            </Can>
+
+                            <Can perform={Permission.DELETE_WORKER}>
                               <Tooltip title="Eliminar">
                                 <IconButton
-                                  onClick={() => handleEliminarTrabajador(trabajador._id)}
+                                  onClick={() =>
+                                    handleEliminarTrabajador(trabajador._id)
+                                  }
                                   color="error"
                                   size="small"
                                   disabled={loading}
@@ -722,7 +867,7 @@ export default function GestionTrabajadores() {
                                   <DeleteIcon />
                                 </IconButton>
                               </Tooltip>
-                            )}
+                            </Can>
                           </TableCell>
                         </TableRow>
                       ))
@@ -750,10 +895,12 @@ export default function GestionTrabajadores() {
 
       {/* MODAL PARA CREAR/EDITAR TRABAJADOR */}
       <Dialog open={openModal} onClose={cerrarModal} maxWidth="md" fullWidth>
-        <DialogTitle>{editingTrabajador ? "Editar Trabajador" : "Nuevo Trabajador"}</DialogTitle>
+        <DialogTitle>
+          {editingTrabajador ? "Editar Trabajador" : "Nuevo Trabajador"}
+        </DialogTitle>
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
-            <Grid size={{xs:12,sm:6}}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="CI *"
@@ -765,42 +912,52 @@ export default function GestionTrabajadores() {
                 required
                 disabled={!!editingTrabajador}
                 error={!formData.ci}
-                helperText={!formData.ci ? "Campo requerido" : "Solo números (6-8 dígitos)"}
+                helperText={
+                  !formData.ci
+                    ? "Campo requerido"
+                    : "Solo números (6-8 dígitos)"
+                }
                 inputProps={{ maxLength: 8 }}
               />
             </Grid>
 
-            <Grid size={{xs:12,sm:6}}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Nómina *"
                 value={formData.nomina}
-                onChange={(e) => setFormData({ ...formData, nomina: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, nomina: e.target.value })
+                }
                 required
                 error={!formData.nomina}
                 helperText={!formData.nomina ? "Campo requerido" : ""}
               />
             </Grid>
 
-            <Grid size={{xs:12,sm:6}}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Puesto *"
                 value={formData.puesto}
-                onChange={(e) => setFormData({ ...formData, puesto: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, puesto: e.target.value })
+                }
                 required
                 error={!formData.puesto}
                 helperText={!formData.puesto ? "Campo requerido" : ""}
               />
             </Grid>
 
-            <Grid size={{xs:12,sm:6}}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Fecha de Ingreso *"
                 type="date"
                 value={formData.fecha_ingreso}
-                onChange={(e) => setFormData({ ...formData, fecha_ingreso: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, fecha_ingreso: e.target.value })
+                }
                 required
                 error={!formData.fecha_ingreso}
                 helperText={!formData.fecha_ingreso ? "Campo requerido" : ""}
@@ -808,21 +965,107 @@ export default function GestionTrabajadores() {
               />
             </Grid>
 
-            <Grid size={{xs:12,sm:6}}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Superintendencia *"
                 value={formData.superintendencia}
-                onChange={(e) => setFormData({ ...formData, superintendencia: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, superintendencia: e.target.value })
+                }
                 required
                 error={!formData.superintendencia}
                 helperText={!formData.superintendencia ? "Campo requerido" : ""}
               />
             </Grid>
 
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                label="Área *"
+                value={formData.area}
+                onChange={(e) =>
+                  setFormData({ ...formData, area: e.target.value })
+                }
+                required
+                error={!formData.area}
+                helperText={!formData.area ? "Campo requerido" : ""}
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12 }}>
+              <Typography
+                variant="subtitle2"
+                color="text.secondary"
+                sx={{ mb: 1 }}
+              >
+                Información Adicional (opcional)
+              </Typography>
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <TextField
+                fullWidth
+                label="Código JDE"
+                value={formData.jde || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, jde: e.target.value })
+                }
+                helperText="Código JDE del trabajador"
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <TextField
+                fullWidth
+                label="N° Bloque"
+                value={formData.no_bloque || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, no_bloque: e.target.value })
+                }
+                helperText="Número de bloque (ej. B-3)"
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <TextField
+                fullWidth
+                label="N° Habitación"
+                value={formData.no_habitacion || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, no_habitacion: e.target.value })
+                }
+                helperText="Número de habitación"
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <TextField
+                fullWidth
+                label="Residencia"
+                value={formData.residencia || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, residencia: e.target.value })
+                }
+                helperText="Campamento o residencia"
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <TextField
+                fullWidth
+                label="Celular"
+                value={formData.celular || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, celular: e.target.value })
+                }
+                helperText="Número de celular"
+              />
+            </Grid>
+
             {!editingTrabajador && isAdmin && (
               <>
-                <Grid size={{xs:12,sm:6}}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <FormControlLabel
                     control={
                       <Checkbox
@@ -842,30 +1085,40 @@ export default function GestionTrabajadores() {
 
                 {formData.crear_usuario_keycloak && (
                   <>
-                    <Grid size={{xs:12,sm:6}}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <TextField
                         fullWidth
                         label="Email *"
                         type="email"
                         value={formData.email || ""}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, email: e.target.value })
+                        }
                         required
-                        error={formData.crear_usuario_keycloak && !formData.email}
-                        helperText={formData.crear_usuario_keycloak && !formData.email ? "Campo requerido" : ""}
+                        error={
+                          formData.crear_usuario_keycloak && !formData.email
+                        }
+                        helperText={
+                          formData.crear_usuario_keycloak && !formData.email
+                            ? "Campo requerido"
+                            : ""
+                        }
                       />
                     </Grid>
 
-                    <Grid size={{xs:12,sm:6}}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <TextField
                         fullWidth
                         label="Username (opcional)"
                         value={formData.username || ""}
-                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, username: e.target.value })
+                        }
                         helperText="Si no se especifica, se generará automáticamente"
                       />
                     </Grid>
 
-                    <Grid size={{xs:12,sm:6}}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <FormControl fullWidth>
                         <InputLabel>Roles del Usuario</InputLabel>
                         <Select
@@ -874,7 +1127,10 @@ export default function GestionTrabajadores() {
                           onChange={(e) =>
                             setFormData({
                               ...formData,
-                              roles: typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value,
+                              roles:
+                                typeof e.target.value === "string"
+                                  ? e.target.value.split(",")
+                                  : e.target.value,
                             })
                           }
                           label="Roles del Usuario"
@@ -882,7 +1138,9 @@ export default function GestionTrabajadores() {
                           <MenuItem value="user">Usuario</MenuItem>
                           <MenuItem value="tecnico">Inspector</MenuItem>
                           <MenuItem value="supervisor">Supervisor</MenuItem>
-                          <MenuItem value="superintendente">Superintendente</MenuItem>
+                          <MenuItem value="superintendente">
+                            Superintendente
+                          </MenuItem>
                           <MenuItem value="admin">Administrador</MenuItem>
                         </Select>
                       </FormControl>
@@ -895,7 +1153,12 @@ export default function GestionTrabajadores() {
         </DialogContent>
 
         <DialogActions sx={{ p: 3, borderTop: "1px solid #e0e0e0" }}>
-          <Button onClick={cerrarModal} color="inherit" disabled={submitting} variant="outlined">
+          <Button
+            onClick={cerrarModal}
+            color="inherit"
+            disabled={submitting}
+            variant="outlined"
+          >
             Cancelar
           </Button>
 
@@ -903,20 +1166,33 @@ export default function GestionTrabajadores() {
             onClick={guardarTrabajador}
             variant="contained"
             disabled={submitting || !validateFormBasic()}
-            startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : null}
+            startIcon={
+              submitting ? <CircularProgress size={16} color="inherit" /> : null
+            }
             color="primary"
           >
-            {submitting ? "Guardando..." : editingTrabajador ? "Actualizar Trabajador" : "Crear Trabajador"}
+            {submitting
+              ? "Guardando..."
+              : editingTrabajador
+                ? "Actualizar Trabajador"
+                : "Crear Trabajador"}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* MODAL PARA CREAR USUARIO PARA TRABAJADOR EXISTENTE */}
-      <Dialog open={openCreateUserModal} onClose={cerrarModalCrearUsuario} maxWidth="sm" fullWidth>
-        <DialogTitle>Crear Usuario para {selectedWorkerForUser?.nomina}</DialogTitle>
+      <Dialog
+        open={openCreateUserModal}
+        onClose={cerrarModalCrearUsuario}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Crear Usuario para {selectedWorkerForUser?.nomina}
+        </DialogTitle>
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
-            <Grid size={{xs:12,sm:6}}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Username *"
@@ -929,11 +1205,15 @@ export default function GestionTrabajadores() {
                 }
                 required
                 error={!createUserForm.username}
-                helperText={!createUserForm.username ? "Campo requerido" : "Nombre de usuario para acceder al sistema"}
+                helperText={
+                  !createUserForm.username
+                    ? "Campo requerido"
+                    : "Nombre de usuario para acceder al sistema"
+                }
               />
             </Grid>
 
-            <Grid size={{xs:12,sm:6}}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Email (opcional)"
@@ -949,7 +1229,7 @@ export default function GestionTrabajadores() {
               />
             </Grid>
 
-            <Grid size={{xs:12,sm:6}}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Contraseña *"
@@ -962,7 +1242,10 @@ export default function GestionTrabajadores() {
                   })
                 }
                 required
-                error={Boolean(createUserForm.password && !validatePassword(createUserForm.password).isValid)}
+                error={Boolean(
+                  createUserForm.password &&
+                  !validatePassword(createUserForm.password).isValid,
+                )}
                 helperText={
                   createUserForm.password
                     ? validatePassword(createUserForm.password).message
@@ -971,7 +1254,7 @@ export default function GestionTrabajadores() {
               />
             </Grid>
 
-            <Grid size={{xs:12,sm:6}}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControlLabel
                 control={
                   <Checkbox
@@ -988,7 +1271,7 @@ export default function GestionTrabajadores() {
               />
             </Grid>
 
-            <Grid size={{xs:12,sm:6}}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Roles del Usuario</InputLabel>
                 <Select
@@ -997,7 +1280,10 @@ export default function GestionTrabajadores() {
                   onChange={(e) =>
                     setCreateUserForm({
                       ...createUserForm,
-                      roles: typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value,
+                      roles:
+                        typeof e.target.value === "string"
+                          ? e.target.value.split(",")
+                          : e.target.value,
                     })
                   }
                   label="Roles del Usuario"
@@ -1014,7 +1300,12 @@ export default function GestionTrabajadores() {
         </DialogContent>
 
         <DialogActions sx={{ p: 3, borderTop: "1px solid #e0e0e0" }}>
-          <Button onClick={cerrarModalCrearUsuario} color="inherit" disabled={submitting} variant="outlined">
+          <Button
+            onClick={cerrarModalCrearUsuario}
+            color="inherit"
+            disabled={submitting}
+            variant="outlined"
+          >
             Cancelar
           </Button>
 
@@ -1027,7 +1318,9 @@ export default function GestionTrabajadores() {
               !createUserForm.password ||
               !validatePassword(createUserForm.password).isValid
             }
-            startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : null}
+            startIcon={
+              submitting ? <CircularProgress size={16} color="inherit" /> : null
+            }
             color="primary"
           >
             {submitting ? "Creando..." : "Crear Usuario"}
@@ -1054,7 +1347,12 @@ export default function GestionTrabajadores() {
         onClose={cerrarNotificacion}
         anchorOrigin={{ vertical: "top", horizontal: "right" }}
       >
-        <Alert onClose={cerrarNotificacion} severity={notification.severity} variant="filled" sx={{ width: "100%" }}>
+        <Alert
+          onClose={cerrarNotificacion}
+          severity={notification.severity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
           {notification.message}
         </Alert>
       </Snackbar>

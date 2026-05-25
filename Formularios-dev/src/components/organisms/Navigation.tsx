@@ -4,7 +4,7 @@ import { NavigationItem } from "../molecules/navigation-item/NavigationItem";
 import { usePathname, useRouter } from "next/navigation";
 import { ExpandLess, ExpandMore } from "@mui/icons-material";
 import { IconName } from "../atoms/Icon";
-import { UserRole } from "@/lib/routePermissions";
+import { Role, UserRole } from "@/lib/routePermissions";
 import { useUserRole } from "@/hooks/useUserRole";
 
 type NavigationItemBase = {
@@ -43,7 +43,7 @@ export const NAVIGATION: NavigationItem[] = [
     segment: "config",
     title: "Configuración",
     icon: "settings",
-    requiredRoles: ["admin"],
+    requiredRoles: [Role.ADMIN],
   },
   {
     segment: "formularios-de-inspeccion",
@@ -54,13 +54,18 @@ export const NAVIGATION: NavigationItem[] = [
     segment: "form-herra-equipos",
     title: "Formulario de Inspección de herramientas y equipos",
     icon: "description",
-    
   },
   {
     segment: "plan-accion",
     title: "Planes de accion",
     icon: "settings",
-    requiredRoles: ["admin", "supervisor", "superintendente"],
+    requiredRoles: [Role.ADMIN, Role.SUPERVISOR, Role.SUPERINTENDENTE],
+  },
+  {
+    segment: "pgr",
+    title: "PGR",
+    icon: "settings",
+    requiredRoles: [Role.ADMIN, Role.SUPERINTENDENTE],
   },
   {
     kind: "divider",
@@ -73,24 +78,31 @@ export const NAVIGATION: NavigationItem[] = [
     segment: "graphics",
     title: "graficas",
     icon: "barChart",
-    requiredRoles: ["admin", "superintendente"],
+    requiredRoles: [Role.ADMIN, Role.SUPERINTENDENTE],
     children: [
       {
         segment: "emergencyinspections",
         title: "inspecciones de sistemas de emergencia",
         icon: "description",
-        requiredRoles: ["admin", "superintendente"],
+        requiredRoles: [Role.ADMIN, Role.SUPERINTENDENTE],
       },
       {
         segment: "extinguishers",
         title: "Extintores",
         icon: "description",
-        requiredRoles: ["admin", "superintendente"],
-      },{
+        requiredRoles: [Role.ADMIN, Role.SUPERINTENDENTE],
+      },
+      {
         segment: "inspectionschedule",
         title: "IRO's ISOP",
         icon: "description",
-        requiredRoles: ["admin", "superintendente"],
+        requiredRoles: [Role.ADMIN, Role.SUPERINTENDENTE],
+      },
+      {
+        segment: "pgr",
+        title: "PGR's",
+        icon: "description",
+        requiredRoles: [Role.ADMIN, Role.SUPERINTENDENTE],
       },
     ],
   },
@@ -98,25 +110,25 @@ export const NAVIGATION: NavigationItem[] = [
     segment: "reports",
     title: "Reports",
     icon: "barChart",
-    requiredRoles: ["admin", "superintendente", "supervisor"],
+    requiredRoles: [Role.ADMIN, Role.SUPERINTENDENTE, Role.SUPERVISOR],
     children: [
       {
         segment: "sistemas-de-emergencia",
         title: "Sistemas de emergencia",
         icon: "description",
-        requiredRoles: ["admin", "superintendente", "supervisor"],
+        requiredRoles: [Role.ADMIN, Role.SUPERINTENDENTE, Role.SUPERVISOR],
       },
       {
         segment: "report-iro-isop",
         title: "IRO's-ISOP",
         icon: "description",
-        requiredRoles: ["admin", "superintendente", "supervisor"],
+        requiredRoles: [Role.ADMIN, Role.SUPERINTENDENTE, Role.SUPERVISOR],
       },
       {
         segment: "report-herra-equipos",
         title: "Herramientas Equipos",
         icon: "description",
-        requiredRoles: ["admin", "superintendente", "supervisor"],
+        requiredRoles: [Role.ADMIN, Role.SUPERINTENDENTE, Role.SUPERVISOR],
       },
     ],
   },
@@ -155,7 +167,7 @@ export function Navigation({ onNavigate }: { onNavigate: () => void }) {
   const renderNavItems = (
     items: NavigationItem[],
     parentSegment = "",
-    level = 0
+    level = 0,
   ) => {
     return items
       .filter(canViewItem) // Filtrar elementos según roles

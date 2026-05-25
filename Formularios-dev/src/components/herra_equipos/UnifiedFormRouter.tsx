@@ -1,12 +1,12 @@
 "use client";
 
 import { Paper, Typography } from "@mui/material";
-import { StandardInspectionForm } from "./StandardInspectionForm";
 import { getFormType } from "./config/form-config.helpers";
 import { FormTemplateHerraEquipos, FormDataHerraEquipos } from "./types/IProps";
-import { GroupedAccessoriesForm } from "./GroupedAccessoriesForm";
-import { VehicleInspectionForm } from "./VehicleInspectionForm";
-import { ScaffoldInspectionForm } from "./ScaffoldInspectionForm";
+import { StandardInspectionForm } from "./presentation/components/forms/StandardInspectionForm";
+import { GroupedAccessoriesForm } from "./presentation/components/forms/GroupedAccessoriesForm";
+import { VehicleInspectionForm } from "./presentation/components/forms/VehicleInspectionForm";
+import { ScaffoldInspectionForm } from "./presentation/components/forms/ScaffoldInspectionForm";
 
 interface UnifiedFormRouterProps {
   template: FormTemplateHerraEquipos;

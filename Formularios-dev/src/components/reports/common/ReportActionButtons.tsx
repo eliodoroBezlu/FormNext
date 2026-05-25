@@ -7,10 +7,11 @@ import {
   Edit as EditIcon,
   PictureAsPdf as PdfIcon,
   TableChart as ExcelIcon,
-  Lock as LockIcon,
   Delete as DeleteIcon,
   ContentCopy as CopyIcon,
 } from "@mui/icons-material";
+import { Can } from "@/components/common/Can";
+import { Permission } from "@/lib/permissions";
 
 interface ReportActionButtonsProps {
   hasPermission?: boolean; // undefined = sin restricción de rol
@@ -31,68 +32,80 @@ interface ReportActionButtonsProps {
 }
 
 const DEFAULT_SHOW = {
-  view: true, edit: true, pdf: true, excel: true,
-  duplicate: false, delete: false,
+  view: true,
+  edit: true,
+  pdf: true,
+  excel: true,
+  duplicate: false,
+  delete: false,
 };
 
 export function ReportActionButtons({
-  hasPermission = true, // por defecto sin restricción
-  onView, onEdit, onDownloadPdf, onDownloadExcel, onDuplicate, onDelete,
+  onView,
+  onEdit,
+  onDownloadPdf,
+  onDownloadExcel,
+  onDuplicate,
+  onDelete,
   show = {},
 }: ReportActionButtonsProps) {
   const config = { ...DEFAULT_SHOW, ...show };
 
-  if (!hasPermission) {
-    return (
-      <Tooltip title="Sin permisos">
-        <LockIcon color="disabled" fontSize="small" />
-      </Tooltip>
-    );
-  }
-
   return (
     <Box display="flex" justifyContent="center">
       {config.view && onView && (
-        <Tooltip title="Ver detalle">
-          <IconButton onClick={onView} color="primary" size="small">
-            <VisibilityIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        <Can perform={Permission.READ_FORM}>
+          <Tooltip title="Ver detalle">
+            <IconButton onClick={onView} color="primary" size="small">
+              <VisibilityIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Can>
       )}
       {config.edit && onEdit && (
-        <Tooltip title="Editar">
-          <IconButton onClick={onEdit} color="primary" size="small">
-            <EditIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        <Can perform={Permission.UPDATE_FORM}>
+          <Tooltip title="Editar">
+            <IconButton onClick={onEdit} color="primary" size="small">
+              <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Can>
       )}
       {config.duplicate && onDuplicate && (
-        <Tooltip title="Duplicar">
-          <IconButton onClick={onDuplicate} color="secondary" size="small">
-            <CopyIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        <Can perform={Permission.DOUBLE_FORM}>
+          <Tooltip title="Duplicar">
+            <IconButton onClick={onDuplicate} color="secondary" size="small">
+              <CopyIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Can>
       )}
       {config.pdf && onDownloadPdf && (
-        <Tooltip title="Descargar PDF">
-          <IconButton onClick={onDownloadPdf} color="secondary" size="small">
-            <PdfIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        <Can perform={Permission.DOWNLOAD_PDF}>
+          <Tooltip title="Descargar PDF">
+            <IconButton onClick={onDownloadPdf} color="secondary" size="small">
+              <PdfIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Can>
       )}
       {config.excel && onDownloadExcel && (
-        <Tooltip title="Descargar Excel">
-          <IconButton onClick={onDownloadExcel} color="success" size="small">
-            <ExcelIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        <Can perform={Permission.DOWNLOAD_EXCEL}>
+          <Tooltip title="Descargar Excel">
+            <IconButton onClick={onDownloadExcel} color="success" size="small">
+              <ExcelIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Can>
       )}
       {config.delete && onDelete && (
-        <Tooltip title="Eliminar">
-          <IconButton onClick={onDelete} color="error" size="small">
-            <DeleteIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        <Can perform={Permission.DELETE_FORM}>
+          <Tooltip title="Eliminar">
+            <IconButton onClick={onDelete} color="error" size="small">
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Can>
       )}
     </Box>
   );

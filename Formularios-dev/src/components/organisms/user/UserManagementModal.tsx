@@ -251,30 +251,30 @@
 //       <DialogTitle>
 //         Gestión de Usuario - {trabajador.nomina}
 //       </DialogTitle>
-      
+
 //       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
 //         <Tabs value={tabValue} onChange={handleTabChange}>
-//           <Tab 
-//             icon={<PersonIcon />} 
-//             label="Información" 
+//           <Tab
+//             icon={<PersonIcon />}
+//             label="Información"
 //             id="user-tab-0"
 //             aria-controls="user-tabpanel-0"
 //           />
-//           <Tab 
-//             icon={<KeyIcon />} 
-//             label="Contraseña" 
+//           <Tab
+//             icon={<KeyIcon />}
+//             label="Contraseña"
 //             id="user-tab-1"
 //             aria-controls="user-tabpanel-1"
 //           />
-//           <Tab 
-//             icon={<SecurityIcon />} 
-//             label="Roles" 
+//           <Tab
+//             icon={<SecurityIcon />}
+//             label="Roles"
 //             id="user-tab-2"
 //             aria-controls="user-tabpanel-2"
 //           />
-//           <Tab 
-//             icon={<HistoryIcon />} 
-//             label="Estado" 
+//           <Tab
+//             icon={<HistoryIcon />}
+//             label="Estado"
 //             id="user-tab-3"
 //             aria-controls="user-tabpanel-3"
 //           />
@@ -301,8 +301,8 @@
 //                     <Typography component="span">
 //                       <strong>Acceso Sistema:</strong>
 //                     </Typography>
-//                     <Chip 
-//                       size="small" 
+//                     <Chip
+//                       size="small"
 //                       color={userInfo.trabajador_info.tiene_acceso_sistema ? "success" : "error"}
 //                       label={userInfo.trabajador_info.tiene_acceso_sistema ? "Activo" : "Inactivo"}
 //                     />
@@ -310,7 +310,7 @@
 //                 </CardContent>
 //               </Card>
 //             </Grid>
-            
+
 //             <Grid size={{ xs: 12, md: 6 }}>
 //               <Card>
 //                 <CardContent>
@@ -323,8 +323,8 @@
 //                     <Typography component="span">
 //                       <strong>Estado:</strong>
 //                     </Typography>
-//                     <Chip 
-//                       size="small" 
+//                     <Chip
+//                       size="small"
 //                       color={userInfo.userInfo.enabled ? "success" : "error"}
 //                       label={userInfo.userInfo.enabled ? "Habilitado" : "Deshabilitado"}
 //                     />
@@ -350,7 +350,7 @@
 //           <Typography variant="h6" gutterBottom>
 //             Actualizar Contraseña
 //           </Typography>
-          
+
 //           <Grid container spacing={3}>
 //             <Grid size={{ xs: 12 }}>
 //               <TextField
@@ -358,30 +358,30 @@
 //                 label="Nueva Contraseña"
 //                 type="password"
 //                 value={passwordForm.new_password}
-//                 onChange={(e) => setPasswordForm({ 
-//                   ...passwordForm, 
-//                   new_password: e.target.value 
+//                 onChange={(e) => setPasswordForm({
+//                   ...passwordForm,
+//                   new_password: e.target.value
 //                 })}
 //                 helperText="Mínimo 8 caracteres"
 //                 error={passwordForm.new_password.length > 0 && passwordForm.new_password.length < 8}
 //               />
 //             </Grid>
-            
+
 //             <Grid size={{ xs: 12 }}>
 //               <FormControlLabel
 //                 control={
 //                   <Checkbox
 //                     checked={passwordForm.temporary}
-//                     onChange={(e) => setPasswordForm({ 
-//                       ...passwordForm, 
-//                       temporary: e.target.checked 
+//                     onChange={(e) => setPasswordForm({
+//                       ...passwordForm,
+//                       temporary: e.target.checked
 //                     })}
 //                   />
 //                 }
 //                 label="Contraseña temporal (el usuario deberá cambiarla en el próximo login)"
 //               />
 //             </Grid>
-            
+
 //             <Grid size={{ xs: 12 }}>
 //               <Button
 //                 variant="contained"
@@ -402,7 +402,7 @@
 //           <Typography variant="h6" gutterBottom>
 //             Gestión de Roles
 //           </Typography>
-          
+
 //           <Grid container spacing={3}>
 //             <Grid size={{ xs: 12 }}>
 //               <FormControl fullWidth>
@@ -411,8 +411,8 @@
 //                   multiple
 //                   value={rolesForm}
 //                   onChange={(e) => setRolesForm(
-//                     typeof e.target.value === 'string' 
-//                       ? e.target.value.split(',') 
+//                     typeof e.target.value === 'string'
+//                       ? e.target.value.split(',')
 //                       : e.target.value
 //                   )}
 //                   label="Roles del Usuario"
@@ -431,7 +431,7 @@
 //                 </Select>
 //               </FormControl>
 //             </Grid>
-            
+
 //             <Grid size={{ xs: 12 }}>
 //               <Button
 //                 variant="contained"
@@ -452,7 +452,7 @@
 //           <Typography variant="h6" gutterBottom>
 //             Gestión de Estado del Usuario
 //           </Typography>
-          
+
 //           <Grid container spacing={3}>
 //             {/* Activar/Desactivar */}
 //             <Grid size={{ xs: 12 }}>
@@ -461,13 +461,13 @@
 //                   <Typography variant="subtitle1" gutterBottom>
 //                     Activar/Desactivar Usuario
 //                   </Typography>
-                  
+
 //                   {userInfo?.keycloak_info?.enabled ? (
 //                     <Box>
 //                       <Typography variant="body2" color="text.secondary" paragraph>
 //                         Desactivar temporalmente el acceso del usuario al sistema.
 //                       </Typography>
-                      
+
 //                       <TextField
 //                         fullWidth
 //                         label="Motivo de desactivación"
@@ -477,7 +477,7 @@
 //                         multiline
 //                         rows={2}
 //                       />
-                      
+
 //                       <Box sx={{ mt: 2 }}>
 //                         <Button
 //                           variant="outlined"
@@ -495,7 +495,7 @@
 //                       <Typography variant="body2" color="text.secondary" paragraph>
 //                         El usuario está desactivado. Puedes reactivarlo.
 //                       </Typography>
-                      
+
 //                       <Button
 //                         variant="contained"
 //                         color="success"
@@ -510,11 +510,11 @@
 //                 </CardContent>
 //               </Card>
 //             </Grid>
-            
+
 //             <Grid size={{ xs: 12 }}>
 //               <Divider />
 //             </Grid>
-            
+
 //             {/* Desvincular */}
 //             <Grid size={{ xs: 12 }}>
 //               <Card>
@@ -522,12 +522,12 @@
 //                   <Typography variant="subtitle1" gutterBottom color="error">
 //                     Desvincular Usuario
 //                   </Typography>
-                  
+
 //                   <Alert severity="warning" sx={{ mb: 2 }}>
-//                     Esta acción desvinculará permanentemente el usuario del trabajador. 
+//                     Esta acción desvinculará permanentemente el usuario del trabajador.
 //                     El usuario se mantendrá en Keycloak pero desactivado.
 //                   </Alert>
-                  
+
 //                   <TextField
 //                     fullWidth
 //                     label="Motivo de desvinculación"
@@ -538,7 +538,7 @@
 //                     rows={2}
 //                     required
 //                   />
-                  
+
 //                   <Box sx={{ mt: 2 }}>
 //                     <Button
 //                       variant="contained"
@@ -566,9 +566,9 @@
 //   );
 // }
 
-"use client"
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -593,22 +593,25 @@ import {
   Divider,
   FormControlLabel,
   Checkbox,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Person as PersonIcon,
-  Security as SecurityIcon,
   History as HistoryIcon,
   Key as KeyIcon,
-} from '@mui/icons-material';
-import { Trabajador } from '@/types/trabajador';
+  AssignmentTurnedIn as AssignmentTurnedInIcon,
+  Security as SecurityIcon,
+} from "@mui/icons-material";
+import { Trabajador } from "@/types/trabajador";
 import {
   obtenerInfoUsuario,
   actualizarContrasenaUsuario,
   actualizarRolesUsuario,
-  desactivarUsuario,
   activarUsuario,
   desvincularUsuario,
-} from '@/lib/actions/trabajador-actions';
+  actualizarPermisosUsuario,
+  desactivarUsuario,
+} from "@/lib/actions/trabajador-actions";
+import { AVAILABLE_PERMISSIONS } from "@/hooks/useUserRole";
 
 interface UserManagementModalProps {
   open: boolean;
@@ -630,6 +633,7 @@ interface UserInfoData {
   username: string;
   email?: string;
   roles: string[];
+  permissions?: string[];
   isTwoFactorEnabled: boolean;
   isActive: boolean;
   createdAt: string;
@@ -678,18 +682,19 @@ export default function UserManagementModal({
 
   // Estados para formularios
   const [passwordForm, setPasswordForm] = useState({
-    new_password: '',
+    new_password: "",
     temporary: true,
   });
 
-  const [rolesForm, setRolesForm] = useState<string[]>(['user']);
+  const [rolesForm, setRolesForm] = useState<string[]>(["user"]);
+  const [permissionsForm, setPermissionsForm] = useState<string[]>([]);
 
   const [disableForm, setDisableForm] = useState({
-    reason: '',
+    reason: "",
   });
 
   const [unlinkForm, setUnlinkForm] = useState({
-    reason: '',
+    reason: "",
   });
 
   const loadUserInfo = useCallback(async () => {
@@ -698,18 +703,21 @@ export default function UserManagementModal({
     try {
       setLoading(true);
       const info = await obtenerInfoUsuario(trabajador._id);
-      console.log('✅ [UserManagementModal] Info cargada:', info);
-      
+      console.log("✅ [UserManagementModal] Info cargada:", info);
+
       const typedInfo = info as UserInfo;
       setUserInfo(typedInfo);
-      
-      // Cargar roles actuales desde la respuesta
+
+      // Cargar roles y permisos actuales desde la respuesta
       if (typedInfo?.user_info?.roles) {
         setRolesForm(typedInfo.user_info.roles);
       }
+      if (typedInfo?.user_info?.permissions) {
+        setPermissionsForm(typedInfo.user_info.permissions);
+      }
     } catch (error) {
-      console.error('❌ [UserManagementModal] Error:', error);
-      onError('Error cargando información del usuario');
+      console.error("❌ [UserManagementModal] Error:", error);
+      onError("Error cargando información del usuario");
     } finally {
       setLoading(false);
     }
@@ -727,11 +735,15 @@ export default function UserManagementModal({
     try {
       setLoading(true);
       await actualizarContrasenaUsuario(trabajador._id, passwordForm);
-      onSuccess('Contraseña actualizada correctamente');
-      setPasswordForm({ new_password: '', temporary: true });
+      onSuccess("Contraseña actualizada correctamente");
+      setPasswordForm({ new_password: "", temporary: true });
       await loadUserInfo();
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Error actualizando contraseña');
+      onError(
+        error instanceof Error
+          ? error.message
+          : "Error actualizando contraseña",
+      );
     } finally {
       setLoading(false);
     }
@@ -743,10 +755,33 @@ export default function UserManagementModal({
     try {
       setLoading(true);
       await actualizarRolesUsuario(trabajador._id, { roles: rolesForm });
-      onSuccess('Roles actualizados correctamente');
+      onSuccess("Roles actualizados correctamente");
       await loadUserInfo();
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Error actualizando roles');
+      onError(
+        error instanceof Error ? error.message : "Error actualizando roles",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePermissionsUpdate = async () => {
+    if (!trabajador) return;
+
+    try {
+      setLoading(true);
+      await actualizarPermisosUsuario(trabajador._id, {
+        permissions: permissionsForm,
+      });
+      onSuccess("Permisos extras actualizados correctamente");
+      await loadUserInfo();
+    } catch (error) {
+      onError(
+        error instanceof Error
+          ? error.message
+          : "Error actualizando permisos extras",
+      );
     } finally {
       setLoading(false);
     }
@@ -758,11 +793,13 @@ export default function UserManagementModal({
     try {
       setLoading(true);
       await desactivarUsuario(trabajador._id, disableForm.reason);
-      onSuccess('Usuario desactivado correctamente');
-      setDisableForm({ reason: '' });
+      onSuccess("Usuario desactivado correctamente");
+      setDisableForm({ reason: "" });
       await loadUserInfo();
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Error desactivando usuario');
+      onError(
+        error instanceof Error ? error.message : "Error desactivando usuario",
+      );
     } finally {
       setLoading(false);
     }
@@ -774,10 +811,12 @@ export default function UserManagementModal({
     try {
       setLoading(true);
       await activarUsuario(trabajador._id);
-      onSuccess('Usuario activado correctamente');
+      onSuccess("Usuario activado correctamente");
       await loadUserInfo();
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Error activando usuario');
+      onError(
+        error instanceof Error ? error.message : "Error activando usuario",
+      );
     } finally {
       setLoading(false);
     }
@@ -787,7 +826,7 @@ export default function UserManagementModal({
     if (!trabajador || !unlinkForm.reason) return;
 
     const confirmed = confirm(
-      '¿Estás seguro de que quieres desvincular este usuario? Esta acción desactivará el acceso al sistema.'
+      "¿Estás seguro de que quieres desvincular este usuario? Esta acción desactivará el acceso al sistema.",
     );
 
     if (!confirmed) return;
@@ -795,10 +834,12 @@ export default function UserManagementModal({
     try {
       setLoading(true);
       await desvincularUsuario(trabajador._id, unlinkForm.reason);
-      onSuccess('Usuario desvinculado correctamente');
+      onSuccess("Usuario desvinculado correctamente");
       onClose();
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Error desvinculando usuario');
+      onError(
+        error instanceof Error ? error.message : "Error desvinculando usuario",
+      );
     } finally {
       setLoading(false);
     }
@@ -825,35 +866,39 @@ export default function UserManagementModal({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        Gestión de Usuario - {trabajador.nomina}
-      </DialogTitle>
-      
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+      <DialogTitle>Gestión de Usuario - {trabajador.nomina}</DialogTitle>
+
+      <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
         <Tabs value={tabValue} onChange={handleTabChange}>
-          <Tab 
-            icon={<PersonIcon />} 
-            label="Información" 
+          <Tab
+            icon={<PersonIcon />}
+            label="Información"
             id="user-tab-0"
             aria-controls="user-tabpanel-0"
           />
-          <Tab 
-            icon={<KeyIcon />} 
-            label="Contraseña" 
+          <Tab
+            icon={<KeyIcon />}
+            label="Contraseña"
             id="user-tab-1"
             aria-controls="user-tabpanel-1"
           />
-          <Tab 
-            icon={<SecurityIcon />} 
-            label="Roles" 
+          <Tab
+            icon={<SecurityIcon />}
+            label="Roles"
             id="user-tab-2"
             aria-controls="user-tabpanel-2"
           />
-          <Tab 
-            icon={<HistoryIcon />} 
-            label="Estado" 
+          <Tab
+            icon={<AssignmentTurnedInIcon />}
+            label="Permisos"
             id="user-tab-3"
             aria-controls="user-tabpanel-3"
+          />
+          <Tab
+            icon={<HistoryIcon />}
+            label="Estado"
+            id="user-tab-4"
+            aria-controls="user-tabpanel-4"
           />
         </Tabs>
       </Box>
@@ -872,39 +917,58 @@ export default function UserManagementModal({
                   <Typography variant="h6" gutterBottom>
                     Información del Trabajador
                   </Typography>
-                  <Typography><strong>CI:</strong> {userInfo.trabajador_info.ci}</Typography>
-                  <Typography><strong>Nómina:</strong> {userInfo.trabajador_info.nomina}</Typography>
+                  <Typography>
+                    <strong>CI:</strong> {userInfo.trabajador_info.ci}
+                  </Typography>
+                  <Typography>
+                    <strong>Nómina:</strong> {userInfo.trabajador_info.nomina}
+                  </Typography>
                   <Box display="flex" alignItems="center" gap={1} mt={1}>
                     <Typography component="span">
                       <strong>Acceso Sistema:</strong>
                     </Typography>
-                    <Chip 
-                      size="small" 
-                      color={userInfo.trabajador_info.tiene_acceso_sistema ? "success" : "error"}
-                      label={userInfo.trabajador_info.tiene_acceso_sistema ? "Activo" : "Inactivo"}
+                    <Chip
+                      size="small"
+                      color={
+                        userInfo.trabajador_info.tiene_acceso_sistema
+                          ? "success"
+                          : "error"
+                      }
+                      label={
+                        userInfo.trabajador_info.tiene_acceso_sistema
+                          ? "Activo"
+                          : "Inactivo"
+                      }
                     />
                   </Box>
                 </CardContent>
               </Card>
             </Grid>
-            
+
             <Grid size={{ xs: 12, md: 6 }}>
               <Card>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
                     Información del Usuario
                   </Typography>
-                  <Typography><strong>Username:</strong> {userInfo.user_info.username}</Typography>
-                  <Typography><strong>Email:</strong> {userInfo.user_info.email || 'No configurado'}</Typography>
-                  
+                  <Typography>
+                    <strong>Username:</strong> {userInfo.user_info.username}
+                  </Typography>
+                  <Typography>
+                    <strong>Email:</strong>{" "}
+                    {userInfo.user_info.email || "No configurado"}
+                  </Typography>
+
                   <Box display="flex" alignItems="center" gap={1} mt={1}>
                     <Typography component="span">
                       <strong>Estado:</strong>
                     </Typography>
-                    <Chip 
-                      size="small" 
+                    <Chip
+                      size="small"
                       color={userInfo.user_info.isActive ? "success" : "error"}
-                      label={userInfo.user_info.isActive ? "Activo" : "Inactivo"}
+                      label={
+                        userInfo.user_info.isActive ? "Activo" : "Inactivo"
+                      }
                     />
                   </Box>
 
@@ -914,24 +978,38 @@ export default function UserManagementModal({
                     </Typography>
                     <Box display="flex" gap={0.5} flexWrap="wrap">
                       {userInfo.user_info.roles.map((role) => (
-                        <Chip key={role} label={role} size="small" color="primary" variant="outlined" />
+                        <Chip
+                          key={role}
+                          label={role}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                        />
                       ))}
                     </Box>
                   </Box>
 
                   <Typography mt={1}>
-                    <strong>2FA:</strong> {userInfo.user_info.isTwoFactorEnabled ? "Habilitado" : "Deshabilitado"}
+                    <strong>2FA:</strong>{" "}
+                    {userInfo.user_info.isTwoFactorEnabled
+                      ? "Habilitado"
+                      : "Deshabilitado"}
                   </Typography>
-                  
+
                   <Typography>
-                    <strong>Creado:</strong> {new Date(userInfo.user_info.createdAt).toLocaleString('es-ES')}
+                    <strong>Creado:</strong>{" "}
+                    {new Date(userInfo.user_info.createdAt).toLocaleString(
+                      "es-ES",
+                    )}
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
           </Grid>
         ) : (
-          <Alert severity="warning">No se pudo cargar la información del usuario</Alert>
+          <Alert severity="warning">
+            No se pudo cargar la información del usuario
+          </Alert>
         )}
       </TabPanel>
 
@@ -941,7 +1019,7 @@ export default function UserManagementModal({
           <Typography variant="h6" gutterBottom>
             Actualizar Contraseña
           </Typography>
-          
+
           <Grid container spacing={3}>
             <Grid size={{ xs: 12 }}>
               <TextField
@@ -949,30 +1027,37 @@ export default function UserManagementModal({
                 label="Nueva Contraseña"
                 type="password"
                 value={passwordForm.new_password}
-                onChange={(e) => setPasswordForm({ 
-                  ...passwordForm, 
-                  new_password: e.target.value 
-                })}
+                onChange={(e) =>
+                  setPasswordForm({
+                    ...passwordForm,
+                    new_password: e.target.value,
+                  })
+                }
                 helperText="Mínimo 8 caracteres con mayúscula, minúscula, número y símbolo"
-                error={passwordForm.new_password.length > 0 && passwordForm.new_password.length < 8}
+                error={
+                  passwordForm.new_password.length > 0 &&
+                  passwordForm.new_password.length < 8
+                }
               />
             </Grid>
-            
+
             <Grid size={{ xs: 12 }}>
               <FormControlLabel
                 control={
                   <Checkbox
                     checked={passwordForm.temporary}
-                    onChange={(e) => setPasswordForm({ 
-                      ...passwordForm, 
-                      temporary: e.target.checked 
-                    })}
+                    onChange={(e) =>
+                      setPasswordForm({
+                        ...passwordForm,
+                        temporary: e.target.checked,
+                      })
+                    }
                   />
                 }
                 label="Contraseña temporal (el usuario deberá cambiarla en el próximo login)"
               />
             </Grid>
-            
+
             <Grid size={{ xs: 12 }}>
               <Button
                 variant="contained"
@@ -993,7 +1078,7 @@ export default function UserManagementModal({
           <Typography variant="h6" gutterBottom>
             Gestión de Roles
           </Typography>
-          
+
           <Grid container spacing={3}>
             <Grid size={{ xs: 12 }}>
               <FormControl fullWidth>
@@ -1001,14 +1086,16 @@ export default function UserManagementModal({
                 <Select
                   multiple
                   value={rolesForm}
-                  onChange={(e) => setRolesForm(
-                    typeof e.target.value === 'string' 
-                      ? e.target.value.split(',') 
-                      : e.target.value
-                  )}
+                  onChange={(e) =>
+                    setRolesForm(
+                      typeof e.target.value === "string"
+                        ? e.target.value.split(",")
+                        : e.target.value,
+                    )
+                  }
                   label="Roles del Usuario"
                   renderValue={(selected) => (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                       {selected.map((value) => (
                         <Chip key={value} label={value} size="small" />
                       ))}
@@ -1022,7 +1109,7 @@ export default function UserManagementModal({
                 </Select>
               </FormControl>
             </Grid>
-            
+
             <Grid size={{ xs: 12 }}>
               <Button
                 variant="contained"
@@ -1037,13 +1124,82 @@ export default function UserManagementModal({
         </Box>
       </TabPanel>
 
-      {/* TAB 4: ESTADO */}
+      {/* TAB 4: PERMISOS */}
       <TabPanel value={tabValue} index={3}>
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            Gestión de Permisos Extra
+          </Typography>
+          <Alert severity="info" sx={{ mb: 3 }}>
+            Los permisos asignados aquí se sumarán a los que el usuario ya posee
+            a través de su rol. Utiliza esto solo para casos extraordinarios
+            individuales.
+          </Alert>
+
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12 }}>
+              <FormControl fullWidth>
+                <InputLabel>Permisos Adicionales</InputLabel>
+                <Select
+                  multiple
+                  value={permissionsForm}
+                  onChange={(e) =>
+                    setPermissionsForm(
+                      typeof e.target.value === "string"
+                        ? e.target.value.split(",")
+                        : e.target.value,
+                    )
+                  }
+                  label="Permisos Adicionales"
+                  renderValue={(selected) => (
+                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                      {selected.map((value) => {
+                        const permLabel =
+                          AVAILABLE_PERMISSIONS.find((p) => p.value === value)
+                            ?.label || value;
+                        return (
+                          <Chip
+                            key={value}
+                            label={permLabel}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                          />
+                        );
+                      })}
+                    </Box>
+                  )}
+                >
+                  {AVAILABLE_PERMISSIONS.map((perm) => (
+                    <MenuItem key={perm.value} value={perm.value}>
+                      {perm.label} ({perm.value})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid size={{ xs: 12 }}>
+              <Button
+                variant="contained"
+                onClick={handlePermissionsUpdate}
+                disabled={loading}
+                startIcon={loading ? <CircularProgress size={16} /> : null}
+              >
+                {loading ? "Actualizando..." : "Actualizar Permisos Extras"}
+              </Button>
+            </Grid>
+          </Grid>
+        </Box>
+      </TabPanel>
+
+      {/* TAB 5: ESTADO */}
+      <TabPanel value={tabValue} index={4}>
         <Box>
           <Typography variant="h6" gutterBottom>
             Gestión de Estado del Usuario
           </Typography>
-          
+
           <Grid container spacing={3}>
             {/* Activar/Desactivar */}
             <Grid size={{ xs: 12 }}>
@@ -1052,30 +1208,39 @@ export default function UserManagementModal({
                   <Typography variant="subtitle1" gutterBottom>
                     Activar/Desactivar Usuario
                   </Typography>
-                  
+
                   {userInfo?.user_info?.isActive ? (
                     <Box>
-                      <Typography variant="body2" color="text.secondary" paragraph>
-                        Desactivar temporalmente el acceso del usuario al sistema.
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        paragraph
+                      >
+                        Desactivar temporalmente el acceso del usuario al
+                        sistema.
                       </Typography>
-                      
+
                       <TextField
                         fullWidth
                         label="Motivo de desactivación"
                         value={disableForm.reason}
-                        onChange={(e) => setDisableForm({ reason: e.target.value })}
+                        onChange={(e) =>
+                          setDisableForm({ reason: e.target.value })
+                        }
                         margin="normal"
                         multiline
                         rows={2}
                       />
-                      
+
                       <Box sx={{ mt: 2 }}>
                         <Button
                           variant="outlined"
                           color="warning"
                           onClick={handleDisableUser}
                           disabled={loading || !disableForm.reason}
-                          startIcon={loading ? <CircularProgress size={16} /> : null}
+                          startIcon={
+                            loading ? <CircularProgress size={16} /> : null
+                          }
                         >
                           {loading ? "Desactivando..." : "Desactivar Usuario"}
                         </Button>
@@ -1083,16 +1248,22 @@ export default function UserManagementModal({
                     </Box>
                   ) : (
                     <Box>
-                      <Typography variant="body2" color="text.secondary" paragraph>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        paragraph
+                      >
                         El usuario está desactivado. Puedes reactivarlo.
                       </Typography>
-                      
+
                       <Button
                         variant="contained"
                         color="success"
                         onClick={handleEnableUser}
                         disabled={loading}
-                        startIcon={loading ? <CircularProgress size={16} /> : null}
+                        startIcon={
+                          loading ? <CircularProgress size={16} /> : null
+                        }
                       >
                         {loading ? "Activando..." : "Activar Usuario"}
                       </Button>
@@ -1101,11 +1272,11 @@ export default function UserManagementModal({
                 </CardContent>
               </Card>
             </Grid>
-            
+
             <Grid size={{ xs: 12 }}>
               <Divider />
             </Grid>
-            
+
             {/* Desvincular */}
             <Grid size={{ xs: 12 }}>
               <Card>
@@ -1113,12 +1284,12 @@ export default function UserManagementModal({
                   <Typography variant="subtitle1" gutterBottom color="error">
                     Desvincular Usuario
                   </Typography>
-                  
+
                   <Alert severity="warning" sx={{ mb: 2 }}>
-                    Esta acción desvinculará permanentemente el usuario del trabajador. 
-                    El usuario quedará desactivado en el sistema.
+                    Esta acción desvinculará permanentemente el usuario del
+                    trabajador. El usuario quedará desactivado en el sistema.
                   </Alert>
-                  
+
                   <TextField
                     fullWidth
                     label="Motivo de desvinculación"
@@ -1129,14 +1300,16 @@ export default function UserManagementModal({
                     rows={2}
                     required
                   />
-                  
+
                   <Box sx={{ mt: 2 }}>
                     <Button
                       variant="contained"
                       color="error"
                       onClick={handleUnlinkUser}
                       disabled={loading || !unlinkForm.reason}
-                      startIcon={loading ? <CircularProgress size={16} /> : null}
+                      startIcon={
+                        loading ? <CircularProgress size={16} /> : null
+                      }
                     >
                       {loading ? "Desvinculando..." : "Desvincular Usuario"}
                     </Button>
@@ -1148,7 +1321,7 @@ export default function UserManagementModal({
         </Box>
       </TabPanel>
 
-      <DialogActions sx={{ p: 3, borderTop: '1px solid #e0e0e0' }}>
+      <DialogActions sx={{ p: 3, borderTop: "1px solid #e0e0e0" }}>
         <Button onClick={onClose} variant="outlined">
           Cerrar
         </Button>

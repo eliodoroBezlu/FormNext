@@ -36,20 +36,34 @@ export const uploadImageToCloudinary = async (
     const buffer = Buffer.from(bytes);
 
     // Subir a Cloudinary usando un Promise
+    const isImage = file.type.startsWith("image/");
+    const uploadOptions: Record<string, unknown> = {
+      folder: "templates-inspecciones",
+      resource_type: isImage ? "auto" : "raw",
+    };
+
+    if (!isImage) {
+      // Los archivos 'raw' (Excel, Word, ZIP) pierden su extensión al subirse por stream si no se especifica.
+      // Forzamos un public_id que incluya la extensión original para que puedan ser descargados correctamente.
+      const ext = file.name.split('.').pop();
+      const randomId = Math.random().toString(36).substring(2, 10);
+      uploadOptions.public_id = `doc_${Date.now()}_${randomId}.${ext}`;
+    }
+
+    if (isImage) {
+      uploadOptions.transformation = [
+        { width: 1200, height: 1200, crop: "limit" },
+        { quality: "auto:good" },
+        { fetch_format: "auto" },
+        { dpr: "auto" },
+        { flags: "progressive" },
+      ];
+    }
+
     const result = await new Promise<CloudinaryUploadResult>((resolve, reject) => {
       cloudinary.uploader
         .upload_stream(
-          {
-            folder: "templates-inspecciones",
-            resource_type: "auto",
-            transformation: [
-              { width: 1200, height: 1200, crop: "limit" },
-              { quality: "auto:good" },
-              { fetch_format: "auto" },
-              { dpr: "auto" },
-              { flags: "progressive" },
-            ],
-          },
+          uploadOptions,
           (error, result) => {
             if (error) reject(error);
             else if (result) resolve(result as CloudinaryUploadResult);

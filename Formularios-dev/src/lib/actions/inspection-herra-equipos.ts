@@ -10,7 +10,8 @@ import {
   InspectionStatus,
   ApprovalData,
 } from "@/components/herra_equipos/types/IProps";
-import { getAuthHeaders } from "./helpers";
+import { getAuthHeaders, handleApiResponse } from "./helpers";
+import { revalidatePath } from "next/cache";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 const INSPECTIONS_ENDPOINT = `${API_BASE_URL}/inspections-herra-equipos`;
@@ -37,7 +38,10 @@ export interface InspectionResponse extends FormDataHerraEquipos {
   updatedAt: string;
   status: InspectionStatus;
   approval?: ApprovalData;
+  /** Área denormalizada extraída de verification al momento de guardar */
+  area?: string;
 }
+
 
 export interface InProgressInspection {
   _id: string;
@@ -77,39 +81,7 @@ interface InspectionPayload {
   approval?: ApprovalData;
 }
 
-async function handleApiResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => "");
-    let errorMessage = `Error ${response.status}: ${response.statusText}`;
-
-    if (errorText) {
-      try {
-        const errorJson = JSON.parse(errorText);
-        errorMessage = errorJson.message || errorJson.error || errorMessage;
-      } catch {
-        errorMessage = errorText.length > 200 ? `${errorText.substring(0, 200)}...` : errorText;
-      }
-    }
-
-    throw new Error(errorMessage);
-  }
-
-  if (response.status === 204) {
-    return {} as T;
-  }
-
-  const contentType = response.headers.get("content-type");
-
-  if (contentType?.includes("application/json")) {
-    return response.json();
-  }
-
-  try {
-    return response.json();
-  } catch {
-    return response.text() as T;
-  }
-}
+// handleApiResponse importada de ./helpers
 
 function mapFormDataToPayload(
   formData: FormDataHerraEquipos,
@@ -129,12 +101,9 @@ function mapFormDataToPayload(
       : {};
 
       const resolvedTemplateId = 
-    typeof templateId === 'object' && templateId !== null
-      ? (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        templateId as any
-      )._id
-      : templateId;
+    typeof templateId === 'object' && templateId !== null && '_id' in templateId
+      ? (templateId as { _id: string })._id
+      : (templateId as string);
 
   return {
     templateId: resolvedTemplateId,
@@ -183,11 +152,7 @@ export async function createInspectionHerraEquipos(
     // ✅ USAR EL STATUS DEL FORMDATA SI EXISTE
     const finalStatus = formData.status || status;
     
-    console.log("📤 [ACTION] Guardando con:");
-    console.log("  - formData.status:", formData.status);
-    console.log("  - status param:", status);
-    console.log("  - finalStatus:", finalStatus);
-    console.log("  - requiresApproval:", formData.requiresApproval);
+    console.log(`[INSPECTION_ACTION] Guardando inspección. Status: ${finalStatus}, RequiresApproval: ${formData.requiresApproval || false}`);
 
     const payload = mapFormDataToPayload(
       formData, 
@@ -205,9 +170,10 @@ export async function createInspectionHerraEquipos(
 
     const result = await handleApiResponse<ApiResponse<InspectionResponse>>(response);
 
-    console.log("✅ [ACTION] Respuesta del servidor:");
-    console.log("  - ID:", result.data?._id);
-    console.log("  - Status guardado:", result.data?.status);
+    revalidatePath("/dashboard/form-herra-equipos");
+    revalidatePath("/dashboard/inspecciones-pendientes");
+
+    console.log(`[INSPECTION_ACTION] Guardada con éxito. ID: ${result.data?._id || "unknown"}`);
 
     return {
       success: true,
@@ -215,7 +181,7 @@ export async function createInspectionHerraEquipos(
       data: result.data,
     };
   } catch (error) {
-    console.error("❌ [ACTION] Error:", error);
+    console.error("❌ [INSPECTION_ACTION] Error al crear inspección:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Error desconocido",
@@ -249,7 +215,10 @@ export async function approveInspection(
 
     const result = await handleApiResponse<ApiResponse<InspectionResponse>>(response);
 
-    console.log("✅ [ACTION] Inspección aprobada:", result);
+    revalidatePath("/dashboard/form-herra-equipos");
+    revalidatePath("/dashboard/inspecciones-pendientes");
+
+    console.log(`[INSPECTION_ACTION] Aprobada con éxito. ID: ${id}`);
 
     return {
       success: true,
@@ -257,7 +226,7 @@ export async function approveInspection(
       data: result.data,
     };
   } catch (error) {
-    console.error("❌ [ACTION] Error al aprobar inspección:", error);
+    console.error(`❌ [INSPECTION_ACTION] Error al aprobar inspección ${id}:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Error desconocido",
@@ -291,7 +260,10 @@ export async function rejectInspection(
 
     const result = await handleApiResponse<ApiResponse<InspectionResponse>>(response);
 
-    console.log("✅ [ACTION] Inspección rechazada:", result);
+    revalidatePath("/dashboard/form-herra-equipos");
+    revalidatePath("/dashboard/inspecciones-pendientes");
+
+    console.log(`[INSPECTION_ACTION] Rechazada con éxito. ID: ${id}`);
 
     return {
       success: true,
@@ -299,7 +271,7 @@ export async function rejectInspection(
       data: result.data,
     };
   } catch (error) {
-    console.error("❌ [ACTION] Error al rechazar inspección:", error);
+    console.error(`❌ [INSPECTION_ACTION] Error al rechazar inspección ${id}:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Error desconocido",
@@ -308,19 +280,28 @@ export async function rejectInspection(
 }
 
 export async function getPendingApprovals(
-  supervisorEmail?: string
+  supervisorUsername?: string,
+  supervisorAreas?: string[],   // array de áreas seleccionadas
+  isAdmin?: boolean,
 ): Promise<ApiResponse<InspectionResponse[]>> {
   try {
     const headers = await getAuthHeaders();
     
     const queryParams = new URLSearchParams();
-    queryParams.append("status", "pending_approval");
     
-    if (supervisorEmail) {
-      queryParams.append("excludeSubmittedBy", supervisorEmail);
+    if (supervisorUsername) {
+      queryParams.append("excludeSubmittedBy", supervisorUsername);
+    }
+    // Enviar áreas como CSV: "Chancado,Flotacion"
+    if (supervisorAreas && supervisorAreas.length > 0) {
+      queryParams.append("areas", supervisorAreas.join(","));
+    }
+    if (isAdmin) {
+      queryParams.append("isAdmin", "true");
     }
 
-    const url = `${INSPECTIONS_ENDPOINT}?${queryParams.toString()}`;
+    // ✅ Endpoint dedicado con lógica de filtrado por área
+    const url = `${INSPECTIONS_ENDPOINT}/pending-approvals?${queryParams.toString()}`;
     
     const response = await fetch(url, {
       method: "GET",
@@ -329,15 +310,13 @@ export async function getPendingApprovals(
 
     const result = await handleApiResponse<ApiResponse<InspectionResponse[]>>(response);
 
-    console.log("📋 [ACTION] Inspecciones pendientes:", result.data?.length || 0);
-
     return {
       success: true,
       data: result.data,
       count: result.count,
     };
   } catch (error) {
-    console.error("❌ [ACTION] Error al obtener pendientes:", error);
+    console.error("❌ [INSPECTION_ACTION] Error al obtener pendientes:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Error desconocido",
@@ -345,6 +324,11 @@ export async function getPendingApprovals(
     };
   }
 }
+
+
+
+
+
 
 export async function saveDraftInspection(
   formData: FormDataHerraEquipos,
@@ -378,8 +362,6 @@ export async function saveProgressInspection(
     project?: string;
   }
 ): Promise<ApiResponse<InspectionResponse>> {
-  console.log("🔄 [ACTION] Guardando en progreso:", templateCode);
-  
   return createInspectionHerraEquipos(
     formData,
     templateId,
@@ -400,13 +382,8 @@ export async function submitInspection(
     project?: string;
   }
 ): Promise<ApiResponse<InspectionResponse>> {
-  console.log("📤 [ACTION] submitInspection:");
-  console.log("  - formData.status:", formData.status);
-  
   // ✅ CORRECCIÓN: Usar el status que viene en formData
   const status = formData.status || InspectionStatus.COMPLETED;
-  
-  console.log("  - Status a usar:", status);
   
   return createInspectionHerraEquipos(
     formData,
@@ -427,12 +404,9 @@ export async function updateInProgressInspection(
     
     const updatePayload: Partial<InspectionPayload> = { ...formData };
 
-    // ✅ CORRECCIÓN: Resolver templateId si viene como objeto populado
-    if (updatePayload.templateId && typeof updatePayload.templateId === 'object') {
-      updatePayload.templateId = (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        updatePayload.templateId as any
-      )._id;
+    // ✅ CORRECCIÓN: Resolver templateId de forma segura si viene populado
+    if (updatePayload.templateId && typeof updatePayload.templateId === 'object' && '_id' in updatePayload.templateId) {
+      updatePayload.templateId = (updatePayload.templateId as { _id: string })._id;
     }
 
     if (status) {
@@ -447,13 +421,16 @@ export async function updateInProgressInspection(
 
     const result = await handleApiResponse<ApiResponse<InspectionResponse>>(response);
 
+    revalidatePath("/dashboard/form-herra-equipos");
+    revalidatePath("/dashboard/inspecciones-pendientes");
+
     return {
       success: true,
       message: result.message || "Inspección actualizada exitosamente",
       data: result.data,
     };
   } catch (error) {
-    console.error("❌ [ACTION] Error al actualizar inspección:", error);
+    console.error(`❌ [INSPECTION_ACTION] Error al actualizar inspección ${id}:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Error desconocido",
@@ -483,15 +460,13 @@ export async function getInProgressInspections(filters?: {
 
     const result = await handleApiResponse<ApiResponse<InProgressInspection[]>>(response);
 
-    console.log("📊 [ACTION] Inspecciones en progreso:", result.data?.length || 0);
-
     return {
       success: true,
       data: result.data,
       count: result.count,
     };
   } catch (error) {
-    console.error("❌ [ACTION] Error al obtener inspecciones en progreso:", error);
+    console.error("❌ [INSPECTION_ACTION] Error al obtener inspecciones en progreso:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Error desconocido",
@@ -533,7 +508,7 @@ export async function getInspectionsHerraEquipos(filters?: {
       count: result.count,
     };
   } catch (error) {
-    console.error("❌ [ACTION] Error al obtener inspecciones:", error);
+    console.error("❌ [INSPECTION_ACTION] Error al obtener inspecciones:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Error desconocido",
@@ -558,7 +533,7 @@ export async function getInspectionById(id: string): Promise<ApiResponse<Inspect
       data: result.data,
     };
   } catch (error) {
-    console.error("❌ [ACTION] Error al obtener inspección:", error);
+    console.error(`❌ [INSPECTION_ACTION] Error al obtener inspección ${id}:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Error desconocido",
@@ -587,7 +562,7 @@ export async function getDraftInspections(userId?: string): Promise<ApiResponse<
       count: result.count,
     };
   } catch (error) {
-    console.error("❌ [ACTION] Error al obtener borradores:", error);
+    console.error("❌ [INSPECTION_ACTION] Error al obtener borradores:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Error desconocido",
@@ -606,12 +581,9 @@ export async function updateInspection(
     
     const updatePayload: Partial<InspectionPayload> = { ...formData };
     
-    // ✅ CORRECCIÓN: Resolver templateId si viene como objeto populado
-    if (updatePayload.templateId && typeof updatePayload.templateId === 'object') {
-      updatePayload.templateId = (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        updatePayload.templateId as any
-      )._id;
+    // ✅ CORRECCIÓN: Resolver templateId de forma segura si viene populado
+    if (updatePayload.templateId && typeof updatePayload.templateId === 'object' && '_id' in updatePayload.templateId) {
+      updatePayload.templateId = (updatePayload.templateId as { _id: string })._id;
     }
     
     if (status) {
@@ -626,13 +598,16 @@ export async function updateInspection(
 
     const result = await handleApiResponse<ApiResponse<InspectionResponse>>(response);
 
+    revalidatePath("/dashboard/form-herra-equipos");
+    revalidatePath("/dashboard/inspecciones-pendientes");
+
     return {
       success: true,
       message: result.message || "Inspección actualizada exitosamente",
       data: result.data,
     };
   } catch (error) {
-    console.error("❌ [ACTION] Error al actualizar inspección:", error);
+    console.error(`❌ [INSPECTION_ACTION] Error al actualizar inspección ${id}:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Error desconocido",
@@ -652,14 +627,17 @@ export async function deleteInspection(id: string): Promise<ApiResponse<null>> {
 
     const result = await handleApiResponse<ApiResponse<null>>(response);
 
-    console.log("✅ [ACTION] Inspección eliminada");
+    revalidatePath("/dashboard/form-herra-equipos");
+    revalidatePath("/dashboard/inspecciones-pendientes");
+
+    console.log(`[INSPECTION_ACTION] Eliminada con éxito. ID: ${id}`);
 
     return {
       success: true,
       message: result.message || "Inspección eliminada exitosamente",
     };
   } catch (error) {
-    console.error("❌ [ACTION] Error al eliminar inspección:", error);
+    console.error(`❌ [INSPECTION_ACTION] Error al eliminar inspección ${id}:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Error desconocido",
@@ -688,7 +666,7 @@ export async function getInspectionStats(templateCode?: string): Promise<ApiResp
       data: result.data,
     };
   } catch (error) {
-    console.error("❌ [ACTION] Error al obtener estadísticas:", error);
+    console.error("❌ [INSPECTION_ACTION] Error al obtener estadísticas:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Error desconocido",
@@ -715,7 +693,7 @@ export async function getInspectionsByTemplateCode(
       count: result.count,
     };
   } catch (error) {
-    console.error("❌ [ACTION] Error al obtener inspecciones por template:", error);
+    console.error("❌ [INSPECTION_ACTION] Error al obtener inspecciones por template:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Error desconocido",
@@ -728,8 +706,6 @@ export async function finalizeInspection(
   id: string,
   formData: FormDataHerraEquipos
 ): Promise<ApiResponse<InspectionResponse>> {
-  console.log("✅ [ACTION] Finalizando inspección:", id);
-  
   return updateInProgressInspection(id, formData, InspectionStatus.COMPLETED);
 }
 

@@ -1,36 +1,37 @@
 // app/dashboard/page.tsx - Dashboard Principal Mejorado
 
-'use client'
+"use client";
 
 import { useState, useEffect } from "react";
-import { 
-  Box, 
-  Grid, 
-  Card, 
-  CardContent, 
+import {
+  Box,
+  Grid,
+  Card,
+  CardContent,
   Alert,
   Paper,
   Chip,
   Avatar,
   LinearProgress,
   IconButton,
-  Tooltip
+  Tooltip,
 } from "@mui/material";
 import { Typography } from "@/components/atoms/Typography";
 import { useUserRole } from "@/hooks/useUserRole";
 import Link from "next/link";
 
 // Icons
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import SecurityIcon from '@mui/icons-material/Security';
-import PersonIcon from '@mui/icons-material/Person';
-import EmailIcon from '@mui/icons-material/Email';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import SettingsIcon from '@mui/icons-material/Settings';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import SecurityIcon from "@mui/icons-material/Security";
+import PersonIcon from "@mui/icons-material/Person";
+import EmailIcon from "@mui/icons-material/Email";
+import AssignmentIcon from "@mui/icons-material/Assignment";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import SettingsIcon from "@mui/icons-material/Settings";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import { getMeAction } from "../actions/auth";
+import { Role } from "@/lib/routePermissions";
 
 // Simulación del usuario - reemplaza esto con tu getMeAction real
 interface User {
@@ -46,11 +47,11 @@ export default function DashboardHome() {
   const { userRole, hasRole } = useUserRole();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-useEffect(() => {
+  useEffect(() => {
     const fetchUser = async () => {
       try {
         // Iniciamos la carga
-        setLoading(true); 
+        setLoading(true);
 
         // Llamamos a la Server Action real
         const userData = await getMeAction();
@@ -80,24 +81,22 @@ useEffect(() => {
 
   const getWelcomeMessage = () => {
     switch (userRole) {
-      case 'admin':
-        return 'Panel de Administrador - Gestión completa del sistema';
-      case 'supervisor':
-        return 'Panel de Supervisor - Revisión y aprobación';
-      case 'tecnico':
-        return 'Panel de Operador - Formularios de inspección y mantenimiento';
-      case 'viewer':
-        return 'Panel de Visualización - Solo lectura';
-      case 'superintendente':
-        return 'Panel de Superintendente - Supervisión general del sistema';
+      case "admin":
+        return "Panel de Administrador - Gestión completa del sistema";
+      case "supervisor":
+        return "Panel de Supervisor - Revisión y aprobación";
+      case "tecnico":
+        return "Panel de Operador - Formularios de inspección y mantenimiento";
+      case "superintendente":
+        return "Panel de Superintendente - Supervisión general del sistema";
       default:
-        return 'Bienvenido al Dashboard';
+        return "Bienvenido al Dashboard";
     }
   };
 
   if (loading || !user) {
     return (
-      <Box sx={{ width: '100%', mt: 2 }}>
+      <Box sx={{ width: "100%", mt: 2 }}>
         <LinearProgress />
       </Box>
     );
@@ -123,19 +122,29 @@ useEffect(() => {
       {/* Stats Grid - Información del Usuario */}
       <Grid container spacing={3}>
         {/* Estado de Cuenta */}
-        <Grid size={{xs: 12, sm: 6, md: 3}}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card elevation={2}>
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                }}
+              >
                 <Box>
-                  <Typography variant="caption" color="text.secondary" gutterBottom>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    gutterBottom
+                  >
                     Estado de Cuenta
                   </Typography>
                   <Typography variant="h5" fontWeight="bold" sx={{ mt: 1 }}>
                     Activa
                   </Typography>
                 </Box>
-                <Avatar sx={{ bgcolor: 'success.main' }}>
+                <Avatar sx={{ bgcolor: "success.main" }}>
                   <CheckCircleIcon />
                 </Avatar>
               </Box>
@@ -144,19 +153,35 @@ useEffect(() => {
         </Grid>
 
         {/* Seguridad 2FA */}
-        <Grid size={{xs: 12, sm: 6, md: 3}}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card elevation={2}>
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                }}
+              >
                 <Box>
-                  <Typography variant="caption" color="text.secondary" gutterBottom>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    gutterBottom
+                  >
                     Seguridad 2FA
                   </Typography>
                   <Typography variant="h5" fontWeight="bold" sx={{ mt: 1 }}>
-                    {user.isTwoFactorEnabled ? 'Activo' : 'Inactivo'}
+                    {user.isTwoFactorEnabled ? "Activo" : "Inactivo"}
                   </Typography>
                 </Box>
-                <Avatar sx={{ bgcolor: user.isTwoFactorEnabled ? 'primary.main' : 'grey.400' }}>
+                <Avatar
+                  sx={{
+                    bgcolor: user.isTwoFactorEnabled
+                      ? "primary.main"
+                      : "grey.400",
+                  }}
+                >
                   <SecurityIcon />
                 </Avatar>
               </Box>
@@ -165,19 +190,33 @@ useEffect(() => {
         </Grid>
 
         {/* Rol */}
-        <Grid size={{xs: 12, sm: 6, md: 3}}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card elevation={2}>
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                }}
+              >
                 <Box>
-                  <Typography variant="caption" color="text.secondary" gutterBottom>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    gutterBottom
+                  >
                     Rol Principal
                   </Typography>
-                  <Typography variant="h5" fontWeight="bold" sx={{ mt: 1, textTransform: 'capitalize' }}>
+                  <Typography
+                    variant="h5"
+                    fontWeight="bold"
+                    sx={{ mt: 1, textTransform: "capitalize" }}
+                  >
                     {user.roles[0]}
                   </Typography>
                 </Box>
-                <Avatar sx={{ bgcolor: 'secondary.main' }}>
+                <Avatar sx={{ bgcolor: "secondary.main" }}>
                   <PersonIcon />
                 </Avatar>
               </Box>
@@ -186,19 +225,29 @@ useEffect(() => {
         </Grid>
 
         {/* Email */}
-        <Grid size={{xs: 12, sm: 6, md: 3}}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card elevation={2}>
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                }}
+              >
                 <Box>
-                  <Typography variant="caption" color="text.secondary" gutterBottom>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    gutterBottom
+                  >
                     Email
                   </Typography>
                   <Typography variant="h5" fontWeight="bold" sx={{ mt: 1 }}>
-                    {user.email ? '✓' : '✗'}
+                    {user.email ? "✓" : "✗"}
                   </Typography>
                 </Box>
-                <Avatar sx={{ bgcolor: user.email ? 'info.main' : 'grey.400' }}>
+                <Avatar sx={{ bgcolor: user.email ? "info.main" : "grey.400" }}>
                   <EmailIcon />
                 </Avatar>
               </Box>
@@ -210,19 +259,33 @@ useEffect(() => {
       {/* Main Content Grid */}
       <Grid container spacing={3}>
         {/* Información de Usuario */}
-        <Grid size={{xs: 12, md: 6}}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card elevation={2}>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+              <Box
+                sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}
+              >
                 <PersonIcon color="primary" />
                 <Typography variant="h6" fontWeight="bold">
                   Información de Usuario
                 </Typography>
               </Box>
-              
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
-                  <Typography variant="body2" color="text.secondary" fontWeight="medium">
+
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    py: 1.5,
+                    borderBottom: 1,
+                    borderColor: "divider",
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    fontWeight="medium"
+                  >
                     Username:
                   </Typography>
                   <Typography variant="body2" fontWeight="bold">
@@ -231,8 +294,20 @@ useEffect(() => {
                 </Box>
 
                 {user.email && (
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
-                    <Typography variant="body2" color="text.secondary" fontWeight="medium">
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      py: 1.5,
+                      borderBottom: 1,
+                      borderColor: "divider",
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      fontWeight="medium"
+                    >
                       Email:
                     </Typography>
                     <Typography variant="body2" fontWeight="bold">
@@ -242,8 +317,20 @@ useEffect(() => {
                 )}
 
                 {user.fullName && (
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
-                    <Typography variant="body2" color="text.secondary" fontWeight="medium">
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      py: 1.5,
+                      borderBottom: 1,
+                      borderColor: "divider",
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      fontWeight="medium"
+                    >
                       Nombre:
                     </Typography>
                     <Typography variant="body2" fontWeight="bold">
@@ -252,16 +339,28 @@ useEffect(() => {
                   </Box>
                 )}
 
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
-                  <Typography variant="body2" color="text.secondary" fontWeight="medium">
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    py: 1.5,
+                    borderBottom: 1,
+                    borderColor: "divider",
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    fontWeight="medium"
+                  >
                     Roles:
                   </Typography>
-                  <Box sx={{ display: 'flex', gap: 0.5 }}>
+                  <Box sx={{ display: "flex", gap: 0.5 }}>
                     {user.roles.map((role) => (
-                      <Chip 
-                        key={role} 
-                        label={role} 
-                        size="small" 
+                      <Chip
+                        key={role}
+                        label={role}
+                        size="small"
                         color="primary"
                         variant="outlined"
                       />
@@ -269,11 +368,24 @@ useEffect(() => {
                   </Box>
                 </Box>
 
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1.5 }}>
-                  <Typography variant="body2" color="text.secondary" fontWeight="medium">
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    py: 1.5,
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    fontWeight="medium"
+                  >
                     ID:
                   </Typography>
-                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontFamily: "monospace", fontSize: "0.85rem" }}
+                  >
                     {user.id.slice(0, 8)}...
                   </Typography>
                 </Box>
@@ -283,10 +395,12 @@ useEffect(() => {
         </Grid>
 
         {/* Seguridad */}
-        <Grid size={{xs: 12, md: 6}}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card elevation={2}>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+              <Box
+                sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}
+              >
                 <SecurityIcon color="success" />
                 <Typography variant="h6" fontWeight="bold">
                   Seguridad
@@ -294,9 +408,21 @@ useEffect(() => {
               </Box>
 
               <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Avatar sx={{ bgcolor: user.isTwoFactorEnabled ? 'success.light' : 'grey.300' }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    <Avatar
+                      sx={{
+                        bgcolor: user.isTwoFactorEnabled
+                          ? "success.light"
+                          : "grey.300",
+                      }}
+                    >
                       {user.isTwoFactorEnabled ? (
                         <CheckCircleIcon color="success" />
                       ) : (
@@ -307,17 +433,21 @@ useEffect(() => {
                       <Typography variant="body2" fontWeight="bold">
                         Autenticación de Dos Factores
                       </Typography>
-                      <Typography 
-                        variant="caption" 
-                        sx={{ color: user.isTwoFactorEnabled ? 'success.main' : 'text.secondary' }}
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: user.isTwoFactorEnabled
+                            ? "success.main"
+                            : "text.secondary",
+                        }}
                       >
-                        {user.isTwoFactorEnabled ? 'Activado ✓' : 'Desactivado'}
+                        {user.isTwoFactorEnabled ? "Activado ✓" : "Desactivado"}
                       </Typography>
                     </Box>
                   </Box>
                   <Tooltip title="Configurar en Settings">
-                    <IconButton 
-                      component={Link} 
+                    <IconButton
+                      component={Link}
                       href="/dashboard/settings"
                       color="primary"
                       size="small"
@@ -343,29 +473,34 @@ useEffect(() => {
         </Grid>
 
         {/* Módulos según rol */}
-        {hasRole('tecnico') && (
-          <Grid >
+        {hasRole(Role.TECNICO) && (
+          <Grid>
             <Card elevation={2}>
               <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <Box
+                  sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}
+                >
                   <AssignmentIcon color="primary" />
                   <Typography variant="h6" fontWeight="bold">
                     Formularios de Inspección
                   </Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary">
-                  Accede a los formularios de inspección de herramientas, equipos y sistemas de emergencia.
+                  Accede a los formularios de inspección de herramientas,
+                  equipos y sistemas de emergencia.
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
         )}
 
-        {hasRole('supervisor') && (
-          <Grid >
+        {hasRole(Role.SUPERVISOR) && (
+          <Grid>
             <Card elevation={2}>
               <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <Box
+                  sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}
+                >
                   <BarChartIcon color="primary" />
                   <Typography variant="h6" fontWeight="bold">
                     Reportes y Analytics
@@ -379,11 +514,13 @@ useEffect(() => {
           </Grid>
         )}
 
-        {hasRole('admin') && (
-          <Grid >
+        {hasRole(Role.ADMIN) && (
+          <Grid>
             <Card elevation={2}>
               <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <Box
+                  sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}
+                >
                   <AdminPanelSettingsIcon color="primary" />
                   <Typography variant="h6" fontWeight="bold">
                     Administración del Sistema
@@ -398,17 +535,22 @@ useEffect(() => {
         )}
 
         {/* Estado del Sistema - Siempre visible */}
-        <Grid >
+        <Grid>
           <Card elevation={2}>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <Box
+                sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}
+              >
                 <CheckCircleIcon color="success" />
                 <Typography variant="h6" fontWeight="bold">
                   Estado del Sistema
                 </Typography>
               </Box>
               <Typography variant="body2" color="text.secondary">
-                Tu rol actual: <strong style={{ textTransform: 'uppercase' }}>{userRole}</strong>
+                Tu rol actual:{" "}
+                <strong style={{ textTransform: "uppercase" }}>
+                  {userRole}
+                </strong>
               </Typography>
             </CardContent>
           </Card>

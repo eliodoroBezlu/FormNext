@@ -46,6 +46,7 @@ export async function GET() {
       username: payload.username,
       email: payload.email,
       roles: payload.roles || [],
+      permissions: payload.permissions || [],
       fullName: payload.fullName,
     };
 

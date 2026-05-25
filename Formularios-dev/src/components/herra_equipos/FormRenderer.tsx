@@ -1,64 +1,76 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, FieldErrors } from "react-hook-form";
 import {
   Box,
   Typography,
   Card,
   CardContent,
-  Button,
   Alert,
   Chip,
   Paper,
 } from "@mui/material";
-import { Save, Send, CheckCircle } from "@mui/icons-material";
+import { CheckCircle } from "@mui/icons-material";
 
 // Componentes compartidos reutilizables
-import { VerificationFields } from "./VerificationsFields";
-import { SectionRenderer } from "./SectionRenderer";
 import { FormDataHerraEquipos, FormTemplateHerraEquipos } from "./types/IProps";
 import { getFormConfig } from "./config/form-config.helpers";
+import { VerificationFields } from "./presentation/components/renderers/VerificationsFields";
+import { SectionRenderer } from "./presentation/components/renderers/SectionRenderer";
+import { SaveSubmitButtons } from "./common/SaveSubmitButtons";
 
 // ============================================
 // PROPS DEL COMPONENTE
 // ============================================
 interface FormFillerProps {
   template: FormTemplateHerraEquipos;
-  onSaveDraft?: (data: FormDataHerraEquipos) => void;    // ✅ Cambiado a FormDataHerraEquipos
-  onSubmit?: (data: FormDataHerraEquipos) => void;  // ✅ Cambiado a FormDataHerraEquipos
+  onSaveDraft?: (data: FormDataHerraEquipos) => void;
+  onSubmit?: (data: FormDataHerraEquipos) => void;
   readonly?: boolean;
   initialData?: FormDataHerraEquipos;
 }
 
-export const FormFiller: React.FC<FormFillerProps> = ({ 
-  template, 
-  onSaveDraft, 
+export const FormFiller: React.FC<FormFillerProps> = ({
+  template,
+  onSaveDraft,
   onSubmit,
-  readonly = false, 
+  readonly = false,
   initialData,
 }) => {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  
-  // ✅ Llamar a useForm ANTES de cualquier return condicional
+  const [hasSubmitErrors, setHasSubmitErrors] = useState(false);
+
+  // ✅ Llamar a useForm ANTES de cualquier return condicional con mode: "onTouched"
   const {
     control,
     setValue,
     handleSubmit,
+    getValues,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty, isSubmitting },
   } = useForm<FormDataHerraEquipos>({
-    defaultValues: {
+    defaultValues: initialData || {
       verification: {},
       responses: {},
     },
+    mode: "onTouched",
   });
+
+  // Warn before leaving with unsaved changes
+  useEffect(() => {
+    if (!isDirty || readonly) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty, readonly]);
 
   useEffect(() => {
     if (initialData) {
-      console.log("🔄 Cargando datos iniciales:", initialData)
-      reset(initialData) ;
-      console.log("✅ Datos cargados");
+      reset(initialData);
     }
   }, [initialData, reset]);
 
@@ -76,40 +88,41 @@ export const FormFiller: React.FC<FormFillerProps> = ({
   }
 
   // ============================================
-  // HANDLER: Guardar Borrador
+  // HANDLERS: Enviar y Borrador
   // ============================================
-  const handleSaveDraft = (data: FormDataHerraEquipos) => {
-    console.log("=".repeat(60));
-    console.log("💾 [FormFiller] GUARDAR BORRADOR");
-    console.log("=".repeat(60));
-    console.log("Template:", template.code);
-    console.log("Datos:", data);
-    console.log("=".repeat(60));
-
+  const handleSaveDraft = () => {
     setSaveMessage("Borrador guardado exitosamente");
     setTimeout(() => setSaveMessage(null), 3000);
-
     if (onSaveDraft) {
-      onSaveDraft(data); // ✅ Ahora pasa FormDataHerraEquipos directamente
+      onSaveDraft(getValues());
     }
   };
 
-  // ============================================
-  // HANDLER: Submit Final
-  // ============================================
   const handleFinalSubmit = (data: FormDataHerraEquipos) => {
-    console.log("=".repeat(60));
-    console.log("📤 [FormFiller] SUBMIT FINAL");
-    console.log("=".repeat(60));
-    console.log("Template:", template.code);
-    console.log("Datos:", data);
-    console.log("=".repeat(60));
-
+    setHasSubmitErrors(false);
     setSaveMessage("Formulario enviado exitosamente");
+    if (onSubmit) onSubmit(data);
+  };
 
-    if (onSubmit) {
-      onSubmit(data); // ✅ Ahora pasa FormDataHerraEquipos directamente
-    }
+  // Scroll to first invalid field when validation fails
+  const handleInvalidSubmit = (errors: FieldErrors<FormDataHerraEquipos>) => {
+    console.error("Form submission errors:", errors);
+    setHasSubmitErrors(true);
+    // Double rAF: first frame commits React's state update, second frame commits the DOM paint
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const firstInvalid = document.querySelector<HTMLElement>(
+          '[data-question-error="true"], [aria-invalid="true"]',
+        );
+        if (firstInvalid) {
+          firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
+          const focusable = firstInvalid.querySelector<HTMLElement>(
+            "input, textarea, button[aria-pressed]",
+          );
+          (focusable ?? firstInvalid).focus?.();
+        }
+      });
+    });
   };
 
   // ============================================
@@ -124,10 +137,17 @@ export const FormFiller: React.FC<FormFillerProps> = ({
             {template.name}
           </Typography>
           <Box display="flex" gap={2} flexWrap="wrap">
-            <Chip label={`Código: ${template.code}`} sx={{ backgroundColor: "white" }} />
+            <Chip
+              label={`Código: ${template.code}`}
+              sx={{ backgroundColor: "white" }}
+            />
             <Chip label={template.revision} sx={{ backgroundColor: "white" }} />
             <Chip
-              label={template.type === "interna" ? "Inspección Interna" : "Inspección Externa"}
+              label={
+                template.type === "interna"
+                  ? "Inspección Interna"
+                  : "Inspección Externa"
+              }
               sx={{ backgroundColor: "white" }}
             />
           </Box>
@@ -140,14 +160,25 @@ export const FormFiller: React.FC<FormFillerProps> = ({
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit(handleFinalSubmit)}>
+      {hasSubmitErrors && Object.keys(errors).length > 0 && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setHasSubmitErrors(false)}>
+          Hay campos con errores. Revise el formulario — los campos marcados en rojo requieren su atención.
+        </Alert>
+      )}
+
+      <Box
+        component="form"
+        onSubmit={handleSubmit(handleFinalSubmit, handleInvalidSubmit)}
+        noValidate
+        sx={{ display: "flex", flexDirection: "column", gap: 3 }}
+      >
         {/* Campos de verificación reutilizables */}
         <VerificationFields
           fields={template.verificationFields}
           control={control}
           errors={errors}
           readonly={readonly}
-          setValue={setValue} 
+          setValue={setValue}
         />
 
         {/* Secciones del formulario */}
@@ -165,26 +196,16 @@ export const FormFiller: React.FC<FormFillerProps> = ({
           ))}
         </Box>
 
-        {/* Botones de acción */}
+        {/* Botones de acción unificados */}
         {!readonly && (
-          <Box display="flex" gap={2} justifyContent="flex-end">
-            <Button
-              variant="outlined"
-              startIcon={<Save />}
-              onClick={handleSubmit(handleSaveDraft)}
-            >
-              Guardar Borrador
-            </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              startIcon={<Send />}
-            >
-              Enviar Formulario
-            </Button>
-          </Box>
+          <SaveSubmitButtons
+            onSaveDraft={onSaveDraft ? handleSaveDraft : undefined}
+            onSubmit={handleSubmit(handleFinalSubmit, handleInvalidSubmit)}
+            isSubmitting={isSubmitting}
+            allowDraft={config.allowDraft ?? true}
+          />
         )}
-      </form>
+      </Box>
     </Box>
   );
 };

@@ -36,6 +36,7 @@ export async function crearInspeccion(data: FormData): Promise<FormData> {
 
   const result = await handleApiResponse<FormData>(response);
   revalidatePath("/inspecciones");
+  revalidatePath("/dashboard/formularios-de-inspeccion");
   return result;
 }
 
@@ -97,6 +98,7 @@ export async function actualizarInspeccion(
 
   const result = await handleApiResponse<FormDataExport>(response);
   revalidatePath("/inspecciones");
+  revalidatePath("/dashboard/formularios-de-inspeccion");
   return result;
 }
 
@@ -110,6 +112,7 @@ export async function eliminarInspeccion(id: string): Promise<void> {
 
   await handleApiResponse<{ success: boolean }>(response);
   revalidatePath("/inspecciones");
+  revalidatePath("/dashboard/formularios-de-inspeccion");
 }
 
 export async function descargarPdf(id: string): Promise<Blob> {
@@ -189,6 +192,7 @@ export async function crearFormSistemasEmergencia(
 
   const result = await handleApiResponse<FormularioInspeccion>(response);
   revalidatePath("/inspecciones-emergencia");
+  revalidatePath("/dashboard/formularios-de-inspeccion");
   return result;
 }
 
@@ -211,6 +215,7 @@ export async function actualizarMesPorTag(
 
   const result = await handleApiResponse<FormularioInspeccion>(response);
   revalidatePath("/inspecciones-emergencia");
+  revalidatePath("/dashboard/formularios-de-inspeccion");
   return result;
 }
 
@@ -403,6 +408,7 @@ export async function actualizarExtintoresPorTag(
     response
   );
   revalidatePath("/inspecciones-emergencia");
+  revalidatePath("/dashboard/formularios-de-inspeccion");
   return result;
 }
 
