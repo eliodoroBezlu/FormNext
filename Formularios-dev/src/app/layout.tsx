@@ -2,9 +2,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeContextProvider } from "@/styles/ThemeContext";
-import { LocalizationWrapper } from "@/components/LocalizationWrapper";
+import { LocalizationWrapper } from "@/components/layout/wrappers/LocalizationWrapper";
 import { Suspense } from "react";
-import { SessionErrorHandler } from "@/components/SessionErrorHandler";
+import { SessionErrorHandler } from "@/components/layout/wrappers/SessionErrorHandler";
 
 export const metadata: Metadata = {
   title: "Forms",

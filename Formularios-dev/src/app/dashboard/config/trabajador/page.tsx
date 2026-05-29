@@ -53,9 +53,9 @@ import {
   obtenerTrabajadores,
   obtenerTrabajadorPorId,
 } from "@/lib/actions/trabajador-actions";
-import UserManagementModal from "@/components/organisms/user/UserManagementModal";
+import UserManagementModal from "@/components/features/user/presentation/components/UserManagementModal";
 import { useUserRole } from "@/hooks/useUserRole";
-import { Can } from "@/components/common/Can";
+import { Can } from "@/components/layout/wrappers/Can";
 import { Permission } from "@/lib/permissions";
 
 const initialFormData: TrabajadorForm = {

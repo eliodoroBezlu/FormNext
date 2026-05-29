@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { InspeccionSistemasEmergencia } from "@/components/form-sistemas-emergencia/InspeccionSistemasEmergencia";
+import { InspeccionSistemasEmergencia } from "@/components/features/sistemas-emergencia/InspeccionSistemasEmergencia";
 
 export default function SeleccionTagPage() {
   const router = useRouter();

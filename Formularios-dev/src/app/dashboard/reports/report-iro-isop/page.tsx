@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import {
   Paper,
   Typography,
@@ -23,7 +23,7 @@ import {
   Assignment as FormIcon,
   TrendingUp as TrendingUpIcon,
 } from "@mui/icons-material";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { FormInstance, FormTemplate } from "@/types/formTypes";
 import { getTemplates } from "@/lib/actions/template-actions";
 import {
@@ -34,17 +34,17 @@ import {
   descargarExcelIroIsopCliente,
   descargarPdfIroIsopCliente,
 } from "@/lib/actions/client";
-import AutocompleteCustom from "@/components/molecules/autocomplete-custom/AutocompleteCustom";
+import AutocompleteCustom from "@/components/ui/autocomplete/AutocompleteCustom";
 
 // ✅ Componentes comunes
-import { Can } from "@/components/common/Can";
+import { Can } from "@/components/layout/wrappers/Can";
 import { Permission } from "@/lib/permissions";
 import {
   ReportTable,
   ReportColumn,
-} from "@/components/reports/common/ReportTable";
-import { ReportActionButtons } from "@/components/reports/common/ReportActionButtons";
-import { ReportStateHandler } from "@/components/reports/common/ReportStateHandler";
+} from "@/components/features/reports/presentation/components/ReportTable";
+import { ReportActionButtons } from "@/components/features/reports/presentation/components/ReportActionButtons";
+import { ReportStateHandler } from "@/components/features/reports/presentation/components/ReportStateHandler";
 
 const ESTADOS_FORMULARIO = [
   { value: "borrador", label: "Borrador", color: "default" as const },
@@ -53,8 +53,10 @@ const ESTADOS_FORMULARIO = [
   { value: "aprobado", label: "Aprobado", color: "success" as const },
 ];
 
-export default function ListarInspeccionesIroIsop() {
+function ListarInspeccionesIroIsopComponent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   const [instancias, setInstancias] = useState<FormInstance[]>([]);
   const [templates, setTemplates] = useState<FormTemplate[]>([]);
@@ -63,9 +65,7 @@ export default function ListarInspeccionesIroIsop() {
   const [error, setError] = useState<string | null>(null);
   const [mostrarResultados, setMostrarResultados] = useState(false);
 
-  // Paginación server-side
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  // Paginación client-side
   const [totalItems, setTotalItems] = useState(0);
 
   // Filtros
@@ -100,33 +100,59 @@ export default function ListarInspeccionesIroIsop() {
     cargarTemplates();
   }, []);
 
-  // ── Búsqueda ──────────────────────────────────────────────────────────────
-  const buscarInstancias = async (
-    overridePage?: number,
-    overrideRowsPerPage?: number,
-  ) => {
+  // ── Búsqueda y Filtros de URL ─────────────────────────────────────────────
+  const buscarInstancias = async (paramsFromUrl?: {
+    templateId?: string;
+    status?: string;
+    createdBy?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    minCompliance?: string;
+    maxCompliance?: string;
+    area?: string;
+    superintendencia?: string;
+    search?: string;
+  }) => {
     try {
       setLoading(true);
       setError(null);
 
-      const currentPage = overridePage ?? page;
-      const currentRows = overrideRowsPerPage ?? rowsPerPage;
+      // 1. Usar parámetros de la URL o el estado actual
+      const tId = paramsFromUrl ? (paramsFromUrl.templateId ?? "") : templateIdFilter;
+      const status = paramsFromUrl ? (paramsFromUrl.status ?? "") : statusFilter;
+      const createdBy = paramsFromUrl ? (paramsFromUrl.createdBy ?? "") : createdByFilter;
+      const dateFrom = paramsFromUrl ? (paramsFromUrl.dateFrom ?? "") : dateFromFilter;
+      const dateTo = paramsFromUrl ? (paramsFromUrl.dateTo ?? "") : dateToFilter;
+      const minComp = paramsFromUrl ? (paramsFromUrl.minCompliance ?? "") : minComplianceFilter;
+      const maxComp = paramsFromUrl ? (paramsFromUrl.maxCompliance ?? "") : maxComplianceFilter;
+      const area = paramsFromUrl ? (paramsFromUrl.area ?? "") : areaFilter;
+      const sup = paramsFromUrl ? (paramsFromUrl.superintendencia ?? "") : superintendenciaFilter;
+      const search = paramsFromUrl ? (paramsFromUrl.search ?? "") : searchFilter;
 
-      const filters: GetInstancesFilters = {};
-      if (templateIdFilter) filters.templateId = templateIdFilter;
-      if (statusFilter) filters.status = statusFilter;
-      if (createdByFilter) filters.createdBy = createdByFilter;
-      if (dateFromFilter) filters.dateFrom = new Date(dateFromFilter);
-      if (dateToFilter) filters.dateTo = new Date(dateToFilter);
-      if (minComplianceFilter)
-        filters.minCompliance = parseFloat(minComplianceFilter);
-      if (maxComplianceFilter)
-        filters.maxCompliance = parseFloat(maxComplianceFilter);
-      if (areaFilter) filters.area = areaFilter;
-      if (superintendenciaFilter)
-        filters.superintendencia = superintendenciaFilter;
-      filters.page = currentPage + 1;
-      filters.limit = currentRows;
+      // 2. Si no es invocación desde useEffect de la URL, actualizar los query params de la barra
+      if (!paramsFromUrl) {
+        const queryParams = new URLSearchParams();
+        if (tId) queryParams.set("templateId", tId);
+        if (status) queryParams.set("status", status);
+        if (createdBy) queryParams.set("createdBy", createdBy);
+        if (dateFrom) queryParams.set("dateFrom", dateFrom);
+        if (dateTo) queryParams.set("dateTo", dateTo);
+        if (minComp) queryParams.set("minCompliance", minComp);
+        if (maxComp) queryParams.set("maxCompliance", maxComp);
+        if (area) queryParams.set("area", area);
+        if (sup) queryParams.set("superintendencia", sup);
+        if (search) queryParams.set("search", search);
+
+        router.push(`${pathname}?${queryParams.toString()}`);
+      }
+
+      // 3. Preparar filtros estables para el backend (con un límite alto)
+      const filters: GetInstancesFilters = { limit: 10000 };
+      if (tId) filters.templateId = tId;
+      if (status) filters.status = status;
+      if (createdBy) filters.createdBy = createdBy;
+      if (dateFrom) filters.dateFrom = new Date(dateFrom);
+      if (dateTo) filters.dateTo = new Date(dateTo);
 
       const response = await getInstances(filters);
 
@@ -137,11 +163,46 @@ export default function ListarInspeccionesIroIsop() {
             ? response.data
             : [];
 
-        if (searchFilter.trim()) {
-          const searchLower = searchFilter.toLowerCase().trim();
+        // 4. Filtrado en el cliente para resolver discrepancias de claves
+        // Área
+        if (area) {
+          const areaLower = area.toLowerCase();
+          fetchedData = fetchedData.filter((i) => {
+            const vl = i.verificationList || {};
+            const val = String(vl["Área"] || vl["area"] || vl["Area Física"] || "");
+            return val.toLowerCase() === areaLower;
+          });
+        }
+
+        // Superintendencia
+        if (sup) {
+          const supLower = sup.toLowerCase();
+          fetchedData = fetchedData.filter((i) => {
+            const vl = i.verificationList || {};
+            const val = String(vl["Superintendencia"] || vl["superintendencia"] || "");
+            return val.toLowerCase() === supLower;
+          });
+        }
+
+        // Cumplimiento
+        if (minComp) {
+          const min = parseFloat(minComp);
+          if (!isNaN(min)) {
+            fetchedData = fetchedData.filter((i) => (i.overallCompliancePercentage ?? 0) >= min);
+          }
+        }
+        if (maxComp) {
+          const max = parseFloat(maxComp);
+          if (!isNaN(max)) {
+            fetchedData = fetchedData.filter((i) => (i.overallCompliancePercentage ?? 0) <= max);
+          }
+        }
+
+        // Búsqueda por texto (en todos los campos de verificationList)
+        if (search.trim()) {
+          const searchLower = search.toLowerCase().trim();
           fetchedData = fetchedData.filter((i) => {
             const haystack = [
-              // ✅ Busca dinámicamente en TODOS los campos de verificationList
               ...Object.keys(i.verificationList || {}),
               ...Object.values(i.verificationList || {}).map((v) => String(v)),
             ]
@@ -152,18 +213,7 @@ export default function ListarInspeccionesIroIsop() {
         }
 
         setInstancias(fetchedData);
-
-        if (Array.isArray(response.data.data)) {
-          setTotalItems(
-            searchFilter.trim()
-              ? fetchedData.length
-              : (response.data.total ?? fetchedData.length),
-          );
-          if (response.data.page) setPage(response.data.page - 1);
-        } else {
-          setTotalItems(fetchedData.length);
-        }
-
+        setTotalItems(fetchedData.length);
         setMostrarResultados(true);
       } else {
         setInstancias([]);
@@ -179,6 +229,57 @@ export default function ListarInspeccionesIroIsop() {
     }
   };
 
+  // Inicializar filtros desde la URL al montar o cambiar params
+  useEffect(() => {
+    const templateId = searchParams.get("templateId") || "";
+    const status = searchParams.get("status") || "";
+    const createdBy = searchParams.get("createdBy") || "";
+    const dateFrom = searchParams.get("dateFrom") || "";
+    const dateTo = searchParams.get("dateTo") || "";
+    const minCompliance = searchParams.get("minCompliance") || "";
+    const maxCompliance = searchParams.get("maxCompliance") || "";
+    const area = searchParams.get("area") || "";
+    const superintendencia = searchParams.get("superintendencia") || "";
+    const search = searchParams.get("search") || "";
+
+    setTemplateIdFilter(templateId);
+    setStatusFilter(status);
+    setCreatedByFilter(createdBy);
+    setDateFromFilter(dateFrom);
+    setDateToFilter(dateTo);
+    setMinComplianceFilter(minCompliance);
+    setMaxComplianceFilter(maxCompliance);
+    setAreaFilter(area);
+    setSuperintendenciaFilter(superintendencia);
+    setSearchFilter(search);
+
+    if (
+      templateId ||
+      status ||
+      createdBy ||
+      dateFrom ||
+      dateTo ||
+      minCompliance ||
+      maxCompliance ||
+      area ||
+      superintendencia ||
+      search
+    ) {
+      buscarInstancias({
+        templateId,
+        status,
+        createdBy,
+        dateFrom,
+        dateTo,
+        minCompliance,
+        maxCompliance,
+        area,
+        superintendencia,
+        search,
+      });
+    }
+  }, [searchParams]);
+
   const limpiarFiltros = () => {
     setTemplateIdFilter("");
     setStatusFilter("");
@@ -193,20 +294,8 @@ export default function ListarInspeccionesIroIsop() {
     setInstancias([]);
     setMostrarResultados(false);
     setError(null);
-    setPage(0);
     setTotalItems(0);
-  };
-
-  // Paginación server-side — relanza búsqueda con nueva página
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-    buscarInstancias(newPage, rowsPerPage);
-  };
-
-  const handleRowsPerPageChange = (newRows: number) => {
-    setRowsPerPage(newRows);
-    setPage(0);
-    buscarInstancias(0, newRows);
+    router.push(pathname);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -581,15 +670,18 @@ export default function ListarInspeccionesIroIsop() {
             rowKey={(row) => row._id}
             size="small"
             emptyMessage="No se encontraron resultados."
-            paginationMode="external"
-            totalItems={totalItems}
-            page={page}
-            rowsPerPage={rowsPerPage}
-            onPageChange={handlePageChange}
-            onRowsPerPageChange={handleRowsPerPageChange}
+            paginationMode="internal"
           />
         )}
       </ReportStateHandler>
     </Container>
+  );
+}
+
+export default function ListarInspeccionesIroIsop() {
+  return (
+    <Suspense fallback={null}>
+      <ListarInspeccionesIroIsopComponent />
+    </Suspense>
   );
 }

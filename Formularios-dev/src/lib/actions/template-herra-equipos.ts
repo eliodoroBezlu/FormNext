@@ -2,7 +2,7 @@
 
 import { API_BASE_URL } from "@/lib/constants"; 
 import {  getAuthHeaders, handleApiResponse } from "./helpers";
-import { FormBuilderDataHerraEquipos } from "@/components/herra_equipos/domain/models/BuilderTypes";
+import { FormBuilderDataHerraEquipos } from "@/components/features/herra-equipos/domain/models/BuilderTypes";
 import { revalidatePath } from "next/cache";
 
 // Tipos de respuesta

@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import RegisterForm from '@/components/auth/RegisterForm';
+import RegisterForm from '@/components/features/auth/presentation/components/RegisterForm';
 import { Box, Container, Typography,  Grid, Card, CardContent } from '@mui/material';
 import { 
   Lock as LockIcon,

@@ -5,9 +5,9 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation"; // 🔥 Agregamos useSearchParams
 import { Box, CircularProgress, Typography, Alert, Chip } from "@mui/material";
 import { ArrowBack, Visibility } from "@mui/icons-material";
-import { Button } from "@/components/atoms/button/Button";
+import { Button } from "@/components/ui/buttons/Button";
 
-import { InspectionFormIroIsop } from "@/components/organisms/inspection-form-iro-isop/InspectionFormIroIsop";
+import { InspectionFormIroIsop } from "@/components/features/iro-isop/InspectionFormIroIsop";
 import {
   getInstanceById,
   updateInstance,

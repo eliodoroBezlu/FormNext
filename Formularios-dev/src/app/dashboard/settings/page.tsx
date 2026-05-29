@@ -13,9 +13,9 @@ import {
   Divider,
   IconButton,
   Tooltip,
-  CircularProgress
+  CircularProgress,
+  Typography,
 } from "@mui/material";
-import { Typography } from "@/components/atoms/Typography";
 import Link from "next/link";
 
 // Icons

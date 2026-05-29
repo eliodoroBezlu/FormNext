@@ -5,12 +5,12 @@ import { useParams, useRouter } from "next/navigation";
 import { Box, CircularProgress, Alert, Button, Snackbar } from "@mui/material";
 import { ArrowBack, Lock } from "@mui/icons-material";
 import { getTemplatesHerraEquipos } from "@/lib/actions/template-herra-equipos";
-import { FormFiller } from "@/components/herra_equipos/FormRenderer";
+import { FormFiller } from "@/components/features/herra-equipos/FormRenderer";
 import {
   FormTemplateHerraEquipos,
   FormDataHerraEquipos,
-} from "@/components/herra_equipos/types/IProps";
-import { UnifiedFormRouter } from "@/components/herra_equipos/UnifiedFormRouter";
+} from "@/components/features/herra-equipos/types/IProps";
+import { UnifiedFormRouter } from "@/components/features/herra-equipos/UnifiedFormRouter";
 import {
   saveDraftInspection,
   submitInspection,
@@ -19,7 +19,7 @@ import {
   getInspectionById,
   updateInspection,
 } from "@/lib/actions/inspection-herra-equipos";
-import { TagVerificationModal } from "@/components/herra_equipos/common/TagVerificationModal";
+import { TagVerificationModal } from "@/components/features/herra-equipos/common/TagVerificationModal";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SPECIALIZED_FORMS: Record<string, React.ComponentType<any>> = {
@@ -80,6 +80,16 @@ export default function FormularioDinamicoPage() {
 
   // ── Detección de modo aprobación ──
   const isPendingApproval = existingInspection?.status === "pending_approval";
+
+  const getRedirectUrl = () => {
+    if (existingInspection?.status === "pending_approval") {
+      return "/dashboard/form-herra-equipos?tab=pending-approval";
+    }
+    if (existingInspection?.status === "in_progress") {
+      return "/dashboard/form-herra-equipos?tab=in-progress";
+    }
+    return "/dashboard/form-herra-equipos";
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -265,7 +275,10 @@ export default function FormularioDinamicoPage() {
           message: "Guardado en Progreso",
           severity: "success",
         });
-        setTimeout(() => router.push("/dashboard/form-herra-equipos"), 2000);
+        setTimeout(() => {
+          router.push(getRedirectUrl());
+          router.refresh();
+        }, 2000);
       }
     } catch (err) {
       console.error("Error al guardar progreso:", err);
@@ -309,7 +322,10 @@ export default function FormularioDinamicoPage() {
           message: "Inspección finalizada",
           severity: "success",
         });
-        setTimeout(() => router.push("/dashboard/form-herra-equipos"), 2000);
+        setTimeout(() => {
+          router.push(getRedirectUrl());
+          router.refresh();
+        }, 2000);
       }
     } catch (err) {
       console.error("Error al finalizar:", err);
@@ -354,7 +370,10 @@ export default function FormularioDinamicoPage() {
           message: "Formulario enviado exitosamente",
           severity: "success",
         });
-        setTimeout(() => router.push("/dashboard/form-herra-equipos"), 2000);
+        setTimeout(() => {
+          router.push(getRedirectUrl());
+          router.refresh();
+        }, 2000);
       } else {
         throw new Error(result.error || "Error al enviar formulario");
       }
@@ -478,7 +497,10 @@ export default function FormularioDinamicoPage() {
       <Button
         variant="outlined"
         startIcon={<ArrowBack />}
-        onClick={() => router.push("/dashboard/form-herra-equipos")}
+        onClick={() => {
+          router.push(getRedirectUrl());
+          router.refresh();
+        }}
         sx={{ m: 2 }}
         disabled={saving}
       >

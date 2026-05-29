@@ -8,9 +8,9 @@ import {
 } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
 import { getTemplatesHerraEquipos } from '@/lib/actions/template-herra-equipos';
-import { FormFiller } from '@/components/herra_equipos/FormRenderer';
-import { FormTemplateHerraEquipos, FormDataHerraEquipos } from '@/components/herra_equipos/types/IProps';
-import { UnifiedFormRouter } from '@/components/herra_equipos/UnifiedFormRouter';
+import { FormFiller } from '@/components/features/herra-equipos/FormRenderer';
+import { FormTemplateHerraEquipos, FormDataHerraEquipos } from '@/components/features/herra-equipos/types/IProps';
+import { UnifiedFormRouter } from '@/components/features/herra-equipos/UnifiedFormRouter';
 import { 
   saveDraftInspection, 
   submitInspection,
@@ -18,7 +18,7 @@ import {
   finalizeInspection,       // ✅ NUEVO
   getInspectionById,        // ✅ NUEVO
 } from '@/lib/actions/inspection-herra-equipos';
-import { TagVerificationModal } from '@/components/herra_equipos/common/TagVerificationModal';
+import { TagVerificationModal } from '@/components/features/herra-equipos/common/TagVerificationModal';
 
 const SPECIALIZED_FORMS: Record<string, React.ComponentType<{
   template: FormTemplateHerraEquipos;
@@ -704,9 +704,9 @@ export default function FormularioDinamicoPage() {
 // import { ArrowBack } from '@mui/icons-material';
 // import { getTemplatesHerraEquipos } from '@/lib/actions/template-herra-equipos';
 
-// import { FormFiller } from '@/components/herra_equipos/FormRenderer';
-// import {  FormTemplateHerraEquipos } from '@/components/herra_equipos/types/IProps';
-// import { UnifiedFormRouter } from '@/components/herra_equipos/UnifiedFormRouter';
+// import { FormFiller } from '@/components/features/herra-equipos/FormRenderer';
+// import {  FormTemplateHerraEquipos } from '@/components/features/herra-equipos/types/IProps';
+// import { UnifiedFormRouter } from '@/components/features/herra-equipos/UnifiedFormRouter';
 
 
 // // Mapeo de códigos a componentes especializados

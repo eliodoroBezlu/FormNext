@@ -9,7 +9,7 @@ import {
   ScaffoldData,
   InspectionStatus,
   ApprovalData,
-} from "@/components/herra_equipos/types/IProps";
+} from "@/components/features/herra-equipos/types/IProps";
 import { getAuthHeaders, handleApiResponse } from "./helpers";
 import { revalidatePath } from "next/cache";
 

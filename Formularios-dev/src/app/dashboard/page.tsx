@@ -15,8 +15,8 @@ import {
   LinearProgress,
   IconButton,
   Tooltip,
+  Typography,
 } from "@mui/material";
-import { Typography } from "@/components/atoms/Typography";
 import { useUserRole } from "@/hooks/useUserRole";
 import Link from "next/link";
 

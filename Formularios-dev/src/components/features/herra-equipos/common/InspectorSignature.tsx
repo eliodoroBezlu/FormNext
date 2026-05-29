@@ -1,0 +1,303 @@
+"use client";
+
+import { TextField, Typography, Paper, Box } from "@mui/material";
+import {
+  type Control,
+  type UseFormRegister,
+  type UseFormSetValue,
+  type FieldErrors,
+  type Path,
+  type FieldValues,
+  Controller,
+} from "react-hook-form";
+import type {
+  FormDataHerraEquipos,
+  SignatureConfig,
+  SignatureFieldConfig,
+} from "../types/IProps";
+import dynamic from "next/dynamic";
+import { SignatureFieldProps } from "@/components/ui/signature/SignatureField";
+import { DataSourceType } from "@/lib/actions/dataSourceService";
+import dayjs from "dayjs";
+
+// ✅ Importar solo los componentes necesarios
+const AutocompleteCustom = dynamic(
+  () => import("@/components/ui/autocomplete/AutocompleteCustom"),
+  { ssr: false }
+);
+const SignatureField = dynamic(
+  () =>
+    import("@/components/ui/signature/SignatureField").then(
+      (mod) => mod.SignatureField
+    ),
+  { ssr: false }
+) as <T extends FieldValues>(
+  props: SignatureFieldProps<T>
+) => React.ReactElement;
+
+interface InspectorSignatureProps {
+  register: UseFormRegister<FormDataHerraEquipos>;
+  control: Control<FormDataHerraEquipos>;
+  setValue: UseFormSetValue<FormDataHerraEquipos>;
+  errors: FieldErrors<FormDataHerraEquipos>;
+  config?: SignatureConfig["inspector"];
+  readonly?: boolean;
+}
+
+export function InspectorSignature({
+  register,
+  control,
+  setValue,
+  errors,
+  config,
+  readonly = false,
+}: InspectorSignatureProps) {
+  // Si está deshabilitado, no renderizar
+  if (config === false || config === undefined) {
+    return null;
+  }
+
+  // Si config es boolean true, usar valores por defecto
+  if (config === true) {
+    config = {
+      enabled: true,
+      title: "Firma del Inspector",
+      fields: {
+        name: {
+          enabled: true,
+          type: "text",
+          label: "Nombre del Inspector",
+          placeholder: "Ingrese nombre completo",
+          required: true,
+          fieldName: "inspectorSignature.name",
+        },
+        signature: {
+          enabled: true,
+          type: "canvas", // Asegúrate de que sea 'canvas'
+          label: "Firma",
+          placeholder: "Firma digital o código",
+          required: true,
+          fieldName: "inspectorSignature.signature",
+        },
+      },
+    };
+  }
+
+  // Si es objeto pero está deshabilitado
+  if (typeof config === "object" && !config.enabled) {
+    return null;
+  }
+
+  const fields = config.fields || {};
+
+  // Helper para renderizar cada campo según su tipo
+  const renderField = (key: string, field: SignatureFieldConfig) => {
+    if (!field || !field.enabled) return null;
+
+    const fieldName = field.fieldName || `inspectorSignature.${key}`;
+    const fieldKey = fieldName.split(".")[1];
+    const fieldType = field.type || "text";
+
+    const commonProps = {
+      label: field.label || key,
+      placeholder: field.placeholder || "",
+      required: field.required || false,
+      error:
+        !!errors.inspectorSignature?.[
+          fieldKey as keyof typeof errors.inspectorSignature
+        ],
+      helperText: errors.inspectorSignature?.[
+        fieldKey as keyof typeof errors.inspectorSignature
+      ]?.message as string | undefined,
+    };
+
+    switch (fieldType) {
+      case "autocomplete":
+        return (
+          <Controller
+            name={fieldName as Path<FormDataHerraEquipos>}
+            control={control}
+            defaultValue=""
+            rules={{
+              required: field.required
+                ? `${field.label || key} es obligatorio`
+                : false,
+            }}
+            render={({ field: controllerField }) => (
+              <AutocompleteCustom
+                value={controllerField.value as string | null}
+                onChange={(value: string | null) => {
+                  if (!readonly) {
+                    controllerField.onChange(value);
+                  }
+                }}
+                dataSource={field.dataSource as DataSourceType | undefined}
+                disabled={readonly}
+                {...commonProps} // Pasamos label y errores
+              />
+            )}
+          />
+        );
+
+      case "canvas":
+        return (
+          <Controller
+            name={fieldName as Path<FormDataHerraEquipos>}
+            control={control}
+            defaultValue=""
+            rules={{
+              required: field.required
+                ? `${field.label || key} es obligatorio`
+                : false,
+            }}
+            render={({ field: controllerField }) => (
+              <Box sx={{ width: "100%" }}>
+                <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                  {field.label || "Firma"}
+                  {field.required && <span style={{ color: "red" }}> *</span>}
+                </Typography>
+                
+                {/* 🔥 MEJORA VISUAL: Contenedor con altura mínima para evitar colapso en móviles */}
+                <Box sx={{ minHeight: "200px", width: "100%" }}>
+                    <SignatureField<FormDataHerraEquipos>
+                      fieldName={fieldName as Path<FormDataHerraEquipos>}
+                      control={control}
+                      setValue={setValue}
+                      heightPercentage={field.heightPercentage || 60}
+                      error={commonProps.error}
+                      helperText={commonProps.helperText}
+                      value={controllerField.value as string}
+                      onChange={controllerField.onChange}
+                      disabled={readonly}
+                    />
+                </Box>
+              </Box>
+            )}
+          />
+        );
+
+      case "date":
+        return (
+          <Controller
+            name={fieldName as Path<FormDataHerraEquipos>}
+            control={control}
+            defaultValue={dayjs().format("YYYY-MM-DD")}
+            render={({ field: controllerField }) => {
+              if (!controllerField.value) {
+                controllerField.onChange(dayjs().format("YYYY-MM-DD"));
+              }
+              
+              return (
+                <TextField
+                  {...commonProps}
+                  type="date"
+                  fullWidth
+                  value={controllerField.value || dayjs().format("YYYY-MM-DD")}
+                  InputProps={{
+                    readOnly: true,
+                  }}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  disabled={readonly}
+                  sx={{
+                    "& .MuiInputBase-input": {
+                      cursor: "default",
+                    },
+                  }}
+                />
+              );
+            }}
+          />
+        );
+
+      case "text":
+      default:
+        return (
+          <TextField
+            key={key}
+            fullWidth
+            {...commonProps}
+            {...register(fieldName as Path<FormDataHerraEquipos>, {
+              required: field.required
+                ? `${field.label || key} es obligatorio`
+                : false,
+            })}
+            disabled={readonly}
+          />
+        );
+    }
+  };
+
+  // Preparar los campos estándar
+  const standardFields = ["name", "signature", "date", "position", "license"];
+  const standardFieldsToRender = standardFields
+    .map((key) => (fields[key] ? { key, field: fields[key]! } : null))
+    .filter((item) => item !== null);
+
+  // Campos custom
+  const customFields = Object.entries(fields)
+    .filter(([key]) => !standardFields.includes(key))
+    .map(([key, field]) => (field ? { key, field } : null))
+    .filter((item) => item !== null);
+
+  const allFields = [...standardFieldsToRender, ...customFields];
+
+  if (allFields.length === 0) {
+    return null;
+  }
+  
+  return (
+    <Paper 
+      elevation={2} 
+      sx={{ 
+        // 🔥 MEJORA RESPONSIVA: Padding reducido en móvil
+        p: { xs: 2, md: 3 },
+        width: "100%",
+        overflow: "hidden" 
+      }}
+    >
+      <Typography 
+        variant="h6" 
+        gutterBottom 
+        sx={{ fontSize: { xs: "1.1rem", md: "1.25rem" } }}
+      >
+        {config.title || ""}
+      </Typography>
+
+      <Box
+        sx={{
+          display: "grid",
+          gap: 2,
+          // Grid responsivo: 1 columna en móvil, 2 en desktop
+          gridTemplateColumns: {
+            xs: "1fr",
+            md: "repeat(2, 1fr)",
+          },
+        }}
+      >
+        {allFields.map((item) => {
+           if (!item) return null;
+
+           // Detectamos si es firma o si hay un solo campo en total
+           const isSignature = item.field.type === "canvas";
+           const isSingleField = allFields.length === 1;
+
+           return (
+              <Box 
+                key={item.key}
+                sx={{
+                   // 🔥 MEJORA RESPONSIVA: Firma siempre ocupa todo el ancho
+                   gridColumn: (isSignature || isSingleField) ? "1 / -1" : "auto",
+                   width: "100%",
+                   minWidth: 0
+                }}
+              >
+                {renderField(item.key, item.field)}
+              </Box>
+           )
+        })}
+      </Box>
+    </Paper>
+  );
+}

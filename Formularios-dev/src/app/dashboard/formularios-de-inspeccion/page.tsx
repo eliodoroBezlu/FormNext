@@ -17,12 +17,12 @@ import {
 import { Description, Add } from "@mui/icons-material";
 import {  FormTemplate } from "@/types/formTypes";
 import { getTemplates } from "@/lib/actions/template-actions";
-import { InspectionFormIroIsop } from "@/components/organisms/inspection-form-iro-isop/InspectionFormIroIsop";
-import { BaseCard } from "@/components/molecules/base-card/BaseCard";
-import { TemplateCard } from "@/components/molecules/template-card/TemplateCard";
-import { InspeccionSistemasEmergencia } from "@/components/form-sistemas-emergencia/InspeccionSistemasEmergencia";
-import LlenarFormulariosPage from "@/components/herra_equipos/FormHerraEquipos";
-import { SuccessScreen } from "@/components/SucessScreen"; 
+import { InspectionFormIroIsop } from "@/components/features/iro-isop/InspectionFormIroIsop";
+import { BaseCard } from "@/components/ui/cards/BaseCard";
+import { TemplateCard } from "@/components/ui/cards/TemplateCard";
+import { InspeccionSistemasEmergencia } from "@/components/features/sistemas-emergencia/InspeccionSistemasEmergencia";
+import LlenarFormulariosPage from "@/components/features/herra-equipos/FormHerraEquipos";
+import { SuccessScreen } from "@/components/ui/feedback/SuccessScreen"; 
 
 // Interfaz para formularios personalizados (Hardcoded por ahora)
 interface CustomForm {

@@ -30,10 +30,10 @@ import {
   AutoAwesome as AutoIcon,
   Info as InfoIcon,
 } from "@mui/icons-material";
-import { PlanTabs } from "@/components/planes-de-accion/tabs/PlanTabs";
-import { PlanCardList } from "@/components/planes-de-accion/plan-cards/PlanCardList";
-import { PlanDetailView } from "@/components/planes-de-accion/plan-detail/PlanDetailView";
-import { PlanSummary } from "@/components/planes-de-accion/plan-detail/PlanSummary";
+import { PlanTabs } from "@/components/features/planes-de-accion/presentation/components/PlanTabs";
+import { PlanCardList } from "@/components/features/planes-de-accion/presentation/components/PlanCardList";
+import { PlanDetailView } from "@/components/features/planes-de-accion/presentation/components/PlanDetailView";
+import { PlanSummary } from "@/components/features/planes-de-accion/presentation/components/PlanSummary";
 import {
   actualizarPlan,
   actualizarTarea,
@@ -46,15 +46,16 @@ import {
   obtenerInspecciones,
   obtenerPlanes,
   PopulatedFormInstance,
-} from "@/components/planes-de-accion/hooks/use-planes-accion";
+} from "@/components/features/planes-de-accion/presentation/hooks/use-planes-accion";
 import {
   UpdateTareaDTO,
   AddTareaDTO,
   CreatePlanDeAccionDTO,
   PlanDeAccion,
   PlanSummary as PlanSummaryType,
-} from "@/components/planes-de-accion/types/IProps";
-import { QuestionResponse } from "@/types/formTypes";
+  TareaObservacion,
+} from "@/components/features/planes-de-accion/domain/models/IProps";
+import { QuestionResponse, SectionResponse } from "@/types/formTypes";
 
 type TabValue = "abierto" | "en-progreso" | "cerrado" | "aprobado";
 
@@ -132,7 +133,7 @@ export default function PlanesDeAccionPage() {
       comment?: string;
     }[] = [];
 
-    selectedInstancia.sections.forEach((section) => {
+    selectedInstancia.sections.forEach((section: SectionResponse) => {
       if (!section.questions) return;
       section.questions.forEach((q: QuestionResponse) => {
         const resp = q.response;
@@ -195,7 +196,7 @@ export default function PlanesDeAccionPage() {
   const filteredPlanes = planes.filter((plan) => {
     if (activeTab === "aprobado") {
       return (
-        plan.tareas.length > 0 && plan.tareas.every((t) => t.aprobado === true)
+        plan.tareas.length > 0 && plan.tareas.every((t: TareaObservacion) => t.aprobado === true)
       );
     }
     return plan.estado === activeTab;

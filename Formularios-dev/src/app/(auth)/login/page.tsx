@@ -2,7 +2,7 @@
 ''
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import LoginForm from '@/components/auth/LoginForm';
+import LoginForm from '@/components/features/auth/presentation/components/LoginForm';
 import { Box, Container,  Grid } from '@mui/material';
 
 import { cookies } from 'next/headers';

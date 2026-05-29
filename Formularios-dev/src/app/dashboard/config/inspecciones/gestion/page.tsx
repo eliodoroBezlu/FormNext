@@ -1,4 +1,4 @@
-import GestionInspecciones from '@/components/herra_equipos/GestionInspecciones';
+import GestionInspecciones from '@/components/features/herra-equipos/GestionInspecciones';
 import React from 'react'
 
 export default function page() {

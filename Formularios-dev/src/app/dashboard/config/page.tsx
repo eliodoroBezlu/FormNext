@@ -1,4 +1,4 @@
-import SettingsPage from '@/components/templates/seetings-page/SettingsPage'
+import SettingsPage from '@/components/features/settings/presentation/components/SettingsPage'
 import React from 'react'
 
 export default function page() {

@@ -5,10 +5,10 @@ import { Box, Typography, Grid, Fab, Tabs, Tab, Alert, CircularProgress, Chip, B
 import { Add, Edit, Delete, Description, Visibility } from "@mui/icons-material"
 import { FormInstance, FormTemplate } from "@/types/formTypes"
 import { deleteTemplate, getTemplates, getTemplateById } from "@/lib/actions/template-actions"
-import { FormBuilder } from "@/components/organisms/form-builder/FormBuilder"
-import { InspectionFormIroIsop } from "@/components/organisms/inspection-form-iro-isop/InspectionFormIroIsop"
-import { TemplateCard } from "@/components/molecules/template-card/TemplateCard"
-import { BaseCard } from "@/components/molecules/base-card/BaseCard"
+import { FormBuilder } from "@/components/features/form-builder/presentation/components/FormBuilder"
+import { InspectionFormIroIsop } from "@/components/features/iro-isop/InspectionFormIroIsop"
+import { TemplateCard } from "@/components/ui/cards/TemplateCard"
+import { BaseCard } from "@/components/ui/cards/BaseCard"
 
 interface CustomForm {
   id: string

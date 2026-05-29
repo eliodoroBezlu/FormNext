@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import {
   Box,
   Paper,
@@ -27,50 +27,34 @@ import {
   Clear as ClearIcon,
   Assignment as FormIcon,
 } from "@mui/icons-material";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   deleteInspection,
   getInspectionById,
   getInspectionsHerraEquipos,
   InspectionResponse,
 } from "@/lib/actions/inspection-herra-equipos";
+import { getTemplatesHerraEquipos, TemplateHerraEquipo } from "@/lib/actions/template-herra-equipos";
 import {
   descargarExcelHerraEquipoCliente,
   descargarPdfHerraEquipoCliente,
 } from "@/lib/actions/client";
 
 // ✅ Componentes comunes
-import { Can } from "@/components/common/Can";
+import { Can } from "@/components/layout/wrappers/Can";
 import { Permission } from "@/lib/permissions";
 import {
   ReportTable,
   ReportColumn,
-} from "@/components/reports/common/ReportTable";
-import { ReportActionButtons } from "@/components/reports/common/ReportActionButtons";
-import { ReportStateHandler } from "@/components/reports/common/ReportStateHandler";
+} from "@/components/features/reports/presentation/components/ReportTable";
+import { ReportActionButtons } from "@/components/features/reports/presentation/components/ReportActionButtons";
+import { ReportStateHandler } from "@/components/features/reports/presentation/components/ReportStateHandler";
 import {
   ReportSnackbar,
   useReportNotification,
-} from "@/components/reports/common/ReportSnackbar";
+} from "@/components/features/reports/presentation/components/ReportSnackbar";
 
-const TEMPLATE_NAMES: Record<string, string> = {
-  "1.02.P06.F20": "Inspección de Cilindros",
-  "1.02.P06.F39": "Inspección de Amoladora",
-  "1.02.P06.F40": "Inspección de Esmeril",
-  "1.02.P06.F42": "Inspección de Equipos de Soldar",
-  "2.03.P10.F05": "Inspección de Taladro",
-  "3.04.P04.F23": "Verificación Puente Grúa con Cabina",
-  "3.04.P04.F35": "Inspección Puente Grúa Control Remoto",
-  "3.04.P37.F19": "Inspección Pre-Uso Elementos de Izaje",
-  "3.04.P37.F24": "Inspección Pre-Uso Tecles",
-  "3.04.P37.F25": "Inspección Frecuente Tecles",
-  "3.04.P48.F03": "Lista Verificación Vehículos",
-  "1.02.P06.F33": "Inspección de Escaleras",
-  "1.02.P06.F30": "Inspección de Andamios",
-  "1.02.P06.F37": "Inspección Man Lift",
-  "1.02.P06.F19":
-    "LISTA DE CHEQUEO SISTEMAS DE PROTECCIÓN CONTRA CAÍDAS (SPCC)",
-};
+
 
 const VERIFICATION_FIELD_NAMES: Record<string, string> = {
   "3.04.P48.F03": "PLACA",
@@ -124,12 +108,16 @@ const getArea = (i: InspectionResponse): string => {
   ).toString();
 };
 
-export default function ListarInspeccionHerraEquipos() {
+function ListarInspeccionHerraEquiposComponent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const { notification, mostrar, cerrar } = useReportNotification();
 
   const [inspections, setInspections] = useState<InspectionResponse[]>([]);
+  const [templates, setTemplates] = useState<TemplateHerraEquipo[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalItems, setTotalItems] = useState(0);
   const [mostrarResultados, setMostrarResultados] = useState(false);
@@ -146,35 +134,59 @@ export default function ListarInspeccionHerraEquipos() {
   const [selectedInspection, setSelectedInspection] =
     useState<InspectionResponse | null>(null);
 
-  // ── Búsqueda ──────────────────────────────────────────────────────────────
-  const buscarInspecciones = async () => {
+  // ── Búsqueda y Filtros de URL ─────────────────────────────────────────────
+  const buscarInspecciones = async (paramsFromUrl?: {
+    templateName?: string;
+    templateCode?: string;
+    equipmentId?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => {
     try {
       setLoading(true);
       setError(null);
+
+      const templateName = paramsFromUrl ? (paramsFromUrl.templateName ?? "") : templateNameFilter;
+      const templateCode = paramsFromUrl ? (paramsFromUrl.templateCode ?? "") : templateCodeFilter;
+      const equipmentId = paramsFromUrl ? (paramsFromUrl.equipmentId ?? "") : equipmentIdFilter;
+      const startDate = paramsFromUrl ? (paramsFromUrl.startDate ?? "") : startDateFilter;
+      const endDate = paramsFromUrl ? (paramsFromUrl.endDate ?? "") : endDateFilter;
+
+      // Si no es por useEffect al montar/cambiar URL, actualizamos la URL
+      if (!paramsFromUrl) {
+        const queryParams = new URLSearchParams();
+        if (templateName) queryParams.set("templateName", templateName);
+        if (templateCode) queryParams.set("templateCode", templateCode);
+        if (equipmentId) queryParams.set("equipmentId", equipmentId);
+        if (startDate) queryParams.set("startDate", startDate);
+        if (endDate) queryParams.set("endDate", endDate);
+
+        router.push(`${pathname}?${queryParams.toString()}`);
+      }
 
       const filters: {
         templateCode?: string;
         startDate?: string;
         endDate?: string;
       } = {};
-      if (templateCodeFilter) filters.templateCode = templateCodeFilter;
-      if (startDateFilter) filters.startDate = startDateFilter;
-      if (endDateFilter) filters.endDate = endDateFilter;
+      if (templateCode) filters.templateCode = templateCode;
+      if (startDate) filters.startDate = startDate;
+      if (endDate) filters.endDate = endDate;
 
       const response = await getInspectionsHerraEquipos(filters);
 
       if (response.success && response.data) {
         let filtradas = response.data;
 
-        if (templateNameFilter.trim()) {
+        if (templateName.trim()) {
           filtradas = filtradas.filter((i) =>
             i.templateName
               ?.toLowerCase()
-              .includes(templateNameFilter.toLowerCase().trim()),
+              .includes(templateName.toLowerCase().trim()),
           );
         }
-        if (equipmentIdFilter.trim()) {
-          const searchLower = equipmentIdFilter.toLowerCase().trim();
+        if (equipmentId.trim()) {
+          const searchLower = equipmentId.toLowerCase().trim();
           filtradas = filtradas.filter((i) => {
             const haystack = [
               // ✅ Busca dinámicamente en TODOS los campos de verification
@@ -205,6 +217,48 @@ export default function ListarInspeccionHerraEquipos() {
     }
   };
 
+  // Sincronización con los parámetros de la URL al montar o cambiar params
+  useEffect(() => {
+    const templateName = searchParams.get("templateName") || "";
+    const templateCode = searchParams.get("templateCode") || "";
+    const equipmentId = searchParams.get("equipmentId") || "";
+    const startDate = searchParams.get("startDate") || "";
+    const endDate = searchParams.get("endDate") || "";
+
+    setTemplateNameFilter(templateName);
+    setTemplateCodeFilter(templateCode);
+    setEquipmentIdFilter(equipmentId);
+    setStartDateFilter(startDate);
+    setEndDateFilter(endDate);
+
+    if (templateName || templateCode || equipmentId || startDate || endDate) {
+      buscarInspecciones({
+        templateName,
+        templateCode,
+        equipmentId,
+        startDate,
+        endDate,
+      });
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const cargarTemplates = async () => {
+      try {
+        setLoadingTemplates(true);
+        const res = await getTemplatesHerraEquipos();
+        if (res.success && res.data) {
+          setTemplates(Array.isArray(res.data) ? res.data : []);
+        }
+      } catch (err) {
+        console.error("Error al cargar templates:", err);
+      } finally {
+        setLoadingTemplates(false);
+      }
+    };
+    cargarTemplates();
+  }, []);
+
   const limpiarFiltros = () => {
     setTemplateNameFilter("");
     setTemplateCodeFilter("");
@@ -215,6 +269,7 @@ export default function ListarInspeccionHerraEquipos() {
     setMostrarResultados(false);
     setError(null);
     setTotalItems(0);
+    router.push(pathname);
   };
 
   // ── Acciones ──────────────────────────────────────────────────────────────
@@ -297,7 +352,6 @@ export default function ListarInspeccionHerraEquipos() {
 
   const handleDescargarExcel = async (id: string) => {
     try {
-      setLoading(true);
       mostrar("Generando archivo Excel...", "info");
       await descargarExcelHerraEquipoCliente(id);
     } catch (err) {
@@ -306,8 +360,6 @@ export default function ListarInspeccionHerraEquipos() {
         err instanceof Error ? err.message : "Error al descargar el Excel",
         "error",
       );
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -340,7 +392,7 @@ export default function ListarInspeccionHerraEquipos() {
       label: "Tipo de Inspección",
       render: (row) => (
         <Typography variant="body2" fontWeight="medium">
-          {TEMPLATE_NAMES[row.templateCode] || row.templateName || "N/A"}
+          {templates.find((t) => t.code === row.templateCode)?.name || row.templateName || "N/A"}
         </Typography>
       ),
     },
@@ -410,11 +462,12 @@ export default function ListarInspeccionHerraEquipos() {
                 value={templateNameFilter}
                 onChange={(e) => setTemplateNameFilter(e.target.value)}
                 label="Nombre del Formulario"
+                disabled={loadingTemplates}
               >
                 <MenuItem value="">Todos</MenuItem>
-                {Object.entries(TEMPLATE_NAMES).map(([code, name]) => (
-                  <MenuItem key={code} value={name}>
-                    {name}
+                {templates.map((t) => (
+                  <MenuItem key={t._id} value={t.name}>
+                    {t.name}
                   </MenuItem>
                 ))}
               </Select>
@@ -428,11 +481,12 @@ export default function ListarInspeccionHerraEquipos() {
                 value={templateCodeFilter}
                 onChange={(e) => setTemplateCodeFilter(e.target.value)}
                 label="Código"
+                disabled={loadingTemplates}
               >
                 <MenuItem value="">Todos</MenuItem>
-                {Object.keys(TEMPLATE_NAMES).map((code) => (
-                  <MenuItem key={code} value={code}>
-                    {code}
+                {templates.map((t) => (
+                  <MenuItem key={t._id} value={t.code}>
+                    {t.code}
                   </MenuItem>
                 ))}
               </Select>
@@ -491,7 +545,7 @@ export default function ListarInspeccionHerraEquipos() {
             <Button
               variant="contained"
               startIcon={<SearchIcon />}
-              onClick={buscarInspecciones}
+              onClick={() => buscarInspecciones()}
               disabled={loading}
             >
               {loading ? "Buscando..." : "Buscar"}
@@ -653,5 +707,13 @@ export default function ListarInspeccionHerraEquipos() {
       {/* ── Notificaciones ── */}
       <ReportSnackbar notification={notification} onClose={cerrar} />
     </Container>
+  );
+}
+
+export default function ListarInspeccionHerraEquipos() {
+  return (
+    <Suspense fallback={null}>
+      <ListarInspeccionHerraEquiposComponent />
+    </Suspense>
   );
 }

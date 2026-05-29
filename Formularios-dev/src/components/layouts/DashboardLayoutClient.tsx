@@ -16,7 +16,7 @@ import {
   ListItemIcon,
   ListItemText,
   Avatar,
-  Typography as MuiTypography,
+  Typography,
   Chip,
 } from "@mui/material";
 
@@ -29,8 +29,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import EmailIcon from "@mui/icons-material/Email";
 import CloseIcon from "@mui/icons-material/Close";
 
-import { Navigation } from "@/components/organisms/Navigation";
-import { Typography } from "@/components/atoms/Typography";
+import { Navigation } from "@/components/layout/navigation/Navigation";
 import { lightTheme, darkTheme } from "../../styles/theme";
 import { logoutAction } from "@/app/actions/auth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -161,9 +160,9 @@ export default function DashboardLayoutClient({
                   {user?.username?.charAt(0).toUpperCase() || 'U'}
                 </Avatar>
                 <Box sx={{ flex: 1 }}>
-                  <MuiTypography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                     {user?.fullName || user?.username || 'Usuario'}
-                  </MuiTypography>
+                  </Typography>
                   {userRole && (
                     <Chip 
                       label={userRole.toUpperCase()} 

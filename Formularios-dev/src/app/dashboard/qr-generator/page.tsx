@@ -1,4 +1,4 @@
-import QRGeneratorClient from "@/components/Qr";
+import QRGeneratorClient from "@/components/features/qr-generator/presentation/components/Qr";
 
 export default function QRGeneratorPage() {
   return (

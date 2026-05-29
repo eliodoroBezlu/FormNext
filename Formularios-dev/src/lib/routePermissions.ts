@@ -35,10 +35,7 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
     path: "/dashboard/inspeccion-sistemas-emergencia/formulario-insp-herr-equi/form-sistemas-de-emergencia",
     requiredRoles: [Role.SUPERVISOR],
   },
-  {
-    path: "/dashboard/inspeccion-sistemas-emergencia/formulario-insp-herr-equi/inspeccion-arnes",
-    requiredRoles: [Role.SUPERVISOR],
-  },
+
 
   // Formularios IRO-ISOP - técnicos
   {

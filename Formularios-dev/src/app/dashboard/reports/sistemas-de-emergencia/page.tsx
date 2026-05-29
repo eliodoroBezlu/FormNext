@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import {
   Box,
   Paper,
@@ -22,7 +22,7 @@ import {
   FireExtinguisher as ExtintorIcon,
   ArrowBack as ArrowBackIcon,
 } from "@mui/icons-material";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   descargarExcelInspeccionesEmergenciaCliente,
   descargarPdfInspeccionesEmergenciaCliente,
@@ -42,9 +42,9 @@ import type {
 import {
   ReportTable,
   ReportColumn,
-} from "@/components/reports/common/ReportTable";
-import { ReportActionButtons } from "@/components/reports/common/ReportActionButtons";
-import { ReportStateHandler } from "@/components/reports/common/ReportStateHandler";
+} from "@/components/features/reports/presentation/components/ReportTable";
+import { ReportActionButtons } from "@/components/features/reports/presentation/components/ReportActionButtons";
+import { ReportStateHandler } from "@/components/features/reports/presentation/components/ReportStateHandler";
 
 const MESES = [
   "ENERO",
@@ -84,8 +84,12 @@ const ORDEN_MESES = [
   "DICIEMBRE",
 ];
 
-export default function ListaInspecciones() {
+const GESTIONES = ["2024", "2025", "2026", "2027", "2028", "2029", "2030"];
+
+function ListaInspeccionesComponent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   const [inspecciones, setInspecciones] = useState<InspeccionServiceExport[]>(
     [],
@@ -102,6 +106,7 @@ export default function ListaInspecciones() {
   const [superintendenciaFilter, setSuperintendenciaFilter] = useState("");
   const [mesFilter, setMesFilter] = useState("");
   const [documentCodeFilter, setDocumentCodeFilter] = useState("");
+  const [gestionFilter, setGestionFilter] = useState("");
 
   const [extintores, setExtintores] = useState<ExtintorBackend[]>([]);
   const [areas, setAreas] = useState<string[]>([]);
@@ -123,6 +128,52 @@ export default function ListaInspecciones() {
     };
     cargarAreas();
   }, []);
+
+  // Inicializar filtros desde la URL al montar
+  useEffect(() => {
+    const area = searchParams.get("area") || "";
+    const superintendencia = searchParams.get("superintendencia") || "";
+    const mes = searchParams.get("mes") || "";
+    const docCode = searchParams.get("docCode") || "";
+    const gestion = searchParams.get("gestion") || "";
+
+    setAreaFilter(area);
+    setSuperintendenciaFilter(superintendencia);
+    setMesFilter(mes);
+    setDocumentCodeFilter(docCode);
+    setGestionFilter(gestion);
+
+    if (area || superintendencia || mes || docCode || gestion) {
+      const cargarFiltrados = async () => {
+        try {
+          setLoading(true);
+          setError(null);
+          const filtros: FiltrosInspeccion = {};
+          if (area) filtros.area = area;
+          if (superintendencia) filtros.superintendencia = superintendencia;
+          if (mes) filtros.mesActual = mes;
+          if (docCode) filtros.documentCode = docCode;
+
+          let data = await obtenerSistemasEmergenciaReport(filtros);
+          if (gestion) {
+            const yearNum = parseInt(gestion, 10);
+            if (!isNaN(yearNum)) {
+              data = data.filter((i) => i.año === yearNum);
+            }
+          }
+          setInspecciones(data);
+          setMostrarResultados(true);
+          setMostrarExtintores(false);
+        } catch (err) {
+          console.error(err);
+          setError("No se pudieron cargar las inspecciones con los filtros seleccionados");
+        } finally {
+          setLoading(false);
+        }
+      };
+      cargarFiltrados();
+    }
+  }, [searchParams]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const obtenerMesesInspeccionados = (
@@ -154,13 +205,37 @@ export default function ListaInspecciones() {
       setLoading(true);
       setError(null);
       const filtros: FiltrosInspeccion = {};
-      if (areaFilter) filtros.area = areaFilter;
-      if (superintendenciaFilter)
+      
+      const params = new URLSearchParams();
+      if (areaFilter) {
+        filtros.area = areaFilter;
+        params.set("area", areaFilter);
+      }
+      if (superintendenciaFilter) {
         filtros.superintendencia = superintendenciaFilter;
-      if (mesFilter) filtros.mesActual = mesFilter;
-      if (documentCodeFilter) filtros.documentCode = documentCodeFilter;
+        params.set("superintendencia", superintendenciaFilter);
+      }
+      if (mesFilter) {
+        filtros.mesActual = mesFilter;
+        params.set("mes", mesFilter);
+      }
+      if (documentCodeFilter) {
+        filtros.documentCode = documentCodeFilter;
+        params.set("docCode", documentCodeFilter);
+      }
+      if (gestionFilter) {
+        params.set("gestion", gestionFilter);
+      }
 
-      const data = await obtenerSistemasEmergenciaReport(filtros);
+      router.push(`${pathname}?${params.toString()}`);
+
+      let data = await obtenerSistemasEmergenciaReport(filtros);
+      if (gestionFilter) {
+        const yearNum = parseInt(gestionFilter, 10);
+        if (!isNaN(yearNum)) {
+          data = data.filter((i) => i.año === yearNum);
+        }
+      }
       setInspecciones(data);
       setMostrarResultados(true);
       setMostrarExtintores(false);
@@ -204,11 +279,13 @@ export default function ListaInspecciones() {
     setSuperintendenciaFilter("");
     setMesFilter("");
     setDocumentCodeFilter("");
+    setGestionFilter("");
     setInspecciones([]);
     setExtintores([]);
     setMostrarResultados(false);
     setMostrarExtintores(false);
     setError(null);
+    router.push(pathname);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -231,6 +308,12 @@ export default function ListaInspecciones() {
       key: "mesActual",
       label: "Mes Actual",
       render: (row) => obtenerMesesInspeccionados(row, mesFilter),
+    },
+    {
+      key: "año",
+      label: "Gestión",
+      align: "center",
+      render: (row) => row.año || "N/A",
     },
     {
       key: "acciones",
@@ -312,7 +395,7 @@ export default function ListaInspecciones() {
         </Typography>
 
         <Grid container spacing={3}>
-          <Grid size={{ xs: 12, md: 3 }}>
+          <Grid size={{ xs: 12, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Área</InputLabel>
               <Select
@@ -349,7 +432,7 @@ export default function ListaInspecciones() {
             </FormControl>
           </Grid>
 
-          <Grid size={{ xs: 12, md: 3 }}>
+          <Grid size={{ xs: 12, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Mes de inspección</InputLabel>
               <Select
@@ -361,6 +444,24 @@ export default function ListaInspecciones() {
                 {MESES.map((mes) => (
                   <MenuItem key={mes} value={mes}>
                     {mes}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 2 }}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Gestión</InputLabel>
+              <Select
+                value={gestionFilter}
+                onChange={(e) => setGestionFilter(e.target.value)}
+                label="Gestión"
+              >
+                <MenuItem value="">Todas</MenuItem>
+                {GESTIONES.map((g) => (
+                  <MenuItem key={g} value={g}>
+                    {g}
                   </MenuItem>
                 ))}
               </Select>
@@ -457,5 +558,13 @@ export default function ListaInspecciones() {
         )}
       </ReportStateHandler>
     </Container>
+  );
+}
+
+export default function ListaInspecciones() {
+  return (
+    <Suspense fallback={null}>
+      <ListaInspeccionesComponent />
+    </Suspense>
   );
 }

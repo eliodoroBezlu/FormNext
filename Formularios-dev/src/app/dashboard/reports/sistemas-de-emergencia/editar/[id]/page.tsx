@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Box, CircularProgress, Alert, Chip, Typography } from "@mui/material";
 import {  Visibility, Edit } from "@mui/icons-material";
 
-import { InspeccionSistemasEmergencia } from "@/components/form-sistemas-emergencia/InspeccionSistemasEmergencia";
+import { InspeccionSistemasEmergencia } from "@/components/features/sistemas-emergencia/InspeccionSistemasEmergencia";
 import { 
   obtenerInspeccionEmergenciaPorId, 
   actualizarMesPorTag 
