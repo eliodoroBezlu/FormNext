@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
+const apiUrl     = process.env.NEXT_PUBLIC_API_URL || '';
+const iamCoreUrl = process.env.IAM_CORE_URL || 'http://localhost:4000';
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
 const nextConfig: NextConfig = {
   /* config options here */
 
@@ -20,7 +21,11 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/forms/:path*',
-        destination: `${apiUrl}/:path*`, // Proxy al API externo
+        destination: `${apiUrl}/:path*`,
+      },
+      {
+        source: '/api/iam/:path*',
+        destination: `${iamCoreUrl}/api/:path*`,
       },
     ];
   },

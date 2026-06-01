@@ -1,49 +1,38 @@
-// app/(auth)/login/page.tsx - Página de Login con Material-UI
-''
+/**
+ * Login page — FormNext
+ * ─────────────────────────────────────────────────────────────────
+ * FormNext no tiene login propio.
+ * El login centralizado vive en IAM Portal.
+ * Esta página simplemente redirige allí, pasando la URL de retorno.
+ */
 import { redirect } from 'next/navigation';
+import { cookies as nextCookies } from 'next/headers';
 import type { Metadata } from 'next';
-import LoginForm from '@/components/features/auth/presentation/components/LoginForm';
-import { Box, Container,  Grid } from '@mui/material';
-
-import { cookies } from 'next/headers';
 
 export const metadata: Metadata = {
-  title: 'Iniciar Sesión | Mi Aplicación',
-  description: 'Accede a tu cuenta',
+  title: 'Iniciando sesión…',
+  description: 'Redirigiendo al sistema de autenticación',
 };
 
-export default async function LoginPage() {
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get('access_token');
-  const refreshToken = cookieStore.get('refresh_token');
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ redirect?: string }>;
+}) {
+  // Si ya tiene token → ir al dashboard directamente
+  const cookieStore = await nextCookies();
+  if (cookieStore.get('access_token') || cookieStore.get('refresh_token')) {
+    redirect('/dashboard');
+  }
 
-  // Simple check: el middleware ya manejó el refresh
- if (accessToken || refreshToken) {
-  // Si tienes CUALQUIERA de los dos → Redirigir a dashboard
-  redirect('/dashboard');
-}
+  // Resolver la URL de retorno:
+  // 1) Si viene del middleware con ?redirect=... usarla directamente
+  // 2) Si no, volver al dashboard de FormNext
+  const params       = await searchParams;
+  const returnTarget = params.redirect ?? `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3001'}/dashboard`;
+  const iamPortalUrl = process.env.IAM_PORTAL_URL ?? 'http://localhost:3005';
 
-  return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        py: 4
-      }}
-    >
-      <Container maxWidth="lg">
-        <Grid container spacing={6} alignItems="center">
-          {/* Columna Izquierda - Información */}
-          
+  const iamLoginUrl  = `${iamPortalUrl}/login?redirect=${encodeURIComponent(returnTarget)}`;
 
-          {/* Columna Derecha - Formulario */}
-          <Grid size={{ xs: 12, lg: 12 }}>
-            <LoginForm />
-          </Grid>
-        </Grid>
-      </Container>
-    </Box>
-  );
+  redirect(iamLoginUrl);
 }
