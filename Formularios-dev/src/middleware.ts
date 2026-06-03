@@ -78,7 +78,8 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Rutas públicas — no requieren autenticación
-  const isPublic = ['/', '/login', '/register'].some(
+  // /inspeccion/login → acceso legacy de inspector técnico (temporal)
+  const isPublic = ['/', '/login', '/register', '/inspeccion/login'].some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
   );
 
