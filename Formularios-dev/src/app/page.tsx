@@ -138,7 +138,12 @@ export default function Home() {
     // Reenviar el destino original (si el middleware lo pasó como ?redirect=)
     // para volver a la página solicitada tras autenticarse en IAM Portal.
     const redirect = new URLSearchParams(window.location.search).get('redirect');
-    router.push(redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login');
+    const target   = redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login';
+
+    // Navegación DURA (no router.push): /login hace un redirect a un dominio
+    // externo (IAM Portal) y el router del cliente no sigue redirects
+    // cross-origin vía RSC — se quedaría en esta misma página.
+    window.location.href = target;
   };
 
   return (
