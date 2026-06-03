@@ -14,8 +14,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // ── Configuración ──────────────────────────────────────────────────
-const IAM_PORTAL_URL = process.env.IAM_PORTAL_URL || 'http://localhost:3005';
-const IAM_CORE_URL   = process.env.IAM_CORE_URL   || 'http://localhost:4000';
+const IAM_CORE_URL = process.env.IAM_CORE_URL || 'http://localhost:4000';
 
 // ── Helpers ────────────────────────────────────────────────────────
 
@@ -36,10 +35,19 @@ function isExpiringSoon(token: string): boolean {
   return payload.exp * 1000 - Date.now() < 3 * 60 * 1000; // < 3 min restantes
 }
 
-/** URL del IAM Portal con el redirect de vuelta al path actual. */
-function buildIamLoginUrl(request: NextRequest): URL {
-  const returnTo = encodeURIComponent(request.url);
-  return new URL(`${IAM_PORTAL_URL}/login?redirect=${returnTo}`);
+/**
+ * URL de la pantalla selectora de acceso de forms (/).
+ * Ofrece "Acceso Inspector Técnico" + "Iniciar Sesión con Cuenta".
+ * Se preserva el destino original en ?redirect= para volver tras el login.
+ *
+ * Nota: mientras exista el acceso legacy de inspector, el gate es esta
+ * pantalla. Cuando se elimine, cambiar este helper para ir directo al
+ * login de IAM Portal (process.env.IAM_PORTAL_URL).
+ */
+function buildAccessSelectorUrl(request: NextRequest): URL {
+  const url = new URL('/', request.url);
+  url.searchParams.set('redirect', request.url);
+  return url;
 }
 
 /** Rota el refresh token directamente contra IAM Core. */
@@ -100,7 +108,7 @@ export async function middleware(request: NextRequest) {
 
   // A) Sin ningún token → IAM Portal login con redirect de vuelta
   if (!accessToken && !refreshToken) {
-    return NextResponse.redirect(buildIamLoginUrl(request));
+    return NextResponse.redirect(buildAccessSelectorUrl(request));
   }
 
   // B) Sin access token pero con refresh → renovar silenciosamente
@@ -115,7 +123,7 @@ export async function middleware(request: NextRequest) {
     } catch { /* ignorar error de red */ }
 
     // Refresh falló → re-login en IAM Portal
-    return NextResponse.redirect(buildIamLoginUrl(request));
+    return NextResponse.redirect(buildAccessSelectorUrl(request));
   }
 
   // C) Access token por expirar → refresh proactivo

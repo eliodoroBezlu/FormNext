@@ -134,9 +134,11 @@ export default function Home() {
     });
   };
 
-  const handleKeycloakLogin = () => {
-    // Tu lógica de Keycloak aquí
-    router.push('/login');
+  const handleAccountLogin = () => {
+    // Reenviar el destino original (si el middleware lo pasó como ?redirect=)
+    // para volver a la página solicitada tras autenticarse en IAM Portal.
+    const redirect = new URLSearchParams(window.location.search).get('redirect');
+    router.push(redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login');
   };
 
   return (
@@ -195,7 +197,7 @@ export default function Home() {
             variant="contained"
             color="primary"
             size="large"
-            onClick={handleKeycloakLogin}
+            onClick={handleAccountLogin}
             disabled={isPending}
             sx={{
               py: 2,
