@@ -19,17 +19,23 @@ export default function InspectorLoginPage() {
     setLoading(true);
     setError(null);
 
-    const result = await inspectorLoginAction();
+    try {
+      const result = await inspectorLoginAction();
 
-    if (!result.success) {
-      setError(result.error ?? 'No se pudo iniciar sesión como inspector.');
+      if (!result?.success) {
+        setError(result?.error ?? 'No se pudo iniciar sesión como inspector.');
+        setLoading(false);
+        return;
+      }
+
+      // Cookies ya guardadas por la acción → ir al dashboard
+      router.push('/dashboard');
+      router.refresh();
+    } catch (err) {
+      console.error('💥 Error inesperado en login de inspector:', err);
+      setError('Error inesperado al iniciar sesión. Intenta de nuevo.');
       setLoading(false);
-      return;
     }
-
-    // Cookies ya guardadas por la acción → ir al dashboard
-    router.push('/dashboard');
-    router.refresh();
   };
 
   return (

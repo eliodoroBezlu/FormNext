@@ -117,14 +117,19 @@ export default function Home() {
     setError(null);
 
     startTransition(async () => {
-      const result = await inspectorLoginAction();
+      try {
+        const result = await inspectorLoginAction();
 
-      if (result.success) {
-        console.log('✅ Inspector autenticado, redirigiendo...');
-        router.push('/dashboard');
-        router.refresh();
-      } else {
-        setError(result.error || 'Error al iniciar sesión como inspector');
+        if (result?.success) {
+          console.log('✅ Inspector autenticado, redirigiendo...');
+          router.push('/dashboard');
+          router.refresh();
+        } else {
+          setError(result?.error || 'Error al iniciar sesión como inspector');
+        }
+      } catch (err) {
+        console.error('💥 Error inesperado en login de inspector:', err);
+        setError('Error inesperado al iniciar sesión. Intenta de nuevo.');
       }
     });
   };
