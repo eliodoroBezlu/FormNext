@@ -628,7 +628,9 @@ export async function logoutAction() {
     cookieStore.delete("refresh_token");
     console.log('✅ [LOGOUT] Sesión cerrada');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    redirect("/login");
+    // Volver a la pantalla selectora de acceso de forms (inspector + cuenta),
+    // no directo a IAM Portal — coherente con el gate del middleware.
+    redirect("/");
   }
 }
 
