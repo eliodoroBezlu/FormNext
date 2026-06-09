@@ -1,9 +1,9 @@
 /**
  * Login page — FormNext
  * ─────────────────────────────────────────────────────────────────
- * FormNext no tiene login propio.
- * El login centralizado vive en IAM Portal.
- * Esta página simplemente redirige allí, pasando la URL de retorno.
+ * FormNext no tiene login propio. Inicia el flujo OIDC contra IAM Core
+ * (que muestra el login de IAM Portal si no hay sesión SSO).
+ * Esta página solo redirige al iniciador OIDC en /api/auth/login.
  */
 import { redirect } from 'next/navigation';
 import { cookies as nextCookies } from 'next/headers';
@@ -25,14 +25,10 @@ export default async function LoginPage({
     redirect('/dashboard');
   }
 
-  // Resolver la URL de retorno:
-  // 1) Si viene del middleware con ?redirect=... usarla directamente
-  // 2) Si no, volver al dashboard de FormNext
-  const params       = await searchParams;
-  const returnTarget = params.redirect ?? `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3001'}/dashboard`;
-  const iamPortalUrl = process.env.IAM_PORTAL_URL ?? 'http://localhost:3005';
+  // Destino de retorno tras el login (path same-origin)
+  const params  = await searchParams;
+  const destino = params.redirect && params.redirect.startsWith('/') ? params.redirect : '/dashboard';
 
-  const iamLoginUrl  = `${iamPortalUrl}/login?redirect=${encodeURIComponent(returnTarget)}`;
-
-  redirect(iamLoginUrl);
+  // Iniciar el flujo OIDC (Authorization Code + PKCE)
+  redirect(`/api/auth/login?redirect=${encodeURIComponent(destino)}`);
 }

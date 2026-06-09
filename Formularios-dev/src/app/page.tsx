@@ -135,15 +135,13 @@ export default function Home() {
   };
 
   const handleAccountLogin = () => {
-    // Reenviar el destino original (si el middleware lo pasó como ?redirect=)
-    // para volver a la página solicitada tras autenticarse en IAM Portal.
+    // Inicia el flujo OIDC. /api/auth/login redirige a IAM Core /authorize,
+    // que a su vez muestra el login de IAM Portal si no hay sesión SSO.
+    // Navegación dura (no router.push) porque sigue redirects cross-origin.
     const redirect = new URLSearchParams(window.location.search).get('redirect');
-    const target   = redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login';
-
-    // Navegación DURA (no router.push): /login hace un redirect a un dominio
-    // externo (IAM Portal) y el router del cliente no sigue redirects
-    // cross-origin vía RSC — se quedaría en esta misma página.
-    window.location.href = target;
+    window.location.href = redirect
+      ? `/api/auth/login?redirect=${encodeURIComponent(redirect)}`
+      : '/api/auth/login';
   };
 
   return (

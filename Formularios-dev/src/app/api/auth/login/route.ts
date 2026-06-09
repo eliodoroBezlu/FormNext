@@ -1,74 +1,57 @@
 // app/api/auth/login/route.ts
+// Inicio del flujo OIDC Authorization Code + PKCE.
+// Genera code_verifier/state/nonce, los guarda en una cookie corta (oidc_tx)
+// y redirige al endpoint /authorize del IAM Core.
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { getOidcClient, generators } from '@/lib/oidc';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
+export const runtime = 'nodejs';
 
-export async function POST(request: NextRequest) {
+const TX_COOKIE = 'oidc_tx';
+
+/** Acepta solo destinos same-origin para evitar open-redirect. */
+function safeRedirect(raw: string | null, request: NextRequest): string {
+  if (!raw) return '/dashboard';
   try {
-    const body = await request.json();
-
-    const response = await fetch(`${API_URL}/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: data.message || 'Error al iniciar sesión' },
-        { status: response.status }
-      );
-    }
-
-    // 🔥 Extraer cookies del backend
-    const setCookieHeader = response.headers.get('set-cookie');
-    
-    const nextResponse = NextResponse.json(data);
-
-    // 🔥 Establecer cookies en Next.js
-    if (setCookieHeader) {
-      const cookiePairs = setCookieHeader.split(',').map(c => c.trim());
-      
-      for (const cookieStr of cookiePairs) {
-        const [nameValue, ...options] = cookieStr.split(';');
-        const [name, value] = nameValue.split('=');
-        
-        // Parsear opciones de cookie\
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const cookieOptions: any = {
-          httpOnly: true,
-          path: '/',
-        };
-
-        options.forEach(opt => {
-          const [key, val] = opt.trim().split('=');
-          if (key.toLowerCase() === 'max-age') {
-            cookieOptions.maxAge = parseInt(val);
-          }
-          if (key.toLowerCase() === 'secure') {
-            cookieOptions.secure = true;
-          }
-          if (key.toLowerCase() === 'samesite') {
-            cookieOptions.sameSite = val.toLowerCase();
-          }
-        });
-
-        (await cookies()).set(name.trim(), value.trim(), cookieOptions);
-      }
-    }
-
-    return nextResponse;
-    
-  } catch (error) {
-  console.error('💥 [ME] Error:', error instanceof Error ? error.message : 'Unknown');
-    return NextResponse.json(
-      { error: 'Error de conexión con el servidor' },
-      { status: 500 }
-    );
+    // Path relativo → seguro
+    if (raw.startsWith('/')) return raw;
+    const url = new URL(raw);
+    if (url.origin === request.nextUrl.origin) return url.pathname + url.search;
+  } catch {
+    /* ignore */
   }
+  return '/dashboard';
+}
+
+export async function GET(request: NextRequest) {
+  const client = getOidcClient();
+
+  const codeVerifier  = generators.codeVerifier();
+  const codeChallenge = generators.codeChallenge(codeVerifier);
+  const state         = generators.state();
+  const nonce         = generators.nonce();
+
+  const redirect = safeRedirect(request.nextUrl.searchParams.get('redirect'), request);
+
+  const authUrl = client.authorizationUrl({
+    scope:                 'openid profile email',
+    state,
+    nonce,
+    code_challenge:        codeChallenge,
+    code_challenge_method: 'S256',
+  });
+
+  const res = NextResponse.redirect(authUrl);
+  res.cookies.set(
+    TX_COOKIE,
+    JSON.stringify({ codeVerifier, state, nonce, redirect }),
+    {
+      httpOnly: true,
+      secure:   process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path:     '/',
+      maxAge:   600, // 10 minutos para completar el login
+    },
+  );
+  return res;
 }

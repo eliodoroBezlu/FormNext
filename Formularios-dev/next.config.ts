@@ -17,6 +17,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
 
+  // openid-client (CommonJS) — no empaquetar; cargar como módulo de Node
+  serverExternalPackages: ['openid-client'],
+
   async rewrites() {
     return [
       {
