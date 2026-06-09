@@ -273,6 +273,7 @@
 
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { sessionCookieOptions, clearSessionCookies } from '@/lib/cookies';
 
 const API_URL = process.env.API_URL || 'http://localhost:3002';
 
@@ -308,14 +309,8 @@ async function proxyCookies(response: Response) {
     const maxAge = maxAgePart ? parseInt(maxAgePart.split('=')[1]) : undefined;
     
     console.log(`🍪 [PROXY] Estableciendo: ${name} = ${value.slice(0, 20)}... (maxAge: ${maxAge}s)`);
-    
-    cookieStore.set(name.trim(), value.trim(), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge,
-    });
+
+    cookieStore.set(name.trim(), value.trim(), sessionCookieOptions(maxAge));
   }
   
   console.log('✅ [PROXY] Cookies sincronizadas correctamente');
@@ -438,8 +433,7 @@ export async function refreshTokenAction(): Promise<ActionResult> {
       
       // Eliminar cookies inválidas
       console.log("🗑️ [REFRESH] Eliminando cookies inválidas...");
-      cookieStore.delete("access_token");
-      cookieStore.delete("refresh_token");
+      clearSessionCookies(cookieStore);
       
       return { success: false, error: "Sesión expirada" };
     }
@@ -540,8 +534,7 @@ export async function getMeAction() {
       if (!refreshResult.success) {
         console.log('❌ [ME] Refresh final falló, eliminando cookies');
         const cookieStore = await cookies();
-        cookieStore.delete("access_token");
-        cookieStore.delete("refresh_token");
+        clearSessionCookies(cookieStore);
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         return null;
       }
@@ -624,8 +617,7 @@ export async function logoutAction() {
     // Siempre eliminar cookies locales
     console.log('🗑️ [LOGOUT] Eliminando cookies...');
     const cookieStore = await cookies();
-    cookieStore.delete("access_token");
-    cookieStore.delete("refresh_token");
+    clearSessionCookies(cookieStore);
     console.log('✅ [LOGOUT] Sesión cerrada');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     // Volver a la pantalla selectora de acceso de forms (inspector + cuenta),

@@ -1,6 +1,7 @@
 // app/api/auth/logout/route.ts
 import {  NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { clearSessionCookies } from '@/lib/cookies';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
 
@@ -19,9 +20,8 @@ export async function POST() {
       });
     }
 
-    // Limpiar cookies
-    cookieStore.delete('access_token');
-    cookieStore.delete('refresh_token');
+    // Limpiar cookies (mismo domain/path que al setear)
+    clearSessionCookies(cookieStore);
 
     return NextResponse.json({ success: true });
     

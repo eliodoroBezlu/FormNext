@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { sessionCookieOptions } from '@/lib/cookies';
 
 const API_URL = process.env.API_URL || 'http://localhost:3002';
 
@@ -36,15 +37,13 @@ export async function GET() {
         const setCookieHeader = response.headers.getSetCookie();
         if (setCookieHeader) {
           for (const cookieStr of setCookieHeader) {
+            const maxAgePart = cookieStr.split(';').find((p) =>
+              p.trim().toLowerCase().startsWith('max-age='),
+            );
+            const maxAge = maxAgePart ? parseInt(maxAgePart.split('=')[1], 10) : undefined;
             const [nameValue] = cookieStr.split(';');
             const [name, value] = nameValue.split('=');
-            // Simplificamos: Guardamos lo básico y seguro
-            res.cookies.set(name.trim(), value.trim(), {
-              httpOnly: true,
-              secure: process.env.NODE_ENV === 'production',
-              sameSite: 'lax',
-              path: '/',
-            });
+            res.cookies.set(name.trim(), value.trim(), sessionCookieOptions(maxAge));
           }
         }
         return res;

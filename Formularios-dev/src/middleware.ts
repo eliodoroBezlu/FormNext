@@ -12,6 +12,7 @@
  */
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { sessionCookieOptions } from '@/lib/cookies';
 
 // ── Configuración ──────────────────────────────────────────────────
 const IAM_CORE_URL = process.env.IAM_CORE_URL || 'http://localhost:4000';
@@ -70,13 +71,8 @@ function applyCookies(source: Response, target: NextResponse): void {
       p.trim().toLowerCase().startsWith('max-age='),
     );
     const maxAge = maxAgePart ? parseInt(maxAgePart.split('=')[1]) : undefined;
-    target.cookies.set(name.trim(), value.trim(), {
-      path:     '/',
-      httpOnly: true,
-      secure:   process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge,
-    });
+    // domain compartido si COOKIE_DOMAIN está definido → SSO cross-subdominio
+    target.cookies.set(name.trim(), value.trim(), sessionCookieOptions(maxAge));
   }
 }
 
