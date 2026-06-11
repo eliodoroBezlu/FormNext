@@ -7,8 +7,9 @@
  */
 import { Issuer, generators, type Client } from 'openid-client';
 
+// Base pública de la API del IdP (ya incluye el prefijo /api o /api/iam).
 const IAM_CORE_PUBLIC_URL = (
-  process.env.IAM_CORE_PUBLIC_URL || process.env.IAM_CORE_URL || 'http://localhost:4000'
+  process.env.IAM_CORE_PUBLIC_URL || 'http://localhost:4000/api'
 ).replace(/\/+$/, '');
 
 const OIDC_ISSUER        = process.env.OIDC_ISSUER || 'iam-core';
@@ -23,13 +24,16 @@ let cachedClient: Client | null = null;
 export function getOidcClient(): Client {
   if (cachedClient) return cachedClient;
 
+  // IAM_CORE_PUBLIC_URL = origen público de la API del IdP, ya con prefijo:
+  //   - directo al core:        http://localhost:4000/api
+  //   - vía proxy del portal:   https://<portal>/api/iam   (modelo Keycloak)
   const issuer = new Issuer({
     issuer:                 OIDC_ISSUER,
-    authorization_endpoint: `${IAM_CORE_PUBLIC_URL}/api/oidc/authorize`,
-    token_endpoint:         `${IAM_CORE_PUBLIC_URL}/api/oidc/token`,
-    userinfo_endpoint:      `${IAM_CORE_PUBLIC_URL}/api/oidc/userinfo`,
-    jwks_uri:               `${IAM_CORE_PUBLIC_URL}/api/auth/.well-known/jwks.json`,
-    end_session_endpoint:   `${IAM_CORE_PUBLIC_URL}/api/oidc/logout`,
+    authorization_endpoint: `${IAM_CORE_PUBLIC_URL}/oidc/authorize`,
+    token_endpoint:         `${IAM_CORE_PUBLIC_URL}/oidc/token`,
+    userinfo_endpoint:      `${IAM_CORE_PUBLIC_URL}/oidc/userinfo`,
+    jwks_uri:               `${IAM_CORE_PUBLIC_URL}/auth/.well-known/jwks.json`,
+    end_session_endpoint:   `${IAM_CORE_PUBLIC_URL}/oidc/logout`,
   });
 
   cachedClient = new issuer.Client({
