@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOidcClient, OIDC_REDIRECT_URI } from '@/lib/oidc';
 import { sessionCookieOptions } from '@/lib/cookies';
+import { getPublicOrigin } from '@/lib/public-url';
 
 export const runtime = 'nodejs';
 
@@ -19,7 +20,7 @@ interface OidcTx {
 
 function fail(request: NextRequest, reason: string): NextResponse {
   console.error('💥 [OIDC callback]', reason);
-  const url = new URL('/', request.nextUrl.origin);
+  const url = new URL('/', getPublicOrigin(request));
   url.searchParams.set('auth_error', '1');
   const res = NextResponse.redirect(url);
   res.cookies.delete(TX_COOKIE);
@@ -55,9 +56,10 @@ export async function GET(request: NextRequest) {
     return fail(request, 'token set incompleto');
   }
 
-  // Destino final (validado al iniciar el flujo)
+  // Destino final (validado al iniciar el flujo). Usa el origen público
+  // (no request.nextUrl.origin, que tras el proxy de Railway es localhost).
   const dest = tx.redirect && tx.redirect.startsWith('/') ? tx.redirect : '/dashboard';
-  const res  = NextResponse.redirect(new URL(dest, request.nextUrl.origin));
+  const res  = NextResponse.redirect(new URL(dest, getPublicOrigin(request)));
 
   const accessMaxAge = tokenSet.expires_in ?? 15 * 60;
   res.cookies.set('access_token',  tokenSet.access_token,  sessionCookieOptions(accessMaxAge));

@@ -4,6 +4,7 @@
 // y redirige al endpoint /authorize del IAM Core.
 import { NextRequest, NextResponse } from 'next/server';
 import { getOidcClient, generators } from '@/lib/oidc';
+import { getPublicOrigin } from '@/lib/public-url';
 
 export const runtime = 'nodejs';
 
@@ -16,7 +17,9 @@ function safeRedirect(raw: string | null, request: NextRequest): string {
     // Path relativo → seguro
     if (raw.startsWith('/')) return raw;
     const url = new URL(raw);
-    if (url.origin === request.nextUrl.origin) return url.pathname + url.search;
+    // Comparar contra el origen público (tras el proxy de Railway el origin
+    // interno es localhost y rechazaría destinos válidos same-origin).
+    if (url.origin === getPublicOrigin(request)) return url.pathname + url.search;
   } catch {
     /* ignore */
   }
