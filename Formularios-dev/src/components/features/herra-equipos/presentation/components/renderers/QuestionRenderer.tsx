@@ -299,9 +299,11 @@ export const QuestionRenderer = <
                                 },
                               },
                               "&:not(.Mui-selected)": {
-                                backgroundColor: "#e9ecef",
-                                color: "#495057",
-                                "&:hover": { backgroundColor: "#dee2e6" },
+                                backgroundColor: (theme) => theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.05)" : "#e9ecef",
+                                color: (theme) => theme.palette.mode === "dark" ? "text.primary" : "#495057",
+                                "&:hover": {
+                                  backgroundColor: (theme) => theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.1)" : "#dee2e6",
+                                },
                               },
                             }}
                           >
@@ -537,7 +539,7 @@ export const QuestionRenderer = <
       sx={{
         p: 2,
         mb: 2,
-        backgroundColor: "#fafafa",
+        backgroundColor: (theme) => theme.palette.mode === "dark" ? "background.paper" : "#fafafa",
         borderLeft: `3px solid ${stripColor}`,
         transition: "border-left-color 0.2s ease",
       }}

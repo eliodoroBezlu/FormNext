@@ -1,12 +1,15 @@
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0f172a;
+    --foreground: #f8fafc;
   }
 }
 
@@ -14,12 +17,13 @@ html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
+  scroll-behavior: smooth;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -35,10 +39,20 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+/* Animaciones globales */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 @media print {
@@ -58,7 +72,7 @@ a {
   }
 }
 
-/* Estilos adicionales para el contenedor del PDF */
+/* Estilos para el contenedor del PDF */
 .pdf-container {
   background: white;
   width: 215mm;
@@ -68,27 +82,60 @@ a {
   box-shadow: 0 0 5px rgba(0,0,0,0.1);
 }
 
+/* Navegación lateral adaptativa al tema */
 .navigation-container {
-  background-color: #d7dbdd ; /* Color gris pálido para el fondo */
+  background-color: transparent !important;
   height: 100%;
 }
 
-
 .navigation-container .MuiListSubheader-root {
-  background-color: #d7dbdd; /* Mantener el mismo color de fondo para los encabezados */
+  background-color: transparent !important;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  padding-top: 16px;
+  padding-bottom: 8px;
+}
+
+/* Estilos interactivos para ítems de menú */
+.custom-nav-item.MuiListItemButton-root {
+  margin: 4px 12px;
+  border-radius: 8px;
+  transition: all 0.2s ease-in-out;
+  color: #64748b;
+}
+
+.custom-nav-item.MuiListItemButton-root .MuiListItemIcon-root {
+  color: #64748b;
+  min-width: 40px;
+  transition: color 0.2s ease-in-out;
 }
 
 .custom-nav-item.MuiListItemButton-root:hover {
-  background-color: #1976d2 !important; /* Color azul para el hover */
-  color: white !important;
+  background-color: rgba(99, 102, 241, 0.08) !important;
+  color: #6366F1 !important;
 }
 
 .custom-nav-item.MuiListItemButton-root:hover .MuiListItemIcon-root {
-  color: white !important;
+  color: #6366F1 !important;
 }
 
-.custom-nav-item.MuiListItemButton-root:hover .MuiListItemText-primary {
-  color: white !important;
+/* Ítem activo/seleccionado */
+.custom-nav-item.MuiListItemButton-root.Mui-selected {
+  background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+.custom-nav-item.MuiListItemButton-root.Mui-selected .MuiListItemIcon-root {
+  color: #ffffff !important;
+}
+
+.custom-nav-item.MuiListItemButton-root.Mui-selected:hover {
+  background: linear-gradient(135deg, #4F46E5 0%, #4338CA 100%) !important;
+  color: #ffffff !important;
 }
 
 .sigCanvas {

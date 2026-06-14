@@ -230,7 +230,7 @@ export function ApprovalSection({
               </Typography>
             }
           />
-          <Box sx={{ ml: 4, mt: 2, p: 2, bgcolor: "grey.50", borderRadius: 1 }}>
+          <Box sx={{ ml: 4, mt: 2, p: 2, bgcolor: theme => theme.palette.mode === 'dark' ? 'background.paper' : 'grey.50', borderRadius: 1 }}>
             {approval.approvedBy && (
               <Typography variant="body2" sx={{ mb: 1 }}>
                 <strong>

@@ -338,9 +338,9 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
                 p={3}
                 textAlign="center"
                 sx={{
-                  border: "2px dashed #ddd",
+                  border: theme => `2px dashed ${theme.palette.mode === 'dark' ? '#334155' : '#ddd'}`,
                   borderRadius: 2,
-                  backgroundColor: "#fafafa",
+                  backgroundColor: theme => theme.palette.mode === 'dark' ? 'background.default' : '#fafafa',
                 }}
               >
                 <Typography color="text.secondary">

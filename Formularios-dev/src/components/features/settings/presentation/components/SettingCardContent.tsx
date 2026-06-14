@@ -1,28 +1,34 @@
-import React from 'react';
-import { CardContent, List, ListItem, ListItemText } from '@mui/material';
-import BulletPoint from '@/components/ui/feedback/BulletPoint';
-
+import React from "react";
+import { CardContent, Box, Chip } from "@mui/material";
 
 interface SettingCardContentProps {
   items: string[];
+  color: string;
 }
 
-const SettingCardContent: React.FC<SettingCardContentProps> = ({ items }) => (
-  <CardContent sx={{ pt: 0 }}>
-    <List dense>
+const SettingCardContent: React.FC<SettingCardContentProps> = ({
+  items,
+  color,
+}) => (
+  <CardContent sx={{ pt: 1, pb: 2.5 }}>
+    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
       {items.map((item, index) => (
-        <ListItem key={index} sx={{ py: 0.5, px: 0 }}>
-          <BulletPoint />
-          <ListItemText
-            primary={item}
-            primaryTypographyProps={{
-              variant: 'body2',
-              color: 'text.secondary',
-            }}
-          />
-        </ListItem>
+        <Chip
+          key={index}
+          label={item}
+          size="small"
+          sx={{
+            fontSize: "11px",
+            fontWeight: 700,
+            textTransform: "capitalize",
+            bgcolor: `${color}0D`, // 8% opacidad
+            color: color,
+            border: `1px solid ${color}30`,
+            borderRadius: 1.5,
+          }}
+        />
       ))}
-    </List>
+    </Box>
   </CardContent>
 );
 

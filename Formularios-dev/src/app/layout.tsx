@@ -1,10 +1,17 @@
 
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeContextProvider } from "@/styles/ThemeContext";
 import { LocalizationWrapper } from "@/components/layout/wrappers/LocalizationWrapper";
 import { Suspense } from "react";
 import { SessionErrorHandler } from "@/components/layout/wrappers/SessionErrorHandler";
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 export const metadata: Metadata = {
   title: "Forms",
@@ -18,8 +25,8 @@ export default function RootLayout({
 }>) {
   
   return (
-    <html lang="es">
-      <body>
+    <html lang="es" className={inter.variable}>
+      <body className={inter.className}>
           <ThemeContextProvider>
             <LocalizationWrapper>
               {/* 🔥 Manejador de errores de sesión con Suspense */}

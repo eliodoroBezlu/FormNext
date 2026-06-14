@@ -16,7 +16,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   onRefresh,
 }) => {
   return (
-    <Box sx={{background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",}} textAlign="center" mb={3} >
+    <Box sx={{background: "linear-gradient(135deg, #6366F1 0%, #06B6D4 100%)", borderRadius: 2, p: 3, color: "white"}} textAlign="center" mb={3} >
       <Grid container display="flex" alignItems="center"  justifyContent="center">
         <Grid size={{ xs: 12, sm: "auto" }}>
           <Security

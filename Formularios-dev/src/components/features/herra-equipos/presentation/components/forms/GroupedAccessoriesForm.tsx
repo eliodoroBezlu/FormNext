@@ -1,14 +1,16 @@
 "use client";
 
+import React, { useEffect, useState } from "react";
 import { Controller, useForm, FieldErrors } from "react-hook-form";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
   Typography,
   Paper,
   Grid,
   TextField,
-  MenuItem,
   Alert,
+  Button,
 } from "@mui/material";
 import {
   FormDataHerraEquipos,
@@ -18,12 +20,15 @@ import { AlertSection } from "../../../common/AlertSection";
 import { ColorCodeSection } from "../../../common/ColorCodeSection";
 import { InspectorSignature } from "../../../common/InspectorSignature";
 import { SupervisorSignature } from "../../../common/SupervisorSignature";
-import { SaveSubmitButtons } from "../../../common/SaveSubmitButtons";
 import { getFormConfig } from "../../../config/form-config.helpers";
 import { ObservationsSection } from "../../../common/ObservationsSection";
 import { GroupedQuestionWithGeneralObservation } from "../renderers/GroupedQuestionWithGeneralObservation";
-import { useEffect, useState } from "react";
 import { VerificationFields } from "../renderers/VerificationsFields";
+
+// Reusable stepper components
+import { FormBreadcrumbs } from "../../../common/FormBreadcrumbs";
+import { FormStepperHeader } from "../../../common/FormStepperHeader";
+import { Step5ReviewSection } from "../../../common/Step5ReviewSection";
 
 interface GroupedAccessoriesFormProps {
   template: FormTemplateHerraEquipos;
@@ -33,6 +38,14 @@ interface GroupedAccessoriesFormProps {
   initialData?: FormDataHerraEquipos;
 }
 
+const steps = [
+  { label: "Herramienta y Área" },
+  { label: "Datos Generales" },
+  { label: "Inspección" },
+  { label: "Firmas y Observaciones" },
+  { label: "Revisión Final" },
+];
+
 export function GroupedAccessoriesForm({
   template,
   onSubmit,
@@ -41,6 +54,24 @@ export function GroupedAccessoriesForm({
   initialData,
 }: GroupedAccessoriesFormProps) {
   const config = getFormConfig(template.code);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Active step state read from search query parameter
+  const initialStep = parseInt(searchParams.get("step") || "1", 10);
+  const [activeStep, setActiveStep] = useState(initialStep);
+
+  const updateStepQueryParam = (step: number) => {
+    const params = new URLSearchParams(window.location.search);
+    params.set("step", step.toString());
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState(null, "", newUrl);
+  };
+
+  const handleStepChange = (newStep: number) => {
+    setActiveStep(newStep);
+    updateStepQueryParam(newStep);
+  };
 
   const {
     control,
@@ -49,6 +80,7 @@ export function GroupedAccessoriesForm({
     setValue,
     watch,
     reset,
+    trigger,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<FormDataHerraEquipos>({ mode: "onTouched" });
 
@@ -102,6 +134,8 @@ export function GroupedAccessoriesForm({
 
   const handleFormSubmit = (data: FormDataHerraEquipos) => {
     setHasSubmitErrors(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).bypassBeforeUnload = true;
     onSubmit(data);
   };
 
@@ -109,292 +143,336 @@ export function GroupedAccessoriesForm({
     onSaveDraft?.(data);
   };
 
+  // Split Verification Fields into Step 1 and Step 2
+  const step1Labels = ["TAG", "Equipo", "Herramienta", "Instrumento", "Código de Instrumento", "Identificación", "Código del Equipo", "Área", "Planta", "Ubicación", "Lugar"];
+  const step1Fields = template.verificationFields.filter((f) => step1Labels.includes(f.label));
+  const step2Fields = template.verificationFields.filter((f) => !step1Labels.includes(f.label));
+
+  // Stepper Section Navigation Handlers
+  const handleNextStep = async () => {
+    if (activeStep === 1) {
+      const step1FieldNames = step1Fields.map((f) => `verification.${f.label}`);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const isValid = await trigger(step1FieldNames as any);
+      if (isValid) handleStepChange(2);
+    } else if (activeStep === 2) {
+      // Validate step 2 fields + accesoriosConfig count inputs
+      const step2FieldNames = step2Fields.map((f) => `verification.${f.label}`);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const step2Valid = await trigger(step2FieldNames as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const configValid = await trigger("accesoriosConfig" as any);
+      if (step2Valid && configValid) handleStepChange(3);
+    } else if (activeStep === 3) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const isValid = await trigger("responses" as any);
+      if (isValid) handleStepChange(4);
+    } else if (activeStep === 4) {
+      const step4FieldNames = [
+        "generalObservations",
+        "inspectorSignature.inspectorName",
+        "inspectorSignature.signatureBase64",
+      ];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const isValid = await trigger(step4FieldNames as any);
+      if (!isValid) return;
+
+      if (onSaveDraft) {
+        handleSubmit(async (data) => {
+          await onSaveDraft(data);
+          if (initialData?._id) {
+            handleStepChange(5);
+          }
+        })();
+      } else {
+        handleStepChange(5);
+      }
+    }
+  };
+
+  const handlePrevStep = () => {
+    if (activeStep > 1) {
+      handleStepChange(activeStep - 1);
+    }
+  };
+
   return (
-    <Box
-      component="form"
-      onSubmit={handleSubmit(handleFormSubmit, handleInvalidSubmit)}
-      sx={{ display: "flex", flexDirection: "column", gap: 3 }}
-      noValidate
-    >
-      <Box>
-        <Typography variant="h4" gutterBottom>
-          {config.formName}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Código: {config.formCode}
-        </Typography>
-      </Box>
+    <>
+      <FormBreadcrumbs formName={config.formName} />
 
-      {hasSubmitErrors && Object.keys(errors).length > 0 && (
-        <Alert severity="error" onClose={() => setHasSubmitErrors(false)}>
-          Hay campos con errores. Revise el formulario — los campos marcados en
-          rojo requieren su atención.
-        </Alert>
-      )}
+      <Box
+        component="form"
+        onSubmit={handleSubmit(handleFormSubmit, handleInvalidSubmit)}
+        sx={{ display: "flex", flexDirection: "column", gap: 3 }}
+        noValidate
+      >
+        <Box>
+          <Typography variant="h4" gutterBottom>
+            {config.formName}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Código: {config.formCode}
+          </Typography>
+        </Box>
 
-      <VerificationFields
-        fields={template.verificationFields}
-        control={control}
-        errors={errors}
-        readonly={readonly}
-        setValue={setValue}
-        isEditMode={!!initialData}
-      />
-      {config.formType === "grouped" && (
-        <Paper elevation={3} sx={{ p: 3, mb: 3, border: "2px solid #2196f3" }}>
-          <Box sx={{ mt: 3 }}>
-            <Typography
-              variant="subtitle1"
-              gutterBottom
-              sx={{
-                fontWeight: "bold",
-                color: "#000",
-                mb: 2,
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-              }}
-            >
-              📊 Cantidad de Accesorios de Izaje a Inspeccionar
-            </Typography>
+        <FormStepperHeader activeStep={activeStep} steps={steps} />
 
-            <Grid container spacing={2}>
-              {config.groupedConfig?.columns
-                .filter((col) => col.applicability === "requiredWithCount")
-                .map((column) => (
-                  <Grid size={{ xs: 6, sm: 3 }} key={column.key}>
-                    <Controller
-                      name={`accesoriosConfig.${column.key}.cantidad`}
-                      control={control}
-                      defaultValue={0}
-                      rules={{
-                        required: "Ingrese cantidad",
-                        min: { value: 0, message: "Mínimo 0" },
-                      }}
-                      render={({ field, fieldState }) => (
-                        <TextField
-                          {...field}
-                          fullWidth
-                          type="number"
-                          label={column.label}
-                          placeholder="0"
-                          error={!!fieldState.error}
-                          helperText={fieldState.error?.message}
-                          disabled={readonly}
-                          InputProps={{
-                            inputProps: { min: 0 },
-                          }}
-                          sx={{
-                            "& .MuiOutlinedInput-root": {
-                              backgroundColor: "#fff9c4",
-                              "& fieldset": {
-                                borderColor: "#fbc02d",
-                                borderWidth: 2,
-                              },
-                              "&:hover fieldset": {
-                                borderColor: "#f9a825",
-                              },
-                              "&.Mui-focused fieldset": {
-                                borderColor: "#f57f17",
-                              },
-                            },
-                            "& .MuiInputLabel-root": {
-                              fontWeight: "bold",
-                              color: "#000",
-                            },
-                            "& input": {
-                              fontWeight: "bold",
-                              fontSize: "1.1rem",
-                              textAlign: "center",
-                            },
-                          }}
-                        />
-                      )}
-                    />
-                  </Grid>
-                ))}
-            </Grid>
-          </Box>
-        </Paper>
-      )}
+        {hasSubmitErrors && Object.keys(errors).length > 0 && (
+          <Alert severity="error" onClose={() => setHasSubmitErrors(false)}>
+            Hay campos con errores. Revise el formulario — los campos marcados en
+            rojo requieren su atención.
+          </Alert>
+        )}
 
-      {config.alert && <AlertSection config={config.alert} />}
+        {/* STEP 1: HERRAMIENTA Y ÁREA */}
+        {activeStep === 1 && (
+          <VerificationFields
+            fields={step1Fields}
+            control={control}
+            errors={errors}
+            readonly={readonly}
+            setValue={setValue}
+            isEditMode={!!initialData}
+          />
+        )}
 
-      {config.colorCode && (
-        <ColorCodeSection
-          config={config.colorCode}
-          register={register}
-          setValue={setValue}
-          watch={watch}
-          errors={errors}
-        />
-      )}
-
-      {template.sections.map((section, sectionIndex) => (
-        <Box key={sectionIndex}>
-          {section.title && (
-            <Typography variant="h5" gutterBottom sx={{ mt: 3, mb: 2 }}>
-              {section.title}
-            </Typography>
-          )}
-
-          {section.questions.map((question, questionIndex) => (
-            <GroupedQuestionWithGeneralObservation
-              key={`${sectionIndex}-${questionIndex}`}
-              question={question}
-              sectionPath={`responses.${sectionIndex}.questions`}
-              questionIndex={questionIndex}
+        {/* STEP 2: DATOS GENERALES + CANTIDADES */}
+        {activeStep === 2 && (
+          <>
+            <VerificationFields
+              fields={step2Fields}
               control={control}
               errors={errors}
               readonly={readonly}
-              formConfig={config}
+              setValue={setValue}
+              isEditMode={!!initialData}
             />
-          ))}
-        </Box>
-      ))}
-      {config.formType === "grouped" && (
-        <Paper
-          elevation={3}
-          sx={{
-            p: 3,
-            mb: 3,
-            border: "2px solid #4caf50",
-            backgroundColor: "#f1f8e9",
-          }}
-        >
-          <Typography
-            variant="h6"
-            gutterBottom
-            sx={{
-              fontWeight: "bold",
-              color: "#2e7d32",
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              mb: 3,
-            }}
-          >
-            🏷️ Tipo de Servicio por Accesorio
-          </Typography>
 
-          <Grid container spacing={3}>
-            {config.groupedConfig?.columns
-              .filter((col) => col.applicability === "requiredWithCount")
-              .map((column) => (
-                <Grid size={{ xs: 12, md: 6 }} key={column.key}>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography
-                      variant="subtitle1"
-                      sx={{
-                        fontWeight: "bold",
-                        mb: 1,
-                        color: "#1976d2",
-                      }}
-                    >
-                      {column.label}
-                    </Typography>
-                    <Controller
-                      name={`accesoriosConfig.${column.key}.tipoServicio`}
-                      control={control}
-                      rules={{
-                        required: `Seleccione tipo de servicio para ${column.label}`,
-                      }}
-                      render={({ field, fieldState }) => (
-                        <TextField
-                          {...field}
-                          fullWidth
-                          select
-                          label={`Tipo de Servicio - ${column.label}`}
-                          value={field.value || ""}
-                          error={!!fieldState.error}
-                          helperText={fieldState.error?.message}
-                          disabled={readonly}
-                          sx={{
-                            "& .MuiOutlinedInput-root": {
-                              backgroundColor: "#e8f5e9",
-                              "& fieldset": {
-                                borderColor: "#4caf50",
-                              },
-                            },
-                          }}
-                        >
-                          <MenuItem value="">
-                            <em>Seleccione tipo</em>
-                          </MenuItem>
-                          <MenuItem value="N">N - Normal</MenuItem>
-                          <MenuItem value="S">S - Severo</MenuItem>
-                          <MenuItem value="ES">ES - Especial</MenuItem>
-                        </TextField>
-                      )}
-                    />
-                  </Box>
-                </Grid>
-              ))}
-          </Grid>
+            {config.formType === "grouped" && (
+              <Paper elevation={3} sx={{ p: 3, mb: 3, border: "2px solid #2196f3" }}>
+                <Box sx={{ mt: 3 }}>
+                  <Typography
+                    variant="subtitle1"
+                    gutterBottom
+                    sx={{
+                      fontWeight: "bold",
+                      color: "#000",
+                      mb: 2,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                    }}
+                  >
+                    📊 Cantidad de Accesorios de Izaje a Inspeccionar
+                  </Typography>
 
-          {/* Leyenda de tipos */}
+                  <Grid container spacing={2}>
+                    {config.groupedConfig?.columns
+                      .filter((col) => col.applicability === "requiredWithCount")
+                      .map((column) => (
+                        <Grid size={{ xs: 6, sm: 3 }} key={column.key}>
+                          <Controller
+                            name={`accesoriosConfig.${column.key}.cantidad`}
+                            control={control}
+                            defaultValue={0}
+                            rules={{
+                              required: "Ingrese cantidad",
+                              min: { value: 0, message: "Mínimo 0" },
+                            }}
+                            render={({ field, fieldState }) => (
+                              <TextField
+                                {...field}
+                                fullWidth
+                                type="number"
+                                label={column.label}
+                                placeholder="0"
+                                error={!!fieldState.error}
+                                helperText={fieldState.error?.message}
+                                disabled={readonly}
+                                InputProps={{
+                                  inputProps: { min: 0 },
+                                }}
+                                sx={{
+                                  "& .MuiOutlinedInput-root": {
+                                    backgroundColor: "#fff9c4",
+                                    "& fieldset": {
+                                      borderColor: "#fbc02d",
+                                      borderWidth: 2,
+                                    },
+                                    "&:hover fieldset": {
+                                      borderColor: "#f9a825",
+                                    },
+                                    "&.Mui-focused fieldset": {
+                                      borderColor: "#f57f17",
+                                    },
+                                  },
+                                  "& .MuiInputLabel-root": {
+                                    fontWeight: "bold",
+                                    color: "#000",
+                                  },
+                                  "& input": {
+                                    fontWeight: "bold",
+                                    fontSize: "1.1rem",
+                                    textAlign: "center",
+                                  },
+                                }}
+                              />
+                            )}
+                          />
+                        </Grid>
+                      ))}
+                  </Grid>
+                </Box>
+              </Paper>
+            )}
+          </>
+        )}
+
+        {/* STEP 3: INSPECCIÓN / CUERPO */}
+        {activeStep === 3 && (
+          <>
+            {config.alert && <AlertSection config={config.alert} />}
+
+            {template.sections.map((section, sectionIndex) => (
+              <Box key={sectionIndex}>
+                {section.title && (
+                  <Typography variant="h5" gutterBottom sx={{ mt: 3, mb: 2 }}>
+                    {section.title}
+                  </Typography>
+                )}
+
+                {section.questions.map((question, questionIndex) => (
+                  <GroupedQuestionWithGeneralObservation
+                    key={`${sectionIndex}-${questionIndex}`}
+                    question={question}
+                    sectionPath={`responses.${sectionIndex}.questions`}
+                    questionIndex={questionIndex}
+                    control={control}
+                    errors={errors}
+                    readonly={readonly}
+                    formConfig={config}
+                  />
+                ))}
+              </Box>
+            ))}
+          </>
+        )}
+
+        {/* STEP 4: FIRMAS Y OBSERVACIONES */}
+        {activeStep === 4 && (
+          <>
+            {config.colorCode && (
+              <ColorCodeSection
+                config={config.colorCode}
+                register={register}
+                setValue={setValue}
+                watch={watch}
+                errors={errors}
+              />
+            )}
+
+            {config.generalObservations?.enabled && (
+              <ObservationsSection
+                config={config.generalObservations}
+                register={register}
+                errors={errors}
+              />
+            )}
+
+            {config.signatures?.inspector && (
+              <InspectorSignature
+                register={register}
+                control={control}
+                errors={errors}
+                setValue={setValue}
+                config={config.signatures.inspector}
+              />
+            )}
+
+            {config.signatures?.supervisor &&
+              typeof config.signatures.supervisor === "object" &&
+              config.signatures.supervisor.enabled && (
+              <SupervisorSignature
+                register={register}
+                control={control}
+                errors={errors}
+                setValue={setValue}
+                config={config.signatures.supervisor}
+              />
+            )}
+          </>
+        )}
+
+        {/* STEP 5: VISTA PREVIA Y PDF */}
+        {activeStep === 5 && (
+          <Step5ReviewSection
+            template={template}
+            formData={watch()}
+            onPrev={handlePrevStep}
+            onFinalSubmit={handleSubmit(handleFormSubmit, handleInvalidSubmit)}
+            isSubmitting={isSubmitting}
+            inspectionId={initialData?._id}
+            formType="grouped"
+          />
+        )}
+
+        {/* STEPPER STEP NAVIGATION BUTTONS (STEPS 1-4) */}
+        {activeStep < 5 && (
           <Box
             sx={{
+              display: "flex",
+              justifyContent: "space-between",
               mt: 2,
-              p: 2,
-              backgroundColor: "#e3f2fd",
-              borderRadius: 1,
+              pt: 2,
+              borderTop: "1px solid",
+              borderColor: "divider",
             }}
           >
-            <Typography variant="body2" sx={{ fontWeight: "bold", mb: 1 }}>
-              📋 Descripción de Tipos de Servicio:
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 0.5 }}>
-              • <strong>N - Normal:</strong> Uso estándar sin condiciones
-              especiales
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 0.5 }}>
-              • <strong>S - Severo:</strong> Condiciones de trabajo exigentes
-            </Typography>
-            <Typography variant="body2">
-              • <strong>ES - Especial:</strong> Aplicaciones específicas o
-              críticas
-            </Typography>
+            {activeStep === 1 ? (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (window as any).bypassBeforeUnload = true;
+                  router.push("/dashboard/form-herra-equipos");
+                }}
+              >
+                Cancelar
+              </Button>
+            ) : (
+              <Button variant="outlined" onClick={handlePrevStep}>
+                Anterior
+              </Button>
+            )}
+
+            <Box sx={{ display: "flex", gap: 1.5 }}>
+              {config.allowDraft !== false && onSaveDraft && (
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  onClick={handleSubmit(handleDraftSave)}
+                  disabled={isSubmitting}
+                >
+                  Guardar Borrador
+                </Button>
+              )}
+              <Button
+                variant="contained"
+                onClick={handleNextStep}
+                disabled={isSubmitting}
+                sx={{
+                  background: "linear-gradient(135deg, #6366F1, #818CF8)",
+                  "&:hover": {
+                    background: "linear-gradient(135deg, #4F46E5, #6366F1)",
+                  },
+                }}
+              >
+                Siguiente Sección
+              </Button>
+            </Box>
           </Box>
-        </Paper>
-      )}
-
-      {config.conclusion && (
-        <ObservationsSection
-          config={config.conclusion}
-          register={register}
-          errors={errors}
-        />
-      )}
-
-      {config.signatures?.inspector && (
-        <InspectorSignature
-          register={register}
-          control={control}
-          errors={errors}
-          setValue={setValue}
-          config={config.signatures.supervisor}
-        />
-      )}
-
-      {config.signatures?.supervisor && (
-        <SupervisorSignature
-          register={register}
-          control={control}
-          errors={errors}
-          setValue={setValue}
-          config={config.signatures.supervisor}
-        />
-      )}
-
-      <SaveSubmitButtons
-        onSaveDraft={
-          onSaveDraft ? () => handleSubmit(handleDraftSave)() : undefined
-        }
-        onSubmit={handleSubmit(handleFormSubmit, handleInvalidSubmit)}
-        isSubmitting={isSubmitting}
-        allowDraft={config.allowDraft ?? true}
-      />
-    </Box>
+        )}
+      </Box>
+    </>
   );
 }

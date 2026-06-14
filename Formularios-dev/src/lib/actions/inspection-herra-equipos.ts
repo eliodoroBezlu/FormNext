@@ -168,17 +168,22 @@ export async function createInspectionHerraEquipos(
       body: JSON.stringify(payload),
     });
 
-    const result = await handleApiResponse<ApiResponse<InspectionResponse>>(response);
+    const result = await handleApiResponse<ApiResponse<unknown>>(response);
 
     revalidatePath("/dashboard/form-herra-equipos");
     revalidatePath("/dashboard/inspecciones-pendientes");
 
-    console.log(`[INSPECTION_ACTION] Guardada con éxito. ID: ${result.data?._id || "unknown"}`);
+    const rawData = result.data as Record<string, unknown> | null | undefined;
+    const inspectionData = (rawData && typeof rawData === "object" && "inspection" in rawData)
+      ? rawData.inspection as InspectionResponse
+      : result.data as InspectionResponse;
+
+    console.log(`[INSPECTION_ACTION] Guardada con éxito. ID: ${inspectionData?._id || "unknown"}`);
 
     return {
       success: true,
       message: result.message || "Inspección guardada exitosamente",
-      data: result.data,
+      data: inspectionData as InspectionResponse,
     };
   } catch (error) {
     console.error("❌ [INSPECTION_ACTION] Error al crear inspección:", error);

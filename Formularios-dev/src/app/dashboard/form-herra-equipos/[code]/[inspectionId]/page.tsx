@@ -234,12 +234,14 @@ export default function FormularioDinamicoPage() {
         template.code,
         { templateName: template.name },
       );
-      if (result.success)
+      if (result.success) {
         setSnackbar({
           open: true,
           message: "Borrador guardado",
           severity: "success",
         });
+        return result.data;
+      }
     } catch (err) {
       console.error("Error al guardar borrador:", err);
       setSnackbar({

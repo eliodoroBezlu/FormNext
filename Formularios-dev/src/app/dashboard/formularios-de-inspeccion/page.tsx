@@ -24,6 +24,8 @@ import { InspeccionSistemasEmergencia } from "@/components/features/sistemas-eme
 import LlenarFormulariosPage from "@/components/features/herra-equipos/FormHerraEquipos";
 import { SuccessScreen } from "@/components/ui/feedback/SuccessScreen"; 
 
+import PageHeader from "@/components/layout/page-header/PageHeader";
+
 // Interfaz para formularios personalizados (Hardcoded por ahora)
 interface CustomForm {
   id: string;
@@ -297,12 +299,10 @@ export default function HomePage() {
   // 4. VISTA DE LISTADO (Default)
   return (
     <Box p={3}>
-      <Box mb={4}>
-        <Typography variant="h3" gutterBottom>Formularios de Inspección</Typography>
-        <Typography variant="subtitle1" color="text.secondary">
-          Selecciona un formulario para completar
-        </Typography>
-      </Box>
+      <PageHeader
+        title="Formularios de Inspección"
+        description="Selecciona un formulario para completar"
+      />
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>

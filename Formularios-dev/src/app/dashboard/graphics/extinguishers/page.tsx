@@ -107,7 +107,7 @@ const DashboardExtintores: React.FC = () => {
         sx={{
           p: 3,
           mb: 3,
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          background: "linear-gradient(135deg, #6366F1 0%, #06B6D4 100%)",
           color: "white",
           borderRadius: 2,
         }}

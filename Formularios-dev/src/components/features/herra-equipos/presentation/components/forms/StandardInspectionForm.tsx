@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { useForm, FieldErrors } from "react-hook-form";
-import { Box, Typography, Paper, Alert, Snackbar } from "@mui/material";
+import { Box, Typography, Paper, Alert, Snackbar, Button } from "@mui/material";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   FormDataHerraEquipos,
   FormTemplateHerraEquipos,
@@ -16,7 +17,6 @@ import { getFormConfig } from "../../../config/form-config.helpers";
 import { AlertSection } from "../../../common/AlertSection";
 import { ColorCodeSection } from "../../../common/ColorCodeSection";
 import { InspectorSignature } from "../../../common/InspectorSignature";
-import { SaveSubmitButtons } from "../../../common/SaveSubmitButtons";
 import { SupervisorSignature } from "../../../common/SupervisorSignature";
 import { OutOfServiceSection } from "../../../common/OutOfServiceSection";
 import { ObservationsSection } from "../../../common/ObservationsSection";
@@ -30,6 +30,11 @@ import { DynamicSectionSelector } from "../selectors/DynamicSectionSelector";
 import { Role } from "@/lib/routePermissions";
 import { VerificationFields } from "../renderers/VerificationsFields";
 import { SectionRenderer } from "../renderers/SectionRenderer";
+
+// Reusable custom stepper components
+import { FormBreadcrumbs } from "../../../common/FormBreadcrumbs";
+import { FormStepperHeader } from "../../../common/FormStepperHeader";
+import { Step5ReviewSection } from "../../../common/Step5ReviewSection";
 
 interface StandardInspectionFormProps {
   template: FormTemplateHerraEquipos;
@@ -55,6 +60,14 @@ const initDefaults = (
   return defaults;
 };
 
+const steps = [
+  { label: "Herramienta y Área" },
+  { label: "Datos Generales" },
+  { label: "Inspección" },
+  { label: "Firmas y Observaciones" },
+  { label: "Revisión Final" },
+];
+
 export function StandardInspectionForm({
   template,
   onSubmit,
@@ -65,6 +78,24 @@ export function StandardInspectionForm({
 }: StandardInspectionFormProps) {
   const config = getFormConfig(template.code);
   const { user, hasRole } = useUserRole();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Active step state read from search query parameter
+  const initialStep = parseInt(searchParams.get("step") || "1", 10);
+  const [activeStep, setActiveStep] = useState(initialStep);
+
+  const updateStepQueryParam = (step: number) => {
+    const params = new URLSearchParams(window.location.search);
+    params.set("step", step.toString());
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState(null, "", newUrl);
+  };
+
+  const handleStepChange = (newStep: number) => {
+    setActiveStep(newStep);
+    updateStepQueryParam(newStep);
+  };
 
   // ✅ 1. ESTADO NUEVO: Para capturar la decisión del Checkbox de Aprobación
   const [approvalDecision, setApprovalDecision] = useState<{
@@ -92,6 +123,7 @@ export function StandardInspectionForm({
     setValue,
     watch,
     reset,
+    trigger,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<FormDataHerraEquipos>({
     defaultValues: {
@@ -150,8 +182,6 @@ export function StandardInspectionForm({
 
     return approvalStatuses.includes(initialData.status as InspectionStatus);
   };
-
-
 
   const ensureAllBooleanFields = (
     data: FormDataHerraEquipos,
@@ -323,6 +353,8 @@ export function StandardInspectionForm({
       completeData.requiresApproval = false;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).bypassBeforeUnload = true;
     onSubmit(completeData);
   };
 
@@ -330,7 +362,6 @@ export function StandardInspectionForm({
   const handleInvalidSubmit = (errors: FieldErrors<FormDataHerraEquipos>) => {
     setHasSubmitErrors(true);
     console.log("errors", errors);
-    // Double rAF: first frame commits React's state update, second frame commits the DOM paint
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         const firstInvalid = document.querySelector<HTMLElement>(
@@ -375,8 +406,61 @@ export function StandardInspectionForm({
     return false;
   };
 
+  // Split Verification Fields into Step 1 and Step 2
+  const step1Labels = ["TAG", "Equipo", "Herramienta", "Instrumento", "Código de Instrumento", "Identificación", "Código del Equipo", "Área", "Planta", "Ubicación", "Lugar"];
+  const step1Fields = template.verificationFields.filter((f) => step1Labels.includes(f.label));
+  const step2Fields = template.verificationFields.filter((f) => !step1Labels.includes(f.label));
+
+  // Stepper Section Navigation Handlers
+  const handleNextStep = async () => {
+    if (activeStep === 1) {
+      const step1FieldNames = step1Fields.map((f) => `verification.${f.label}`);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const isValid = await trigger(step1FieldNames as any);
+      if (isValid) handleStepChange(2);
+    } else if (activeStep === 2) {
+      const step2FieldNames = step2Fields.map((f) => `verification.${f.label}`);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const isValid = await trigger(step2FieldNames as any);
+      if (isValid) handleStepChange(3);
+    } else if (activeStep === 3) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const isValid = await trigger("responses" as any);
+      if (isValid) handleStepChange(4);
+    } else if (activeStep === 4) {
+      const step4FieldNames = [
+        "generalObservations",
+        "inspectorSignature.inspectorName",
+        "inspectorSignature.signatureBase64",
+      ];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const isValid = await trigger(step4FieldNames as any);
+      if (!isValid) return;
+
+      if (onSaveDraft) {
+        handleSubmit(async (data) => {
+          const completeData = ensureAllBooleanFields(data, template.sections);
+          await onSaveDraft(completeData);
+          if (initialData?._id) {
+            handleStepChange(5);
+          }
+        })();
+      } else {
+        handleStepChange(5);
+      }
+    }
+  };
+
+  const handlePrevStep = () => {
+    if (activeStep > 1) {
+      handleStepChange(activeStep - 1);
+    }
+  };
+
   return (
     <>
+      <FormBreadcrumbs formName={config.formName} />
+
       <Box
         component="form"
         onSubmit={handleSubmit(handleFormSubmit, handleInvalidSubmit)}
@@ -418,6 +502,8 @@ export function StandardInspectionForm({
           )}
         </Box>
 
+        <FormStepperHeader activeStep={activeStep} steps={steps} />
+
         {hasSubmitErrors && Object.keys(errors).length > 0 && (
           <Alert severity="error" onClose={() => setHasSubmitErrors(false)}>
             Hay campos con errores. Revise el formulario — los campos marcados
@@ -432,158 +518,233 @@ export function StandardInspectionForm({
           </Alert>
         )}
 
-        <VerificationFields
-          fields={template.verificationFields}
-          control={control}
-          errors={errors}
-          readonly={readonly || isApprovalReview}
-          setValue={setValue}
-          isEditMode={!!initialData}
-        />
-
-        {config.alert && <AlertSection config={config.alert} />}
-
-        {config.colorCode && (
-          <ColorCodeSection
-            config={config.colorCode}
-            register={register}
-            setValue={setValue}
-            watch={watch}
+        {/* STEP 1: HERRAMIENTA Y ÁREA */}
+        {activeStep === 1 && (
+          <VerificationFields
+            fields={step1Fields}
+            control={control}
             errors={errors}
+            readonly={readonly || isApprovalReview}
+            setValue={setValue}
+            isEditMode={!!initialData}
           />
         )}
 
-        {config.outOfService?.enabled && (
-          <Box>
-            <OutOfServiceSection
-              config={config.outOfService}
-              register={register}
-              control={control}
-              errors={errors}
-              readonly={readonly}
-              section="header"
-              selectedRootItems={selectedItems["ROOT"]}
-            />
-          </Box>
+        {/* STEP 2: DATOS GENERALES */}
+        {activeStep === 2 && (
+          <VerificationFields
+            fields={step2Fields}
+            control={control}
+            errors={errors}
+            readonly={readonly || isApprovalReview}
+            setValue={setValue}
+            isEditMode={!!initialData}
+          />
         )}
 
-        {config.sectionSelector?.enabled &&
-          config.sectionSelector.items &&
-          !readonly && (
-            <Box>
-              {config.sectionSelector.items.map((itemConfig, idx) => (
-                <DynamicSectionSelector
-                  key={idx}
-                  sections={template.sections}
-                  config={itemConfig}
-                  selectedItems={selectedItems}
-                  onSelectionChange={handleSelectionChange}
-                  readonly={readonly}
-                />
-              ))}
-            </Box>
-          )}
+        {/* STEP 3: INSPECCIÓN / CUERPO */}
+        {activeStep === 3 && (
+          <>
+            {config.alert && <AlertSection config={config.alert} />}
 
-        {visibleSections.length > 0 && (
-          <Box>
-            {visibleSections.map((section, idx) => {
-              const originalIndex = template.sections.findIndex(
-                (s) => s._id === section._id || s.title === section.title,
-              );
+            {config.colorCode && (
+              <ColorCodeSection
+                config={config.colorCode}
+                register={register}
+                setValue={setValue}
+                watch={watch}
+                errors={errors}
+              />
+            )}
 
-              return (
-                <SectionRenderer
-                  key={section._id || idx}
-                  section={section}
-                  sectionPath={`responses.section_${originalIndex}`}
+            {config.sectionSelector?.enabled &&
+              config.sectionSelector.items &&
+              !readonly && (
+                <Box>
+                  {config.sectionSelector.items.map((itemConfig, idx) => (
+                    <DynamicSectionSelector
+                      key={idx}
+                      sections={template.sections}
+                      config={itemConfig}
+                      selectedItems={selectedItems}
+                      onSelectionChange={handleSelectionChange}
+                      readonly={readonly}
+                    />
+                  ))}
+                </Box>
+              )}
+
+            {visibleSections.length > 0 && (
+              <Box>
+                {visibleSections.map((section, idx) => {
+                  const originalIndex = template.sections.findIndex(
+                    (s) => s._id === section._id || s.title === section.title,
+                  );
+
+                  return (
+                    <SectionRenderer
+                      key={section._id || idx}
+                      section={section}
+                      sectionPath={`responses.section_${originalIndex}`}
+                      control={control}
+                      errors={errors}
+                      formConfig={config}
+                      readonly={readonly || isApprovalReview}
+                    />
+                  );
+                })}
+              </Box>
+            )}
+          </>
+        )}
+
+        {/* STEP 4: FIRMAS Y OBSERVACIONES */}
+        {activeStep === 4 && (
+          <>
+            {config.outOfService?.enabled && (
+              <Box>
+                <OutOfServiceSection
+                  config={config.outOfService}
+                  register={register}
                   control={control}
                   errors={errors}
-                  formConfig={config}
-                  readonly={readonly || isApprovalReview}
+                  readonly={readonly}
+                  section="header"
+                  selectedRootItems={selectedItems["ROOT"]}
                 />
-              );
-            })}
-          </Box>
+              </Box>
+            )}
+
+            {config.outOfService?.enabled && (
+              <Box>
+                <OutOfServiceSection
+                  config={config.outOfService}
+                  register={register}
+                  control={control}
+                  errors={errors}
+                  readonly={readonly}
+                  section="footer"
+                  selectedRootItems={selectedItems["ROOT"]}
+                />
+              </Box>
+            )}
+
+            {config.generalObservations?.enabled && (
+              <ObservationsSection
+                config={config.generalObservations}
+                register={register}
+                errors={errors}
+              />
+            )}
+
+            {config.signatures?.inspector && (
+              <InspectorSignature
+                register={register}
+                control={control}
+                errors={errors}
+                setValue={setValue}
+                config={config.signatures.inspector}
+              />
+            )}
+
+            {showSupervisorSignature() && (
+              <SupervisorSignature
+                register={register}
+                control={control}
+                errors={errors}
+                setValue={setValue}
+                config={config.signatures?.supervisor}
+              />
+            )}
+
+            {shouldShowApprovalSection() && (
+              <ApprovalSection
+                status={initialData!.status || InspectionStatus.PENDING_APPROVAL}
+                approval={initialData!.approval}
+                canApprove={canApprove()}
+                onApprove={handleLocalApprove}
+                onReject={handleLocalReject}
+                readonly={
+                  initialData!.status === InspectionStatus.APPROVED ||
+                  initialData!.status === InspectionStatus.REJECTED
+                }
+              />
+            )}
+          </>
         )}
 
-        {config.outOfService?.enabled && (
-          <Box>
-            <OutOfServiceSection
-              config={config.outOfService}
-              register={register}
-              control={control}
-              errors={errors}
-              readonly={readonly}
-              section="footer"
-              selectedRootItems={selectedItems["ROOT"]}
-            />
-          </Box>
-        )}
-
-        {config.generalObservations?.enabled && (
-          <ObservationsSection
-            config={config.generalObservations}
-            register={register}
-            errors={errors}
-          />
-        )}
-
-        {config.signatures?.inspector && (
-          <InspectorSignature
-            register={register}
-            control={control}
-            errors={errors}
-            setValue={setValue}
-            config={config.signatures.inspector}
-          />
-        )}
-
-        {showSupervisorSignature() && (
-          <SupervisorSignature
-            register={register}
-            control={control}
-            errors={errors}
-            setValue={setValue}
-            config={config.signatures?.supervisor}
-          />
-        )}
-
-        {shouldShowApprovalSection() && (
-          <ApprovalSection
-            status={initialData!.status || InspectionStatus.PENDING_APPROVAL}
-            approval={initialData!.approval}
-            canApprove={canApprove()}
-            onApprove={handleLocalApprove}
-            onReject={handleLocalReject}
-            readonly={
-              initialData!.status === InspectionStatus.APPROVED ||
-              initialData!.status === InspectionStatus.REJECTED
-            }
-          />
-        )}
-
-        {!isViewMode && (
-          <SaveSubmitButtons
-            onSaveDraft={
-              onSaveDraft ? () => handleSubmit(handleDraftSave)() : undefined
-            }
-            onSubmit={
+        {/* STEP 5: VISTA PREVIA Y PDF */}
+        {activeStep === 5 && (
+          <Step5ReviewSection
+            template={template}
+            formData={watch()}
+            onPrev={handlePrevStep}
+            onFinalSubmit={
               isApprovalReview
                 ? handleApprovalSubmit
                 : handleSubmit(handleFormSubmit, handleInvalidSubmit)
             }
             isSubmitting={isSubmitting}
-            allowDraft={config.allowDraft ?? true}
-            approvalAction={
-              initialData?.status === InspectionStatus.PENDING_APPROVAL
-                ? approvalDecision.status === "approved"
-                  ? "approve"
-                  : approvalDecision.status === "rejected"
-                    ? "reject"
-                    : null
-                : undefined
-            }
+            inspectionId={initialData?._id}
+            formType="standard"
           />
+        )}
+
+        {/* STEPPER STEP NAVIGATION BUTTONS (STEPS 1-4) */}
+        {activeStep < 5 && (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              mt: 2,
+              pt: 2,
+              borderTop: "1px solid",
+              borderColor: "divider",
+            }}
+          >
+            {activeStep === 1 ? (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (window as any).bypassBeforeUnload = true;
+                  router.push("/dashboard/form-herra-equipos");
+                }}
+              >
+                Cancelar
+              </Button>
+            ) : (
+              <Button variant="outlined" onClick={handlePrevStep}>
+                Anterior
+              </Button>
+            )}
+
+            <Box sx={{ display: "flex", gap: 1.5 }}>
+              {config.allowDraft !== false && onSaveDraft && (
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  onClick={handleSubmit(handleDraftSave)}
+                  disabled={isSubmitting}
+                >
+                  Guardar Borrador
+                </Button>
+              )}
+              <Button
+                variant="contained"
+                onClick={handleNextStep}
+                disabled={isSubmitting}
+                sx={{
+                  background: "linear-gradient(135deg, #6366F1, #818CF8)",
+                  "&:hover": {
+                    background: "linear-gradient(135deg, #4F46E5, #6366F1)",
+                  },
+                }}
+              >
+                Siguiente Sección
+              </Button>
+            </Box>
+          </Box>
         )}
       </Box>
 

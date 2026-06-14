@@ -168,7 +168,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
   }
 
   return (
-    <Paper elevation={1} sx={{ p: 2, mb: 2, backgroundColor: "#fafafa" }}>
+    <Paper elevation={1} sx={{ p: 2, mb: 2, backgroundColor: theme => theme.palette.mode === 'dark' ? 'background.paper' : '#fafafa' }}>
       <Box display="flex" alignItems="flex-start" gap={2}>
         <DragIndicator sx={{ color: "text.secondary", mt: 1 }} />
         <Box flex={1}>

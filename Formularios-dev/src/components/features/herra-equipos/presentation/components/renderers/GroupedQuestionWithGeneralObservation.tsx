@@ -13,6 +13,7 @@ import {
   TextField,
   FormControl,
   FormHelperText,
+  useTheme,
 } from "@mui/material"
 import type { FormDataHerraEquipos, Question, GroupedQuestionData, ColumnConfig, FormFeatureConfig } from "../../../types/IProps"
 
@@ -34,6 +35,8 @@ export const GroupedQuestionWithGeneralObservation = <T extends FormDataHerraEqu
   readonly = false,
   formConfig,
 }: GroupedQuestionWithGeneralObservationProps<T>) => {
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
   const groupedConfig = formConfig?.groupedConfig
 
   if (!groupedConfig) {
@@ -54,28 +57,45 @@ export const GroupedQuestionWithGeneralObservation = <T extends FormDataHerraEqu
       blue: "#e3f2fd",
       green: "#e8f5e9",
       orange: "#fff3e0",
-      // Agrega más colores según necesites
     };
     
-    // Si ya es un color hex, retornarlo directamente
     if (colorName.startsWith('#')) return colorName;
-    
-    // Buscar en el mapa (case-insensitive)
     return colorMap[colorName.toLowerCase()] || "#ffffff";
   }
 
-  // 🆕 Función mejorada para obtener color de fondo por columna y pregunta
+  // 🆕 Función mejorada para obtener color de fondo por columna y pregunta (soporta modo oscuro)
   const getBackgroundColor = (columnKey: string, applicability: string): string => {
-    // PRIORIDAD 1: Verificar si hay configuración de colores por pregunta en groupedConfig
     if (groupedConfig?.questionColumnColors) {
       const questionColors = groupedConfig.questionColumnColors[questionIndex];
       
       if (questionColors && questionColors[columnKey]) {
-        return getColorHex(questionColors[columnKey]);
+        const hex = getColorHex(questionColors[columnKey]);
+        if (isDarkMode) {
+          if (hex === "#ffffff") return "#1e293b";
+          if (hex === "#ffebee") return "rgba(183, 28, 28, 0.25)";
+          if (hex === "#f5f5f5" || hex === "grey" || hex === "#grey") return "rgba(255, 255, 255, 0.05)";
+          if (hex === "#fff9c4") return "rgba(217, 119, 6, 0.25)";
+          if (hex === "#e3f2fd") return "rgba(30, 41, 59, 0.5)";
+          if (hex === "#e8f5e9") return "rgba(5, 150, 105, 0.25)";
+          if (hex === "#fff3e0") return "rgba(217, 119, 6, 0.25)";
+        }
+        return hex;
       }
     }
 
-    // PRIORIDAD 2 (FALLBACK): Usar color basado en applicability
+    if (isDarkMode) {
+      switch (applicability) {
+        case "required":
+          return "rgba(183, 28, 28, 0.25)"
+        case "requiredWithCount":
+          return "rgba(217, 119, 6, 0.25)"
+        case "notApplicable":
+          return "rgba(255, 255, 255, 0.03)"
+        default:
+          return "#1e293b"
+      }
+    }
+
     switch (applicability) {
       case "required":
         return "#ffebee" // Rojo claro
@@ -105,9 +125,9 @@ export const GroupedQuestionWithGeneralObservation = <T extends FormDataHerraEqu
   }
 
   return (
-    <Paper elevation={2} sx={{ mb: { xs: 2, md: 3 }, border: "2px solid #ddd", overflow: "hidden" }}>
+    <Paper elevation={2} sx={{ mb: { xs: 2, md: 3 }, border: (theme) => `2px solid ${theme.palette.mode === 'dark' ? '#334155' : '#ddd'}`, overflow: "hidden" }}>
       {/* Header de la pregunta */}
-      <Box sx={{ p: { xs: 1.5, md: 2 }, backgroundColor: "#e3f2fd", borderBottom: "3px solid #1976d2" }}>
+      <Box sx={{ p: { xs: 1.5, md: 2 }, backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.15)' : '#e3f2fd', borderBottom: (theme) => `3px solid ${theme.palette.mode === 'dark' ? '#90caf9' : '#1976d2'}` }}>
         <Typography variant="h6" fontWeight="bold" sx={{ fontSize: { xs: "1rem", md: "1.25rem" } }}>
           {question.text}
         </Typography>
@@ -115,7 +135,7 @@ export const GroupedQuestionWithGeneralObservation = <T extends FormDataHerraEqu
 
       {/* Instrucciones */}
       {groupedConfig.instructionText && (
-        <Box sx={{ p: { xs: 1.5, md: 2 }, backgroundColor: "#e8f5e9", borderBottom: "1px solid #c8e6c9" }}>
+        <Box sx={{ p: { xs: 1.5, md: 2 }, backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(46, 125, 50, 0.15)' : '#e8f5e9', borderBottom: (theme) => `1px solid ${theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : '#c8e6c9'}` }}>
           <Typography variant="body2" sx={{ fontStyle: "italic", fontSize: { xs: "0.875rem", md: "0.875rem" } }}>
             {groupedConfig.instructionText}
           </Typography>
@@ -195,7 +215,9 @@ export const GroupedQuestionWithGeneralObservation = <T extends FormDataHerraEqu
                             p: { xs: 1, md: 2 },
                             height: "100%",
                             backgroundColor: bgColor, // 🆕 Color dinámico
-                            border: isDisabled ? "2px dashed #ccc" : "2px solid #ddd",
+                            border: (theme) => isDisabled 
+                              ? `2px dashed ${theme.palette.mode === 'dark' ? '#475569' : '#ccc'}` 
+                              : `2px solid ${theme.palette.mode === 'dark' ? '#334155' : '#ddd'}`,
                             opacity: isDisabled ? 0.5 : 1,
                           }}
                         >
@@ -290,7 +312,7 @@ export const GroupedQuestionWithGeneralObservation = <T extends FormDataHerraEqu
                     disabled={readonly}
                     sx={{
                       "& .MuiOutlinedInput-root": {
-                        backgroundColor: "#fafafa",
+                        backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'background.default' : '#fafafa',
                         fontSize: { xs: "0.875rem", md: "1rem" },
                       },
                       "& .MuiInputLabel-root": {

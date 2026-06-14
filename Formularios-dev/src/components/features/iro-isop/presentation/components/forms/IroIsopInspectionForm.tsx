@@ -154,10 +154,10 @@ export const IroIsopInspectionForm = ({
           elevation={3}
           sx={{
             p: 2,
-            bgcolor: "grey.50",
+            bgcolor: (theme) => (theme.palette.mode === "dark" ? "background.paper" : "grey.50"),
             borderRadius: 2,
             border: "1px solid",
-            borderColor: "grey.200",
+            borderColor: (theme) => (theme.palette.mode === "dark" ? "divider" : "grey.200"),
             mt: 4,
           }}
         >

@@ -33,12 +33,16 @@ export const QuestionItem = React.memo(
         sx={{
           mb: 2,
           p: { xs: 1.5, sm: 2 },
-          bgcolor: "grey.50",
+          bgcolor: (theme) => (theme.palette.mode === "dark" ? "background.paper" : "grey.50"),
           border: hasError ? "2px solid" : "1px solid",
-          borderColor: hasError ? "error.main" : "grey.200",
+          borderColor: (theme) =>
+            hasError ? "error.main" : theme.palette.mode === "dark" ? "divider" : "grey.200",
           transition: "box-shadow 0.3s ease, border-color 0.3s ease",
           "&:hover": {
-            boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.05)",
+            boxShadow: (theme) =>
+              theme.palette.mode === "dark"
+                ? "0px 2px 8px rgba(0, 0, 0, 0.3)"
+                : "0px 2px 8px rgba(0, 0, 0, 0.05)",
           },
         }}
       >

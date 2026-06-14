@@ -333,6 +333,11 @@ export default function FormularioDinamicoPage() {
           severity: 'success'
         });
         console.log("✅ Borrador guardado:", result.data);
+        
+        if (result.data?._id) {
+          router.push(`/dashboard/form-herra-equipos/${code}/${result.data._id}?step=5`);
+        }
+        return result.data;
       } else {
         throw new Error(result.error || 'Error al guardar borrador');
       }

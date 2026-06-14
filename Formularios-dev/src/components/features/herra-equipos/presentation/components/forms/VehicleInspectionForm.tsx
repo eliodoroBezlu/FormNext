@@ -1,6 +1,8 @@
 "use client";
 
+import React, { useEffect, useRef, useState } from "react";
 import { useForm, Controller, FieldErrors } from "react-hook-form";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
   Typography,
@@ -10,6 +12,7 @@ import {
   Checkbox,
   FormControlLabel,
   Alert,
+  Button,
 } from "@mui/material";
 import {
   FormDataHerraEquipos,
@@ -20,17 +23,20 @@ import { getFormConfig } from "../../../config/form-config.helpers";
 import { AlertSection } from "../../../common/AlertSection";
 import { InspectorSignature } from "../../../common/InspectorSignature";
 import { SupervisorSignature } from "../../../common/SupervisorSignature";
-import { SaveSubmitButtons } from "../../../common/SaveSubmitButtons";
 import { ObservationsSection } from "../../../common/ObservationsSection";
 import { ApprovalSection } from "../../../common/ApprovalSection";
 import VehicleDamageSelector, {
   VehicleDamageSelectorRef,
 } from "../selectors/VehicleDamageSelector";
-import { useEffect, useRef, useState } from "react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Role } from "@/lib/routePermissions";
 import { VerificationFields } from "../renderers/VerificationsFields";
 import { SectionRenderer } from "../renderers/SectionRenderer";
+
+// Reusable stepper components
+import { FormBreadcrumbs } from "../../../common/FormBreadcrumbs";
+import { FormStepperHeader } from "../../../common/FormStepperHeader";
+import { Step5ReviewSection } from "../../../common/Step5ReviewSection";
 
 interface VehicleInspectionFormProps {
   template: FormTemplateHerraEquipos;
@@ -40,6 +46,14 @@ interface VehicleInspectionFormProps {
   initialData?: FormDataHerraEquipos;
   isViewMode?: boolean;
 }
+
+const steps = [
+  { label: "Herramienta y Área" },
+  { label: "Datos Generales" },
+  { label: "Inspección" },
+  { label: "Firmas y Observaciones" },
+  { label: "Revisión Final" },
+];
 
 export function VehicleInspectionForm({
   template,
@@ -51,6 +65,24 @@ export function VehicleInspectionForm({
 }: VehicleInspectionFormProps) {
   const config = getFormConfig(template.code);
   const { user, hasRole } = useUserRole();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Active step state read from search query parameter
+  const initialStep = parseInt(searchParams.get("step") || "1", 10);
+  const [activeStep, setActiveStep] = useState(initialStep);
+
+  const updateStepQueryParam = (step: number) => {
+    const params = new URLSearchParams(window.location.search);
+    params.set("step", step.toString());
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState(null, "", newUrl);
+  };
+
+  const handleStepChange = (newStep: number) => {
+    setActiveStep(newStep);
+    updateStepQueryParam(newStep);
+  };
 
   // ✅ Estado de decisión de aprobación (igual que StandardInspectionForm)
   const [approvalDecision, setApprovalDecision] = useState<{
@@ -64,7 +96,9 @@ export function VehicleInspectionForm({
     handleSubmit,
     getValues,
     setValue,
+    watch,
     reset,
+    trigger,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<FormDataHerraEquipos>({
     mode: "onTouched",
@@ -264,485 +298,616 @@ export function VehicleInspectionForm({
       data.requiresApproval = false;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).bypassBeforeUnload = true;
     onSubmit(data);
   };
 
   const handleSaveDraftWithImage = async (data: FormDataHerraEquipos) => {
-    if (data.vehicle?.damages) {
-      data.vehicle.damages = data.vehicle.damages.map((damage) => ({
-        type: damage.type,
-        x: damage.x,
-        y: damage.y,
-        timestamp: damage.timestamp,
-      }));
-    }
-
     if (vehicleDamageRef.current) {
       const damageImage = await vehicleDamageRef.current.generateBase64();
-      if (damageImage && data.vehicle) {
-        data.vehicle.damageImageBase64 = damageImage;
+      if (data.vehicle) {
+        data.vehicle.damageImageBase64 = damageImage || undefined;
       }
     }
-
     if (onSaveDraft) {
       onSaveDraft(data);
     }
   };
 
+  // Split Verification Fields into Step 1 and Step 2
+  const step1Labels = ["TAG", "Equipo", "Herramienta", "Instrumento", "Código de Instrumento", "Identificación", "Código del Equipo", "Área", "Planta", "Ubicación", "Lugar"];
+  const step1Fields = template.verificationFields.filter((f) => step1Labels.includes(f.label));
+  const step2Fields = template.verificationFields.filter((f) => !step1Labels.includes(f.label));
+
+  // Stepper Section Navigation Handlers
+  const handleNextStep = async () => {
+    if (activeStep === 1) {
+      const step1FieldNames = step1Fields.map((f) => `verification.${f.label}`);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const isValid = await trigger(step1FieldNames as any);
+      if (isValid) handleStepChange(2);
+    } else if (activeStep === 2) {
+      // Validate step 2 verification + vehicle-specific header inputs
+      const step2FieldNames = step2Fields.map((f) => `verification.${f.label}`);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const step2Valid = await trigger(step2FieldNames as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const vehicleValid = await trigger(["vehicle.tipoInspeccion", "vehicle.certificacionMSC"] as any);
+      if (step2Valid && vehicleValid) handleStepChange(3);
+    } else if (activeStep === 3) {
+      // Validate checklist & damages + next inspection date
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const responsesValid = await trigger("responses" as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const nextInspValid = await trigger(["vehicle.fechaProximaInspeccion", "vehicle.responsableProximaInspeccion"] as any);
+      if (responsesValid && nextInspValid) handleStepChange(4);
+    } else if (activeStep === 4) {
+      const step4FieldNames = [
+        "inspectorSignature.inspectorName",
+        "inspectorSignature.signatureBase64",
+      ];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const isValid = await trigger(step4FieldNames as any);
+      if (!isValid) return;
+
+      if (onSaveDraft) {
+        handleSubmit(async (data) => {
+          if (vehicleDamageRef.current) {
+            const damageImage = await vehicleDamageRef.current.generateBase64();
+            if (data.vehicle) {
+              data.vehicle.damageImageBase64 = damageImage || undefined;
+            }
+          }
+          await onSaveDraft(data);
+          if (initialData?._id) {
+            handleStepChange(5);
+          }
+        })();
+      } else {
+        handleStepChange(5);
+      }
+    }
+  };
+
+  const handlePrevStep = () => {
+    if (activeStep > 1) {
+      handleStepChange(activeStep - 1);
+    }
+  };
+
   return (
-    <Box
-      component="form"
-      onSubmit={handleSubmit(handleFormSubmit, handleInvalidSubmit)}
-      sx={{ display: "flex", flexDirection: "column", gap: 3 }}
-      noValidate
-    >
-      {/* Header */}
-      <Box>
-        <Typography variant="h4" gutterBottom>
-          {config.formName}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Código: {config.formCode}
-        </Typography>
-      </Box>
+    <>
+      <FormBreadcrumbs formName={config.formName} />
 
-      {hasSubmitErrors && Object.keys(errors).length > 0 && (
-        <Alert severity="error" onClose={() => setHasSubmitErrors(false)}>
-          Hay campos con errores. Revise el formulario — los campos marcados en
-          rojo requieren su atención.
-        </Alert>
-      )}
-
-      {/* Info aprobación para formularios nuevos */}
-      {config.approval?.enabled && !isViewMode && !initialData && (
-        <Alert severity="info">
-          Esta inspección requiere aprobación de un supervisor antes de ser
-          finalizada.
-        </Alert>
-      )}
-
-      {config.alert && <AlertSection config={config.alert} />}
-
-      <VerificationFields
-        fields={template.verificationFields}
-        control={control}
-        errors={errors}
-        readonly={readonly || isApprovalReview}
-        setValue={setValue}
-        isEditMode={!!initialData}
-      />
-
-      {/* Tipo de Inspección y Certificación MSC */}
-      {config.vehicle?.hasDamageSelector && (
-        <Paper
-          elevation={3}
-          sx={{
-            p: 3,
-            mb: 3,
-            border: "2px solid #1976d2",
-            backgroundColor: "#f8f9fa",
-          }}
-        >
-          <Grid container spacing={3}>
-            {/* TIPO DE INSPECCIÓN */}
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Box>
-                <Typography
-                  variant="subtitle1"
-                  sx={{
-                    fontWeight: "bold",
-                    mb: 2,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                  }}
-                >
-                  📋 INSPECCIÓN:
-                </Typography>
-                <Controller
-                  name="vehicle.tipoInspeccion"
-                  control={control}
-                  rules={{ required: "Debe seleccionar un tipo de inspección" }}
-                  render={({ field }) => (
-                    <Box sx={{ display: "flex", gap: 2 }}>
-                      {["inicial", "periodica"].map((tipo) => (
-                        <FormControlLabel
-                          key={tipo}
-                          control={
-                            <Checkbox
-                              checked={field.value === tipo}
-                              onChange={() => field.onChange(tipo)}
-                              disabled={readonly}
-                              sx={{ "&.Mui-checked": { color: "#1976d2" } }}
-                            />
-                          }
-                          label={
-                            <Typography
-                              sx={{ fontWeight: "bold", fontSize: "1rem" }}
-                            >
-                              {tipo === "inicial" ? "INICIAL" : "PERIÓDICA"}
-                            </Typography>
-                          }
-                          sx={{
-                            border:
-                              field.value === tipo
-                                ? "3px solid #1976d2"
-                                : "2px solid #000",
-                            p: 1.5,
-                            m: 0,
-                            flex: 1,
-                            backgroundColor:
-                              field.value === tipo ? "#e3f2fd" : "#fff",
-                            transition: "all 0.3s ease",
-                            borderRadius: 1,
-                          }}
-                        />
-                      ))}
-                    </Box>
-                  )}
-                />
-                {errors?.vehicle?.tipoInspeccion && (
-                  <Typography
-                    color="error"
-                    variant="caption"
-                    sx={{ mt: 1, display: "block" }}
-                  >
-                    {errors.vehicle.tipoInspeccion.message}
-                  </Typography>
-                )}
-              </Box>
-            </Grid>
-
-            {/* CERTIFICACIÓN MSC */}
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Box>
-                <Typography
-                  variant="subtitle1"
-                  sx={{
-                    fontWeight: "bold",
-                    mb: 2,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                  }}
-                >
-                  ✅ CERTIFICACIÓN MSC:
-                </Typography>
-                <Controller
-                  name="vehicle.certificacionMSC"
-                  control={control}
-                  rules={{ required: "Debe seleccionar una opción" }}
-                  render={({ field }) => (
-                    <Box sx={{ display: "flex", gap: 2 }}>
-                      {[
-                        {
-                          value: "si",
-                          label: "SI",
-                          color: "#4caf50",
-                          bg: "#e8f5e9",
-                        },
-                        {
-                          value: "no",
-                          label: "NO",
-                          color: "#f44336",
-                          bg: "#ffebee",
-                        },
-                      ].map((opt) => (
-                        <FormControlLabel
-                          key={opt.value}
-                          control={
-                            <Checkbox
-                              checked={field.value === opt.value}
-                              onChange={() => field.onChange(opt.value)}
-                              disabled={readonly}
-                              sx={{ "&.Mui-checked": { color: opt.color } }}
-                            />
-                          }
-                          label={
-                            <Typography
-                              sx={{ fontWeight: "bold", fontSize: "1rem" }}
-                            >
-                              {opt.label}
-                            </Typography>
-                          }
-                          sx={{
-                            border:
-                              field.value === opt.value
-                                ? `3px solid ${opt.color}`
-                                : "2px solid #000",
-                            p: 1.5,
-                            m: 0,
-                            flex: 1,
-                            backgroundColor:
-                              field.value === opt.value ? opt.bg : "#fff",
-                            transition: "all 0.3s ease",
-                            borderRadius: 1,
-                          }}
-                        />
-                      ))}
-                    </Box>
-                  )}
-                />
-                {errors?.vehicle?.certificacionMSC && (
-                  <Typography
-                    color="error"
-                    variant="caption"
-                    sx={{ mt: 1, display: "block" }}
-                  >
-                    {errors.vehicle.certificacionMSC.message}
-                  </Typography>
-                )}
-              </Box>
-            </Grid>
-          </Grid>
-        </Paper>
-      )}
-
-      {/* Secciones */}
-      {template.sections && template.sections.length > 0 && (
+      <Box
+        component="form"
+        onSubmit={handleSubmit(handleFormSubmit, handleInvalidSubmit)}
+        sx={{ display: "flex", flexDirection: "column", gap: 3 }}
+        noValidate
+      >
         <Box>
-          {template.sections.map((section, idx) => (
-            <SectionRenderer
-              key={section._id || idx}
-              section={section}
-              sectionPath={`responses.section_${idx}`}
+          <Typography variant="h4" gutterBottom>
+            {config.formName}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Código: {config.formCode}
+          </Typography>
+        </Box>
+
+        <FormStepperHeader activeStep={activeStep} steps={steps} />
+
+        {hasSubmitErrors && Object.keys(errors).length > 0 && (
+          <Alert severity="error" onClose={() => setHasSubmitErrors(false)}>
+            Hay campos con errores. Revise el formulario — los campos marcados en
+            rojo requieren su atención.
+          </Alert>
+        )}
+
+        {/* Info aprobación para formularios nuevos */}
+        {config.approval?.enabled && !isViewMode && !initialData && (
+          <Alert severity="info">
+            Esta inspección requiere aprobación de un supervisor antes de ser
+            finalizada.
+          </Alert>
+        )}
+
+        {/* STEP 1: HERRAMIENTA Y ÁREA */}
+        {activeStep === 1 && (
+          <VerificationFields
+            fields={step1Fields}
+            control={control}
+            errors={errors}
+            readonly={readonly || isApprovalReview}
+            setValue={setValue}
+            isEditMode={!!initialData}
+          />
+        )}
+
+        {/* STEP 2: DATOS GENERALES + TIPO DE INSPECCIÓN/MSC */}
+        {activeStep === 2 && (
+          <>
+            <VerificationFields
+              fields={step2Fields}
               control={control}
               errors={errors}
-              formConfig={config}
               readonly={readonly || isApprovalReview}
+              setValue={setValue}
+              isEditMode={!!initialData}
             />
-          ))}
-        </Box>
-      )}
 
-      {/* Selector de daños */}
-      {config.vehicle?.hasDamageSelector && (
-        <VehicleDamageSelector<FormDataHerraEquipos>
-          ref={vehicleDamageRef}
-          vehicleImageUrl="/image.png"
-          control={control}
-          setValue={setValue}
-          damageFieldName="vehicle.damages"
-          observationsFieldName="vehicle.damageObservations"
-          readonly={readonly}
-          initialDamages={initialData?.vehicle?.damages}
-          initialImage={initialData?.vehicle?.damageImageBase64}
-        />
-      )}
-
-      {/* Próxima Inspección */}
-      {config.vehicle?.hasNextInspectionDate && (
-        <Paper
-          elevation={3}
-          sx={{
-            p: 3,
-            mb: 3,
-            border: "2px solid #757575",
-            backgroundColor: "#f5f5f5",
-          }}
-        >
-          <Typography
-            variant="h6"
-            gutterBottom
-            sx={{
-              fontWeight: "bold",
-              color: "#424242",
-              mb: 3,
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-            }}
-          >
-            📅 Programación de Próxima Inspección
-          </Typography>
-          <Grid container spacing={3}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Box
+            {config.vehicle?.hasDamageSelector && (
+              <Paper
+                elevation={3}
                 sx={{
-                  backgroundColor: "#e0e0e0",
-                  border: "2px solid #000",
-                  borderRadius: 1,
-                  p: 2,
+                  p: 3,
+                  mb: 3,
+                  border: "2px solid #1976d2",
+                  backgroundColor: "#f8f9fa",
+                }}
+              >
+                <Grid container spacing={3}>
+                  {/* TIPO DE INSPECCIÓN */}
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <Box>
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
+                          fontWeight: "bold",
+                          mb: 2,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                        }}
+                      >
+                        📋 INSPECCIÓN:
+                      </Typography>
+                      <Controller
+                        name="vehicle.tipoInspeccion"
+                        control={control}
+                        rules={{ required: "Debe seleccionar un tipo de inspección" }}
+                        render={({ field }) => (
+                          <Box sx={{ display: "flex", gap: 2 }}>
+                            {["inicial", "periodica"].map((tipo) => (
+                              <FormControlLabel
+                                key={tipo}
+                                control={
+                                  <Checkbox
+                                    checked={field.value === tipo}
+                                    onChange={() => field.onChange(tipo)}
+                                    disabled={readonly}
+                                    sx={{ "&.Mui-checked": { color: "#1976d2" } }}
+                                  />
+                                }
+                                label={
+                                  <Typography
+                                    sx={{ fontWeight: "bold", fontSize: "1rem" }}
+                                  >
+                                    {tipo === "inicial" ? "INICIAL" : "PERIÓDICA"}
+                                  </Typography>
+                                }
+                                sx={{
+                                  border:
+                                    field.value === tipo
+                                      ? "3px solid #1976d2"
+                                      : "2px solid #000",
+                                  p: 1.5,
+                                  m: 0,
+                                  flex: 1,
+                                  backgroundColor:
+                                    field.value === tipo ? "#e3f2fd" : "#fff",
+                                  transition: "all 0.3s ease",
+                                  borderRadius: 1,
+                                }}
+                              />
+                            ))}
+                          </Box>
+                        )}
+                      />
+                      {errors?.vehicle?.tipoInspeccion && (
+                        <Typography
+                          color="error"
+                          variant="caption"
+                          sx={{ mt: 1, display: "block" }}
+                        >
+                          {errors.vehicle.tipoInspeccion.message}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Grid>
+
+                  {/* CERTIFICACIÓN MSC */}
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <Box>
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
+                          fontWeight: "bold",
+                          mb: 2,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                        }}
+                      >
+                        ✅ CERTIFICACIÓN MSC:
+                      </Typography>
+                      <Controller
+                        name="vehicle.certificacionMSC"
+                        control={control}
+                        rules={{ required: "Debe seleccionar una opción" }}
+                        render={({ field }) => (
+                          <Box sx={{ display: "flex", gap: 2 }}>
+                            {[
+                              {
+                                value: "si",
+                                label: "SI",
+                                color: "#4caf50",
+                                bg: "#e8f5e9",
+                              },
+                              {
+                                value: "no",
+                                label: "NO",
+                                color: "#f44336",
+                                bg: "#ffebee",
+                              },
+                            ].map((opt) => (
+                              <FormControlLabel
+                                key={opt.value}
+                                control={
+                                  <Checkbox
+                                    checked={field.value === opt.value}
+                                    onChange={() => field.onChange(opt.value)}
+                                    disabled={readonly}
+                                    sx={{ "&.Mui-checked": { color: opt.color } }}
+                                  />
+                                }
+                                label={
+                                  <Typography
+                                    sx={{ fontWeight: "bold", fontSize: "1rem" }}
+                                  >
+                                    {opt.label}
+                                  </Typography>
+                                }
+                                sx={{
+                                  border:
+                                    field.value === opt.value
+                                      ? `3px solid ${opt.color}`
+                                      : "2px solid #000",
+                                  p: 1.5,
+                                  m: 0,
+                                  flex: 1,
+                                  backgroundColor:
+                                    field.value === opt.value ? opt.bg : "#fff",
+                                  transition: "all 0.3s ease",
+                                  borderRadius: 1,
+                                }}
+                              />
+                            ))}
+                          </Box>
+                        )}
+                      />
+                      {errors?.vehicle?.certificacionMSC && (
+                        <Typography
+                          color="error"
+                          variant="caption"
+                          sx={{ mt: 1, display: "block" }}
+                        >
+                          {errors.vehicle.certificacionMSC.message}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Paper>
+            )}
+          </>
+        )}
+
+        {/* STEP 3: INSPECCIÓN / MAPA DE DAÑOS */}
+        {activeStep === 3 && (
+          <>
+            {config.alert && <AlertSection config={config.alert} />}
+
+            {/* Secciones */}
+            {template.sections && template.sections.length > 0 && (
+              <Box>
+                {template.sections.map((section, idx) => (
+                  <SectionRenderer
+                    key={section._id || idx}
+                    section={section}
+                    sectionPath={`responses.section_${idx}`}
+                    control={control}
+                    errors={errors}
+                    formConfig={config}
+                    readonly={readonly || isApprovalReview}
+                  />
+                ))}
+              </Box>
+            )}
+
+            {/* Selector de daños */}
+            {config.vehicle?.hasDamageSelector && (
+              <VehicleDamageSelector<FormDataHerraEquipos>
+                ref={vehicleDamageRef}
+                vehicleImageUrl="/image.png"
+                control={control}
+                setValue={setValue}
+                damageFieldName="vehicle.damages"
+                observationsFieldName="vehicle.damageObservations"
+                readonly={readonly}
+                initialDamages={initialData?.vehicle?.damages}
+                initialImage={initialData?.vehicle?.damageImageBase64}
+              />
+            )}
+
+            {/* Próxima Inspección */}
+            {config.vehicle?.hasNextInspectionDate && (
+              <Paper
+                elevation={3}
+                sx={{
+                  p: 3,
+                  mb: 3,
+                  border: "2px solid #757575",
+                  backgroundColor: "#f5f5f5",
                 }}
               >
                 <Typography
-                  variant="subtitle1"
+                  variant="h6"
+                  gutterBottom
                   sx={{
                     fontWeight: "bold",
-                    fontSize: "1rem",
-                    mb: 2,
-                    textAlign: "center",
-                    color: "#000",
+                    color: "#424242",
+                    mb: 3,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
                   }}
                 >
-                  FECHA PROXIMA INSPECCIÓN
+                  📅 Programación de Próxima Inspección
                 </Typography>
-                <Controller
-                  name="vehicle.fechaProximaInspeccion"
-                  control={control}
-                  rules={{
-                    required: "La fecha de próxima inspección es obligatoria",
-                  }}
-                  render={({ field, fieldState }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      type="date"
-                      InputLabelProps={{ shrink: true }}
-                      error={!!fieldState.error}
-                      helperText={fieldState.error?.message}
-                      disabled={readonly}
+                <Grid container spacing={3}>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <Box
                       sx={{
-                        "& .MuiOutlinedInput-root": {
-                          backgroundColor: "#fff",
-                          "& fieldset": { borderColor: "#000", borderWidth: 2 },
-                        },
-                        "& input": {
+                        backgroundColor: "#e0e0e0",
+                        border: "2px solid #000",
+                        borderRadius: 1,
+                        p: 2,
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
                           fontWeight: "bold",
                           fontSize: "1rem",
+                          mb: 2,
                           textAlign: "center",
                           color: "#000",
-                        },
-                      }}
-                    />
-                  )}
-                />
-              </Box>
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Box
-                sx={{
-                  backgroundColor: "#e0e0e0",
-                  border: "2px solid #000",
-                  borderRadius: 1,
-                  p: 2,
-                }}
-              >
-                <Typography
-                  variant="subtitle1"
-                  sx={{
-                    fontWeight: "bold",
-                    fontSize: "1rem",
-                    mb: 2,
-                    textAlign: "center",
-                    color: "#000",
-                  }}
-                >
-                  RESPONSABLE DE PROX. INSP.
-                </Typography>
-                <Controller
-                  name="vehicle.responsableProximaInspeccion"
-                  control={control}
-                  rules={{
-                    required:
-                      "El responsable de próxima inspección es obligatorio",
-                  }}
-                  render={({ field, fieldState }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      placeholder="Ingrese nombre del responsable"
-                      error={!!fieldState.error}
-                      helperText={fieldState.error?.message}
-                      disabled={readonly}
+                        }}
+                      >
+                        FECHA PROXIMA INSPECCIÓN
+                      </Typography>
+                      <Controller
+                        name="vehicle.fechaProximaInspeccion"
+                        control={control}
+                        rules={{
+                          required: "La fecha de próxima inspección es obligatoria",
+                        }}
+                        render={({ field, fieldState }) => (
+                          <TextField
+                            {...field}
+                            fullWidth
+                            type="date"
+                            InputLabelProps={{ shrink: true }}
+                            error={!!fieldState.error}
+                            helperText={fieldState.error?.message}
+                            disabled={readonly}
+                            sx={{
+                              "& .MuiOutlinedInput-root": {
+                                backgroundColor: "#fff",
+                                "& fieldset": { borderColor: "#000", borderWidth: 2 },
+                              },
+                              "& input": {
+                                fontWeight: "bold",
+                                fontSize: "1rem",
+                                textAlign: "center",
+                                color: "#000",
+                              },
+                            }}
+                          />
+                        )}
+                      />
+                    </Box>
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <Box
                       sx={{
-                        "& .MuiOutlinedInput-root": {
-                          backgroundColor: "#fff",
-                          "& fieldset": { borderColor: "#000", borderWidth: 2 },
-                        },
-                        "& input": {
+                        backgroundColor: "#e0e0e0",
+                        border: "2px solid #000",
+                        borderRadius: 1,
+                        p: 2,
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
                           fontWeight: "bold",
                           fontSize: "1rem",
+                          mb: 2,
+                          textAlign: "center",
                           color: "#000",
-                        },
-                      }}
-                    />
-                  )}
-                />
-              </Box>
-            </Grid>
-          </Grid>
-          <Alert severity="info" sx={{ mt: 3 }}>
-            <Typography variant="body2">
-              <strong>ℹ️ Información:</strong> Estos datos se utilizan para
-              programar la siguiente inspección del vehículo.
-            </Typography>
-          </Alert>
-        </Paper>
-      )}
+                        }}
+                      >
+                        RESPONSABLE DE PROX. INSP.
+                      </Typography>
+                      <Controller
+                        name="vehicle.responsableProximaInspeccion"
+                        control={control}
+                        rules={{
+                          required:
+                            "El responsable de próxima inspección es obligatorio",
+                        }}
+                        render={({ field, fieldState }) => (
+                          <TextField
+                            {...field}
+                            fullWidth
+                            placeholder="Ingrese nombre del responsable"
+                            error={!!fieldState.error}
+                            helperText={fieldState.error?.message}
+                            disabled={readonly}
+                            sx={{
+                              "& .MuiOutlinedInput-root": {
+                                backgroundColor: "#fff",
+                                "& fieldset": { borderColor: "#000", borderWidth: 2 },
+                              },
+                              "& input": {
+                                fontWeight: "bold",
+                                fontSize: "1rem",
+                                color: "#000",
+                              },
+                            }}
+                          />
+                        )}
+                      />
+                    </Box>
+                  </Grid>
+                </Grid>
+                <Alert severity="info" sx={{ mt: 3 }}>
+                  <Typography variant="body2">
+                    <strong>ℹ️ Información:</strong> Estos datos se utilizan para
+                    programar la siguiente inspección del vehículo.
+                  </Typography>
+                </Alert>
+              </Paper>
+            )}
+          </>
+        )}
 
-      {/* Conclusión */}
-      {config.conclusion?.enabled && (
-        <ObservationsSection
-          config={config.conclusion}
-          register={register}
-          errors={errors}
-        />
-      )}
+        {/* STEP 4: FIRMAS Y OBSERVACIONES */}
+        {activeStep === 4 && (
+          <>
+            {/* Conclusión */}
+            {config.conclusion?.enabled && (
+              <ObservationsSection
+                config={config.conclusion}
+                register={register}
+                errors={errors}
+              />
+            )}
 
-      {/* Firma Inspector */}
-      {config.signatures?.inspector && (
-        <InspectorSignature
-          register={register}
-          control={control}
-          errors={errors}
-          setValue={setValue}
-          config={config.signatures.inspector}
-        />
-      )}
+            {/* Firma Inspector */}
+            {config.signatures?.inspector && (
+              <InspectorSignature
+                register={register}
+                control={control}
+                errors={errors}
+                setValue={setValue}
+                config={config.signatures.inspector}
+              />
+            )}
 
-      {/* ✅ Firma Supervisor — condicional según estado de aprobación */}
-      {showSupervisorSignature() && (
-        <SupervisorSignature
-          register={register}
-          control={control}
-          errors={errors}
-          setValue={setValue}
-          config={config.signatures?.supervisor}
-        />
-      )}
+            {/* Firma Supervisor */}
+            {showSupervisorSignature() && (
+              <SupervisorSignature
+                register={register}
+                control={control}
+                errors={errors}
+                setValue={setValue}
+                config={config.signatures?.supervisor}
+              />
+            )}
 
-      {/* ✅ Sección de Aprobación */}
-      {shouldShowApprovalSection() && (
-        <ApprovalSection
-          status={initialData!.status || InspectionStatus.PENDING_APPROVAL}
-          approval={initialData!.approval}
-          canApprove={canApprove()}
-          onApprove={handleLocalApprove}
-          onReject={handleLocalReject}
-          readonly={
-            initialData!.status === InspectionStatus.APPROVED ||
-            initialData!.status === InspectionStatus.REJECTED
-          }
-        />
-      )}
+            {/* Aprobación */}
+            {shouldShowApprovalSection() && (
+              <ApprovalSection
+                status={initialData!.status || InspectionStatus.PENDING_APPROVAL}
+                approval={initialData!.approval}
+                canApprove={canApprove()}
+                onApprove={handleLocalApprove}
+                onReject={handleLocalReject}
+                readonly={
+                  initialData!.status === InspectionStatus.APPROVED ||
+                  initialData!.status === InspectionStatus.REJECTED
+                }
+              />
+            )}
+          </>
+        )}
 
-      {/* Botones */}
-      {!isViewMode && (
-        <SaveSubmitButtons
-          onSaveDraft={
-            onSaveDraft
-              ? () => handleSubmit(handleSaveDraftWithImage)()
-              : undefined
-          }
-          onSubmit={
-            isApprovalReview
-              ? handleApprovalSubmit
-              : handleSubmit(handleFormSubmit, handleInvalidSubmit)
-          }
-          isSubmitting={isSubmitting}
-          allowDraft={config.allowDraft ?? true}
-          approvalAction={
-            initialData?.status === InspectionStatus.PENDING_APPROVAL
-              ? approvalDecision.status === "approved"
-                ? "approve"
-                : approvalDecision.status === "rejected"
-                  ? "reject"
-                  : null
-              : undefined
-          }
-        />
-      )}
-    </Box>
+        {/* STEP 5: VISTA PREVIA Y PDF */}
+        {activeStep === 5 && (
+          <Step5ReviewSection
+            template={template}
+            formData={watch()}
+            onPrev={handlePrevStep}
+            onFinalSubmit={
+              isApprovalReview
+                ? handleApprovalSubmit
+                : handleSubmit(handleFormSubmit, handleInvalidSubmit)
+            }
+            isSubmitting={isSubmitting}
+            inspectionId={initialData?._id}
+            formType="vehicle"
+          />
+        )}
+
+        {/* STEPPER STEP NAVIGATION BUTTONS (STEPS 1-4) */}
+        {activeStep < 5 && (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              mt: 2,
+              pt: 2,
+              borderTop: "1px solid",
+              borderColor: "divider",
+            }}
+          >
+            {activeStep === 1 ? (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (window as any).bypassBeforeUnload = true;
+                  router.push("/dashboard/form-herra-equipos");
+                }}
+              >
+                Cancelar
+              </Button>
+            ) : (
+              <Button variant="outlined" onClick={handlePrevStep}>
+                Anterior
+              </Button>
+            )}
+
+            <Box sx={{ display: "flex", gap: 1.5 }}>
+              {config.allowDraft !== false && onSaveDraft && (
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  onClick={handleSubmit(handleSaveDraftWithImage)}
+                  disabled={isSubmitting}
+                >
+                  Guardar Borrador
+                </Button>
+              )}
+              <Button
+                variant="contained"
+                onClick={handleNextStep}
+                disabled={isSubmitting}
+                sx={{
+                  background: "linear-gradient(135deg, #6366F1, #818CF8)",
+                  "&:hover": {
+                    background: "linear-gradient(135deg, #4F46E5, #6366F1)",
+                  },
+                }}
+              >
+                Siguiente Sección
+              </Button>
+            </Box>
+          </Box>
+        )}
+      </Box>
+    </>
   );
 }
