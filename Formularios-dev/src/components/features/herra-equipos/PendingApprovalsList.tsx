@@ -40,6 +40,7 @@ export function PendingApprovalsList() {
     loadedAreas,
     setLoadedAreas,
     loadInspections,
+    refreshInspections,
     groupedByTemplate,
     groupedByArea,
   } = useApprovals();
@@ -82,7 +83,7 @@ export function PendingApprovalsList() {
       <Alert
         severity="error"
         action={
-          <Button onClick={() => loadedAreas !== null && loadInspections(loadedAreas)}>
+          <Button onClick={() => loadedAreas !== null && refreshInspections(loadedAreas)}>
             Reintentar
           </Button>
         }
@@ -116,7 +117,7 @@ export function PendingApprovalsList() {
             Cambiar áreas
           </Button>
         )}
-        <Button size="small" variant="outlined" onClick={() => loadedAreas !== null && loadInspections(loadedAreas)}>
+        <Button size="small" variant="outlined" onClick={() => loadedAreas !== null && refreshInspections(loadedAreas)}>
           Actualizar
         </Button>
       </Stack>
@@ -181,6 +182,7 @@ export function PendingApprovalsList() {
               expanded={isAreaOpen}
               onChange={() => setExpandedArea(isAreaOpen ? false : area)}
               elevation={3}
+              TransitionProps={{ unmountOnExit: true }}
               sx={{
                 borderLeft: '6px solid',
                 borderLeftColor:
@@ -197,6 +199,7 @@ export function PendingApprovalsList() {
                       color={
                         areaUrgency === 'error' ? 'error' : areaUrgency === 'warning' ? 'warning' : 'primary'
                       }
+                      fontSize="small"
                     />
                   )}
                   <Box sx={{ flex: 1 }}>
@@ -216,27 +219,29 @@ export function PendingApprovalsList() {
               </AccordionSummary>
 
               <AccordionDetails sx={{ pt: 0 }}>
-                <Stack spacing={1}>
-                  {[...byTemplate.entries()]
-                    .sort(([, a], [, b]) => b.items.length - a.items.length)
-                    .map(([code, group]) => {
-                      const tplKey = `${area}__${code}`;
-                      return (
-                        <TemplateAccordion
-                          key={tplKey}
-                          templateCode={code}
-                          templateName={group.templateName}
-                          items={group.items}
-                          expanded={expandedTemplate === tplKey}
-                          onToggle={() =>
-                            setExpandedTemplate(expandedTemplate === tplKey ? false : tplKey)
-                          }
-                          onView={handleView}
-                          indent
-                        />
-                      );
-                    })}
-                </Stack>
+                {isAreaOpen && (
+                  <Stack spacing={1}>
+                    {[...byTemplate.entries()]
+                      .sort(([, a], [, b]) => b.items.length - a.items.length)
+                      .map(([code, group]) => {
+                        const tplKey = `${area}__${code}`;
+                        return (
+                          <TemplateAccordion
+                            key={tplKey}
+                            templateCode={code}
+                            templateName={group.templateName}
+                            items={group.items}
+                            expanded={expandedTemplate === tplKey}
+                            onToggle={() =>
+                              setExpandedTemplate(expandedTemplate === tplKey ? false : tplKey)
+                            }
+                            onView={handleView}
+                            indent
+                          />
+                        );
+                      })}
+                  </Stack>
+                )}
               </AccordionDetails>
             </Accordion>
           );

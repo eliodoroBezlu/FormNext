@@ -42,6 +42,7 @@ export function TemplateAccordion({
       onChange={onToggle}
       elevation={indent ? 0 : 2}
       variant={indent ? 'outlined' : 'elevation'}
+      TransitionProps={{ unmountOnExit: true }}
       sx={{
         borderLeft: '4px solid',
         borderLeftColor:
@@ -88,11 +89,13 @@ export function TemplateAccordion({
         </Box>
       </AccordionSummary>
       <AccordionDetails sx={{ pt: 0 }}>
-        <Stack spacing={1.5}>
-          {items.map((insp) => (
-            <ApprovalCard key={insp._id} insp={insp} onView={onView} />
-          ))}
-        </Stack>
+        {expanded && (
+          <Stack spacing={1.5}>
+            {items.map((insp) => (
+              <ApprovalCard key={insp._id} insp={insp} onView={onView} />
+            ))}
+          </Stack>
+        )}
       </AccordionDetails>
     </Accordion>
   );

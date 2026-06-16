@@ -2,9 +2,9 @@
 
 import React, { Suspense } from "react";
 import { Box, CircularProgress } from "@mui/material";
-import NewInspectionTemplates from "@/components/features/herra-equipos/NewInspectionTemplates";
+import { PendingApprovalsList } from "@/components/features/herra-equipos/PendingApprovalsList";
 
-export default function LlenarFormulariosPage() {
+export default function PendingApprovalsPage() {
   return (
     <Suspense
       fallback={
@@ -18,7 +18,7 @@ export default function LlenarFormulariosPage() {
         </Box>
       }
     >
-      <NewInspectionTemplates />
+      <PendingApprovalsList />
     </Suspense>
   );
 }

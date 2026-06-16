@@ -2,9 +2,9 @@
 
 import React, { Suspense } from "react";
 import { Box, CircularProgress } from "@mui/material";
-import NewInspectionTemplates from "@/components/features/herra-equipos/NewInspectionTemplates";
+import { InProgressInspectionsList } from "@/components/features/herra-equipos/InProgressInspectionsList";
 
-export default function LlenarFormulariosPage() {
+export default function InProgressInspectionsPage() {
   return (
     <Suspense
       fallback={
@@ -18,7 +18,7 @@ export default function LlenarFormulariosPage() {
         </Box>
       }
     >
-      <NewInspectionTemplates />
+      <InProgressInspectionsList filterByTemplateCode="1.02.P06.F30" />
     </Suspense>
   );
 }

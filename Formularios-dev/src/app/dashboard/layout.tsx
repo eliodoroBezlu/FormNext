@@ -24,6 +24,7 @@ import { Navigation } from "@/components/layout/navigation/Navigation";
 import { lightTheme, darkTheme } from "../../styles/theme";
 import { LogoutButton } from "@/components/features/auth/presentation/components/LogoutButton";
 import { useUserRole } from "@/hooks/useUserRole";
+import { DynamicBreadcrumbs } from "@/components/layout/navigation/DynamicBreadcrumbs";
 
 const drawerWidth = 300;
 
@@ -247,6 +248,7 @@ export default function DashboardLayout({
         >
           <Toolbar />
           <Box className="fade-in" sx={{ flexGrow: 1 }}>
+            <DynamicBreadcrumbs />
             {children}
           </Box>
         </Box>

@@ -15,20 +15,26 @@ import {
 import {
   FormDataHerraEquipos,
   FormTemplateHerraEquipos,
+  InspectionStatus,
 } from "../../../types/IProps";
 import { AlertSection } from "../../../common/AlertSection";
 import { ColorCodeSection } from "../../../common/ColorCodeSection";
 import { InspectorSignature } from "../../../common/InspectorSignature";
 import { SupervisorSignature } from "../../../common/SupervisorSignature";
+import { ApprovalSection } from "../../../common/ApprovalSection";
 import { getFormConfig } from "../../../config/form-config.helpers";
 import { ObservationsSection } from "../../../common/ObservationsSection";
 import { GroupedQuestionWithGeneralObservation } from "../renderers/GroupedQuestionWithGeneralObservation";
 import { VerificationFields } from "../renderers/VerificationsFields";
+import { useUserRole } from "@/hooks/useUserRole";
+import { Role } from "@/lib/routePermissions";
 
 // Reusable stepper components
 import { FormBreadcrumbs } from "../../../common/FormBreadcrumbs";
 import { FormStepperHeader } from "../../../common/FormStepperHeader";
 import { Step5ReviewSection } from "../../../common/Step5ReviewSection";
+
+import dayjs from "dayjs";
 
 interface GroupedAccessoriesFormProps {
   template: FormTemplateHerraEquipos;
@@ -37,14 +43,6 @@ interface GroupedAccessoriesFormProps {
   readonly?: boolean;
   initialData?: FormDataHerraEquipos;
 }
-
-const steps = [
-  { label: "Herramienta y Área" },
-  { label: "Datos Generales" },
-  { label: "Inspección" },
-  { label: "Firmas y Observaciones" },
-  { label: "Revisión Final" },
-];
 
 export function GroupedAccessoriesForm({
   template,
@@ -56,9 +54,111 @@ export function GroupedAccessoriesForm({
   const config = getFormConfig(template.code);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user, hasRole } = useUserRole();
+
+  const [approvalDecision, setApprovalDecision] = useState<{
+    status: "approved" | "rejected" | null;
+    comments: string;
+  }>({ status: null, comments: "" });
+
+  const canApprove = () => {
+    if (!config?.approval?.enabled) return false;
+    if (!config.approval.requiredRoles) return false;
+
+    const hasRequiredRole = config.approval.requiredRoles.some((role) =>
+      hasRole(
+        role as
+          | Role.ADMIN
+          | Role.SUPERVISOR
+          | Role.TECNICO
+          | Role.SUPERINTENDENTE,
+      ),
+    );
+
+    if (!hasRequiredRole) return false;
+
+    if (!config.approval.allowSelfApproval) {
+      return initialData?.submittedBy !== user?.email;
+    }
+
+    return true;
+  };
+
+  const isApprovalReview =
+    !readonly &&
+    initialData?.status === InspectionStatus.PENDING_APPROVAL &&
+    canApprove();
+
+  const shouldShowApprovalSection = () => {
+    if (!config?.approval?.enabled) return false;
+    if (!initialData) return false;
+
+    const approvalStatuses = [
+      InspectionStatus.PENDING_APPROVAL,
+      InspectionStatus.APPROVED,
+      InspectionStatus.REJECTED,
+    ];
+
+    return approvalStatuses.includes(initialData.status as InspectionStatus);
+  };
+
+  const showSupervisorSignature = () => {
+    if (
+      !config?.signatures ||
+      typeof config.signatures.supervisor !== "object" ||
+      !config.signatures.supervisor.enabled
+    ) {
+      return false;
+    }
+    if (!config.approval?.enabled) return true;
+
+    if (initialData) {
+      if (initialData.status === "approved") return true;
+      if (initialData.status === "pending_approval" && canApprove())
+        return true;
+    }
+    return false;
+  };
+
+  const handleLocalApprove = (comments?: string | null) => {
+    if (comments === null) {
+      setApprovalDecision({ status: null, comments: "" });
+    } else {
+      setApprovalDecision({ status: "approved", comments: comments || "" });
+    }
+  };
+
+  const handleLocalReject = (reason: string | null) => {
+    if (reason === null) {
+      setApprovalDecision({ status: null, comments: "" });
+    } else {
+      setApprovalDecision({ status: "rejected", comments: reason });
+    }
+  };
+
+  const handleApprovalSubmit = () => {
+    handleFormSubmit(getValues());
+  };
+
+  const formSteps = isApprovalReview
+    ? [
+        { label: "Herramienta y Área" },
+        { label: "Datos Generales" },
+        { label: "Inspección" },
+        { label: "Firmas y Observaciones" },
+        { label: "Revisión Final" },
+        { label: "Aprobación" },
+      ]
+    : [
+        { label: "Herramienta y Área" },
+        { label: "Datos Generales" },
+        { label: "Inspección" },
+        { label: "Firmas y Observaciones" },
+        { label: "Revisión Final" },
+      ];
 
   // Active step state read from search query parameter
-  const initialStep = parseInt(searchParams.get("step") || "1", 10);
+  const initialStep = isApprovalReview ? 6 : parseInt(searchParams.get("step") || "1", 10);
   const [activeStep, setActiveStep] = useState(initialStep);
 
   const updateStepQueryParam = (step: number) => {
@@ -78,17 +178,53 @@ export function GroupedAccessoriesForm({
     register,
     handleSubmit,
     setValue,
+    getValues,
     watch,
     reset,
     trigger,
     formState: { errors, isSubmitting, isDirty },
-  } = useForm<FormDataHerraEquipos>({ mode: "onTouched" });
+  } = useForm<FormDataHerraEquipos>({
+    mode: "onTouched",
+    defaultValues: {
+      ...initialData,
+      inspectorSignature: {
+        name: "",
+        signature: "",
+        inspectorName: "",
+        inspectorSignature: "",
+        inspectionDate: dayjs().format("YYYY-MM-DD"),
+        ...initialData?.inspectorSignature,
+      },
+      supervisorSignature: {
+        supervisorName: "",
+        supervisorSignature: "",
+        supervisorDate: dayjs().format("YYYY-MM-DD"),
+        ...initialData?.supervisorSignature,
+      },
+    },
+  });
 
   const [hasSubmitErrors, setHasSubmitErrors] = useState(false);
 
   useEffect(() => {
     if (initialData) {
-      reset(initialData);
+      reset({
+        ...initialData,
+        inspectorSignature: {
+          name: "",
+          signature: "",
+          inspectorName: "",
+          inspectorSignature: "",
+          inspectionDate: dayjs().format("YYYY-MM-DD"),
+          ...initialData.inspectorSignature,
+        },
+        supervisorSignature: {
+          supervisorName: "",
+          supervisorSignature: "",
+          supervisorDate: dayjs().format("YYYY-MM-DD"),
+          ...initialData.supervisorSignature,
+        },
+      });
     }
   }, [initialData, reset]);
 
@@ -134,9 +270,46 @@ export function GroupedAccessoriesForm({
 
   const handleFormSubmit = (data: FormDataHerraEquipos) => {
     setHasSubmitErrors(false);
+    const completeData = { ...data };
+    const isNewForm = !initialData || !initialData._id;
+    const requiresApproval = config?.approval?.enabled === true;
+
+    if (requiresApproval && !readonly) {
+      if (approvalDecision.status === "approved" && canApprove()) {
+        completeData.status = InspectionStatus.APPROVED;
+        completeData.approval = {
+          ...completeData.approval,
+          status: "approved",
+          approvedBy: user?.username || "Supervisor",
+          approvedAt: new Date().toISOString(),
+          supervisorComments: approvalDecision.comments,
+        };
+      } else if (approvalDecision.status === "rejected" && canApprove()) {
+        completeData.status = InspectionStatus.REJECTED;
+        completeData.approval = {
+          ...completeData.approval,
+          status: "rejected",
+          approvedBy: user?.username || "Supervisor",
+          approvedAt: new Date().toISOString(),
+          rejectionReason: approvalDecision.comments,
+        };
+      } else if (isNewForm) {
+        completeData.status = InspectionStatus.PENDING_APPROVAL;
+        completeData.requiresApproval = true;
+        completeData.approval = { status: "pending" };
+      } else {
+        completeData.status = initialData?.status || InspectionStatus.COMPLETED;
+        completeData.requiresApproval = initialData?.requiresApproval || false;
+        completeData.approval = initialData?.approval;
+      }
+    } else {
+      completeData.status = InspectionStatus.COMPLETED;
+      completeData.requiresApproval = false;
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).bypassBeforeUnload = true;
-    onSubmit(data);
+    onSubmit(completeData);
   };
 
   const handleDraftSave = (data: FormDataHerraEquipos) => {
@@ -171,7 +344,15 @@ export function GroupedAccessoriesForm({
       const step4FieldNames = [
         "generalObservations",
         "inspectorSignature.inspectorName",
+        "inspectorSignature.name",
+        "inspectorSignature.inspectorSignature",
+        "inspectorSignature.signature",
         "inspectorSignature.signatureBase64",
+        "supervisorSignature.supervisorName",
+        "supervisorSignature.name",
+        "supervisorSignature.supervisorSignature",
+        "supervisorSignature.signature",
+        "supervisorSignature.signatureBase64",
       ];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const isValid = await trigger(step4FieldNames as any);
@@ -187,6 +368,8 @@ export function GroupedAccessoriesForm({
       } else {
         handleStepChange(5);
       }
+    } else if (activeStep === 5) {
+      handleStepChange(6);
     }
   };
 
@@ -215,7 +398,7 @@ export function GroupedAccessoriesForm({
           </Typography>
         </Box>
 
-        <FormStepperHeader activeStep={activeStep} steps={steps} />
+        <FormStepperHeader activeStep={activeStep} steps={formSteps} />
 
         {hasSubmitErrors && Object.keys(errors).length > 0 && (
           <Alert severity="error" onClose={() => setHasSubmitErrors(false)}>
@@ -389,15 +572,27 @@ export function GroupedAccessoriesForm({
               />
             )}
 
-            {config.signatures?.supervisor &&
-              typeof config.signatures.supervisor === "object" &&
-              config.signatures.supervisor.enabled && (
+            {showSupervisorSignature() && !isApprovalReview && (
               <SupervisorSignature
                 register={register}
                 control={control}
                 errors={errors}
                 setValue={setValue}
-                config={config.signatures.supervisor}
+                config={config.signatures!.supervisor}
+              />
+            )}
+
+            {shouldShowApprovalSection() && !isApprovalReview && (
+              <ApprovalSection
+                status={initialData!.status || "pending_approval"}
+                approval={initialData!.approval}
+                canApprove={canApprove()}
+                onApprove={handleLocalApprove}
+                onReject={handleLocalReject}
+                readonly={
+                  initialData!.status === "approved" ||
+                  initialData!.status === "rejected"
+                }
               />
             )}
           </>
@@ -409,16 +604,45 @@ export function GroupedAccessoriesForm({
             template={template}
             formData={watch()}
             onPrev={handlePrevStep}
-            onFinalSubmit={handleSubmit(handleFormSubmit, handleInvalidSubmit)}
+            onFinalSubmit={
+              isApprovalReview
+                ? handleNextStep
+                : handleSubmit(handleFormSubmit, handleInvalidSubmit)
+            }
             isSubmitting={isSubmitting}
             inspectionId={initialData?._id}
             formType="grouped"
+            isApprovalReview={isApprovalReview}
+            showApprovalInputs={false}
+          />
+        )}
+
+        {/* STEP 6: APROBACIÓN */}
+        {activeStep === 6 && (
+          <Step5ReviewSection
+            template={template}
+            formData={watch()}
+            onPrev={handlePrevStep}
+            onFinalSubmit={handleApprovalSubmit}
+            isSubmitting={isSubmitting}
+            inspectionId={initialData?._id}
+            formType="grouped"
+            isApprovalReview={isApprovalReview}
+            showApprovalInputs={true}
+            register={register}
+            control={control}
+            setValue={setValue}
+            errors={errors}
+            onApprove={handleLocalApprove}
+            onReject={handleLocalReject}
+            isSubmitDisabled={!approvalDecision.status}
           />
         )}
 
         {/* STEPPER STEP NAVIGATION BUTTONS (STEPS 1-4) */}
         {activeStep < 5 && (
           <Box
+            className="save-submit-buttons"
             sx={{
               display: "flex",
               justifyContent: "space-between",

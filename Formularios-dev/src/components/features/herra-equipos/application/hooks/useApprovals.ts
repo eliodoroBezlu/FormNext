@@ -7,6 +7,50 @@ import {
 } from '@/lib/actions/inspection-herra-equipos';
 import { Role } from '@/lib/routePermissions';
 
+// ─── Cache helpers ──────────────────────────────────────────────────────────
+const CACHE_KEY = 'pendingApprovals_cache';
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
+
+interface CacheEntry {
+  inspections: InspectionResponse[];
+  areas: string[];
+  timestamp: number;
+  username: string;
+}
+
+function readCache(username: string): CacheEntry | null {
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const entry: CacheEntry = JSON.parse(raw);
+    const expired = Date.now() - entry.timestamp > CACHE_TTL_MS;
+    if (expired || entry.username !== username) {
+      sessionStorage.removeItem(CACHE_KEY);
+      return null;
+    }
+    return entry;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(entry: CacheEntry) {
+  try {
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(entry));
+  } catch {
+    // sessionStorage lleno o no disponible → ignorar
+  }
+}
+
+function invalidateCache() {
+  try {
+    sessionStorage.removeItem(CACHE_KEY);
+  } catch {
+    // noop
+  }
+}
+
+// ─── Exports ─────────────────────────────────────────────────────────────────
 export interface TemplateGroup {
   templateName: string;
   items: InspectionResponse[];
@@ -26,9 +70,51 @@ export const useApprovals = () => {
 
   const isAdmin = hasRole(Role.ADMIN) || hasRole(Role.SUPERINTENDENTE);
 
+  // ── Eliminar una inspección del estado local sin refetch ──────────────────
+  const removeInspection = useCallback(
+    (inspectionId: string) => {
+      setInspections((prev) => {
+        const next = prev.filter((i) => i._id !== inspectionId);
+        // Actualizar caché con la lista reducida
+        if (user) {
+          const cached = readCache(user.username);
+          if (cached) {
+            writeCache({ ...cached, inspections: next, timestamp: Date.now() });
+          }
+        }
+        return next;
+      });
+    },
+    [user],
+  );
+
+  // ── Fetch real desde el servidor ──────────────────────────────────────────
   const loadInspections = useCallback(
-    async (areas: string[]) => {
+    async (areas: string[], forceRefresh = false) => {
       if (!user) return;
+
+      // Si no se fuerza refresco, intentar usar caché
+      if (!forceRefresh) {
+        const cached = readCache(user.username);
+        if (cached) {
+          setInspections(cached.inspections);
+          setLoadedAreas(cached.areas);
+
+          // Verificar si hay una inspección procesada pendiente de quitar
+          const processedId = sessionStorage.getItem('approvedInspectionId');
+          if (processedId) {
+            sessionStorage.removeItem('approvedInspectionId');
+            setInspections((prev) => {
+              const next = prev.filter((i) => i._id !== processedId);
+              writeCache({ ...cached, inspections: next, timestamp: Date.now() });
+              return next;
+            });
+          }
+          return;
+        }
+      }
+
+      // Fetch fresco
       try {
         setLoading(true);
         setError(null);
@@ -38,8 +124,10 @@ export const useApprovals = () => {
           isAdmin,
         );
         if (!result.success) throw new Error(result.error || 'Error al cargar');
-        setInspections(result.data || []);
+        const data = result.data || [];
+        setInspections(data);
         setLoadedAreas(areas);
+        writeCache({ inspections: data, areas, timestamp: Date.now(), username: user.username });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error desconocido');
       } finally {
@@ -49,12 +137,22 @@ export const useApprovals = () => {
     [user, isAdmin],
   );
 
+  // ── Botón "Actualizar" → fuerza refresco ────────────────────────────────
+  const refreshInspections = useCallback(
+    (areas: string[]) => {
+      invalidateCache();
+      loadInspections(areas, true);
+    },
+    [loadInspections],
+  );
+
   useEffect(() => {
     if (!authLoading && user && isAdmin) {
       loadInspections([]);
     }
   }, [authLoading, user, isAdmin, loadInspections]);
 
+  // ── Agrupaciones derivadas ────────────────────────────────────────────────
   const groupedByTemplate = useMemo(() => {
     const map = new Map<string, TemplateGroup>();
     for (const insp of inspections) {
@@ -102,6 +200,8 @@ export const useApprovals = () => {
     loadedAreas,
     setLoadedAreas,
     loadInspections,
+    refreshInspections,
+    removeInspection,
     groupedByTemplate,
     groupedByArea,
   };

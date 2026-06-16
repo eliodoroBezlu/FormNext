@@ -26,7 +26,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import WarningIcon from "@mui/icons-material/Warning";
 import CancelIcon from "@mui/icons-material/Cancel";
-import { FormTemplateHerraEquipos, FormDataHerraEquipos, QuestionResponse, RoutineInspectionEntry } from "../types/IProps";
+import { FormTemplateHerraEquipos, FormDataHerraEquipos, QuestionResponse, RoutineInspectionEntry, Section, Question } from "../types/IProps";
 import dayjs from "dayjs";
 
 interface LocalDamage {
@@ -40,6 +40,9 @@ interface LocalAccessoryConfig {
   cantidad?: number;
 }
 import { descargarPdfHerraEquipoCliente } from "@/lib/actions/client";
+import { SupervisorSignature } from "./SupervisorSignature";
+import { ApprovalSection } from "./ApprovalSection";
+import { getFormConfig } from "../config/form-config.helpers";
 
 interface Step5ReviewSectionProps {
   template: FormTemplateHerraEquipos;
@@ -49,6 +52,19 @@ interface Step5ReviewSectionProps {
   isSubmitting: boolean;
   inspectionId?: string;
   formType: "standard" | "grouped" | "vehicle" | "scaffold";
+  isApprovalReview?: boolean;
+  showApprovalInputs?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  register?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  control?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  setValue?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  errors?: any;
+  onApprove?: (comments?: string | null) => void;
+  onReject?: (reason: string | null) => void;
+  isSubmitDisabled?: boolean;
 }
 
 export function Step5ReviewSection({
@@ -59,6 +75,15 @@ export function Step5ReviewSection({
   isSubmitting,
   inspectionId,
   formType,
+  isApprovalReview = false,
+  showApprovalInputs = false,
+  register,
+  control,
+  setValue,
+  errors,
+  onApprove,
+  onReject,
+  isSubmitDisabled = false,
 }: Step5ReviewSectionProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
@@ -84,6 +109,68 @@ export function Step5ReviewSection({
   const verificationData = formData.verification || {};
   const fieldsStep1 = template.verificationFields.filter((f) => step1Labels.includes(f.label));
   const fieldsStep2 = template.verificationFields.filter((f) => !step1Labels.includes(f.label));
+
+  // Interface for flattened review rows (supporting subsections recursively)
+  interface FlatReviewRow {
+    id: string;
+    type: "section" | "question";
+    text: string;
+    level: number;
+    response?: QuestionResponse;
+  }
+
+  const flatReviewRows: FlatReviewRow[] = [];
+
+  const collectRows = (
+    section: Section,
+    sectionPath: string,
+    level: number,
+    responsesObj: Record<string, unknown>
+  ) => {
+    // Add section header row
+    flatReviewRows.push({
+      id: sectionPath,
+      type: "section",
+      text: section.title || "",
+      level: level,
+    });
+
+    // Add questions from this section if it has any
+    if (section.questions && section.questions.length > 0) {
+      section.questions.forEach((question: Question, qIdx: number) => {
+        const questionKey = `q${qIdx}`;
+        const response: QuestionResponse = (responsesObj?.[questionKey] as QuestionResponse) || {
+          value: "",
+          description: "",
+          observacion: "",
+        };
+        flatReviewRows.push({
+          id: `${sectionPath}_q${qIdx}`,
+          type: "question",
+          text: question.text || "",
+          level: level + 1,
+          response,
+        });
+      });
+    }
+
+    // Add subsections recursively
+    if (section.subsections && section.subsections.length > 0) {
+      section.subsections.forEach((subsection: Section, subIdx: number) => {
+        const subPath = `sub${subIdx}`;
+        const subResponses = (responsesObj?.[subPath] as Record<string, unknown>) || {};
+        collectRows(subsection, `${sectionPath}.${subPath}`, level + 1, subResponses);
+      });
+    }
+  };
+
+  if (formType === "standard" || formType === "vehicle" || formType === "scaffold") {
+    template.sections.forEach((section, sIdx) => {
+      const sectionKey = `section_${sIdx}`;
+      const sectionResponses = (formData.responses?.[sectionKey] as Record<string, unknown>) || {};
+      collectRows(section, sectionKey, 0, sectionResponses);
+    });
+  }
 
   // Helper para renderizar los valores de verificación
   const renderValue = (val: unknown) => {
@@ -176,7 +263,7 @@ export function Step5ReviewSection({
           </Typography>
         </Box>
 
-        <Box sx={{ display: "flex", gap: 1.5 }}>
+        <Box className="save-submit-buttons" sx={{ display: "flex", gap: 1.5 }}>
           {inspectionId ? (
             <Button
               variant="contained"
@@ -293,43 +380,50 @@ export function Step5ReviewSection({
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {template.sections.map((section, sIdx) => {
-                    const sectionKey = `section_${sIdx}`;
-                    const sectionResponses = formData.responses?.[sectionKey] || {};
-
-                    return (
-                      <React.Fragment key={section._id || sIdx}>
-                        {/* Cabecera de la Sección */}
-                        <TableRow>
-                          <TableCell colSpan={3} sx={{ bgcolor: isDark ? "rgba(99, 102, 241, 0.1)" : "rgba(99, 102, 241, 0.05)", fontWeight: "bold", color: "primary.main" }}>
-                            {section.title}
+                  {flatReviewRows.map((row) => {
+                    if (row.type === "section") {
+                      return (
+                        <TableRow key={row.id}>
+                          <TableCell
+                            colSpan={3}
+                            sx={{
+                              bgcolor: isDark
+                                ? `rgba(99, 102, 241, ${Math.max(0.04, 0.12 - row.level * 0.03)})`
+                                : `rgba(99, 102, 241, ${Math.max(0.015, 0.06 - row.level * 0.015)})`,
+                              fontWeight: "bold",
+                              color: "primary.main",
+                              pl: 2 + row.level * 2,
+                            }}
+                          >
+                            {row.text}
                           </TableCell>
                         </TableRow>
-                        
-                        {/* Preguntas de la sección */}
-                        {section.questions.map((question, qIdx) => {
-                          const questionKey = `q${qIdx}`;
-                          const response: QuestionResponse = (sectionResponses as unknown as Record<string, QuestionResponse>)?.[questionKey] || { value: "", description: "", observacion: "" };
+                      );
+                    }
 
-                          return (
-                            <TableRow key={qIdx} sx={{ "&:hover": { bgcolor: isDark ? "rgba(255, 255, 255, 0.02)" : "rgba(0, 0, 0, 0.01)" } }}>
-                              <TableCell sx={{ pl: 3 }}>
-                                <Typography variant="body2" fontWeight={500}>
-                                  {question.text}
-                                </Typography>
-                              </TableCell>
-                              <TableCell align="center">
-                                {renderStatusChip(response.value)}
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2">
-                                  {response.observacion || response.description || "Sin observaciones"}
-                                </Typography>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </React.Fragment>
+                    return (
+                      <TableRow
+                        key={row.id}
+                        sx={{
+                          "&:hover": {
+                            bgcolor: isDark ? "rgba(255, 255, 255, 0.02)" : "rgba(0, 0, 0, 0.01)",
+                          },
+                        }}
+                      >
+                        <TableCell sx={{ pl: 3 + row.level * 2 }}>
+                          <Typography variant="body2" fontWeight={500}>
+                            {row.text}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          {renderStatusChip(row.response?.value)}
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {row.response?.observacion || row.response?.description || "Sin observaciones"}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
                 </TableBody>
@@ -574,7 +668,9 @@ export function Step5ReviewSection({
                   TÉCNICO / INSPECTOR
                 </Typography>
                 <Typography variant="body1" fontWeight={600} gutterBottom sx={{ mt: 1 }}>
-                  {formData.inspectorSignature?.inspectorName ? String(formData.inspectorSignature.inspectorName) : "—"}
+                  {formData.inspectorSignature?.inspectorName || formData.inspectorSignature?.name
+                    ? String(formData.inspectorSignature.inspectorName || formData.inspectorSignature.name)
+                    : "—"}
                 </Typography>
                 
                 <Box
@@ -591,9 +687,15 @@ export function Step5ReviewSection({
                     overflow: "hidden",
                   }}
                 >
-                  {formData.inspectorSignature?.signatureBase64 ? (
+                  {formData.inspectorSignature?.inspectorSignature ||
+                  formData.inspectorSignature?.signatureBase64 ||
+                  formData.inspectorSignature?.signature ? (
                     <img
-                      src={String(formData.inspectorSignature.signatureBase64)}
+                      src={String(
+                        formData.inspectorSignature.inspectorSignature ||
+                          formData.inspectorSignature.signatureBase64 ||
+                          formData.inspectorSignature.signature
+                      )}
                       alt="Firma del inspector"
                       style={{ maxHeight: "100%", maxWidth: "100%", objectFit: "contain" }}
                     />
@@ -626,7 +728,15 @@ export function Step5ReviewSection({
                   <Typography variant="subtitle2" color="text.secondary" fontWeight={700} gutterBottom>
                     SUPERVISOR APROBADOR
                   </Typography>
-                  {formData.requiresApproval || formData.approval?.status ? (
+                  {isApprovalReview ? (
+                    <Box sx={{ mt: 2 }}>
+                      <Chip
+                        label="FIRMA Y DECISIÓN REQUERIDAS"
+                        color="warning"
+                        sx={{ fontWeight: "bold" }}
+                      />
+                    </Box>
+                  ) : formData.requiresApproval || formData.approval?.status ? (
                     <Box sx={{ mt: 2 }}>
                       <Chip
                         label={
@@ -660,27 +770,45 @@ export function Step5ReviewSection({
                   )}
                 </Box>
 
-                {formData.supervisorSignature?.signatureBase64 && (
-                  <Box
-                    sx={{
-                      my: 2,
-                      height: "120px",
-                      border: "1px dashed",
-                      borderColor: "divider",
-                      borderRadius: 2,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      bgcolor: "#ffffff",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <img
-                      src={String(formData.supervisorSignature.signatureBase64)}
-                      alt="Firma del supervisor"
-                      style={{ maxHeight: "100%", maxWidth: "100%", objectFit: "contain" }}
-                    />
-                  </Box>
+                {!isApprovalReview && (
+                  <>
+                    <Box sx={{ mt: 1 }}>
+                      {(formData.supervisorSignature?.supervisorName || formData.supervisorSignature?.name) && (
+                        <Typography variant="body1" fontWeight={600} gutterBottom>
+                          {String(formData.supervisorSignature.supervisorName || formData.supervisorSignature.name)}
+                        </Typography>
+                      )}
+                    </Box>
+
+                    {(formData.supervisorSignature?.supervisorSignature ||
+                      formData.supervisorSignature?.signatureBase64 ||
+                      formData.supervisorSignature?.signature) ? (
+                      <Box
+                        sx={{
+                          my: 2,
+                          height: "120px",
+                          border: "1px dashed",
+                          borderColor: "divider",
+                          borderRadius: 2,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          bgcolor: "#ffffff",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <img
+                          src={String(
+                            formData.supervisorSignature.supervisorSignature ||
+                              formData.supervisorSignature.signatureBase64 ||
+                              formData.supervisorSignature.signature
+                          )}
+                          alt="Firma del supervisor"
+                          style={{ maxHeight: "100%", maxWidth: "100%", objectFit: "contain" }}
+                        />
+                      </Box>
+                    ) : null}
+                  </>
                 )}
               </Box>
             </Grid>
@@ -688,8 +816,29 @@ export function Step5ReviewSection({
         </CardContent>
       </Card>
 
+      {showApprovalInputs && register && control && setValue && errors && onApprove && onReject && (
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 3, mt: 3 }}>
+          <SupervisorSignature
+            register={register}
+            control={control}
+            errors={errors}
+            setValue={setValue}
+            config={getFormConfig(template.code)?.signatures?.supervisor}
+          />
+          <ApprovalSection
+            status={formData.status || "pending_approval"}
+            approval={formData.approval}
+            canApprove={true}
+            onApprove={onApprove}
+            onReject={onReject}
+            readonly={false}
+          />
+        </Box>
+      )}
+
       {/* Botones de navegación del paso final */}
       <Box
+        className="save-submit-buttons"
         sx={{
           display: "flex",
           justifyContent: "space-between",
@@ -699,21 +848,32 @@ export function Step5ReviewSection({
           borderColor: "divider",
         }}
       >
-        <Button
-          variant="outlined"
-          startIcon={<ArrowBackIcon />}
-          onClick={onPrev}
-          disabled={isSubmitting}
-        >
-          Anterior
-        </Button>
+        {isApprovalReview ? (
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBackIcon />}
+            onClick={onPrev}
+            disabled={isSubmitting}
+          >
+            Volver
+          </Button>
+        ) : (
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBackIcon />}
+            onClick={onPrev}
+            disabled={isSubmitting}
+          >
+            Anterior
+          </Button>
+        )}
 
         <Button
           variant="contained"
           color="success"
           startIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
           onClick={onFinalSubmit}
-          disabled={isSubmitting}
+          disabled={isSubmitting || isSubmitDisabled}
           sx={{
             px: 4,
             fontWeight: "bold",
@@ -723,7 +883,13 @@ export function Step5ReviewSection({
             },
           }}
         >
-          {isSubmitting ? "Enviando..." : "Guardar y Enviar"}
+          {isSubmitting
+            ? "Procesando..."
+            : showApprovalInputs
+            ? "Enviar Decisión de Aprobación"
+            : isApprovalReview
+            ? "Siguiente"
+            : "Guardar y Enviar"}
         </Button>
       </Box>
     </Box>

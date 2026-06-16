@@ -38,8 +38,8 @@ interface ApprovalSectionProps {
     supervisorComments?: string;
   };
   canApprove: boolean;
-  onApprove: (comments?: string) => void;
-  onReject: (reason: string) => void;
+  onApprove: (comments?: string | null) => void;
+  onReject: (reason: string | null) => void;
   readonly?: boolean;
 }
 
@@ -131,8 +131,7 @@ export function ApprovalSection({
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
-      // Al desmarcar, podríamos querer limpiar la decisión en el padre
-      // o dejarla como está, pero visualmente ya no es "approve".
+      onApprove(null);
     }
   };
 
@@ -147,6 +146,7 @@ export function ApprovalSection({
     } else {
       setActionSelection("none");
       setShowRejectForm(false);
+      onReject(null);
     }
   };
 
@@ -167,6 +167,7 @@ export function ApprovalSection({
     setRejectionReason("");
     setRejectionReasonError("");
     setActionSelection("none");
+    onReject(null);
   };
 
   const isFinalized = status === "approved" || status === "rejected";

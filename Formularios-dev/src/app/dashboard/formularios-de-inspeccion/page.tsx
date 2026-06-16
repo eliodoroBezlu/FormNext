@@ -21,7 +21,7 @@ import { InspectionFormIroIsop } from "@/components/features/iro-isop/Inspection
 import { BaseCard } from "@/components/ui/cards/BaseCard";
 import { TemplateCard } from "@/components/ui/cards/TemplateCard";
 import { InspeccionSistemasEmergencia } from "@/components/features/sistemas-emergencia/InspeccionSistemasEmergencia";
-import LlenarFormulariosPage from "@/components/features/herra-equipos/FormHerraEquipos";
+import NewInspectionTemplates from "@/components/features/herra-equipos/NewInspectionTemplates";
 import { SuccessScreen } from "@/components/ui/feedback/SuccessScreen"; 
 
 import PageHeader from "@/components/layout/page-header/PageHeader";
@@ -368,7 +368,7 @@ export default function HomePage() {
           {/* TAB 2: HERRAMIENTAS Y EQUIPOS */}
           {tabValue === 2 && (
             <Grid size={{ xs: 12 }}>
-              <LlenarFormulariosPage />
+              <NewInspectionTemplates />
             </Grid>
           )}
 

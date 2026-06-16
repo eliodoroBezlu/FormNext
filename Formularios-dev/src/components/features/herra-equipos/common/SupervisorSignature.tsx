@@ -125,9 +125,9 @@ export function SupervisorSignature({
                   controllerField.onChange(value);
                 }}
                 dataSource={field.dataSource as DataSourceType | undefined}
+                disabled={readonly}
               />
             )}
-            disabled={readonly}
           />
         );
 
@@ -174,12 +174,7 @@ export function SupervisorSignature({
           <Controller
             name={fieldName as Path<FormDataHerraEquipos>}
             control={control}
-            defaultValue={dayjs().format("YYYY-MM-DD")}
             render={({ field: controllerField }) => {
-              if (!controllerField.value) {
-                controllerField.onChange(dayjs().format("YYYY-MM-DD"));
-              }
-
               return (
                 <TextField
                   {...commonProps}

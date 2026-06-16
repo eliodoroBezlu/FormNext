@@ -37,6 +37,7 @@ import { SectionRenderer } from "../renderers/SectionRenderer";
 import { FormBreadcrumbs } from "../../../common/FormBreadcrumbs";
 import { FormStepperHeader } from "../../../common/FormStepperHeader";
 import { Step5ReviewSection } from "../../../common/Step5ReviewSection";
+import dayjs from "dayjs";
 
 interface VehicleInspectionFormProps {
   template: FormTemplateHerraEquipos;
@@ -47,13 +48,7 @@ interface VehicleInspectionFormProps {
   isViewMode?: boolean;
 }
 
-const steps = [
-  { label: "Herramienta y Área" },
-  { label: "Datos Generales" },
-  { label: "Inspección" },
-  { label: "Firmas y Observaciones" },
-  { label: "Revisión Final" },
-];
+
 
 export function VehicleInspectionForm({
   template,
@@ -68,8 +63,53 @@ export function VehicleInspectionForm({
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const canApprove = () => {
+    if (!config?.approval?.enabled) return false;
+    if (!config.approval.requiredRoles) return false;
+
+    const hasRequiredRole = config.approval.requiredRoles.some((role) =>
+      hasRole(
+        role as
+          | Role.ADMIN
+          | Role.SUPERVISOR
+          | Role.TECNICO
+          | Role.SUPERINTENDENTE,
+      ),
+    );
+
+    if (!hasRequiredRole) return false;
+
+    if (!config.approval.allowSelfApproval) {
+      return initialData?.submittedBy !== user?.email;
+    }
+
+    return true;
+  };
+
+  const isApprovalReview =
+    !isViewMode &&
+    initialData?.status === InspectionStatus.PENDING_APPROVAL &&
+    canApprove();
+
+  const formSteps = isApprovalReview
+    ? [
+        { label: "Herramienta y Área" },
+        { label: "Datos Generales" },
+        { label: "Inspección" },
+        { label: "Firmas y Observaciones" },
+        { label: "Revisión Final" },
+        { label: "Aprobación" },
+      ]
+    : [
+        { label: "Herramienta y Área" },
+        { label: "Datos Generales" },
+        { label: "Inspección" },
+        { label: "Firmas y Observaciones" },
+        { label: "Revisión Final" },
+      ];
+
   // Active step state read from search query parameter
-  const initialStep = parseInt(searchParams.get("step") || "1", 10);
+  const initialStep = isApprovalReview ? 6 : parseInt(searchParams.get("step") || "1", 10);
   const [activeStep, setActiveStep] = useState(initialStep);
 
   const updateStepQueryParam = (step: number) => {
@@ -102,7 +142,7 @@ export function VehicleInspectionForm({
     formState: { errors, isSubmitting, isDirty },
   } = useForm<FormDataHerraEquipos>({
     mode: "onTouched",
-    defaultValues: initialData || {
+    defaultValues: {
       verification: {},
       responses: {},
       vehicle: {
@@ -114,8 +154,21 @@ export function VehicleInspectionForm({
         responsableProximaInspeccion: "",
         damageImageBase64: "",
       },
-      inspectorSignature: {},
-      supervisorSignature: {},
+      ...initialData,
+      inspectorSignature: {
+        name: "",
+        signature: "",
+        inspectorName: "",
+        inspectorSignature: "",
+        inspectionDate: dayjs().format("YYYY-MM-DD"),
+        ...initialData?.inspectorSignature,
+      },
+      supervisorSignature: {
+        supervisorName: "",
+        supervisorSignature: "",
+        supervisorDate: dayjs().format("YYYY-MM-DD"),
+        ...initialData?.supervisorSignature,
+      },
     },
   });
 
@@ -124,7 +177,23 @@ export function VehicleInspectionForm({
 
   useEffect(() => {
     if (initialData) {
-      reset(initialData);
+      reset({
+        ...initialData,
+        inspectorSignature: {
+          name: "",
+          signature: "",
+          inspectorName: "",
+          inspectorSignature: "",
+          inspectionDate: dayjs().format("YYYY-MM-DD"),
+          ...initialData.inspectorSignature,
+        },
+        supervisorSignature: {
+          supervisorName: "",
+          supervisorSignature: "",
+          supervisorDate: dayjs().format("YYYY-MM-DD"),
+          ...initialData.supervisorSignature,
+        },
+      });
     }
   }, [initialData, reset]);
 
@@ -150,28 +219,7 @@ export function VehicleInspectionForm({
   }
 
   // ✅ Misma lógica que StandardInspectionForm
-  const canApprove = () => {
-    if (!config.approval?.enabled) return false;
-    if (!config.approval.requiredRoles) return false;
 
-    const hasRequiredRole = config.approval.requiredRoles.some((role) =>
-      hasRole(
-        role as
-          | Role.ADMIN
-          | Role.SUPERVISOR
-          | Role.TECNICO
-          | Role.SUPERINTENDENTE,
-      ),
-    );
-
-    if (!hasRequiredRole) return false;
-
-    if (!config.approval.allowSelfApproval) {
-      return initialData?.submittedBy !== user?.email;
-    }
-
-    return true;
-  };
 
   const shouldShowApprovalSection = () => {
     if (!config?.approval?.enabled) return false;
@@ -206,18 +254,23 @@ export function VehicleInspectionForm({
   };
 
   // ✅ Interceptores locales de aprobación
-  const handleLocalApprove = (comments?: string) => {
-    setApprovalDecision({ status: "approved", comments: comments || "" });
+  const handleLocalApprove = (comments?: string | null) => {
+    if (comments === null) {
+      setApprovalDecision({ status: null, comments: "" });
+    } else {
+      setApprovalDecision({ status: "approved", comments: comments || "" });
+    }
   };
 
-  const handleLocalReject = (reason: string) => {
-    setApprovalDecision({ status: "rejected", comments: reason });
+  const handleLocalReject = (reason: string | null) => {
+    if (reason === null) {
+      setApprovalDecision({ status: null, comments: "" });
+    } else {
+      setApprovalDecision({ status: "rejected", comments: reason });
+    }
   };
 
-  const isApprovalReview =
-    !isViewMode &&
-    initialData?.status === InspectionStatus.PENDING_APPROVAL &&
-    canApprove();
+
 
   const handleApprovalSubmit = () => {
     handleFormSubmit(getValues());
@@ -345,7 +398,15 @@ export function VehicleInspectionForm({
     } else if (activeStep === 4) {
       const step4FieldNames = [
         "inspectorSignature.inspectorName",
+        "inspectorSignature.name",
+        "inspectorSignature.inspectorSignature",
+        "inspectorSignature.signature",
         "inspectorSignature.signatureBase64",
+        "supervisorSignature.supervisorName",
+        "supervisorSignature.name",
+        "supervisorSignature.supervisorSignature",
+        "supervisorSignature.signature",
+        "supervisorSignature.signatureBase64",
       ];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const isValid = await trigger(step4FieldNames as any);
@@ -367,6 +428,8 @@ export function VehicleInspectionForm({
       } else {
         handleStepChange(5);
       }
+    } else if (activeStep === 5) {
+      handleStepChange(6);
     }
   };
 
@@ -395,7 +458,7 @@ export function VehicleInspectionForm({
           </Typography>
         </Box>
 
-        <FormStepperHeader activeStep={activeStep} steps={steps} />
+        <FormStepperHeader activeStep={activeStep} steps={formSteps} />
 
         {hasSubmitErrors && Object.keys(errors).length > 0 && (
           <Alert severity="error" onClose={() => setHasSubmitErrors(false)}>
@@ -807,7 +870,7 @@ export function VehicleInspectionForm({
             )}
 
             {/* Firma Supervisor */}
-            {showSupervisorSignature() && (
+            {showSupervisorSignature() && !isApprovalReview && (
               <SupervisorSignature
                 register={register}
                 control={control}
@@ -818,7 +881,7 @@ export function VehicleInspectionForm({
             )}
 
             {/* Aprobación */}
-            {shouldShowApprovalSection() && (
+            {shouldShowApprovalSection() && !isApprovalReview && (
               <ApprovalSection
                 status={initialData!.status || InspectionStatus.PENDING_APPROVAL}
                 approval={initialData!.approval}
@@ -842,18 +905,43 @@ export function VehicleInspectionForm({
             onPrev={handlePrevStep}
             onFinalSubmit={
               isApprovalReview
-                ? handleApprovalSubmit
+                ? handleNextStep
                 : handleSubmit(handleFormSubmit, handleInvalidSubmit)
             }
             isSubmitting={isSubmitting}
             inspectionId={initialData?._id}
             formType="vehicle"
+            isApprovalReview={isApprovalReview}
+            showApprovalInputs={false}
+          />
+        )}
+
+        {/* STEP 6: APROBACIÓN */}
+        {activeStep === 6 && (
+          <Step5ReviewSection
+            template={template}
+            formData={watch()}
+            onPrev={handlePrevStep}
+            onFinalSubmit={handleApprovalSubmit}
+            isSubmitting={isSubmitting}
+            inspectionId={initialData?._id}
+            formType="vehicle"
+            isApprovalReview={isApprovalReview}
+            showApprovalInputs={true}
+            register={register}
+            control={control}
+            setValue={setValue}
+            errors={errors}
+            onApprove={handleLocalApprove}
+            onReject={handleLocalReject}
+            isSubmitDisabled={!approvalDecision.status}
           />
         )}
 
         {/* STEPPER STEP NAVIGATION BUTTONS (STEPS 1-4) */}
         {activeStep < 5 && (
           <Box
+            className="save-submit-buttons"
             sx={{
               display: "flex",
               justifyContent: "space-between",

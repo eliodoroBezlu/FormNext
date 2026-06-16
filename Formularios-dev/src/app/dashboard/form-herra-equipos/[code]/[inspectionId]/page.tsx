@@ -83,10 +83,10 @@ export default function FormularioDinamicoPage() {
 
   const getRedirectUrl = () => {
     if (existingInspection?.status === "pending_approval") {
-      return "/dashboard/form-herra-equipos?tab=pending-approval";
+      return "/dashboard/form-herra-equipos/pending-approval";
     }
     if (existingInspection?.status === "in_progress") {
-      return "/dashboard/form-herra-equipos?tab=in-progress";
+      return "/dashboard/form-herra-equipos/in-progress";
     }
     return "/dashboard/form-herra-equipos";
   };
@@ -319,6 +319,10 @@ export default function FormularioDinamicoPage() {
       if (result.success) {
         localStorage.removeItem(`draft_${code}`);
         sessionStorage.removeItem("preverified_equipment_id");
+        // Marcar esta inspección como procesada para actualización optimista en la lista
+        if (inspectionId && existingInspection?.status === "pending_approval") {
+          sessionStorage.setItem("approvedInspectionId", inspectionId);
+        }
         setSnackbar({
           open: true,
           message: "Inspección finalizada",
@@ -326,7 +330,6 @@ export default function FormularioDinamicoPage() {
         });
         setTimeout(() => {
           router.push(getRedirectUrl());
-          router.refresh();
         }, 2000);
       }
     } catch (err) {
@@ -367,6 +370,10 @@ export default function FormularioDinamicoPage() {
       if (result.success) {
         localStorage.removeItem(`draft_${code}`);
         sessionStorage.removeItem("preverified_equipment_id");
+        // Marcar esta inspección como procesada para actualización optimista en la lista
+        if (inspectionId && existingInspection?.status === "pending_approval") {
+          sessionStorage.setItem("approvedInspectionId", inspectionId);
+        }
         setSnackbar({
           open: true,
           message: "Formulario enviado exitosamente",
@@ -374,7 +381,6 @@ export default function FormularioDinamicoPage() {
         });
         setTimeout(() => {
           router.push(getRedirectUrl());
-          router.refresh();
         }, 2000);
       } else {
         throw new Error(result.error || "Error al enviar formulario");
@@ -501,7 +507,11 @@ export default function FormularioDinamicoPage() {
         startIcon={<ArrowBack />}
         onClick={() => {
           router.push(getRedirectUrl());
-          router.refresh();
+          // Only force refresh for non-approval flows;
+          // pending_approval list updates optimistically via sessionStorage cache
+          if (existingInspection?.status !== 'pending_approval') {
+            router.refresh();
+          }
         }}
         sx={{ m: 2 }}
         disabled={saving}
