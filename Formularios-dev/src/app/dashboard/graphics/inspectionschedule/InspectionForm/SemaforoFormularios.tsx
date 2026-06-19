@@ -17,7 +17,7 @@ import {
   useTheme,
 } from "@mui/material";
 
-import { useSemaforoFormularios } from "./hook/InspectionForm";
+import { useSemaforoFormularios } from "./hooks/InspectionForm";
 import { TableRow as FormularioTableRow } from "./components/TableRow";
 import { TableRowMobile } from "./components/TableRowMobile";
 import { InstanciasModal } from "./components/Modals/InstanciasModal";
@@ -25,7 +25,7 @@ import { ProgramacionDirectaModal } from "./components/Modals/ProgramacionDirect
 import { ProgramacionesModal } from "./components/Modals/ProgramacionesModal";
 import { ProgramacionAreaModal } from "./components/Modals/ProgramacionAreaModal";
 import { TABLE_COLUMNS } from "./constants/constants-config";
-import { Formulario } from "./types/Iprops";
+import { Formulario } from "./types/IProps";
 import {
   abrirModalInstancias,
   abrirModalProgramacionArea,

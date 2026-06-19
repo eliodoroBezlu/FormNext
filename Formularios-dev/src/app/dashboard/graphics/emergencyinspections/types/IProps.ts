@@ -91,22 +91,18 @@ export interface AreaStats {
   estado: string;
   tendencia: number;
   totalInspecciones: number;
+  totalTags: number;
   superintendencia: string;
   extintoresInspeccionados: number;
   sistemasPasivosCumplimiento: number;
   sistemasActivosCumplimiento: number;
 }
 
-export interface SistemaInspeccionType {
-  cantidad: number | string;
-  estado: '✓' | 'X' | 'N/A' | null;
-  observaciones?: string;
-}
 
 export interface DashboardMetricsProps {
   tagsCount: number;
-  inspeccionesCount: number;
-  promedioCumplimiento: number;
+  coberturaInspecciones: number;
+  cumplimientoExtintores: number;
   alertasCriticasCount: number;
   estadisticasGlobales: AreaStats[];
 }
@@ -117,4 +113,15 @@ export interface ChartData {
   inspecciones: number;
   extintores: number;
   tendencia: number;
+}
+
+export interface Extintor {
+  _id: string;
+  CodigoExtintor: string;
+  Ubicacion: string;
+  inspeccionado: boolean;
+  activo: boolean;
+  updatedAt: string;
+  tag: string;
+  area: string;
 }

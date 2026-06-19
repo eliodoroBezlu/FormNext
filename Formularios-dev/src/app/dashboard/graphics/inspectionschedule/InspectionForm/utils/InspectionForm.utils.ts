@@ -1,6 +1,6 @@
 // utils.ts
 import { getAuthHeaders } from "@/lib/actions/helpers";
-import { Instancia, Formulario } from "../types/Iprops";
+import { Instancia, Formulario } from "../types/IProps";
 import { Dayjs } from "dayjs";
 import { API_BASE_URL } from "@/lib/constants";
 

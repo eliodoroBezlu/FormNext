@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { Tag, FormularioInspeccion } from "../types/IProps";
+import { Tag, FormularioInspeccion, Extintor } from "../types/IProps";
 import { obtenerDashboardData } from "../actions";
 
 export const useDashboardData = () => {
   const [tags, setTags] = useState<Tag[]>([]);
   const [inspecciones, setInspecciones] = useState<FormularioInspeccion[]>([]);
+  const [extintores, setExtintores] = useState<Extintor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
@@ -15,10 +16,11 @@ export const useDashboardData = () => {
       if (showRefresh) setRefreshing(true);
       setError(null);
 
-      const { tags, inspecciones } = await obtenerDashboardData();
+      const { tags, inspecciones, extintores } = await obtenerDashboardData();
 
       setTags(tags);
       setInspecciones(inspecciones);
+      setExtintores(extintores);
       setLastUpdated(new Date());
     } catch (err) {
       console.error("Error fetching data:", err);
@@ -38,6 +40,7 @@ export const useDashboardData = () => {
   return {
     tags,
     inspecciones,
+    extintores,
     loading,
     error,
     lastUpdated,

@@ -1,7 +1,7 @@
-import React from 'react';
-import { Box, Alert, colors } from '@mui/material';
-import { Warning, Error as ErrorIcon } from '@mui/icons-material';
-import { AreaStats } from '../types/IProps';
+import React from "react";
+import { Box, Alert } from "@mui/material";
+import { Warning, Error as ErrorIcon } from "@mui/icons-material";
+import { AreaStats } from "../types/IProps";
 
 interface DashboardAlertsProps {
   alertasCriticas: AreaStats[];
@@ -18,16 +18,17 @@ export const DashboardAlerts: React.FC<DashboardAlertsProps> = ({
         <Alert
           severity="warning"
           icon={<Warning />}
-          sx={{ backgroundColor: colors.green }}
+          sx={{ backgroundColor: "warning.light" }}
         >
-         {alertasCriticas.length} área(s) en estado CRÍTICO requieren atención inmediata
+          {alertasCriticas.length} área(s) en estado CRÍTICO requieren atención
+          inmediata
         </Alert>
       )}
       {areasSinInspecciones.length > 0 && (
         <Alert
           severity="info"
           icon={<ErrorIcon />}
-          sx={{ backgroundColor: colors.blue }}
+          sx={{ backgroundColor: "info.light" }}
         >
           {areasSinInspecciones.length} área(s) sin inspecciones registradas
         </Alert>

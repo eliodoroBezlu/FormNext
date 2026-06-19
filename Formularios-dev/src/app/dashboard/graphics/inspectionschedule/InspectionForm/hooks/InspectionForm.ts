@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { SnackbarState, FormDataDirecta } from "../types/Iprops";
+import { SnackbarState, FormDataDirecta } from "../types/IProps";
 
 export const useSemaforoFormularios = () => {
   const [modalAbierto, setModalAbierto] = useState(false);

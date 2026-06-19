@@ -1,6 +1,6 @@
 import { ListItem, Box, Typography, Chip, Button } from "@mui/material";
 import { CalendarMonth } from "@mui/icons-material";
-import { Instancia, Formulario } from "../../types/Iprops";
+import { Instancia, Formulario } from "../../types/IProps";
 import {
   formatearFecha,
   obtenerFechaInspeccion,

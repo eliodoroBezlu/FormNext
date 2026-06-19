@@ -1,5 +1,5 @@
 import { ListItem, Box, Typography, Chip } from "@mui/material";
-import { Instancia, Formulario } from "../../types/Iprops";
+import { Instancia, Formulario } from "../../types/IProps";
 import {
   obtenerArea,
   formatearFecha,

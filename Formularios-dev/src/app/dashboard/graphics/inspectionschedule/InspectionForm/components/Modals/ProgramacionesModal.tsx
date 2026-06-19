@@ -9,7 +9,7 @@ import {
   IconButton,
 } from "@mui/material";
 import { Close } from "@mui/icons-material";
-import { Formulario } from "../../types/Iprops";
+import { Formulario } from "../../types/IProps";
 import GestionProgramaciones from "../../../ManagementProgramming/GestionProgramaciones";
 
 interface ProgramacionesModalProps {

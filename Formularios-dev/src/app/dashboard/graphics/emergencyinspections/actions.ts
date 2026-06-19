@@ -2,7 +2,7 @@
 
 import { getAuthHeaders, handleApiResponse } from "@/lib/actions/helpers";
 import { API_BASE_URL } from "@/lib/constants";
-import { FormularioInspeccion, Tag } from "./types/IProps";
+import { FormularioInspeccion, Tag, Extintor } from "./types/IProps";
 
 // Obtener todos los tags
 export async function obtenerTags(): Promise<Tag[]> {
@@ -28,14 +28,27 @@ export async function obtenerInspecciones(): Promise<FormularioInspeccion[]> {
   return handleApiResponse<FormularioInspeccion[]>(response);
 }
 
-// Obtener ambos datos en paralelo
+// Obtener todos los extintores
+export async function obtenerExtintores(): Promise<Extintor[]> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/extintor/`, {
+    method: "GET",
+    headers,
+    cache: "no-store",
+  });
+
+  return handleApiResponse<Extintor[]>(response);
+}
+
+// Obtener todos los datos en paralelo para el dashboard
 export async function obtenerDashboardData(): Promise<{
   tags: Tag[];
   inspecciones: FormularioInspeccion[];
+  extintores: Extintor[];
 }> {
   const headers = await getAuthHeaders();
 
-  const [tagsResponse, inspeccionesResponse] = await Promise.all([
+  const [tagsResponse, inspeccionesResponse, extintoresResponse] = await Promise.all([
     fetch(`${API_BASE_URL}/tag/`, {
       method: "GET",
       headers,
@@ -46,12 +59,18 @@ export async function obtenerDashboardData(): Promise<{
       headers,
       cache: "no-store",
     }),
+    fetch(`${API_BASE_URL}/extintor/`, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    }),
   ]);
 
-  const [tags, inspecciones] = await Promise.all([
+  const [tags, inspecciones, extintores] = await Promise.all([
     handleApiResponse<Tag[]>(tagsResponse),
     handleApiResponse<FormularioInspeccion[]>(inspeccionesResponse),
+    handleApiResponse<Extintor[]>(extintoresResponse),
   ]);
 
-  return { tags, inspecciones };
+  return { tags, inspecciones, extintores };
 }

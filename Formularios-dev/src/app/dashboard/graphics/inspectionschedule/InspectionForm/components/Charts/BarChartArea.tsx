@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { Formulario } from "../../types/Iprops";
+import { Formulario } from "../../types/IProps";
 import { generarDatosGrafica } from "../../utils/InspectionForm.utils";
 
 interface BarChartAreaProps {

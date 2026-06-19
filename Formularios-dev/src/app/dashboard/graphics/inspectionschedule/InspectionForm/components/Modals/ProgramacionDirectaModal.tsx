@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import { Close, CalendarMonth } from "@mui/icons-material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { FormDataDirecta, Formulario, Instancia } from "../../types/Iprops";
+import { FormDataDirecta, Formulario, Instancia } from "../../types/IProps";
 import { Dayjs } from "dayjs";
 
 interface ProgramacionDirectaModalProps {

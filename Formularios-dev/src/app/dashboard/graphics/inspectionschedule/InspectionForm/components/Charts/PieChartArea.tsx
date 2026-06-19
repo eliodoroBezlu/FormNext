@@ -7,7 +7,7 @@ import {
   Tooltip as RechartsTooltip,
   Legend,
 } from "recharts";
-import { Formulario } from "../../types/Iprops";
+import { Formulario } from "../../types/IProps";
 import { generarDatosGrafica } from "../../utils/InspectionForm.utils";
 
 interface PieChartInstanciasProps {

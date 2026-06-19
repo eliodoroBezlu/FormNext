@@ -10,7 +10,7 @@ import {
   List,
 } from "@mui/material";
 import { Close } from "@mui/icons-material";
-import { Instancia, Formulario } from "../../types/Iprops";
+import { Instancia, Formulario } from "../../types/IProps";
 import { ModalInstanciaItem } from "../ListItems/ModalInstanciaItem";
 
 interface InstanciasModalProps {

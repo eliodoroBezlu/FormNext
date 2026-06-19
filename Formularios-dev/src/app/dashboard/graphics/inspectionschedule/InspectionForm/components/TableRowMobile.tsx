@@ -9,7 +9,7 @@ import {
   Grid,
 } from "@mui/material";
 import { CalendarMonth } from "@mui/icons-material";
-import { Formulario } from "../types/Iprops";
+import { Formulario } from "../types/IProps";
 import {
   obtenerAreasUnicas,
   tieneInstancias,
