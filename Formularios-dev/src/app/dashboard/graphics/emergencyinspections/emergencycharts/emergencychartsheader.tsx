@@ -9,7 +9,6 @@ interface DashboardHeaderProps {
 }
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
-  tagsCount,
   refreshing,
   onRefresh,
 }) => {
