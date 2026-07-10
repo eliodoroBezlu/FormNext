@@ -180,6 +180,7 @@ export const FormFiller: React.FC<FormFillerProps> = ({
           errors={errors}
           readonly={readonly}
           setValue={setValue}
+          templateCode={template.code}
         />
 
         {/* Secciones del formulario */}

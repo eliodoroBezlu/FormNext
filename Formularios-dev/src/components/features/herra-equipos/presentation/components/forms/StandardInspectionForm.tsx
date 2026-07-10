@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useForm, FieldErrors } from "react-hook-form";
+import { useForm, FieldErrors, Path } from "react-hook-form";
 import { Box, Typography, Paper, Alert, Snackbar, Button } from "@mui/material";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -12,6 +12,10 @@ import {
   Section,
   ResponsesData,
   InspectionStatus,
+  isEquipmentCodeField,
+  isAreaField,
+  autofillEquipmentFields,
+  TEMPLATE_EQUIPMENT_MAP,
 } from "../../../types/IProps";
 import { getFormConfig } from "../../../config/form-config.helpers";
 import { AlertSection } from "../../../common/AlertSection";
@@ -30,6 +34,8 @@ import { DynamicSectionSelector } from "../selectors/DynamicSectionSelector";
 import { Role } from "@/lib/routePermissions";
 import { VerificationFields } from "../renderers/VerificationsFields";
 import { SectionRenderer } from "../renderers/SectionRenderer";
+import { EquipmentSelectionStep } from "../selectors/EquipmentSelectionStep";
+import { EquipoBackend } from "@/lib/actions/equipo-actions";
 
 // Reusable custom stepper components
 import { FormBreadcrumbs } from "../../../common/FormBreadcrumbs";
@@ -46,6 +52,9 @@ interface StandardInspectionFormProps {
   readonly?: boolean;
   initialData?: FormDataHerraEquipos;
   isViewMode?: boolean;
+  startStep?: number;
+  equipos?: EquipoBackend[];
+  areas?: string[];
 }
 
 const initDefaults = (
@@ -70,6 +79,9 @@ export function StandardInspectionForm({
   readonly = false,
   initialData,
   isViewMode = false,
+  startStep,
+  equipos,
+  areas,
 }: StandardInspectionFormProps) {
   const config = getFormConfig(template.code);
   const { user, hasRole } = useUserRole();
@@ -121,8 +133,8 @@ export function StandardInspectionForm({
         { label: "Revisión Final" },
       ];
 
-  // Active step state read from search query parameter
-  const initialStep = isApprovalReview ? 6 : parseInt(searchParams.get("step") || "1", 10);
+  // Active step state read from search query parameter or startStep prop
+  const initialStep = isApprovalReview ? 6 : (startStep !== undefined ? startStep : parseInt(searchParams.get("step") || "1", 10));
   const [activeStep, setActiveStep] = useState(initialStep);
 
   const updateStepQueryParam = (step: number) => {
@@ -213,6 +225,55 @@ export function StandardInspectionForm({
   useEffect(() => {
     setValue("selectedItems", selectedItems, { shouldDirty: false });
   }, [selectedItems, setValue]);
+
+  // ✅ Auto-seleccionar tipo de escalera desde el campo de verificación
+  // Aplica solo a formularios con sectionSelector (ej. 1.02.P06.F33 - Escaleras)
+  const tipoEscaleraFieldLabel = React.useMemo(() => {
+    if (!config?.sectionSelector?.enabled) return null;
+    const field = template.verificationFields.find((f) => {
+      const norm = f.label.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+      return norm.includes("TIPO") && norm.includes("ESCALERA");
+    });
+    return field?.label || null;
+  }, [config, template.verificationFields]);
+
+  // Observar el valor del campo "Tipo de Escalera"
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tipoEscaleraValor = tipoEscaleraFieldLabel ? (watch as any)(`verification.${tipoEscaleraFieldLabel}`) as string | undefined : undefined;
+
+  useEffect(() => {
+    if (!config?.sectionSelector?.enabled || !config.sectionSelector.items) return;
+    if (!tipoEscaleraFieldLabel || !tipoEscaleraValor) return;
+
+    const normTipo = tipoEscaleraValor.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+    config.sectionSelector.items.forEach((itemConfig) => {
+      const parentSection = template.sections.find((s) => s.title === itemConfig.sectionTitle);
+      if (!parentSection?.subsections?.length) return;
+
+      // Buscar la subsección cuyo título coincida con el tipo de escalera del equipo
+      const matchingSubsection = parentSection.subsections.find((sub) => {
+        const normSub = sub.title.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        // Extraer parte significativa del título de la subsección (quitar "N. VERIFICACION ESCALERA ")
+        const subKeywords = normSub.replace(/^\d+\.\s*VERIFICACION\s+ESCALERA\s*/i, "").trim();
+        return normSub.includes(normTipo) || normTipo.includes(subKeywords.substring(0, 20)) ||
+               subKeywords.split(" ").filter(w => w.length > 4).every(w => normTipo.includes(w));
+      });
+
+      if (!matchingSubsection) return;
+
+      const currentPath = itemConfig.sectionTitle;
+      const currentSelected = selectedItems[currentPath] || [];
+      if (!currentSelected.includes(matchingSubsection.title)) {
+        setSelectedItems((prev) => ({
+          ...prev,
+          [currentPath]: [matchingSubsection.title],
+        }));
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipoEscaleraValor]);
+
 
   // Warn before leaving with unsaved changes
   useEffect(() => {
@@ -453,20 +514,26 @@ export function StandardInspectionForm({
     return false;
   };
 
-  // Split Verification Fields into Step 1 and Step 2
-  const step1Labels = ["TAG", "Equipo", "Herramienta", "Instrumento", "Código de Instrumento", "Identificación", "Código del Equipo", "Área", "Planta", "Ubicación", "Lugar"];
-  const step1Fields = template.verificationFields.filter((f) => step1Labels.includes(f.label));
-  const step2Fields = template.verificationFields.filter((f) => !step1Labels.includes(f.label));
+  // Step 1 should contain ONLY Area and Code/TAG fields (used for edit mode navigation)
+  const step1Fields = template.verificationFields.filter((f) => isEquipmentCodeField(f.label) || isAreaField(f.label));
+
+  // Mapped forms with equipment: show equipment selector in step 1 (new inspections only)
+  const hasEquipmentSelection = TEMPLATE_EQUIPMENT_MAP[template.code] !== undefined && !initialData;
 
   // Stepper Section Navigation Handlers
   const handleNextStep = async () => {
     if (activeStep === 1) {
-      const step1FieldNames = step1Fields.map((f) => `verification.${f.label}`);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const isValid = await trigger(step1FieldNames as any);
-      if (isValid) handleStepChange(2);
+      if (hasEquipmentSelection) {
+        handleStepChange(2);
+      } else {
+        const step1FieldNames = step1Fields.map((f) => `verification.${f.label}`);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const isValid = await trigger(step1FieldNames as any);
+        if (isValid) handleStepChange(2);
+      }
     } else if (activeStep === 2) {
-      const step2FieldNames = step2Fields.map((f) => `verification.${f.label}`);
+      // Always validate ALL verification fields in step 2
+      const step2FieldNames = template.verificationFields.map((f) => `verification.${f.label}`);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const isValid = await trigger(step2FieldNames as any);
       if (isValid) handleStepChange(3);
@@ -577,25 +644,53 @@ export function StandardInspectionForm({
 
         {/* STEP 1: HERRAMIENTA Y ÁREA */}
         {activeStep === 1 && (
-          <VerificationFields
-            fields={step1Fields}
-            control={control}
-            errors={errors}
-            readonly={readonly || isApprovalReview}
-            setValue={setValue}
-            isEditMode={!!initialData}
-          />
+          hasEquipmentSelection ? (
+            <EquipmentSelectionStep
+              templateCode={template.code}
+              templateName={template.name}
+              equipos={equipos || []}
+              areas={areas || []}
+              onSelect={(area, code, equipo) => {
+                autofillEquipmentFields(setValue, template.verificationFields, area, code, equipo);
+                handleStepChange(2);
+              }}
+              onSkip={() => {
+                // Clear fields first, then set default area from logged in user if available
+                template.verificationFields.forEach((field) => {
+                  setValue(`verification.${field.label}` as Path<FormDataHerraEquipos>, "");
+                });
+                if (user?.area) {
+                  const areaField = template.verificationFields.find(f => isAreaField(f.label));
+                  if (areaField) {
+                    setValue(`verification.${areaField.label}` as Path<FormDataHerraEquipos>, user.area);
+                  }
+                }
+                handleStepChange(2);
+              }}
+            />
+          ) : (
+            <VerificationFields
+              fields={step1Fields}
+              control={control}
+              errors={errors}
+              readonly={readonly || isApprovalReview}
+              setValue={setValue}
+              isEditMode={!!initialData}
+              templateCode={template.code}
+            />
+          )
         )}
 
-        {/* STEP 2: DATOS GENERALES */}
+        {/* STEP 2: DATOS GENERALES — siempre muestra TODOS los campos de verificación */}
         {activeStep === 2 && (
           <VerificationFields
-            fields={step2Fields}
+            fields={template.verificationFields}
             control={control}
             errors={errors}
             readonly={readonly || isApprovalReview}
             setValue={setValue}
             isEditMode={!!initialData}
+            templateCode={template.code}
           />
         )}
 

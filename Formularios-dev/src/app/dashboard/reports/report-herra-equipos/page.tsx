@@ -38,6 +38,7 @@ import { getTemplatesHerraEquipos, TemplateHerraEquipo } from "@/lib/actions/tem
 import {
   descargarExcelHerraEquipoCliente,
   descargarPdfHerraEquipoCliente,
+  descargarZipHerraEquipoCliente,
 } from "@/lib/actions/client";
 
 // ✅ Componentes comunes
@@ -48,6 +49,7 @@ import {
   ReportColumn,
 } from "@/components/features/reports/presentation/components/ReportTable";
 import { ReportActionButtons } from "@/components/features/reports/presentation/components/ReportActionButtons";
+import { BulkDownloadButton } from "@/components/features/reports/presentation/components/BulkDownloadButton";
 import { ReportStateHandler } from "@/components/features/reports/presentation/components/ReportStateHandler";
 import {
   ReportSnackbar,
@@ -121,6 +123,7 @@ function ListarInspeccionHerraEquiposComponent() {
   const [error, setError] = useState<string | null>(null);
   const [totalItems, setTotalItems] = useState(0);
   const [mostrarResultados, setMostrarResultados] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Filtros
   const [templateNameFilter, setTemplateNameFilter] = useState("");
@@ -363,6 +366,19 @@ function ListarInspeccionHerraEquiposComponent() {
     }
   };
 
+  const handleDescargarZip = async (format: "pdf" | "excel") => {
+    try {
+      mostrar(`Generando ZIP en ${format === "pdf" ? "PDF" : "Excel"}...`, "info");
+      await descargarZipHerraEquipoCliente(Array.from(selectedIds), format);
+    } catch (err) {
+      console.error(err);
+      mostrar(
+        err instanceof Error ? err.message : "Error al descargar el ZIP",
+        "error",
+      );
+    }
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") buscarInspecciones();
   };
@@ -598,20 +614,26 @@ function ListarInspeccionHerraEquiposComponent() {
           <ReportTable
             title="Resultados"
             titleExtra={
-              <Can perform={Permission.CREATE_FORM}>
-                <Button
-                  variant="contained"
-                  startIcon={<FormIcon />}
-                  onClick={() => router.push("/dashboard/form-herra-equipos")}
-                >
-                  Nueva Inspección
-                </Button>
-              </Can>
+              <Box display="flex" gap={2} alignItems="center">
+                <BulkDownloadButton count={selectedIds.size} onDownload={handleDescargarZip} />
+                <Can perform={Permission.CREATE_FORM}>
+                  <Button
+                    variant="contained"
+                    startIcon={<FormIcon />}
+                    onClick={() => router.push("/dashboard/form-herra-equipos")}
+                  >
+                    Nueva Inspección
+                  </Button>
+                </Can>
+              </Box>
             }
             columns={columnas}
             rows={inspections}
             rowKey={(row) => row._id}
             emptyMessage="No se encontraron inspecciones con los criterios de búsqueda"
+            selectable
+            selectedKeys={selectedIds}
+            onSelectionChange={setSelectedIds}
           />
         )}
       </ReportStateHandler>

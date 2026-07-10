@@ -714,3 +714,75 @@ export async function finalizeInspection(
   return updateInProgressInspection(id, formData, InspectionStatus.COMPLETED);
 }
 
+/**
+ * Obtiene actividad reciente de inspecciones filtrada por área (supervisor)
+ * o por usuario (técnico). Opción B: envía el filtro de área al backend.
+ * Si el backend no lo soporta aún, aplica filtrado en frontend como fallback.
+ */
+export async function getRecentActivityByArea(params: {
+  areas?: string[];      // áreas del supervisor (filtro principal)
+  submittedBy?: string;  // username del técnico (historial personal)
+  limit?: number;        // máximo de resultados, default 20
+  sinceHours?: number;   // desde hace N horas, default 8
+}): Promise<ApiResponse<InspectionResponse[]>> {
+  try {
+    const headers = await getAuthHeaders();
+
+    const { areas, submittedBy, limit = 20, sinceHours = 8 } = params;
+
+    const sinceDate = new Date();
+    sinceDate.setHours(sinceDate.getHours() - sinceHours);
+
+    const queryParams = new URLSearchParams();
+    queryParams.append("startDate", sinceDate.toISOString());
+    queryParams.append("limit", String(limit));
+    queryParams.append("sortBy", "submittedAt");
+    queryParams.append("sortOrder", "desc");
+
+    // Opción B: pasar área al backend
+    if (areas && areas.length > 0) {
+      queryParams.append("area", areas.join(","));
+    }
+    if (submittedBy) {
+      queryParams.append("submittedBy", submittedBy);
+    }
+
+    const url = `${INSPECTIONS_ENDPOINT}?${queryParams.toString()}`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    });
+
+    const result = await handleApiResponse<ApiResponse<InspectionResponse[]>>(response);
+
+    let data = (result.data || []) as InspectionResponse[];
+
+    // Fallback: si el backend no filtró por área, lo hacemos en frontend
+    if (areas && areas.length > 0 && !submittedBy) {
+      const normalizeArea = (a: string) => a.trim().toLowerCase();
+      const targetAreas = areas.map(normalizeArea);
+      data = data.filter((insp) => {
+        const inspArea = normalizeArea(insp.area || "");
+        return targetAreas.some((a) => inspArea.includes(a) || a.includes(inspArea));
+      });
+    }
+
+    // Ordenar por más reciente primero (por si el backend no lo hace)
+    data.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+
+    return {
+      success: true,
+      data: data.slice(0, limit),
+      count: data.length,
+    };
+  } catch (error) {
+    console.error("❌ [INSPECTION_ACTION] Error al obtener actividad reciente:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error desconocido",
+      data: [],
+    };
+  }
+}

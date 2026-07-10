@@ -59,6 +59,7 @@ export default function EditarInspeccionPage() {
 
   useEffect(() => {
     loadInspectionAndTemplate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inspectionId]);
 
   const loadInspectionAndTemplate = async () => {

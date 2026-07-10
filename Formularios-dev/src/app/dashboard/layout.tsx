@@ -25,6 +25,7 @@ import { lightTheme, darkTheme } from "../../styles/theme";
 import { LogoutButton } from "@/components/features/auth/presentation/components/LogoutButton";
 import { useUserRole } from "@/hooks/useUserRole";
 import { DynamicBreadcrumbs } from "@/components/layout/navigation/DynamicBreadcrumbs";
+import { NotificationBell } from "@/components/features/dashboard/NotificationBell";
 
 const drawerWidth = 300;
 
@@ -110,6 +111,9 @@ export default function DashboardLayout({
               <IconButton color="inherit" onClick={handleThemeToggle} size="medium">
                 {darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
               </IconButton>
+
+              {/* ✅ Campana de Notificaciones para Supervisores */}
+              <NotificationBell />
 
               <Box
                 onClick={handleUserMenuOpen}

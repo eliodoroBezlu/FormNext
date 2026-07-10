@@ -3,6 +3,7 @@
 import type React from "react";
 import { useEffect, useState, Suspense } from "react";
 import {
+  Box,
   Paper,
   Typography,
   Grid,
@@ -33,6 +34,7 @@ import {
 import {
   descargarExcelIroIsopCliente,
   descargarPdfIroIsopCliente,
+  descargarZipIroIsopCliente,
 } from "@/lib/actions/client";
 import AutocompleteCustom from "@/components/ui/autocomplete/AutocompleteCustom";
 
@@ -44,6 +46,7 @@ import {
   ReportColumn,
 } from "@/components/features/reports/presentation/components/ReportTable";
 import { ReportActionButtons } from "@/components/features/reports/presentation/components/ReportActionButtons";
+import { BulkDownloadButton } from "@/components/features/reports/presentation/components/BulkDownloadButton";
 import { ReportStateHandler } from "@/components/features/reports/presentation/components/ReportStateHandler";
 
 const ESTADOS_FORMULARIO = [
@@ -64,6 +67,7 @@ function ListarInspeccionesIroIsopComponent() {
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mostrarResultados, setMostrarResultados] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Paginación client-side
   const [totalItems, setTotalItems] = useState(0);
@@ -300,6 +304,14 @@ function ListarInspeccionesIroIsopComponent() {
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") buscarInstancias();
+  };
+
+  const handleDescargarZip = async (format: "pdf" | "excel") => {
+    try {
+      await descargarZipIroIsopCliente(Array.from(selectedIds), format);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -653,17 +665,20 @@ function ListarInspeccionesIroIsopComponent() {
           <ReportTable
             title="Resultados"
             titleExtra={
-              <Can perform={Permission.CREATE_FORM}>
-                <Button
-                  variant="contained"
-                  startIcon={<FormIcon />}
-                  onClick={() =>
-                    router.push("/dashboard/report-iro-isop/nuevo")
-                  }
-                >
-                  Nueva Instancia
-                </Button>
-              </Can>
+              <Box display="flex" gap={2} alignItems="center">
+                <BulkDownloadButton count={selectedIds.size} onDownload={handleDescargarZip} />
+                <Can perform={Permission.CREATE_FORM}>
+                  <Button
+                    variant="contained"
+                    startIcon={<FormIcon />}
+                    onClick={() =>
+                      router.push("/dashboard/report-iro-isop/nuevo")
+                    }
+                  >
+                    Nueva Instancia
+                  </Button>
+                </Can>
+              </Box>
             }
             columns={columnas}
             rows={instancias}
@@ -671,6 +686,9 @@ function ListarInspeccionesIroIsopComponent() {
             size="small"
             emptyMessage="No se encontraron resultados."
             paginationMode="internal"
+            selectable
+            selectedKeys={selectedIds}
+            onSelectionChange={setSelectedIds}
           />
         )}
       </ReportStateHandler>

@@ -4,12 +4,19 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  Box, CircularProgress, Alert, Button, Snackbar
+  Box, CircularProgress, Alert, Button, Snackbar, Card, CardContent, FormControl, InputLabel, Select, MenuItem, Typography, Grid
 } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
 import { getTemplatesHerraEquipos } from '@/lib/actions/template-herra-equipos';
 import { FormFiller } from '@/components/features/herra-equipos/FormRenderer';
-import { FormTemplateHerraEquipos, FormDataHerraEquipos } from '@/components/features/herra-equipos/types/IProps';
+import {
+  FormTemplateHerraEquipos,
+  FormDataHerraEquipos,
+  TEMPLATE_EQUIPMENT_MAP,
+  isAreaField,
+  isSuperintendenciaField,
+  resolveAutofillValue,
+} from '@/components/features/herra-equipos/types/IProps';
 import { UnifiedFormRouter } from '@/components/features/herra-equipos/UnifiedFormRouter';
 import { 
   saveDraftInspection, 
@@ -19,6 +26,11 @@ import {
   getInspectionById,        // ✅ NUEVO
 } from '@/lib/actions/inspection-herra-equipos';
 import { TagVerificationModal } from '@/components/features/herra-equipos/common/TagVerificationModal';
+import { useUserRole } from '@/hooks/useUserRole';
+import { obtenerTrabajadorPorUsername } from '@/lib/actions/trabajador-actions';
+import { fetchDataBySource } from '@/lib/actions/dataSourceService';
+import { obtenerEquipos, EquipoBackend } from '@/lib/actions/equipo-actions';
+import { Trabajador } from '@/types/trabajador';
 
 const SPECIALIZED_FORMS: Record<string, React.ComponentType<{
   template: FormTemplateHerraEquipos;
@@ -27,6 +39,9 @@ const SPECIALIZED_FORMS: Record<string, React.ComponentType<{
   onSaveProgress?: (data: FormDataHerraEquipos) => void;  // ✅ NUEVO
   onFinalize?: (data: FormDataHerraEquipos) => void;      // ✅ NUEVO
   initialData?: FormDataHerraEquipos;
+  startStep?: number;
+  equipos?: EquipoBackend[];
+  areas?: string[];
 }>> = {
   '1.02.P06.F19': UnifiedFormRouter,
   '1.02.P06.F20': UnifiedFormRouter,
@@ -50,13 +65,14 @@ const FORMS_REQUIRING_TAG_VERIFICATION = [
   '3.04.P37.F25', // Frecuente tecles
 ];
 
+
 export default function FormularioDinamicoPage() {
   const params = useParams();
   const router = useRouter();
   
   // ✅ DETECTAR SI ES EDICIÓN DE INSPECCIÓN EXISTENTE
   const inspectionId = params.inspectionId as string | undefined;
-  const code = decodeURIComponent((params.code || params.templateCode) as string);
+  const code = decodeURIComponent((params.code || params.templateCode) as string).toUpperCase();
   
   const [template, setTemplate] = useState<FormTemplateHerraEquipos | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -71,6 +87,17 @@ export default function FormularioDinamicoPage() {
   const [verifiedTemplateCode, setVerifiedTemplateCode] = useState<string | null>(null);
   
   const [duplicateData, setDuplicateData] = useState<FormDataHerraEquipos | null>(null);
+
+  // Estados para pantalla de selección inicial
+  const { user } = useUserRole();
+  const [trabajador, setTrabajador] = useState<Trabajador | null>(null);
+  const [areas, setAreas] = useState<string[]>([]);
+  const [equipos, setEquipos] = useState<EquipoBackend[]>([]);
+  const [showSelectionScreen, setShowSelectionScreen] = useState(false);
+  const [selectedArea, setSelectedArea] = useState<string>('');
+  const [selectedCode, setSelectedCode] = useState<string>('');
+  const [prefilledData, setPrefilledData] = useState<FormDataHerraEquipos | null>(null);
+  const [startStep, setStartStep] = useState<number | undefined>(undefined);
   
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -149,12 +176,51 @@ export default function FormularioDinamicoPage() {
               severity: 'info'
             });
           }
-        } 
+        }
         // ============================================
-        // 3. NUEVA INSPECCIÓN - VERIFICAR TAG SI ES NECESARIO
+        // 3. NUEVA INSPECCIÓN - VERIFICAR TAG SI ES NECESARIO O CARGAR PANTALLA DE SELECCIÓN
         // ============================================
         else {
           const requiresVerification = FORMS_REQUIRING_TAG_VERIFICATION.includes(foundTemplate.code);
+
+          // Cargar trabajador completo
+          let userTrabajador: Trabajador | null = null;
+          if (user?.username) {
+            try {
+              const res = await obtenerTrabajadorPorUsername(user.username);
+              if (res) {
+                setTrabajador(res);
+                userTrabajador = res;
+                setSelectedArea(res.area || '');
+              }
+            } catch (err) {
+              console.error("Error al cargar trabajador:", err);
+            }
+          }
+
+          // Cargar áreas del sistema
+          try {
+            const areaData = await fetchDataBySource("area");
+            if (Array.isArray(areaData)) {
+              const mapped = (areaData as (string | { nombre?: string; name?: string })[]).map(a => typeof a === 'string' ? a : (a.nombre || a.name || '')).filter(Boolean);
+              setAreas(Array.from(new Set(mapped)));
+            }
+          } catch (err) {
+            console.error("Error al cargar áreas:", err);
+          }
+
+          // Cargar equipos del tipo correspondiente a la de la plantilla
+          let relatedEquipos: EquipoBackend[] = [];
+          if (TEMPLATE_EQUIPMENT_MAP[code]) {
+            try {
+              const allEquipos = await obtenerEquipos();
+              const allowedTypes = TEMPLATE_EQUIPMENT_MAP[code];
+              relatedEquipos = allEquipos.filter(e => allowedTypes.includes(e.tipo_equipo));
+              setEquipos(relatedEquipos);
+            } catch (err) {
+              console.error("Error al cargar equipos:", err);
+            }
+          }
 
           if (requiresVerification) {
             // Verificar pre-verificación en sessionStorage
@@ -197,9 +263,46 @@ export default function FormularioDinamicoPage() {
               
               setShowTagVerification(true);
             }
+          } else if (TEMPLATE_EQUIPMENT_MAP[code]) {
+            // Formulario mapeado a tipo de equipo
+            if (relatedEquipos.length === 0) {
+              // No hay equipos registrados de este tipo → ir directo a Step 2 con datos del usuario
+              console.log("⚠️ No hay equipos de este tipo en base de datos. Saltando selección...");
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const prefilledVerification: Record<string, any> = {};
+              foundTemplate.verificationFields.forEach(f => {
+                if (isAreaField(f.label) && userTrabajador?.area) {
+                  prefilledVerification[f.label] = userTrabajador.area;
+                } else if (isSuperintendenciaField(f.label) && userTrabajador?.superintendencia) {
+                  prefilledVerification[f.label] = userTrabajador.superintendencia;
+                }
+              });
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              setPrefilledData({ verification: prefilledVerification } as any);
+              setStartStep(2);
+              setShowSelectionScreen(false);
+            } else {
+              // Hay equipos → la selección es inline en Step 1, no prefilledData
+              setShowSelectionScreen(false);
+            }
           } else {
-            console.log(`✅ [PAGE] Form ${code} no requiere verificación de TAG`);
+            // Formulario SIN registro de equipos → ir directo a Step 2 (Datos Generales)
+            // con los datos del usuario pre-rellenados
+            console.log(`✅ [PAGE] Form ${code} sin registro de equipos. Pre-llenando con datos del usuario y saltando a Step 2.`);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const prefilledVerification: Record<string, any> = {};
+            foundTemplate.verificationFields.forEach(f => {
+              if (isAreaField(f.label) && userTrabajador?.area) {
+                prefilledVerification[f.label] = userTrabajador.area;
+              } else if (isSuperintendenciaField(f.label) && userTrabajador?.superintendencia) {
+                prefilledVerification[f.label] = userTrabajador.superintendencia;
+              }
+            });
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            setPrefilledData({ verification: prefilledVerification } as any);
+            setStartStep(2);
             setShowTagVerification(false);
+            setShowSelectionScreen(false);
           }
         }
 
@@ -238,7 +341,69 @@ export default function FormularioDinamicoPage() {
     };
 
     loadData();
-  }, [code, inspectionId]);
+  }, [code, inspectionId, user?.username]);
+
+  // ============================================
+  // HANDLERS DE LA PANTALLA DE SELECCIÓN INICIAL
+  // ============================================
+
+  const handleSkipSelection = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const prefilledVerification: Record<string, any> = {};
+    if (template) {
+      template.verificationFields.forEach(f => {
+        if (isAreaField(f.label) && trabajador?.area) {
+          prefilledVerification[f.label] = trabajador.area;
+        } else if (isSuperintendenciaField(f.label) && trabajador?.superintendencia) {
+          prefilledVerification[f.label] = trabajador.superintendencia;
+        }
+      });
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setPrefilledData({ verification: prefilledVerification } as any);
+    setStartStep(1);
+    setShowSelectionScreen(false);
+  };
+
+  const handleSelectionContinue = () => {
+    if (!selectedCode) return;
+    
+    const selectedEquip = equipos.find(e => e.codigo === selectedCode);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const prefilledVerification: Record<string, any> = {};
+    
+    if (template) {
+      template.verificationFields.forEach((field) => {
+        const value = resolveAutofillValue(field.label, selectedArea, selectedCode, selectedEquip);
+        if (value !== undefined) {
+          prefilledVerification[field.label] = value;
+        }
+      });
+    }
+    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setPrefilledData({ verification: prefilledVerification } as any);
+    setStartStep(2);
+
+    // Actualizar parámetro de URL para iniciar directamente en el Paso 2 (Datos Generales)
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set("step", "2");
+    const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
+    window.history.replaceState(null, "", newUrl);
+
+    setShowSelectionScreen(false);
+  };
+
+  // Filtrar equipos por área seleccionada
+  const getFilteredEquipos = () => {
+    if (!selectedArea) return equipos;
+    const normSelected = selectedArea.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    return equipos.filter(e => {
+      const areaNombre = e.area_id?.nombre || "";
+      const normArea = areaNombre.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+      return normArea === normSelected || normArea.includes(normSelected) || normSelected.includes(normArea);
+    });
+  };
 
   // ============================================
   // HANDLERS
@@ -579,10 +744,112 @@ export default function FormularioDinamicoPage() {
     );
   }
 
+  if (showSelectionScreen && template) {
+    const filteredOptions = getFilteredEquipos();
+    
+    return (
+      <Box sx={{ py: 4, px: 2, display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
+        <Card sx={{ p: 4, width: "100%", maxWidth: 650, borderRadius: 3, boxShadow: "0 10px 30px rgba(0,0,0,0.08)" }}>
+          <CardContent>
+            <Typography variant="h5" align="center" fontWeight={700} sx={{ mb: 1, color: "primary.main" }}>
+              Formulario de Inspección de Seguridad
+            </Typography>
+            <Typography variant="subtitle2" align="center" sx={{ mb: 4, opacity: 0.7 }}>
+              Código: {template.code} — {template.name}
+            </Typography>
+            
+            <Typography variant="body1" sx={{ mb: 3, fontWeight: 500 }} align="center">
+              Seleccione primero el área y el TAG para continuar
+            </Typography>
+
+            <Grid container spacing={3} sx={{ mb: 4 }}>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <FormControl fullWidth>
+                  <InputLabel id="select-area-label">Área</InputLabel>
+                  <Select
+                    labelId="select-area-label"
+                    value={selectedArea}
+                    label="Área"
+                    onChange={(e) => {
+                      setSelectedArea(e.target.value);
+                      setSelectedCode(''); // Reset code when area changes
+                    }}
+                  >
+                    <MenuItem value="">
+                      <em>Seleccione un área</em>
+                    </MenuItem>
+                    {areas.map((opt) => (
+                      <MenuItem key={opt} value={opt}>
+                        {opt}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <FormControl fullWidth disabled={!selectedArea || filteredOptions.length === 0}>
+                  <InputLabel id="select-code-label">TAG / Código de Herramienta</InputLabel>
+                  <Select
+                    labelId="select-code-label"
+                    value={selectedCode}
+                    label="TAG / Código de Herramienta"
+                    onChange={(e) => setSelectedCode(e.target.value)}
+                  >
+                    <MenuItem value="">
+                      <em>Seleccione un código</em>
+                    </MenuItem>
+                    {filteredOptions.map((opt) => (
+                      <MenuItem key={opt._id} value={opt.codigo}>
+                        {opt.codigo} {opt.descripcion ? `(${opt.descripcion})` : ""}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+
+            <Box display="flex" flexDirection="column" gap={2} alignItems="center">
+              <Button
+                variant="contained"
+                size="large"
+                fullWidth
+                onClick={handleSelectionContinue}
+                disabled={!selectedCode}
+                sx={{ py: 1.5, fontWeight: "bold" }}
+              >
+                Continuar
+              </Button>
+
+              <Button
+                variant="text"
+                color="secondary"
+                onClick={handleSkipSelection}
+                sx={{ textTransform: "none", fontWeight: 500 }}
+              >
+                Omitir selección (Inspeccionar equipo nuevo o no registrado)
+              </Button>
+
+              <Button
+                variant="outlined"
+                color="inherit"
+                startIcon={<ArrowBack />}
+                onClick={() => router.push('/dashboard/form-herra-equipos')}
+                sx={{ mt: 1 }}
+              >
+                Volver a la lista
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  }
+
   const SpecializedComponent = SPECIALIZED_FORMS[template.code];
 
-  // ✅ Determinar initialData: inspección existente o datos duplicados
-  const initialFormData = existingInspection || duplicateData || undefined;
+  // ✅ Determinar initialData: inspección existente o datos duplicados o datos pre-rellenados de selección
+  const initialFormData = existingInspection || duplicateData || prefilledData || undefined;
 
   return (
     <Box>
@@ -687,6 +954,9 @@ export default function FormularioDinamicoPage() {
           onSaveProgress={handleSaveProgress}  // ✅ NUEVO
           onFinalize={handleFinalize}          // ✅ NUEVO
           initialData={initialFormData}        // ✅ Inspección existente o duplicados
+          startStep={startStep}
+          equipos={equipos}
+          areas={areas}
         />
       ) : (
         <FormFiller

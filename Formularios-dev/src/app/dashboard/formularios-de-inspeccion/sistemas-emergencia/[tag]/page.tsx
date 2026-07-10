@@ -11,6 +11,7 @@ export default function LlenarInspeccionTagPage() {
 
   const tag = params.tag as string;
   const area = searchParams.get("area") || "";
+  const extintores = searchParams.get("extintores") || "";
 
   if (!tag) {
     return null;
@@ -20,6 +21,7 @@ export default function LlenarInspeccionTagPage() {
     <InspeccionSistemasEmergencia
       preselectedTag={tag}
       preselectedArea={area}
+      preselectedExtintores={extintores}
       onCancel={() => router.push("/dashboard/formularios-de-inspeccion/sistemas-emergencia")}
     />
   );

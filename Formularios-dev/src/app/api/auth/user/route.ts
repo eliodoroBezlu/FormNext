@@ -1,22 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-/**
- * Decodifica JWT sin verificar firma (solo lectura del payload)
- * Seguro porque el Middleware ya validó el token
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function decodeJWT(token: string): any {
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = Buffer.from(base64, 'base64').toString('utf-8');
-    return JSON.parse(jsonPayload);
-  } catch (error) {
-  console.error('💥 [ME] Error:', error instanceof Error ? error.message : 'Unknown');
-    return null;
-  }
-}
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export async function GET() {
   try {
@@ -30,24 +15,34 @@ export async function GET() {
       );
     }
 
-    // Decodificar token para obtener info del usuario
-    const payload = decodeJWT(accessToken);
+    // Pedimos el perfil al backend en vez de decodificar el JWT nosotros:
+    // el JWT de IAM Core no trae un claim de permisos — los permisos del
+    // servicio "forms" se calculan dinámicamente en /auth/me a partir de
+    // los roles (ver JwtStrategy + RbacCacheService en BackendForm).
+    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+      method: 'GET',
+      headers: {
+        Cookie: `access_token=${accessToken}`,
+      },
+      cache: 'no-store',
+    });
 
-    if (!payload) {
+    if (!response.ok) {
       return NextResponse.json(
-        { error: 'Token inválido' },
-        { status: 401 }
+        { error: 'Token inválido o sesión expirada' },
+        { status: response.status === 401 ? 401 : 500 }
       );
     }
 
-    // Extraer información del usuario
+    const data = await response.json();
+
     const user = {
-      id: payload.sub,
-      username: payload.username,
-      email: payload.email,
-      roles: payload.roles || [],
-      permissions: payload.permissions || [],
-      fullName: payload.fullName,
+      id: data.id,
+      username: data.username,
+      email: data.email,
+      roles: data.roles || [],
+      permissions: data.permissions || [],
+      fullName: data.fullName,
     };
 
     return NextResponse.json({ user });

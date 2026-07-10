@@ -7,7 +7,8 @@ import {
   LocalOffer as TagIcon,
   EditDocument as EditDocumentIcon,
   Domain as DomanIcon,
-  Accessibility as AccessibilityIcon
+  Accessibility as AccessibilityIcon,
+  Build as BuildIcon
 } from "@mui/icons-material";
 
 
@@ -76,7 +77,14 @@ const SettingsPage: React.FC = () => {
       color: "#f44336",
       items: ["Crear", "editar", "eliminar"],
     },
-
+    {
+      id: "inventario-equipos",
+      title: "Inventario de Equipos y Herramientas",
+      description: "Administra el listado de herramientas, ubicaciones, clasificaciones y especificaciones dinámicas",
+      icon: BuildIcon,
+      color: "#009688",
+      items: ["Equipos", "Ubicaciones", "Clasificaciones", "Campos dinámicos"],
+    },
     {
       id: "inspecciones/gestion",
       title: "Gestion de inspecciones de herramientas y equipos",

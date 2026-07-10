@@ -7,6 +7,7 @@ import { StandardInspectionForm } from "./presentation/components/forms/Standard
 import { GroupedAccessoriesForm } from "./presentation/components/forms/GroupedAccessoriesForm";
 import { VehicleInspectionForm } from "./presentation/components/forms/VehicleInspectionForm";
 import { ScaffoldInspectionForm } from "./presentation/components/forms/ScaffoldInspectionForm";
+import { EquipoBackend } from "@/lib/actions/equipo-actions";
 
 interface UnifiedFormRouterProps {
   template: FormTemplateHerraEquipos;
@@ -16,6 +17,9 @@ interface UnifiedFormRouterProps {
   onFinalize?: (data: FormDataHerraEquipos) => void;
   initialData?: FormDataHerraEquipos; // ✅ AGREGAR
   readonly?: boolean; // ✅ AGREGAR
+  startStep?: number; // ✅ NUEVO
+  equipos?: EquipoBackend[]; // ✅ NUEVO
+  areas?: string[]; // ✅ NUEVO
 }
 
 export function UnifiedFormRouter({
@@ -26,6 +30,9 @@ export function UnifiedFormRouter({
   onFinalize,
   initialData,
   readonly = false,
+  startStep,
+  equipos,
+  areas,
 }: UnifiedFormRouterProps) {
   const formType = getFormType(template.code);
 
@@ -48,6 +55,9 @@ export function UnifiedFormRouter({
     onSaveDraft: handleDraftWithLog,
     initialData,
     readonly,
+    startStep,
+    equipos,
+    areas,
   };
 
   const scaffoldProps = {

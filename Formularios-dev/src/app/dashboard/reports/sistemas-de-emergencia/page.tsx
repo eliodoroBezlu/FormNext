@@ -26,6 +26,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   descargarExcelInspeccionesEmergenciaCliente,
   descargarPdfInspeccionesEmergenciaCliente,
+  descargarZipInspeccionesEmergenciaCliente,
 } from "@/lib/actions/client";
 import {
   buscarAreas,
@@ -44,6 +45,7 @@ import {
   ReportColumn,
 } from "@/components/features/reports/presentation/components/ReportTable";
 import { ReportActionButtons } from "@/components/features/reports/presentation/components/ReportActionButtons";
+import { BulkDownloadButton } from "@/components/features/reports/presentation/components/BulkDownloadButton";
 import { ReportStateHandler } from "@/components/features/reports/presentation/components/ReportStateHandler";
 
 const MESES = [
@@ -101,6 +103,7 @@ function ListaInspeccionesComponent() {
 
   const [mostrarResultados, setMostrarResultados] = useState(false);
   const [mostrarExtintores, setMostrarExtintores] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [areaFilter, setAreaFilter] = useState("");
   const [superintendenciaFilter, setSuperintendenciaFilter] = useState("");
@@ -290,6 +293,14 @@ function ListaInspeccionesComponent() {
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") filtrarInspecciones();
+  };
+
+  const handleDescargarZip = async (format: "pdf" | "excel") => {
+    try {
+      await descargarZipInspeccionesEmergenciaCliente(Array.from(selectedIds), format);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // ── Columnas de inspecciones ──────────────────────────────────────────────
@@ -550,10 +561,16 @@ function ListaInspeccionesComponent() {
         {mostrarResultados && (
           <ReportTable
             title="Resultados"
+            titleExtra={
+              <BulkDownloadButton count={selectedIds.size} onDownload={handleDescargarZip} />
+            }
             columns={columnasInspecciones}
             rows={inspecciones}
             rowKey={(row) => row._id}
             emptyMessage="No se encontraron inspecciones con los criterios de búsqueda"
+            selectable
+            selectedKeys={selectedIds}
+            onSelectionChange={setSelectedIds}
           />
         )}
       </ReportStateHandler>

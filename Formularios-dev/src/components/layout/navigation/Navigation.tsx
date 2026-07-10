@@ -55,6 +55,11 @@ export const NAVIGATION: NavigationItem[] = [
     icon: "description",
   },
   {
+    segment: "mis-inspecciones",
+    title: "Mis Inspecciones",
+    icon: "description",
+  },
+  {
     segment: "plan-accion",
     title: "Planes de accion",
     icon: "settings",

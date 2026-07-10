@@ -11,6 +11,7 @@ import {
 import { useUserRole } from "@/hooks/useUserRole";
 import Link from "next/link";
 import { getMeAction } from "../actions/auth";
+import { ActivityFeed } from "@/components/features/dashboard/ActivityFeed";
 
 interface User {
   id: string;
@@ -378,6 +379,9 @@ export default function DashboardHome() {
             </Box>
           ))}
       </Box>
+
+      {/* ✅ Feed de Actividad Reciente */}
+      <ActivityFeed />
     </Box>
   );
 }

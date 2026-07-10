@@ -140,7 +140,7 @@ export const AreaTagSelector = ({
 
       {/* VISUALIZACIÓN PREVIA / CHECKLIST SEGÚN TAG */}
       {area && tag && (
-        TAGS_CON_SELECCION_EXTINTORES.includes(tag) ? (
+        TAGS_CON_SELECCION_EXTINTORES.some(t => t.toLowerCase() === tag.toLowerCase()) ? (
           <ExtintoresChecklist
             tag={tag}
             extintores={extintores}

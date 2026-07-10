@@ -17,7 +17,8 @@ function getSegmentLabel(segment: string): string {
   // Mapeo específico de códigos de plantillas
   const templatesMap: Record<string, string> = {
     "1.02.p06.f30": "INSPECCIÓN DE ANDAMIOS",
-    "1.02.p06.f33": "INSPECCIÓN DE MAN LIFT",
+    "1.02.p06.f33": "INSPECCIÓN DE ESCALERAS DE MANO",
+    "1.02.p06.f37": "INSPECCIÓN DE MAN LIFT",
     "arn-001": "INSPECCIÓN DE ARNÉS",
     "esc-001": "INSPECCIÓN DE ESCALERAS",
     "ext-001": "INSPECCIÓN DE EXTINTORES",

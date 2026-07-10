@@ -19,6 +19,28 @@ export function descargarArchivo(blob: Blob, nombre: string): void {
 }
 
 /**
+ * Extrae el nombre de archivo del header Content-Disposition, priorizando
+ * la variante RFC 6266 (filename*=UTF-8''...) sobre el filename ASCII plano.
+ */
+function extraerFilenameDeHeader(contentDisposition: string | null): string | null {
+  if (!contentDisposition) return null;
+
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match) {
+    try {
+      return decodeURIComponent(utf8Match[1].trim());
+    } catch {
+      // sigue al siguiente intento si el valor viene mal codificado
+    }
+  }
+
+  const plainMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+  if (plainMatch) return plainMatch[1].trim();
+
+  return null;
+}
+
+/**
  * Descarga con autenticación usando cookies httpOnly
  */
 async function descargarConAuth(backendUrl: string, nombreArchivo: string) {
@@ -52,7 +74,10 @@ async function descargarConAuth(backendUrl: string, nombreArchivo: string) {
 
     const blob = await response.blob();
     console.log("✅ [DESCARGA] Blob recibido, tamaño:", blob.size);
-    descargarArchivo(blob, nombreArchivo);
+    const nombreDesdeHeader = extraerFilenameDeHeader(
+      response.headers.get("content-disposition"),
+    );
+    descargarArchivo(blob, nombreDesdeHeader || nombreArchivo);
   } catch (error) {
     console.error("💥 [DESCARGA] Error:", error);
     throw error;
@@ -114,5 +139,80 @@ export async function descargarPdfHerraEquipoCliente(id: string): Promise<void> 
   await descargarConAuth(
     `${API_BASE_URL}/inspections-herra-equipos/${id}/pdf`,
     `herramienta-equipo-${id}.pdf`
+  );
+}
+
+// ============= DESCARGA MASIVA (ZIP) =============
+
+/**
+ * Descarga múltiples inspecciones como un único .zip generado en el backend.
+ * `backendUrl` debe apuntar al endpoint "bulk-download" del módulo correspondiente.
+ */
+async function descargarZipConAuth(
+  backendUrl: string,
+  ids: string[],
+  format: "pdf" | "excel",
+  nombreZipFallback: string,
+): Promise<void> {
+  const path = new URL(backendUrl).pathname;
+  const proxyUrl = `/api/download${path}`;
+
+  const response = await fetch(proxyUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ids, format }),
+    cache: "no-store",
+  });
+
+  if (response.status === 401) {
+    window.location.href = "/login";
+    throw new Error("Sesión expirada.");
+  }
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Error ${response.status}: ${errorText}`);
+  }
+
+  const blob = await response.blob();
+  const nombreDesdeHeader = extraerFilenameDeHeader(
+    response.headers.get("content-disposition"),
+  );
+  descargarArchivo(blob, nombreDesdeHeader || nombreZipFallback);
+}
+
+export async function descargarZipHerraEquipoCliente(
+  ids: string[],
+  format: "pdf" | "excel",
+): Promise<void> {
+  await descargarZipConAuth(
+    `${API_BASE_URL}/inspections-herra-equipos/bulk-download`,
+    ids,
+    format,
+    "Inspecciones.zip",
+  );
+}
+
+export async function descargarZipIroIsopCliente(
+  ids: string[],
+  format: "pdf" | "excel",
+): Promise<void> {
+  await descargarZipConAuth(
+    `${API_BASE_URL}/instances/bulk-download`,
+    ids,
+    format,
+    "Inspecciones.zip",
+  );
+}
+
+export async function descargarZipInspeccionesEmergenciaCliente(
+  ids: string[],
+  format: "pdf" | "excel",
+): Promise<void> {
+  await descargarZipConAuth(
+    `${API_BASE_URL}/inspecciones-emergencia/bulk-download`,
+    ids,
+    format,
+    "Inspecciones.zip",
   );
 }

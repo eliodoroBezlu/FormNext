@@ -166,6 +166,7 @@ export const InspeccionExtintores = ({
     });
   }, [extintoresArray]);
 
+
   useEffect(() => {
     if (nuevosExtintores.length > 0 && fields.length === 0) {
       replace(nuevosExtintores);

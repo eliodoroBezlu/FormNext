@@ -2,7 +2,7 @@
 
 import {
   Paper, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, TablePagination, Typography, Box,
+  TableHead, TableRow, TablePagination, Typography, Box, Checkbox,
 } from "@mui/material";
 import { useState } from "react";
 
@@ -21,6 +21,10 @@ interface ReportTableBaseProps<T> {
   rowKey: (row: T) => string;
   emptyMessage?: string;
   size?: "small" | "medium";
+  /** Habilita una columna de checkbox para seleccionar filas (p. ej. descarga masiva). */
+  selectable?: boolean;
+  selectedKeys?: Set<string>;
+  onSelectionChange?: (keys: Set<string>) => void;
 }
 
 // ── Paginación interna (frontend)
@@ -50,6 +54,9 @@ export function ReportTable<T>({
   rowKey,
   emptyMessage = "No se encontraron resultados",
   size = "medium",
+  selectable = false,
+  selectedKeys,
+  onSelectionChange,
   ...paginationProps
 }: ReportTableProps<T>) {
   // Estado interno solo para modo "internal"
@@ -90,6 +97,33 @@ export function ReportTable<T>({
     }
   };
 
+  const visibleKeys = paginated.map(rowKey);
+  const allVisibleSelected =
+    visibleKeys.length > 0 && visibleKeys.every((k) => selectedKeys?.has(k));
+  const someVisibleSelected = visibleKeys.some((k) => selectedKeys?.has(k));
+
+  const toggleAllVisible = () => {
+    if (!onSelectionChange) return;
+    const next = new Set(selectedKeys ?? []);
+    if (allVisibleSelected) {
+      visibleKeys.forEach((k) => next.delete(k));
+    } else {
+      visibleKeys.forEach((k) => next.add(k));
+    }
+    onSelectionChange(next);
+  };
+
+  const toggleOne = (key: string) => {
+    if (!onSelectionChange) return;
+    const next = new Set(selectedKeys ?? []);
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+    onSelectionChange(next);
+  };
+
   return (
     <Paper elevation={2} sx={{ borderRadius: "8px", overflow: "hidden" }}>
       {(title || titleExtra) && (
@@ -113,6 +147,15 @@ export function ReportTable<T>({
         <Table size={size}>
           <TableHead>
             <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
+              {selectable && (
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    indeterminate={someVisibleSelected && !allVisibleSelected}
+                    checked={allVisibleSelected}
+                    onChange={toggleAllVisible}
+                  />
+                </TableCell>
+              )}
               {columns.map((col) => (
                 <TableCell key={col.key} align={col.align ?? "left"}>
                   {col.label}
@@ -124,7 +167,7 @@ export function ReportTable<T>({
           <TableBody>
             {paginated.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={columns.length + (selectable ? 1 : 0)} align="center" sx={{ py: 4 }}>
                   <Typography variant="body1" color="textSecondary">
                     {emptyMessage}
                   </Typography>
@@ -136,6 +179,14 @@ export function ReportTable<T>({
                   key={rowKey(row)}
                   sx={{ "&:hover": { backgroundColor: "#f9f9f9" } }}
                 >
+                  {selectable && (
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        checked={selectedKeys?.has(rowKey(row)) ?? false}
+                        onChange={() => toggleOne(rowKey(row))}
+                      />
+                    </TableCell>
+                  )}
                   {columns.map((col) => (
                     <TableCell key={col.key} align={col.align ?? "left"}>
                       {col.render

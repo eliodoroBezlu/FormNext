@@ -1,13 +1,17 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Controller, useForm, FieldErrors } from "react-hook-form";
+import { Controller, useForm, FieldErrors, Path } from "react-hook-form";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Box, Typography, Paper, Alert, Button, Chip } from "@mui/material";
 import {
   FormDataHerraEquipos,
   FormTemplateHerraEquipos,
   InspectionStatus,
+  isEquipmentCodeField,
+  isAreaField,
+  autofillEquipmentFields,
+  TEMPLATE_EQUIPMENT_MAP,
 } from "../../../types/IProps";
 import { getFormConfig } from "../../../config/form-config.helpers";
 import { AlertSection } from "../../../common/AlertSection";
@@ -30,6 +34,9 @@ import { FormStepperHeader } from "../../../common/FormStepperHeader";
 import { Step5ReviewSection } from "../../../common/Step5ReviewSection";
 import dayjs from "dayjs";
 
+import { EquipmentSelectionStep } from "../selectors/EquipmentSelectionStep";
+import { EquipoBackend } from "@/lib/actions/equipo-actions";
+
 interface ScaffoldInspectionFormProps {
   template: FormTemplateHerraEquipos;
   onSubmit: (data: FormDataHerraEquipos) => void;
@@ -39,6 +46,9 @@ interface ScaffoldInspectionFormProps {
   initialData?: FormDataHerraEquipos;
   readonly?: boolean;
   isViewMode?: boolean;
+  startStep?: number;
+  equipos?: EquipoBackend[];
+  areas?: string[];
 }
 
 
@@ -52,6 +62,9 @@ export function ScaffoldInspectionForm({
   initialData,
   readonly = false,
   isViewMode = false,
+  startStep,
+  equipos,
+  areas,
 }: ScaffoldInspectionFormProps) {
   const config = getFormConfig(template.code);
   const { user, hasRole } = useUserRole();
@@ -103,8 +116,8 @@ export function ScaffoldInspectionForm({
         { label: "Revisión Final" },
       ];
 
-  // Active step state read from search query parameter
-  const initialStep = isApprovalReview ? 6 : parseInt(searchParams.get("step") || "1", 10);
+  // Active step state read from search query parameter or startStep prop
+  const initialStep = isApprovalReview ? 6 : (startStep !== undefined ? startStep : parseInt(searchParams.get("step") || "1", 10));
   const [activeStep, setActiveStep] = useState(initialStep);
 
   const updateStepQueryParam = (step: number) => {
@@ -466,20 +479,26 @@ export function ScaffoldInspectionForm({
     return null;
   };
 
-  // Split Verification Fields into Step 1 and Step 2
-  const step1Labels = ["TAG", "Equipo", "Herramienta", "Instrumento", "Código de Instrumento", "Identificación", "Código del Equipo", "Área", "Planta", "Ubicación", "Lugar"];
-  const step1Fields = template.verificationFields.filter((f) => step1Labels.includes(f.label));
-  const step2Fields = template.verificationFields.filter((f) => !step1Labels.includes(f.label));
+  // Step 1 should contain ONLY Area and Code/TAG fields (used for edit mode navigation)
+  const step1Fields = template.verificationFields.filter((f) => isEquipmentCodeField(f.label) || isAreaField(f.label));
+
+  // Mapped forms with equipment: show equipment selector in step 1 (new inspections only)
+  const hasEquipmentSelection = TEMPLATE_EQUIPMENT_MAP[template.code] !== undefined && !initialData;
 
   // Stepper Section Navigation Handlers
   const handleNextStep = async () => {
     if (activeStep === 1) {
-      const step1FieldNames = step1Fields.map((f) => `verification.${f.label}`);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const isValid = await trigger(step1FieldNames as any);
-      if (isValid) handleStepChange(2);
+      if (hasEquipmentSelection) {
+        handleStepChange(2);
+      } else {
+        const step1FieldNames = step1Fields.map((f) => `verification.${f.label}`);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const isValid = await trigger(step1FieldNames as any);
+        if (isValid) handleStepChange(2);
+      }
     } else if (activeStep === 2) {
-      const step2FieldNames = step2Fields.map((f) => `verification.${f.label}`);
+      // Always validate ALL verification fields
+      const step2FieldNames = template.verificationFields.map((f) => `verification.${f.label}`);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const isValid = await trigger(step2FieldNames as any);
       if (isValid) handleStepChange(3);
@@ -567,25 +586,53 @@ export function ScaffoldInspectionForm({
 
         {/* STEP 1: HERRAMIENTA Y ÁREA */}
         {activeStep === 1 && (
-          <VerificationFields
-            fields={step1Fields}
-            control={control}
-            errors={errors}
-            readonly={fieldsReadonly || readonly || isApprovalReview}
-            setValue={setValue}
-            isEditMode={!!initialData}
-          />
+          hasEquipmentSelection ? (
+            <EquipmentSelectionStep
+              templateCode={template.code}
+              templateName={template.name}
+              equipos={equipos || []}
+              areas={areas || []}
+              onSelect={(area, code, equipo) => {
+                autofillEquipmentFields(setValue, template.verificationFields, area, code, equipo);
+                handleStepChange(2);
+              }}
+              onSkip={() => {
+                // Clear fields first, then set default area from logged in user if available
+                template.verificationFields.forEach((field) => {
+                  setValue(`verification.${field.label}` as Path<FormDataHerraEquipos>, "");
+                });
+                if (user?.area) {
+                  const areaField = template.verificationFields.find(f => isAreaField(f.label));
+                  if (areaField) {
+                    setValue(`verification.${areaField.label}` as Path<FormDataHerraEquipos>, user.area);
+                  }
+                }
+                handleStepChange(2);
+              }}
+            />
+          ) : (
+            <VerificationFields
+              fields={step1Fields}
+              control={control}
+              errors={errors}
+              readonly={fieldsReadonly || readonly || isApprovalReview}
+              setValue={setValue}
+              isEditMode={!!initialData}
+              templateCode={template.code}
+            />
+          )
         )}
 
-        {/* STEP 2: DATOS GENERALES */}
+        {/* STEP 2: DATOS GENERALES — siempre muestra TODOS los campos de verificación */}
         {activeStep === 2 && (
           <VerificationFields
-            fields={step2Fields}
+            fields={template.verificationFields}
             control={control}
             errors={errors}
             readonly={fieldsReadonly || readonly || isApprovalReview}
             setValue={setValue}
             isEditMode={!!initialData}
+            templateCode={template.code}
           />
         )}
 

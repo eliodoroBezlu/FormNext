@@ -192,9 +192,10 @@ export function RoutineInspectionSection({
                   {fields.showSignature && (
                     <TableCell>
                       {entry.signature ? (
-                        <img 
-                          src={entry.signature} 
-                          alt="Firma" 
+                        // eslint-disable-next-line @next/next/no-img-element -- firma en base64 (data URL), no un asset estático
+                        <img
+                          src={entry.signature}
+                          alt="Firma"
                           style={{ maxWidth: "100px", maxHeight: "50px" }}
                         />
                       ) : (

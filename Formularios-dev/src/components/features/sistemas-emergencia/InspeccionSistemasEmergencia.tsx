@@ -34,6 +34,7 @@ export const InspeccionSistemasEmergencia = ({
   onTagSelected,
   preselectedTag,
   preselectedArea,
+  preselectedExtintores,
 }: InspectionFormProps) => {
   
   // Consumimos toda la lógica desacoplada a través del Custom Hook
@@ -67,6 +68,7 @@ export const InspeccionSistemasEmergencia = ({
     onTagSelected,
     preselectedTag,
     preselectedArea,
+    preselectedExtintores,
   });
 
   const { loading, showForm, error, successMessage, esFormularioExistente, soloExtintores, submitting } = formState;

@@ -70,3 +70,77 @@ export async function GET(
     );
   }
 }
+
+/**
+ * Igual que GET, pero reenvía el body (usado para descargas masivas en ZIP,
+ * donde el backend necesita un array de ids + formato en el cuerpo).
+ */
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ path: string[] }> }
+) {
+  const { path } = await params;
+
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+
+  if (!accessToken) {
+    return NextResponse.json(
+      { error: "Sesión expirada. Por favor recarga la página." },
+      { status: 401 }
+    );
+  }
+
+  const backendPath = path.join("/");
+  const url = `${API_BASE_URL}/${backendPath}`;
+  const body = await request.text();
+
+  console.log("📥 [DOWNLOAD PROXY POST] →", url);
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Cookie: `access_token=${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body,
+      cache: "no-store",
+    });
+
+    if (response.status === 401) {
+      return NextResponse.json(
+        { error: "Sesión expirada en backend." },
+        { status: 401 }
+      );
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      return NextResponse.json(
+        { error: `Error ${response.status}: ${errorText}` },
+        { status: response.status }
+      );
+    }
+
+    const blob = await response.blob();
+    const contentType =
+      response.headers.get("content-type") || "application/octet-stream";
+    const contentDisposition =
+      response.headers.get("content-disposition") || "";
+
+    return new NextResponse(blob, {
+      status: 200,
+      headers: {
+        "Content-Type": contentType,
+        "Content-Disposition": contentDisposition,
+      },
+    });
+  } catch (error) {
+    console.error("💥 [DOWNLOAD PROXY POST] Error:", error);
+    return NextResponse.json(
+      { error: "Error interno al procesar la descarga." },
+      { status: 500 }
+    );
+  }
+}

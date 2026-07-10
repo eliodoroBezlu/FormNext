@@ -53,7 +53,7 @@ export const ExtintoresChecklist = ({
     return [];
   }, [extintores]);
 
-  const requiereSeleccion = TAGS_CON_SELECCION_EXTINTORES.includes(tag);
+  const requiereSeleccion = TAGS_CON_SELECCION_EXTINTORES.some(t => t.toLowerCase() === tag.toLowerCase());
 
   useEffect(() => {
     if (!requiereSeleccion) {
@@ -64,10 +64,10 @@ export const ExtintoresChecklist = ({
 
     const initialState: ExtintoresSeleccionadosState = {};
     extintoresArray.forEach((extintor: ExtintorBackend) => {
-      initialState[extintor._id] = false;
+      initialState[extintor._id || extintor.CodigoExtintor] = false;
     });
     setExtintoresSeleccionados(initialState);
-  }, [extintoresArray, tag, requiereSeleccion]);
+  }, [extintoresArray, tag, requiereSeleccion, onExtintoresSeleccionados]);
 
   const handleCheckboxChange = (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -80,7 +80,7 @@ export const ExtintoresChecklist = ({
     setExtintoresSeleccionados(newSeleccionados);
 
     const seleccionados = extintoresArray.filter(
-      (extintor) => newSeleccionados[extintor._id]
+      (extintor) => newSeleccionados[extintor._id || extintor.CodigoExtintor]
     );
     onExtintoresSeleccionados(seleccionados);
   };
@@ -88,7 +88,7 @@ export const ExtintoresChecklist = ({
   const seleccionarTodos = () => {
     const newSeleccionados: ExtintoresSeleccionadosState = {};
     extintoresArray.forEach((extintor: ExtintorBackend) => {
-      newSeleccionados[extintor._id] = true;
+      newSeleccionados[extintor._id || extintor.CodigoExtintor] = true;
     });
     setExtintoresSeleccionados(newSeleccionados);
     onExtintoresSeleccionados([...extintoresArray]);
@@ -97,7 +97,7 @@ export const ExtintoresChecklist = ({
   const deseleccionarTodos = () => {
     const newSeleccionados: ExtintoresSeleccionadosState = {};
     extintoresArray.forEach((extintor: ExtintorBackend) => {
-      newSeleccionados[extintor._id] = false;
+      newSeleccionados[extintor._id || extintor.CodigoExtintor] = false;
     });
     setExtintoresSeleccionados(newSeleccionados);
     onExtintoresSeleccionados([]);
@@ -125,23 +125,26 @@ export const ExtintoresChecklist = ({
 
             <Box sx={{ maxHeight: "200px", overflowY: "auto" }}>
               <FormGroup>
-                {extintoresArray.map((extintor: ExtintorBackend) => (
-                  <FormControlLabel
-                    key={extintor._id}
-                    control={
-                      <Checkbox
-                        checked={!!extintoresSeleccionados[extintor._id]}
-                        onChange={(e) => handleCheckboxChange(e, extintor._id)}
-                        size="small"
-                      />
-                    }
-                    label={
-                      <Typography variant="body2">
-                        {extintor.CodigoExtintor} - {extintor.Ubicacion}
-                      </Typography>
-                    }
-                  />
-                ))}
+                {extintoresArray.map((extintor: ExtintorBackend) => {
+                  const extId = extintor._id || extintor.CodigoExtintor;
+                  return (
+                    <FormControlLabel
+                      key={extId}
+                      control={
+                        <Checkbox
+                          checked={!!extintoresSeleccionados[extId]}
+                          onChange={(e) => handleCheckboxChange(e, extId)}
+                          size="small"
+                        />
+                      }
+                      label={
+                        <Typography variant="body2">
+                          {extintor.CodigoExtintor} - {extintor.Ubicacion}
+                        </Typography>
+                      }
+                    />
+                  );
+                })}
               </FormGroup>
             </Box>
           </Box>
