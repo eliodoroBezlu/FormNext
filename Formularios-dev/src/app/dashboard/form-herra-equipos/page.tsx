@@ -2,7 +2,7 @@
 
 import React, { Suspense } from "react";
 import { Box, CircularProgress } from "@mui/material";
-import NewInspectionTemplates from "@/components/features/herra-equipos/NewInspectionTemplates";
+import NewInspectionTemplates from "@/components/features/herra-equipos/presentation/components/management/NewInspectionTemplates";
 
 export default function LlenarFormulariosPage() {
   return (

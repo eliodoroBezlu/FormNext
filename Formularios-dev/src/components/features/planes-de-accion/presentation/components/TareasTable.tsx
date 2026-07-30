@@ -18,6 +18,7 @@ import {
   Edit,
   Delete,
   CheckCircle,
+  ChevronRight,
   AttachFile as AttachFileIcon,
   Visibility as VisibilityIcon,
 } from "@mui/icons-material";
@@ -27,6 +28,7 @@ import { Role } from "@/lib/routePermissions";
 
 interface TareasTableProps {
   tareas: TareaObservacion[];
+  esGeneradaDesdeInspeccion: boolean;
   onEdit: (tarea: TareaObservacion) => void;
   onDelete: (tareaId: string) => void;
   onApprove: (tareaId: string) => void;
@@ -34,12 +36,14 @@ interface TareasTableProps {
 
 export function TareasTable({
   tareas,
+  esGeneradaDesdeInspeccion,
   onEdit,
   onDelete,
   onApprove,
 }: TareasTableProps) {
   const { hasRole } = useUserRole();
   const canApprove = hasRole(Role.SUPERINTENDENTE) || hasRole(Role.ADMIN);
+  const isAdmin = hasRole(Role.ADMIN);
 
   const getStatusColor = (estado: TareaObservacion["estado"]) => {
     switch (estado) {
@@ -220,7 +224,35 @@ export function TareasTable({
                     wordBreak: "break-word",
                   }}
                 >
-                  {tarea.descripcionObservacion}
+                  {tarea.questionText ? (
+                    <Tooltip
+                      arrow
+                      title={
+                        <>
+                          {tarea.sectionTitle && (
+                            <>
+                              <strong>Sección:</strong> {tarea.sectionTitle}
+                              <br />
+                            </>
+                          )}
+                          <strong>Pregunta:</strong> {tarea.questionText}
+                        </>
+                      }
+                    >
+                      <Box
+                        component="span"
+                        sx={{
+                          textDecoration: "underline dotted",
+                          textUnderlineOffset: 3,
+                          cursor: "help",
+                        }}
+                      >
+                        {tarea.descripcionObservacion}
+                      </Box>
+                    </Tooltip>
+                  ) : (
+                    tarea.descripcionObservacion
+                  )}
                 </TableCell>
                 <TableCell
                   sx={{
@@ -279,7 +311,7 @@ export function TareasTable({
                       {tarea.evidencias.map((evidencia, idx) => (
                         <Tooltip key={idx} title={evidencia.nombre} arrow>
                           <Link
-                            href={`http://localhost:3002${evidencia.url}`}
+                            href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002"}${evidencia.url}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             sx={{
@@ -325,20 +357,37 @@ export function TareasTable({
                   )}
                 </TableCell>
                 <TableCell sx={{ minWidth: 100, textAlign: "center" }}>
-                  <IconButton
-                    size="small"
-                    onClick={() => onEdit(tarea)}
-                    title="Editar"
-                  >
-                    <Edit fontSize="small" />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => onDelete(tarea._id!)}
-                    title="Eliminar"
-                  >
-                    <Delete fontSize="small" />
-                  </IconButton>
+                  {isAdmin && (
+                    <>
+                      <IconButton
+                        size="small"
+                        onClick={() => onEdit(tarea)}
+                        title="Editar"
+                      >
+                        <Edit fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => onDelete(tarea._id!)}
+                        title="Eliminar"
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </>
+                  )}
+
+                  {!isAdmin &&
+                    esGeneradaDesdeInspeccion &&
+                    !tarea.aprobado && (
+                      <Tooltip title="Continuar">
+                        <IconButton
+                          size="small"
+                          onClick={() => onEdit(tarea)}
+                        >
+                          <ChevronRight fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
 
                   {canApprove &&
                     !tarea.aprobado &&

@@ -14,11 +14,12 @@ export async function uploadFile(
   formData: FormData
 ): Promise<UploadResponse> {
   try {
-    // Para FormData, solo agregamos Authorization (no Content-Type)
+    // Para FormData no fijamos Content-Type (el navegador define el boundary
+    // multipart), pero sí hay que reenviar la cookie de sesión — la API
+    // autentica por cookie `access_token`, no por header Authorization.
     const authHeaders = await getAuthHeaders();
-    const headers = {
-      Authorization: authHeaders.Authorization,
-    };
+    const headers: Record<string, string> = {};
+    if (authHeaders.Cookie) headers.Cookie = authHeaders.Cookie;
 
     const response = await fetch(`${API_URL}/upload`, {
       method: "POST",

@@ -1,49 +1,29 @@
 'use client'
 
-import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  Box, 
-  TextField, 
-  Button, 
-  Typography, 
-  Paper, 
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Paper,
   Alert,
   AlertTitle,
   CircularProgress,
   Avatar
 } from '@mui/material';
-import { 
+import {
   PersonAdd as PersonAddIcon
 } from '@mui/icons-material';
-import { registerAction } from '@/app/actions/auth';
+import { useRegister } from '../../application/hooks/useRegister';
 
 export default function RegisterForm() {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const { isPending, error, success, handleSubmit: submitRegister } = useRegister();
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
-
     const formData = new FormData(e.currentTarget);
-
-    startTransition(async () => {
-      const result = await registerAction(formData);
-
-      if (result.success) {
-        setSuccess(result.message || 'Usuario registrado exitosamente');
-        setTimeout(() => {
-          router.push('/login');
-        }, 2000);
-      } else {
-        setError(result.error || 'Error al registrar usuario');
-      }
-    });
+    submitRegister(formData);
   }
 
   return (

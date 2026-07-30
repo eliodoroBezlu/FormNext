@@ -8,7 +8,12 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { TimePicker } from "@mui/x-date-pickers/TimePicker";
 import dayjs, { Dayjs } from "dayjs";
 import AutocompleteCustom from "@/components/ui/autocomplete/AutocompleteCustom";
-import { DataSourceType, fetchDataBySource } from "@/lib/actions/dataSourceService";
+import {
+  DataSourceType,
+  EquipoBackend,
+  fetchDataBySourceAdapter,
+  obtenerEquiposAdapter,
+} from "../../../infrastructure/adapters/catalogDataAdapter";
 import {
   VerificationField,
   FormDataHerraEquipos,
@@ -16,8 +21,9 @@ import {
   isEquipmentCodeField,
   isAreaField,
   autofillEquipmentFields,
+  sanitizeFieldKey,
+  verificationFieldPath,
 } from "../../../types/IProps";
-import { obtenerEquipos, EquipoBackend } from "@/lib/actions/equipo-actions";
 import { useUserRole } from "@/hooks/useUserRole";
 
 interface VerificationFieldsProps<
@@ -64,7 +70,7 @@ export const VerificationFields = <
   useEffect(() => {
     const loadAreas = async () => {
       try {
-        const data = await fetchDataBySource("area");
+        const data = await fetchDataBySourceAdapter("area");
         if (Array.isArray(data)) {
           const mapped = (data as (string | { nombre?: string; name?: string })[]).map(a => typeof a === 'string' ? a : (a.nombre || a.name || '')).filter(Boolean);
           setAreas(Array.from(new Set(mapped)));
@@ -83,7 +89,7 @@ export const VerificationFields = <
     const loadEquipos = async () => {
       setLoadingEquipos(true);
       try {
-        const data = await obtenerEquipos();
+        const data = await obtenerEquiposAdapter();
         const allowedTypes = TEMPLATE_EQUIPMENT_MAP[templateCode];
         const filtered = data.filter(e => allowedTypes.includes(e.tipo_equipo));
         setEquipos(filtered);
@@ -102,13 +108,13 @@ export const VerificationFields = <
   // Observar el valor del campo de área en tiempo real
   const watchedArea = useWatch({
     control,
-    name: areaField ? `verification.${areaField.label}` as FieldPath<T> : ("" as FieldPath<T>),
+    name: areaField ? verificationFieldPath(areaField.label) as FieldPath<T> : ("" as FieldPath<T>),
   }) as string | undefined;
 
   // Pre-poblar el campo de área con el área del usuario logueado por defecto si no tiene valor y no es modo edición
   useEffect(() => {
     if (!isEditMode && user?.area && areaField) {
-      const targetKey = `verification.${areaField.label}` as FieldPath<T>;
+      const targetKey = verificationFieldPath(areaField.label) as FieldPath<T>;
       // Solo asignar si actualmente no tiene un valor
       setValue(targetKey, user.area as PathValue<T, FieldPath<T>>, { shouldValidate: true, shouldDirty: true });
     }
@@ -132,7 +138,7 @@ export const VerificationFields = <
   useEffect(() => {
     if (!isEditMode) {
       fields.forEach((field) => {
-        const fieldKey = `verification.${field.label}` as FieldPath<T>;
+        const fieldKey = verificationFieldPath(field.label) as FieldPath<T>;
         if (field.type === "date") {
           setValue(fieldKey, getCurrentDate() as PathValue<T, FieldPath<T>>);
         } else if (field.type === "time") {
@@ -150,12 +156,12 @@ export const VerificationFields = <
         </Typography>
         <Grid container spacing={2}>
           {fields.map((field, idx) => {
-            const fieldKey = `verification.${field.label}` as FieldPath<T>;
+            const fieldKey = verificationFieldPath(field.label) as FieldPath<T>;
             const fieldError = (
               errors.verification as
                 | Record<string, { message?: string }>
                 | undefined
-            )?.[field.label];
+            )?.[sanitizeFieldKey(field.label)];
 
             return (
               <Grid size={{ xs: 12, md: 6 }} key={idx}>

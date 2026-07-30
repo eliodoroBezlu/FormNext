@@ -5,6 +5,31 @@ import { valoracionCriterio } from "@/lib/constants";
 
 export type ValoracionValue = "0" | "1" | "2" | "3" | "N/A" | "";
 
+// RHF separa su path interno de get/set por cada "." — una etiqueta de
+// plantilla que ya trae un punto (ej. "AÑO VEH./EQU.") rompe esa resolución.
+// Se sanea el punto SOLO para el path interno de RHF (Controller `name`,
+// `getValues`); la etiqueta real sigue siendo la clave del objeto final que
+// ve el resto del sistema (backend, reportes). Mismo patrón que
+// herra-equipos/domain/models/EquipmentAutofill.ts.
+const DOT_PLACEHOLDER = "․"; // ONE DOT LEADER — no es "." "," "[" "]"
+
+export const sanitizeFieldKey = (label: string): string =>
+  label.replace(/\./g, DOT_PLACEHOLDER);
+
+export const verificationListFieldPath = (label: string): `verificationList.${string}` =>
+  `verificationList.${sanitizeFieldKey(label)}`;
+
+export const sanitizeVerificationListObject = <T extends Record<string, unknown>>(
+  verificationList: T | undefined,
+): T => {
+  if (!verificationList) return {} as T;
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(verificationList)) {
+    result[sanitizeFieldKey(key)] = value;
+  }
+  return result as T;
+};
+
 /**
  * Aplana las secciones jerárquicas recursivas de acordeones a un array plano.
  */

@@ -12,12 +12,30 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { useDashboardData } from "./hooks/useDashboardData";
-import { calcularEstadisticasPorArea } from "./utils/dashboardCalculations";
+import { calcularEstadisticasPorArea, calcularDetalleTagsPorArea } from "./utils/dashboardCalculations";
 import { DashboardHeader } from "./emergencycharts/emergencychartsheader";
 import { DashboardFilters } from "./emergencycharts/emergencychartsfilters";
 import { DashboardCharts } from "./emergencycharts/emergencychartsCharts";
 import { LiveCommandCenter } from "./emergencycharts/emergencychartsLiveCenter";
+import { TagDetailModal } from "./emergencycharts/emergencychartsTagDetailModal";
 import { Refresh } from "@mui/icons-material";
+
+// Lista fija de meses (siempre los 12, en orden cronológico) — no se deriva
+// de los datos, para que el filtro no dependa de qué meses ya tienen inspecciones.
+const MESES_DEL_AÑO = [
+  "ENERO",
+  "FEBRERO",
+  "MARZO",
+  "ABRIL",
+  "MAYO",
+  "JUNIO",
+  "JULIO",
+  "AGOSTO",
+  "SEPTIEMBRE",
+  "OCTUBRE",
+  "NOVIEMBRE",
+  "DICIEMBRE",
+];
 
 const DashboardEmergencyInspections: React.FC = () => {
   const [filtroSuperintendencia, setFiltroSuperintendencia] =
@@ -26,11 +44,13 @@ const DashboardEmergencyInspections: React.FC = () => {
   const [filtroTags, setFiltroTags] = useState<string[]>([]);
   const [filtroMes, setFiltroMes] = useState<string>("");
   const [filtroAño, setFiltroAño] = useState<string>("");
+  const [areaDetalle, setAreaDetalle] = useState<string | null>(null);
 
   const {
     tags,
     inspecciones,
     extintores,
+    areas,
     loading,
     error,
     lastUpdated,
@@ -39,33 +59,58 @@ const DashboardEmergencyInspections: React.FC = () => {
   } = useDashboardData();
 
   // 1. Calcular opciones dinámicas para los filtros (Cascada)
+  // Fuente canónica: colección Área (con su Superintendencia poblada), NO el
+  // texto libre guardado en cada inspección — así el filtro solo muestra las
+  // superintendencias/áreas que realmente existen en la BD, sin duplicados
+  // ni valores sueltos de registros viejos o mal cargados.
+  const areasActivas = useMemo(() => areas.filter((a) => a.activo), [areas]);
+
+  const todasSuperintendencias = useMemo(
+    () =>
+      [...new Set(areasActivas.map((a) => a.superintendencia?.nombre).filter(Boolean))].sort() as string[],
+    [areasActivas],
+  );
+
   // Superintendencia -> Áreas
   const areasDisponibles = useMemo(() => {
-    const filteredIns = filtroSuperintendencia
-      ? inspecciones.filter(
-          (ins) => ins.superintendencia === filtroSuperintendencia,
-        )
-      : inspecciones;
-    return [...new Set(filteredIns.map((ins) => ins.area))].sort();
-  }, [inspecciones, filtroSuperintendencia]);
+    const filtradas = filtroSuperintendencia
+      ? areasActivas.filter((a) => a.superintendencia?.nombre === filtroSuperintendencia)
+      : areasActivas;
+    return [...new Set(filtradas.map((a) => a.nombre))].sort();
+  }, [areasActivas, filtroSuperintendencia]);
 
   // Áreas -> Tags
+  // Nota: `Tag.superintendencia` NO existe en el schema del backend (el
+  // documento solo guarda tag/area/activo), así que nunca hay que filtrar
+  // tags comparando ese campo — siempre da `undefined`. En su lugar se
+  // reutiliza `areasDisponibles`, que ya resuelve correctamente qué áreas
+  // pertenecen a la superintendencia seleccionada (o todas si no hay ninguna).
   const tagsDisponibles = useMemo(() => {
     let filteredTags = tags;
     if (filtroSuperintendencia) {
-      filteredTags = filteredTags.filter(
-        (t) => t.superintendencia === filtroSuperintendencia,
-      );
+      filteredTags = filteredTags.filter((t) => areasDisponibles.includes(t.area));
     }
     if (filtroAreas.length > 0) {
       filteredTags = filteredTags.filter((t) => filtroAreas.includes(t.area));
     }
     return [...new Set(filteredTags.map((t) => t.tag))].sort();
-  }, [tags, filtroSuperintendencia, filtroAreas]);
+  }, [tags, filtroSuperintendencia, filtroAreas, areasDisponibles]);
 
-  const mesesDisponibles = useMemo(() => {
-    return [...new Set(inspecciones.map((ins) => ins.mesActual))].sort();
-  }, [inspecciones]);
+  // Tags filtrados por Superintendencia/Área — para que las estadísticas por
+  // área (gráficos) solo consideren las áreas del filtro activo, en vez de
+  // mostrar todas las áreas del sistema con 0% cuando hay un filtro puesto.
+  const tagsParaEstadisticas = useMemo(() => {
+    let filtered = tags;
+    if (filtroSuperintendencia) {
+      filtered = filtered.filter((t) => areasDisponibles.includes(t.area));
+    }
+    if (filtroAreas.length > 0) {
+      filtered = filtered.filter((t) => filtroAreas.includes(t.area));
+    }
+    return filtered;
+  }, [tags, filtroSuperintendencia, filtroAreas, areasDisponibles]);
+
+  const mesesDisponibles = MESES_DEL_AÑO;
 
   const añosDisponibles = useMemo(() => {
     return [...new Set(inspecciones.map((ins) => ins.año.toString()))].sort();
@@ -148,15 +193,15 @@ const DashboardEmergencyInspections: React.FC = () => {
 
   // 3. Estadísticas basadas en datos filtrados y deduplicados
   const estadisticasGlobales = useMemo(
-    () => calcularEstadisticasPorArea(inspeccionesFiltradas, tags, extintores),
-    [inspeccionesFiltradas, tags, extintores],
+    () => calcularEstadisticasPorArea(inspeccionesFiltradas, tagsParaEstadisticas, extintores),
+    [inspeccionesFiltradas, tagsParaEstadisticas, extintores],
   );
 
-  // Listados únicos estáticos para inicializar Superintendencias
-  const todasSuperintendencias = useMemo(
-    () => [...new Set(inspecciones.map((ins) => ins.superintendencia))].sort(),
-    [inspecciones],
-  );
+  // 4. Detalle por tag del área clickeada en cualquiera de los dos gráficos
+  const detalleTagsArea = useMemo(() => {
+    if (!areaDetalle) return [];
+    return calcularDetalleTagsPorArea(areaDetalle, tags, extintores, inspeccionesFiltradas);
+  }, [areaDetalle, tags, extintores, inspeccionesFiltradas]);
 
   if (loading) {
     return (
@@ -241,7 +286,8 @@ const DashboardEmergencyInspections: React.FC = () => {
           filtroSuperintendencia={filtroSuperintendencia}
           filtroAreas={filtroAreas}
           filtroTags={filtroTags}
-          tags={tags}
+          areasDeSuperintendencia={areasDisponibles}
+          onAreaClick={setAreaDetalle}
         />
 
         <LiveCommandCenter
@@ -264,6 +310,13 @@ const DashboardEmergencyInspections: React.FC = () => {
         open={refreshing}
         message="Actualizando datos..."
         anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+      />
+
+      <TagDetailModal
+        open={!!areaDetalle}
+        area={areaDetalle}
+        detalle={detalleTagsArea}
+        onClose={() => setAreaDetalle(null)}
       />
     </Paper>
   );

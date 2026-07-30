@@ -46,7 +46,7 @@ export const useEmergencyForm = ({
     handleSubmit,
     setValue,
     reset,
-    watch,
+    subscribe,
     formState: { errors, isDirty },
   } = useForm<FormularioInspeccion>({
     mode: "onTouched",
@@ -100,13 +100,22 @@ export const useEmergencyForm = ({
   useEffect(() => {
     if (readonly || !areaData.tag || isEditMode) return;
 
-    const subscription = watch((value) => {
-      if (value.tag) {
-        localStorage.setItem(`draft_emergencia_${value.tag}`, JSON.stringify(value));
-      }
+    // `subscribe` en vez de `watch(cb)`: hace lo mismo pero sin re-renderizar
+    // el formulario en cada tecla — el borrador solo necesita escribirse en
+    // localStorage, no repintar la UI.
+    const unsubscribe = subscribe({
+      formState: { values: true },
+      callback: ({ values }) => {
+        if (values.tag) {
+          localStorage.setItem(
+            `draft_emergencia_${values.tag}`,
+            JSON.stringify(values),
+          );
+        }
+      },
     });
-    return () => subscription.unsubscribe();
-  }, [watch, areaData.tag, readonly, isEditMode]);
+    return unsubscribe;
+  }, [subscribe, areaData.tag, readonly, isEditMode]);
 
   // --- EFECTO: CARGA INICIAL (EDICIÓN) ---
   useEffect(() => {

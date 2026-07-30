@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import {
   Dialog,
   DialogTitle,
@@ -37,9 +37,14 @@ import {
   PlanDeAccion,
 } from "../../domain/models/IProps";
 import { FAMILIAS_PELIGRO } from "@/lib/constants";
-import AutocompleteCustom from "@/components/ui/autocomplete/AutocompleteCustom";
 import { getRecommendedActions } from "../../infrastructure/adapters/mlRecommendationsAdapter";
 import { uploadFile } from "../../infrastructure/adapters/uploadAdapter";
+import {
+  obtenerSupervisoresDisponibles,
+  SupervisorOption,
+} from "../../infrastructure/adapters/trabajadoresAdapter";
+import { useUserRole } from "@/hooks/useUserRole";
+import { Role } from "@/lib/routePermissions";
 
 interface TareaFormModalProps {
   open: boolean;
@@ -65,6 +70,8 @@ export function TareaFormModal({
   const [evidencias, setEvidencias] = useState<EvidenciaDto[]>([]);
   const [selectedRecommendationIndex, setSelectedRecommendationIndex] =
     useState<number | null>(null);
+  const [supervisores, setSupervisores] = useState<SupervisorOption[]>([]);
+  const [loadingSupervisores, setLoadingSupervisores] = useState(false);
 
   const toDateInputValue = (date: Date | string | undefined): string => {
     if (!date) return dayjs().format("YYYY-MM-DD");
@@ -84,7 +91,7 @@ export function TareaFormModal({
     control,
     handleSubmit,
     reset,
-    watch,
+    setValue,
     formState: { errors },
   } = useForm<FormTareaData>({
     defaultValues: {
@@ -97,6 +104,7 @@ export function TareaFormModal({
       descripcionObservacion: "",
       accionPropuesta: "",
       responsableAreaCierre: "",
+      responsableAreaCierreUsername: "",
       fechaCumplimientoAcordada: toDateInputValue(undefined),
       fechaCumplimientoEfectiva: "",
       estado: "abierto",
@@ -105,47 +113,34 @@ export function TareaFormModal({
 
   const fetchMLRecommendations = useCallback(async (questionText: string) => {
     if (!questionText || questionText.trim().length < 10) {
-      console.log("⏭️ Texto muy corto, saltando recomendaciones");
       setMlRecommendations([]);
       return;
     }
-
-    console.log("🚀 Iniciando fetchMLRecommendations");
-    console.log("📝 Texto de pregunta:", questionText);
 
     setLoadingML(true);
     setMlError(null);
 
     try {
-      console.log("🔄 Llamando a getRecommendedActions...");
-
       const result = await getRecommendedActions(questionText);
 
-      console.log("📦 Resultado completo:", JSON.stringify(result, null, 2));
-
       if (result.success && result.actions && result.actions.length > 0) {
-        console.log("✅ Recomendaciones recibidas:", result.actions);
         setMlRecommendations(result.actions);
         setMlError(null);
       } else {
-        console.warn("⚠️ No se encontraron recomendaciones");
-        console.warn("Error:", result.error);
         setMlRecommendations([]);
         setMlError(result.error || "No se encontraron recomendaciones");
       }
     } catch (error) {
-      console.error("❌ Error en fetchMLRecommendations:", error);
+      console.error("Error en fetchMLRecommendations:", error);
       setMlError("Error al cargar recomendaciones");
       setMlRecommendations([]);
     } finally {
       setLoadingML(false);
-      console.log("🏁 fetchMLRecommendations terminado");
     }
   }, []);
 
   useEffect(() => {
     if (open && tarea) {
-      console.log("📂 Cargando datos de tarea en el formulario:", tarea);
       reset({
         fechaHallazgo: toDateInputValue(tarea.fechaHallazgo),
         responsableObservacion: tarea.responsableObservacion ?? "",
@@ -156,6 +151,8 @@ export function TareaFormModal({
         descripcionObservacion: tarea.descripcionObservacion ?? "",
         accionPropuesta: tarea.accionPropuesta ?? "",
         responsableAreaCierre: tarea.responsableAreaCierre ?? "",
+        responsableAreaCierreUsername:
+          tarea.responsableAreaCierreUsername ?? "",
         fechaCumplimientoAcordada: toDateInputValue(
           tarea.fechaCumplimientoAcordada,
         ),
@@ -175,14 +172,9 @@ export function TareaFormModal({
         tarea.descripcionObservacion &&
         tarea.descripcionObservacion.trim().length >= 10
       ) {
-        console.log(
-          "🤖 Cargando recomendaciones para descripción existente:",
-          tarea.descripcionObservacion,
-        );
         fetchMLRecommendations(tarea.descripcionObservacion);
       }
     } else if (open && !tarea) {
-      console.log("🆕 Abriendo modal para nueva tarea");
       reset({
         fechaHallazgo: toDateInputValue(undefined),
         responsableObservacion: "",
@@ -193,6 +185,7 @@ export function TareaFormModal({
         descripcionObservacion: "",
         accionPropuesta: "",
         responsableAreaCierre: "",
+        responsableAreaCierreUsername: "",
         fechaCumplimientoAcordada: toDateInputValue(undefined),
         fechaCumplimientoEfectiva: "",
         estado: "abierto",
@@ -203,24 +196,34 @@ export function TareaFormModal({
     }
   }, [open, tarea, reset, fetchMLRecommendations]);
 
+  useEffect(() => {
+    if (!open) return;
+    setLoadingSupervisores(true);
+    obtenerSupervisoresDisponibles()
+      .then(setSupervisores)
+      .catch(() => setSupervisores([]))
+      .finally(() => setLoadingSupervisores(false));
+  }, [open]);
+
+  const { hasRole } = useUserRole();
+  const isAdmin = hasRole(Role.ADMIN);
+
   const esGeneradaDesdeInspeccion = plan?.instanceId !== undefined;
   const estaAprobada = tarea?.aprobado === true;
-  const estadoActual = watch("estado") || tarea?.estado || "abierto";
+  const estadoActual =
+    useWatch({ control, name: "estado" }) || tarea?.estado || "abierto";
 
   const esEstadoAbierto = estadoActual === "abierto";
   const esEstadoEnProgreso = estadoActual === "en-progreso";
   const esEstadoCerrado = estadoActual === "cerrado";
 
-  const descripcionObservacion = watch("descripcionObservacion");
+  const descripcionObservacion = useWatch({
+    control,
+    name: "descripcionObservacion",
+  });
 
   useEffect(() => {
-    console.log(
-      "🔄 useEffect disparado - descripcion:",
-      descripcionObservacion,
-    );
-
     if (esGeneradaDesdeInspeccion) {
-      console.log("⏭️ Tarea generada desde inspección, campo bloqueado");
       return;
     }
 
@@ -229,15 +232,11 @@ export function TareaFormModal({
         descripcionObservacion &&
         descripcionObservacion.trim().length >= 10
       ) {
-        console.log("✅ Descripción válida, obteniendo recomendaciones...");
         fetchMLRecommendations(descripcionObservacion);
-      } else {
-        console.log("⏭️ Descripción insuficiente:", descripcionObservacion);
       }
     }, 1000);
 
     return () => {
-      console.log("🧹 Limpiando timer");
       clearTimeout(timer);
     };
   }, [
@@ -246,8 +245,21 @@ export function TareaFormModal({
     fetchMLRecommendations,
   ]);
 
-  const fechaAcordada = watch("fechaCumplimientoAcordada");
-  const fechaEfectiva = watch("fechaCumplimientoEfectiva");
+  const fechaAcordada = useWatch({
+    control,
+    name: "fechaCumplimientoAcordada",
+  });
+  const fechaEfectiva = useWatch({
+    control,
+    name: "fechaCumplimientoEfectiva",
+  });
+
+  // Izado al scope del componente: no se puede llamar un hook dentro del
+  // render prop de <Controller>.
+  const responsableUsernameActual = useWatch({
+    control,
+    name: "responsableAreaCierreUsername",
+  });
 
   const calcularDiasRetraso = (): number => {
     if (!fechaAcordada || !fechaEfectiva || fechaEfectiva === "") return 0;
@@ -298,10 +310,8 @@ export function TareaFormModal({
           url: data.url || data.path,
         },
       ]);
-
-      console.log("✅ Archivo subido:", data);
     } catch (error) {
-      console.error("❌ Error subiendo archivo:", error);
+      console.error("Error subiendo archivo:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Error al subir el archivo";
       alert(errorMessage);
@@ -316,13 +326,12 @@ export function TareaFormModal({
 
   const onFormSubmit = async (data: FormTareaData) => {
     try {
-      console.log("📤 Datos del formulario:", data);
-
       if (esGeneradaDesdeInspeccion) {
         const camposEditables: UpdateTareaDTO = {
           familiaPeligro: data.familiaPeligro,
           accionPropuesta: data.accionPropuesta,
           responsableAreaCierre: data.responsableAreaCierre,
+          responsableAreaCierreUsername: data.responsableAreaCierreUsername,
           fechaCumplimientoAcordada: data.fechaCumplimientoAcordada,
           fechaCumplimientoEfectiva: data.fechaCumplimientoEfectiva,
           evidencias: evidencias.length > 0 ? evidencias : undefined,
@@ -334,10 +343,6 @@ export function TareaFormModal({
               mlRecommendations.length > 0 ? mlRecommendations : undefined,
           },
         };
-        console.log(
-          "📦 Campos editables a enviar:",
-          JSON.stringify(camposEditables, null, 2),
-        );
         if (estadoActual === "abierto") {
           if (
             data.familiaPeligro &&
@@ -346,24 +351,17 @@ export function TareaFormModal({
             data.fechaCumplimientoAcordada
           ) {
             camposEditables.estado = "en-progreso";
-            console.log("✅ Cambio automático: Abierto → En Progreso");
           }
         } else if (estadoActual === "en-progreso") {
           if (data.fechaCumplimientoEfectiva) {
             camposEditables.estado = "cerrado";
-            console.log("✅ Cambio automático: En Progreso → Cerrado");
           }
         }
 
-        console.log(
-          "✅ Enviando solo campos editables (UpdateTareaDTO):",
-          camposEditables,
-        );
         await onSubmit(camposEditables);
       } else {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { estado: _estado, ...tareaData } = data;
-        console.log("✅ Enviando todos los campos (AddTareaDTO)");
         await onSubmit(tareaData);
       }
 
@@ -373,17 +371,14 @@ export function TareaFormModal({
     }
   };
 
-  useEffect(() => {
-    console.log("📊 Estado actual:");
-    console.log("  - loadingML:", loadingML);
-    console.log("  - mlRecommendations:", mlRecommendations);
-    console.log("  - mlError:", mlError);
-  }, [loadingML, mlRecommendations, mlError]);
-
   return (
     <Dialog open={open} onClose={handleFormClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ fontWeight: 600 }}>
-        {tarea ? "Editar Tarea" : "Agregar Nueva Tarea"}
+        {tarea
+          ? isAdmin
+            ? "Editar Tarea"
+            : "Continuar Tarea"
+          : "Agregar Nueva Tarea"}
       </DialogTitle>
 
       <DialogContent sx={{ pt: 3 }}>
@@ -402,6 +397,18 @@ export function TareaFormModal({
                   para la acción propuesta.
                 </>
               )}
+            </Alert>
+          )}
+
+          {tarea?.questionText && (
+            <Alert severity="info" variant="outlined">
+              {tarea.sectionTitle && (
+                <>
+                  <strong>Sección:</strong> {tarea.sectionTitle}
+                  <br />
+                </>
+              )}
+              <strong>Pregunta original:</strong> {tarea.questionText}
             </Alert>
           )}
 
@@ -645,24 +652,12 @@ export function TareaFormModal({
                   options={mlRecommendations}
                   value={value || ""}
                   onChange={(_event, newValue) => {
-                    console.log("🎯 onChange - Acción seleccionada:", newValue);
                     onChange(newValue || "");
 
                     const index = mlRecommendations.indexOf(newValue as string);
                     setSelectedRecommendationIndex(index >= 0 ? index : null);
-                    console.log(
-                      "📊 Índice de recomendación:",
-                      index >= 0 ? index : "manual",
-                    );
                   }}
                   onInputChange={(_event, newInputValue, reason) => {
-                    console.log(
-                      "⌨️ onInputChange - Valor:",
-                      newInputValue,
-                      "Razón:",
-                      reason,
-                    );
-
                     if (reason === "input") {
                       onChange(newInputValue);
                       setSelectedRecommendationIndex(null);
@@ -752,35 +747,58 @@ export function TareaFormModal({
             name="responsableAreaCierre"
             control={control}
             rules={{ required: "Campo requerido" }}
-            render={({ field: { onChange, onBlur, value } }) => {
-              const handleSupervisorChange = (newValue: string | null) => {
-                if (newValue && newValue.includes(" - ")) {
-                  const nombre = newValue.split(" - ")[0].trim();
-                  onChange(nombre);
-                } else {
-                  onChange(newValue);
-                }
-              };
+            render={({ field: { onBlur } }) => {
+              const seleccionado =
+                supervisores.find(
+                  (s) => s.username === responsableUsernameActual,
+                ) ?? null;
 
               return (
-                <AutocompleteCustom
-                  dataSource={"supervisor"}
-                  value={value || null}
-                  onChange={handleSupervisorChange}
+                <Autocomplete
+                  options={supervisores}
+                  loading={loadingSupervisores}
+                  value={seleccionado}
+                  getOptionLabel={(s) => `${s.nomina} - ${s.puesto}`}
+                  isOptionEqualToValue={(a, b) => a.username === b.username}
+                  onChange={(_event, newValue) => {
+                    setValue("responsableAreaCierre", newValue?.nomina ?? "", {
+                      shouldValidate: true,
+                    });
+                    setValue(
+                      "responsableAreaCierreUsername",
+                      newValue?.username ?? "",
+                    );
+                  }}
                   onBlur={onBlur}
-                  label="Responsable de Área para Cierre"
-                  placeholder="Seleccione un supervisor"
-                  error={!!errors.responsableAreaCierre}
-                  helperText={
-                    errors.responsableAreaCierre?.message ||
-                    (estaAprobada
-                      ? "No se puede editar (tarea aprobada)"
-                      : !esEstadoAbierto
-                        ? "Solo editable en estado Abierto"
-                        : "")
-                  }
                   disabled={estaAprobada || !esEstadoAbierto}
-                  required
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Responsable de Área para Cierre"
+                      placeholder="Seleccione un supervisor"
+                      error={!!errors.responsableAreaCierre}
+                      helperText={
+                        errors.responsableAreaCierre?.message ||
+                        (estaAprobada
+                          ? "No se puede editar (tarea aprobada)"
+                          : !esEstadoAbierto
+                            ? "Solo editable en estado Abierto"
+                            : "Solo supervisores con acceso al sistema")
+                      }
+                      required
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {loadingSupervisores ? (
+                              <CircularProgress size={20} />
+                            ) : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
                 />
               );
             }}
@@ -892,7 +910,7 @@ export function TareaFormModal({
                         primary={evidencia.nombre}
                         secondary={
                           <a
-                            href={evidencia.url}
+                            href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002"}${evidencia.url}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{ fontSize: "0.75rem", color: "#1976d2" }}

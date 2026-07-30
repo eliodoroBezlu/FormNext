@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useTransition } from 'react';
+import React from 'react';
 import {
   Box,
   Card,
@@ -28,8 +28,7 @@ import {
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 
-import { QRGenerateRequest } from '@/types/formTypes';
-import { generarCodigoQR, obtenerUrlImagenQR, obtenerUrlSvgQR, validarUrl } from '@/app/actions/inspeccion';
+import { useQrGenerator } from '@/components/features/qr-generator/application/hooks/useQrGenerator';
 
 // Styled components
 const StyledCard = styled(Card)(({ theme }) => ({
@@ -77,172 +76,21 @@ interface QRGeneratorClientProps {
 }
 
 export default function QRGeneratorClient({ className = '' }: QRGeneratorClientProps) {
-  const [url, setUrl] = useState('');
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
-  const [error, setError] = useState<string>('');
-  const [isPending, startTransition] = useTransition();
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-
-  const showSnackbar = (message: string) => {
-    setSnackbarMessage(message);
-    setSnackbarOpen(true);
-  };
-
-  const handleGenerateQR = () => {
-    if (!url.trim()) {
-      setError('Por favor ingresa una URL válida');
-      return;
-    }
-
-    startTransition(async () => {
-      try {
-        setError('');
-        
-        // Validar URL primero
-        const validacion = await validarUrl(url);
-        if (!validacion.valida) {
-          setError(validacion.mensaje || 'URL inválida');
-          return;
-        }
-
-        // Generar QR
-        const request: QRGenerateRequest = {
-          text: url,
-          width: 256,
-          margin: 2,
-          errorCorrectionLevel: 'M'
-        };
-
-        const response = await generarCodigoQR(request);
-        
-        if (response.success) {
-          setQrCodeUrl(response.data.qrCode);
-          showSnackbar('¡Código QR generado exitosamente!');
-        } else {
-          setError('Error al generar el código QR');
-        }
-      } catch (err) {
-        setError('Error al conectar con el servidor');
-        console.error('Error generating QR:', err);
-      }
-    });
-  };
-
-  const handleDownloadPNG = async () => {
-    if (!url.trim()) return;
-
-    try {
-      const { url: imageUrl } = await obtenerUrlImagenQR(url, { width: 512, margin: 2 });
-      
-      // Fetch the image as blob
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
-      
-      // Create download link
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = `qr-code-${Date.now()}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Clean up
-      window.URL.revokeObjectURL(downloadUrl);
-      
-      showSnackbar('Imagen PNG descargada');
-    } catch (err) {
-      console.error('Error downloading PNG:', err);
-      setError('Error al descargar la imagen');
-    }
-  };
-
-  const handleDownloadSVG = async () => {
-    if (!url.trim()) return;
-
-    try {
-      const { url: svgUrl } = await obtenerUrlSvgQR(url, { width: 512 });
-      
-      // Fetch the SVG as blob
-      const response = await fetch(svgUrl);
-      const blob = await response.blob();
-      
-      // Create download link
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = `qr-code-${Date.now()}.svg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Clean up
-      window.URL.revokeObjectURL(downloadUrl);
-      
-      showSnackbar('Archivo SVG descargado');
-    } catch (err) {
-      console.error('Error downloading SVG:', err);
-      setError('Error al descargar el SVG');
-    }
-  };
-
-  const handleViewImage = async () => {
-    if (!url.trim()) return;
-
-    try {
-      const { url: imageUrl } = await obtenerUrlImagenQR(url, { width: 512, margin: 2 });
-      window.open(imageUrl, '_blank');
-    } catch (err) {
-      console.error('Error viewing image:', err);
-      setError('Error al abrir la imagen');
-    }
-  };
-
-  const copyQRToClipboard = async () => {
-    if (!qrCodeUrl) return;
-
-    try {
-      // Función helper para convertir data URL a blob
-      const dataURLToBlob = (dataURL: string): Blob => {
-        const arr = dataURL.split(',');
-        const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
-        const bstr = atob(arr[1]);
-        let n = bstr.length;
-        const u8arr = new Uint8Array(n);
-        while (n--) {
-          u8arr[n] = bstr.charCodeAt(n);
-        }
-        return new Blob([u8arr], { type: mime });
-      };
-
-      // Verificar si el navegador soporta la API de portapapeles
-      if (!navigator.clipboard || !window.ClipboardItem) {
-        throw new Error('API de portapapeles no soportada');
-      }
-
-      // Convertir data URL a blob
-      const blob = dataURLToBlob(qrCodeUrl);
-      
-      // Copiar al portapapeles
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          [blob.type]: blob
-        })
-      ]);
-      
-      showSnackbar('¡Código QR copiado al portapapeles!');
-    } catch (err) {
-      console.error('Error copying to clipboard:', err);
-      
-      // Fallback: Mostrar instrucciones al usuario
-      if (err instanceof Error && err.message.includes('not supported')) {
-        setError('Tu navegador no soporta copiar imágenes. Usa el botón de descarga.');
-      } else {
-        setError('Error al copiar. Intenta hacer clic derecho en la imagen y seleccionar "Copiar imagen".');
-      }
-    }
-  };
+  const {
+    url,
+    setUrl,
+    qrCodeUrl,
+    error,
+    isPending,
+    snackbarOpen,
+    snackbarMessage,
+    closeSnackbar,
+    handleGenerateQR,
+    handleDownloadPNG,
+    handleDownloadSVG,
+    handleViewImage,
+    copyQRToClipboard,
+  } = useQrGenerator();
 
   return (
     <Container maxWidth="sm" className={className}>
@@ -432,48 +280,9 @@ export default function QRGeneratorClient({ className = '' }: QRGeneratorClientP
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={4000}
-        onClose={() => setSnackbarOpen(false)}
+        onClose={closeSnackbar}
         message={snackbarMessage}
       />
     </Container>
   );
-}
-
-// Hook personalizado para usar las server actions
-export function useQRGenerator() {
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string>('');
-
-  const generateQR = (request: QRGenerateRequest) => {
-    return new Promise((resolve, reject) => {
-      startTransition(async () => {
-        try {
-          setError('');
-          const response = await generarCodigoQR(request);
-          resolve(response);
-        } catch (err) {
-          setError('Error al generar QR');
-          reject(err);
-        }
-      });
-    });
-  };
-
-  const validateUrl = async (url: string) => {
-    try {
-      setError('');
-      return await validarUrl(url);
-    } catch (err) {
-      setError('Error al validar URL');
-      throw err;
-    }
-  };
-
-  return {
-    generateQR,
-    validateUrl,
-    isPending,
-    error,
-    clearError: () => setError('')
-  };
 }

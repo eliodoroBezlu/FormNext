@@ -28,71 +28,26 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  FormControlLabel,
-  Checkbox,
   Alert,
-  Snackbar,
 } from "@mui/material";
 import {
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Add as AddIcon,
   Clear as ClearIcon,
   Person as PersonIcon,
   Visibility as VisibilityIcon,
-  PersonAdd as PersonAddIcon,
-  Settings as SettingsIcon,
+  OpenInNew as OpenInNewIcon,
 } from "@mui/icons-material";
-import { Trabajador, TrabajadorForm } from "@/types/trabajador";
-import {
-  actualizarTrabajador,
-  crearTrabajador,
-  crearTrabajadorConUsuario,
-  crearUsuarioParaTrabajadorExistente,
-  eliminarTrabajador,
-  obtenerTrabajadores,
-  obtenerTrabajadorPorId,
-} from "@/lib/actions/trabajador-actions";
-import UserManagementModal from "@/components/features/user/presentation/components/UserManagementModal";
-import { useUserRole } from "@/hooks/useUserRole";
-import { Can } from "@/components/layout/wrappers/Can";
-import { Permission } from "@/lib/permissions";
+import { Trabajador } from "@/types/trabajador";
+import { obtenerTrabajadores } from "@/lib/actions/trabajador-actions";
 
-const initialFormData: TrabajadorForm = {
-  ci: "",
-  nomina: "",
-  puesto: "",
-  fecha_ingreso: "",
-  superintendencia: "",
-  area: "",
-  jde: "",
-  no_bloque: "",
-  no_habitacion: "",
-  residencia: "",
-  celular: "",
-  email: "",
-  username: "",
-  crear_usuario_keycloak: false,
-  roles: ["user"],
-  activo: true,
-};
+const IAM_PORTAL_URL =
+  process.env.NEXT_PUBLIC_IAM_PORTAL_URL ?? "http://localhost:3005";
 
 export default function GestionTrabajadores() {
-  const { user } = useUserRole();
-  const isAdmin = user?.roles?.includes("admin");
   const [trabajadores, setTrabajadores] = useState<Trabajador[]>([]);
   const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-
-  // Estados para el modal principal
-  const [openModal, setOpenModal] = useState(false);
-  const [editingTrabajador, setEditingTrabajador] = useState<Trabajador | null>(
-    null,
-  );
-  const [formData, setFormData] = useState<TrabajadorForm>(initialFormData);
 
   // Estados para filtros
   const [ciFilter, setCiFilter] = useState("");
@@ -102,149 +57,14 @@ export default function GestionTrabajadores() {
   const [activoFilter, setActivoFilter] = useState("");
   const [tieneUsuarioFilter, setTieneUsuarioFilter] = useState("");
 
-  // Estados para modal de crear usuario
-  const [openCreateUserModal, setOpenCreateUserModal] = useState(false);
-  const [selectedWorkerForUser, setSelectedWorkerForUser] =
-    useState<Trabajador | null>(null);
-  const [createUserForm, setCreateUserForm] = useState({
-    email: "",
-    username: "",
-    password: "",
-    temporary_password: true,
-    roles: ["user"],
-  });
-
-  // Estados para modal de gestión avanzada
-  const [openUserManagementModal, setOpenUserManagementModal] = useState(false);
-  const [selectedWorkerForManagement, setSelectedWorkerForManagement] =
-    useState<Trabajador | null>(null);
-
-  // Estado para notificaciones
-  const [notification, setNotification] = useState<{
-    open: boolean;
-    message: string;
-    severity: "success" | "error" | "warning" | "info";
-  }>({
-    open: false,
-    message: "",
-    severity: "info",
-  });
+  // Detalle de solo lectura
+  const [detalleTrabajador, setDetalleTrabajador] = useState<Trabajador | null>(
+    null,
+  );
 
   useEffect(() => {
     cargarTrabajadores();
   }, []);
-
-  // Validación de contraseña
-  const validatePassword = (
-    password: string,
-  ): { isValid: boolean; message: string } => {
-    if (password.length < 8) {
-      return { isValid: false, message: "Mínimo 8 caracteres" };
-    }
-
-    const hasUpper = /[A-Z]/.test(password);
-    const hasLower = /[a-z]/.test(password);
-    const hasNumber = /\d/.test(password);
-    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-
-    const requirements = [];
-    if (!hasUpper) requirements.push("mayúscula");
-    if (!hasLower) requirements.push("minúscula");
-    if (!hasNumber) requirements.push("número");
-    if (!hasSpecial) requirements.push("símbolo");
-
-    if (requirements.length > 0) {
-      return {
-        isValid: false,
-        message: `Falta: ${requirements.join(", ")}`,
-      };
-    }
-
-    return { isValid: true, message: "Contraseña válida" };
-  };
-
-  const validateForm = (): boolean => {
-    const requiredFields = [
-      "ci",
-      "nomina",
-      "puesto",
-      "fecha_ingreso",
-      "superintendencia",
-      "area",
-    ];
-
-    for (const field of requiredFields) {
-      if (!formData[field as keyof TrabajadorForm]?.toString().trim()) {
-        mostrarNotificacion(`El campo ${field} es requerido`, "error");
-        return false;
-      }
-    }
-
-    const ciPattern = /^\d{6,8}$/;
-    if (!ciPattern.test(formData.ci)) {
-      mostrarNotificacion("El CI debe tener entre 6 y 8 dígitos", "error");
-      return false;
-    }
-
-    if (formData.crear_usuario_keycloak && !formData.email?.trim()) {
-      mostrarNotificacion(
-        "El email es requerido cuando se crea un usuario del sistema",
-        "error",
-      );
-      return false;
-    }
-
-    if (formData.email && formData.email.trim()) {
-      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailPattern.test(formData.email)) {
-        mostrarNotificacion("El email no tiene un formato válido", "error");
-        return false;
-      }
-    }
-
-    if (formData.username && formData.username.trim()) {
-      const usernamePattern = /^[a-zA-Z0-9._-]+$/;
-      if (!usernamePattern.test(formData.username)) {
-        mostrarNotificacion(
-          "El username solo puede contener letras, números, puntos, guiones y guiones bajos",
-          "error",
-        );
-        return false;
-      }
-    }
-
-    const today = new Date();
-    const fechaIngreso = new Date(formData.fecha_ingreso);
-    if (fechaIngreso > today) {
-      mostrarNotificacion("La fecha de ingreso no puede ser futura", "error");
-      return false;
-    }
-
-    return true;
-  };
-
-  const validateFormBasic = (): boolean => {
-    const requiredFields = [
-      "ci",
-      "nomina",
-      "puesto",
-      "fecha_ingreso",
-      "superintendencia",
-      "area",
-    ];
-
-    for (const field of requiredFields) {
-      if (!formData[field as keyof TrabajadorForm]?.toString().trim()) {
-        return false;
-      }
-    }
-
-    if (formData.crear_usuario_keycloak && !formData.email?.trim()) {
-      return false;
-    }
-
-    return true;
-  };
 
   const cargarTrabajadores = async () => {
     try {
@@ -255,7 +75,6 @@ export default function GestionTrabajadores() {
     } catch (error) {
       console.error("Error al cargar trabajadores:", error);
       setError("No se pudieron cargar los trabajadores");
-      mostrarNotificacion("Error al cargar los trabajadores", "error");
     } finally {
       setLoading(false);
     }
@@ -324,266 +143,39 @@ export default function GestionTrabajadores() {
     setPage(0);
   };
 
-  const abrirModal = async (trabajador?: Trabajador) => {
-    if (trabajador) {
-      try {
-        const trabajadorActualizado = await obtenerTrabajadorPorId(
-          trabajador._id,
-        );
-        setEditingTrabajador(trabajadorActualizado);
-        setFormData({
-          ci: trabajadorActualizado.ci,
-          nomina: trabajadorActualizado.nomina,
-          puesto: trabajadorActualizado.puesto,
-          fecha_ingreso: trabajadorActualizado.fecha_ingreso.split("T")[0],
-          superintendencia: trabajadorActualizado.superintendencia,
-          area: trabajadorActualizado.area || "",
-          jde: trabajadorActualizado.jde || "",
-          no_bloque: trabajadorActualizado.no_bloque || "",
-          no_habitacion: trabajadorActualizado.no_habitacion || "",
-          residencia: trabajadorActualizado.residencia || "",
-          celular: trabajadorActualizado.celular || "",
-          email: "",
-          username: trabajadorActualizado.username || "",
-          crear_usuario_keycloak: false,
-          roles: ["user"],
-          activo: trabajadorActualizado.activo,
-        });
-      } catch (error) {
-        console.error("Error al cargar trabajador:", error);
-        setEditingTrabajador(trabajador);
-        setFormData({
-          ci: trabajador.ci,
-          nomina: trabajador.nomina,
-          puesto: trabajador.puesto,
-          fecha_ingreso: trabajador.fecha_ingreso.split("T")[0],
-          superintendencia: trabajador.superintendencia,
-          area: trabajador.area || "",
-          jde: trabajador.jde || "",
-          no_bloque: trabajador.no_bloque || "",
-          no_habitacion: trabajador.no_habitacion || "",
-          residencia: trabajador.residencia || "",
-          celular: trabajador.celular || "",
-          email: "",
-          username: trabajador.username || "",
-          crear_usuario_keycloak: false,
-          roles: ["user"],
-          activo: trabajador.activo,
-        });
-      }
-    } else {
-      setEditingTrabajador(null);
-      setFormData(initialFormData);
-    }
-    setOpenModal(true);
-  };
-
-  const cerrarModal = () => {
-    setOpenModal(false);
-    setEditingTrabajador(null);
-    setFormData(initialFormData);
-  };
-
-  const guardarTrabajador = async () => {
-    if (!validateForm()) {
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-
-      if (editingTrabajador) {
-        const updateData = {
-          nomina: formData.nomina,
-          puesto: formData.puesto,
-          fecha_ingreso: formData.fecha_ingreso,
-          superintendencia: formData.superintendencia,
-          area: formData.area,
-          jde: formData.jde || undefined,
-          no_bloque: formData.no_bloque || undefined,
-          no_habitacion: formData.no_habitacion || undefined,
-          residencia: formData.residencia || undefined,
-          celular: formData.celular || undefined,
-          activo: formData.activo,
-        };
-        await actualizarTrabajador(editingTrabajador._id, updateData);
-        mostrarNotificacion("Trabajador actualizado correctamente", "success");
-      } else {
-        if (formData.crear_usuario_keycloak && isAdmin) {
-          await crearTrabajadorConUsuario({
-            ci: formData.ci,
-            nomina: formData.nomina,
-            puesto: formData.puesto,
-            fecha_ingreso: formData.fecha_ingreso,
-            superintendencia: formData.superintendencia,
-            area: formData.area,
-            email: formData.email!,
-            username: formData.username || "",
-            crear_usuario_keycloak: true,
-            roles: formData.roles || ["user"],
-            jde: formData.jde || undefined,
-            no_bloque: formData.no_bloque || undefined,
-            no_habitacion: formData.no_habitacion || undefined,
-            residencia: formData.residencia || undefined,
-            celular: formData.celular || undefined,
-          });
-          mostrarNotificacion(
-            "Trabajador y usuario creados correctamente",
-            "success",
-          );
-        } else {
-          await crearTrabajador({
-            ci: formData.ci,
-            nomina: formData.nomina,
-            puesto: formData.puesto,
-            fecha_ingreso: formData.fecha_ingreso,
-            superintendencia: formData.superintendencia,
-            area: formData.area,
-            jde: formData.jde || undefined,
-            no_bloque: formData.no_bloque || undefined,
-            no_habitacion: formData.no_habitacion || undefined,
-            residencia: formData.residencia || undefined,
-            celular: formData.celular || undefined,
-          });
-          mostrarNotificacion("Trabajador creado correctamente", "success");
-        }
-      }
-
-      cerrarModal();
-      await cargarTrabajadores();
-    } catch (error) {
-      console.error("Error al guardar trabajador:", error);
-      mostrarNotificacion(
-        error instanceof Error
-          ? error.message
-          : "Error al guardar el trabajador",
-        "error",
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleEliminarTrabajador = async (id: string) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar este trabajador?"))
-      return;
-
-    try {
-      setLoading(true);
-      await eliminarTrabajador(id);
-      mostrarNotificacion("Trabajador eliminado correctamente", "success");
-      await cargarTrabajadores();
-    } catch (error) {
-      console.error("Error al eliminar trabajador:", error);
-      mostrarNotificacion(
-        error instanceof Error
-          ? error.message
-          : "Error al eliminar el trabajador",
-        "error",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const abrirModalCrearUsuario = (trabajador: Trabajador) => {
-    setSelectedWorkerForUser(trabajador);
-    setCreateUserForm({
-      email: "",
-      username: "",
-      password: "",
-      temporary_password: true,
-      roles: ["user"],
-    });
-    setOpenCreateUserModal(true);
-  };
-
-  const cerrarModalCrearUsuario = () => {
-    setOpenCreateUserModal(false);
-    setSelectedWorkerForUser(null);
-    setCreateUserForm({
-      email: "",
-      username: "",
-      password: "",
-      temporary_password: true,
-      roles: ["user"],
-    });
-  };
-
-  const crearUsuarioParaTrabajador = async () => {
-    if (!selectedWorkerForUser) return;
-
-    const passwordValidation = validatePassword(createUserForm.password);
-    if (!passwordValidation.isValid) {
-      mostrarNotificacion(passwordValidation.message, "error");
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-
-      const requestData = {
-        trabajadorId: selectedWorkerForUser._id,
-        username: createUserForm.username,
-        password: createUserForm.password,
-        temporary_password: createUserForm.temporary_password,
-        roles: createUserForm.roles,
-        ...(createUserForm.email?.trim() && {
-          email: createUserForm.email.trim(),
-        }),
-      };
-
-      await crearUsuarioParaTrabajadorExistente(requestData);
-      mostrarNotificacion(
-        "Usuario creado correctamente para el trabajador",
-        "success",
-      );
-      cerrarModalCrearUsuario();
-      await cargarTrabajadores();
-    } catch (error) {
-      console.error("Error al crear usuario:", error);
-      mostrarNotificacion(
-        error instanceof Error ? error.message : "Error al crear el usuario",
-        "error",
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const abrirModalGestionUsuario = (trabajador: Trabajador) => {
-    setSelectedWorkerForManagement(trabajador);
-    setOpenUserManagementModal(true);
-  };
-
-  const cerrarModalGestionUsuario = () => {
-    setOpenUserManagementModal(false);
-    setSelectedWorkerForManagement(null);
-  };
-
-  const mostrarNotificacion = (
-    message: string,
-    severity: "success" | "error" | "warning" | "info",
-  ) => {
-    setNotification({ open: true, message, severity });
-  };
-
-  const cerrarNotificacion = () => {
-    setNotification((prev) => ({ ...prev, open: false }));
-  };
-
   const trabajadoresMostrados = filtrarTrabajadores();
 
   return (
     <Container maxWidth="xl">
-      <Typography variant="h4" gutterBottom sx={{ mt: 3, mb: 3 }}>
-        Gestión de Trabajadores
+      <Typography variant="h4" gutterBottom sx={{ mt: 3 }}>
+        Trabajadores
       </Typography>
 
-      {/* PANEL DE FILTROS Y CONTROLES */}
+      <Alert
+        severity="info"
+        sx={{ mb: 3 }}
+        action={
+          <Button
+            color="inherit"
+            size="small"
+            endIcon={<OpenInNewIcon fontSize="small" />}
+            href={IAM_PORTAL_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Gestionar en Portal IAM
+          </Button>
+        }
+      >
+        Estos datos se sincronizan desde IAM Core — esta pantalla es de solo
+        lectura. Para crear, editar o dar de baja trabajadores y usuarios, usá
+        el Portal IAM.
+      </Alert>
+
+      {/* PANEL DE FILTROS */}
       <Paper elevation={3} sx={{ mb: 4, p: 3, borderRadius: "8px" }}>
         <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
-          Filtros y Controles
+          Filtros
         </Typography>
 
         <Grid container spacing={3} sx={{ mb: 3 }}>
@@ -662,28 +254,14 @@ export default function GestionTrabajadores() {
           </Grid>
         </Grid>
 
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Box display="flex" gap={1}>
-            <Button
-              variant="outlined"
-              startIcon={<ClearIcon />}
-              onClick={limpiarFiltros}
-            >
-              Limpiar Filtros
-            </Button>
-          </Box>
-
-          <Can perform={Permission.CREATE_WORKER}>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => abrirModal()}
-              color="primary"
-              disabled={loading}
-            >
-              Nuevo Trabajador
-            </Button>
-          </Can>
+        <Box display="flex" justifyContent="flex-end">
+          <Button
+            variant="outlined"
+            startIcon={<ClearIcon />}
+            onClick={limpiarFiltros}
+          >
+            Limpiar Filtros
+          </Button>
         </Box>
       </Paper>
 
@@ -804,70 +382,14 @@ export default function GestionTrabajadores() {
                           </TableCell>
                           <TableCell align="center">
                             <Tooltip title="Ver detalle">
-                              <IconButton color="info" size="small">
+                              <IconButton
+                                onClick={() => setDetalleTrabajador(trabajador)}
+                                color="info"
+                                size="small"
+                              >
                                 <VisibilityIcon />
                               </IconButton>
                             </Tooltip>
-
-                            <Can perform={Permission.UPDATE_WORKER}>
-                              <Tooltip title="Editar">
-                                <IconButton
-                                  onClick={() => abrirModal(trabajador)}
-                                  color="primary"
-                                  size="small"
-                                  disabled={loading}
-                                >
-                                  <EditIcon />
-                                </IconButton>
-                              </Tooltip>
-                            </Can>
-
-                            <Can perform={Permission.MANAGE_WORKER_USER}>
-                              {!trabajador.tiene_acceso_sistema && (
-                                <Tooltip title="Crear Usuario del Sistema">
-                                  <IconButton
-                                    onClick={() =>
-                                      abrirModalCrearUsuario(trabajador)
-                                    }
-                                    color="success"
-                                    size="small"
-                                    disabled={loading}
-                                  >
-                                    <PersonAddIcon />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-
-                              {trabajador.tiene_acceso_sistema && (
-                                <Tooltip title="Gestión Avanzada de Usuario">
-                                  <IconButton
-                                    onClick={() =>
-                                      abrirModalGestionUsuario(trabajador)
-                                    }
-                                    color="secondary"
-                                    size="small"
-                                    disabled={loading}
-                                  >
-                                    <SettingsIcon />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                            </Can>
-
-                            <Can perform={Permission.DELETE_WORKER}>
-                              <Tooltip title="Eliminar">
-                                <IconButton
-                                  onClick={() =>
-                                    handleEliminarTrabajador(trabajador._id)
-                                  }
-                                  color="error"
-                                  size="small"
-                                  disabled={loading}
-                                >
-                                  <DeleteIcon />
-                                </IconButton>
-                              </Tooltip>
-                            </Can>
                           </TableCell>
                         </TableRow>
                       ))
@@ -893,469 +415,72 @@ export default function GestionTrabajadores() {
         )}
       </Paper>
 
-      {/* MODAL PARA CREAR/EDITAR TRABAJADOR */}
-      <Dialog open={openModal} onClose={cerrarModal} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {editingTrabajador ? "Editar Trabajador" : "Nuevo Trabajador"}
-        </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={3} sx={{ mt: 1 }}>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="CI *"
-                value={formData.ci}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, "");
-                  setFormData({ ...formData, ci: value });
-                }}
-                required
-                disabled={!!editingTrabajador}
-                error={!formData.ci}
-                helperText={
-                  !formData.ci
-                    ? "Campo requerido"
-                    : "Solo números (6-8 dígitos)"
-                }
-                inputProps={{ maxLength: 8 }}
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Nómina *"
-                value={formData.nomina}
-                onChange={(e) =>
-                  setFormData({ ...formData, nomina: e.target.value })
-                }
-                required
-                error={!formData.nomina}
-                helperText={!formData.nomina ? "Campo requerido" : ""}
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Puesto *"
-                value={formData.puesto}
-                onChange={(e) =>
-                  setFormData({ ...formData, puesto: e.target.value })
-                }
-                required
-                error={!formData.puesto}
-                helperText={!formData.puesto ? "Campo requerido" : ""}
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Fecha de Ingreso *"
-                type="date"
-                value={formData.fecha_ingreso}
-                onChange={(e) =>
-                  setFormData({ ...formData, fecha_ingreso: e.target.value })
-                }
-                required
-                error={!formData.fecha_ingreso}
-                helperText={!formData.fecha_ingreso ? "Campo requerido" : ""}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Superintendencia *"
-                value={formData.superintendencia}
-                onChange={(e) =>
-                  setFormData({ ...formData, superintendencia: e.target.value })
-                }
-                required
-                error={!formData.superintendencia}
-                helperText={!formData.superintendencia ? "Campo requerido" : ""}
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Área *"
-                value={formData.area}
-                onChange={(e) =>
-                  setFormData({ ...formData, area: e.target.value })
-                }
-                required
-                error={!formData.area}
-                helperText={!formData.area ? "Campo requerido" : ""}
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12 }}>
-              <Typography
-                variant="subtitle2"
-                color="text.secondary"
-                sx={{ mb: 1 }}
-              >
-                Información Adicional (opcional)
-              </Typography>
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <TextField
-                fullWidth
-                label="Código JDE"
-                value={formData.jde || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, jde: e.target.value })
-                }
-                helperText="Código JDE del trabajador"
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <TextField
-                fullWidth
-                label="N° Bloque"
-                value={formData.no_bloque || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, no_bloque: e.target.value })
-                }
-                helperText="Número de bloque (ej. B-3)"
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <TextField
-                fullWidth
-                label="N° Habitación"
-                value={formData.no_habitacion || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, no_habitacion: e.target.value })
-                }
-                helperText="Número de habitación"
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <TextField
-                fullWidth
-                label="Residencia"
-                value={formData.residencia || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, residencia: e.target.value })
-                }
-                helperText="Campamento o residencia"
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <TextField
-                fullWidth
-                label="Celular"
-                value={formData.celular || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, celular: e.target.value })
-                }
-                helperText="Número de celular"
-              />
-            </Grid>
-
-            {!editingTrabajador && isAdmin && (
-              <>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={formData.crear_usuario_keycloak}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            crear_usuario_keycloak: e.target.checked,
-                          })
-                        }
-                        color="primary"
-                      />
-                    }
-                    label="Crear usuario del sistema (acceso a la aplicación)"
-                  />
-                </Grid>
-
-                {formData.crear_usuario_keycloak && (
-                  <>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Email *"
-                        type="email"
-                        value={formData.email || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, email: e.target.value })
-                        }
-                        required
-                        error={
-                          formData.crear_usuario_keycloak && !formData.email
-                        }
-                        helperText={
-                          formData.crear_usuario_keycloak && !formData.email
-                            ? "Campo requerido"
-                            : ""
-                        }
-                      />
-                    </Grid>
-
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Username (opcional)"
-                        value={formData.username || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, username: e.target.value })
-                        }
-                        helperText="Si no se especifica, se generará automáticamente"
-                      />
-                    </Grid>
-
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <FormControl fullWidth>
-                        <InputLabel>Roles del Usuario</InputLabel>
-                        <Select
-                          multiple
-                          value={formData.roles || ["user"]}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              roles:
-                                typeof e.target.value === "string"
-                                  ? e.target.value.split(",")
-                                  : e.target.value,
-                            })
-                          }
-                          label="Roles del Usuario"
-                        >
-                          <MenuItem value="user">Usuario</MenuItem>
-                          <MenuItem value="tecnico">Inspector</MenuItem>
-                          <MenuItem value="supervisor">Supervisor</MenuItem>
-                          <MenuItem value="superintendente">
-                            Superintendente
-                          </MenuItem>
-                          <MenuItem value="admin">Administrador</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                  </>
-                )}
-              </>
-            )}
-          </Grid>
-        </DialogContent>
-
-        <DialogActions sx={{ p: 3, borderTop: "1px solid #e0e0e0" }}>
-          <Button
-            onClick={cerrarModal}
-            color="inherit"
-            disabled={submitting}
-            variant="outlined"
-          >
-            Cancelar
-          </Button>
-
-          <Button
-            onClick={guardarTrabajador}
-            variant="contained"
-            disabled={submitting || !validateFormBasic()}
-            startIcon={
-              submitting ? <CircularProgress size={16} color="inherit" /> : null
-            }
-            color="primary"
-          >
-            {submitting
-              ? "Guardando..."
-              : editingTrabajador
-                ? "Actualizar Trabajador"
-                : "Crear Trabajador"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* MODAL PARA CREAR USUARIO PARA TRABAJADOR EXISTENTE */}
+      {/* DETALLE DE SOLO LECTURA */}
       <Dialog
-        open={openCreateUserModal}
-        onClose={cerrarModalCrearUsuario}
+        open={!!detalleTrabajador}
+        onClose={() => setDetalleTrabajador(null)}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>
-          Crear Usuario para {selectedWorkerForUser?.nomina}
-        </DialogTitle>
+        <DialogTitle>{detalleTrabajador?.nomina}</DialogTitle>
         <DialogContent>
-          <Grid container spacing={3} sx={{ mt: 1 }}>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Username *"
-                value={createUserForm.username}
-                onChange={(e) =>
-                  setCreateUserForm({
-                    ...createUserForm,
-                    username: e.target.value,
-                  })
-                }
-                required
-                error={!createUserForm.username}
-                helperText={
-                  !createUserForm.username
-                    ? "Campo requerido"
-                    : "Nombre de usuario para acceder al sistema"
-                }
-              />
+          {detalleTrabajador && (
+            <Grid container spacing={2} sx={{ mt: 0.5 }}>
+              {[
+                { label: "CI", value: detalleTrabajador.ci },
+                { label: "Puesto", value: detalleTrabajador.puesto },
+                {
+                  label: "Superintendencia",
+                  value: detalleTrabajador.superintendencia,
+                },
+                { label: "Área", value: detalleTrabajador.area },
+                { label: "Código JDE", value: detalleTrabajador.jde },
+                { label: "N° Bloque", value: detalleTrabajador.no_bloque },
+                {
+                  label: "N° Habitación",
+                  value: detalleTrabajador.no_habitacion,
+                },
+                { label: "Residencia", value: detalleTrabajador.residencia },
+                { label: "Celular", value: detalleTrabajador.celular },
+                {
+                  label: "Fecha de ingreso",
+                  value: new Date(
+                    detalleTrabajador.fecha_ingreso,
+                  ).toLocaleDateString(),
+                },
+                {
+                  label: "Estado",
+                  value: detalleTrabajador.activo ? "Activo" : "Inactivo",
+                },
+                {
+                  label: "Usuario del sistema",
+                  value: detalleTrabajador.userId?.username || "Sin usuario",
+                },
+                {
+                  label: "Email",
+                  value: detalleTrabajador.userId?.email || "N/A",
+                },
+                {
+                  label: "Roles (IAM)",
+                  value: detalleTrabajador.roles_iam?.length
+                    ? detalleTrabajador.roles_iam.join(", ")
+                    : "Ninguno",
+                },
+              ].map(({ label, value }) => (
+                <Grid key={label} size={{ xs: 6 }}>
+                  <Typography variant="body2" color="textSecondary">
+                    {label}
+                  </Typography>
+                  <Typography variant="body1">{value || "N/A"}</Typography>
+                </Grid>
+              ))}
             </Grid>
-
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Email (opcional)"
-                type="email"
-                value={createUserForm.email}
-                onChange={(e) =>
-                  setCreateUserForm({
-                    ...createUserForm,
-                    email: e.target.value,
-                  })
-                }
-                helperText="Email para notificaciones (opcional)"
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Contraseña *"
-                type="password"
-                value={createUserForm.password}
-                onChange={(e) =>
-                  setCreateUserForm({
-                    ...createUserForm,
-                    password: e.target.value,
-                  })
-                }
-                required
-                error={Boolean(
-                  createUserForm.password &&
-                  !validatePassword(createUserForm.password).isValid,
-                )}
-                helperText={
-                  createUserForm.password
-                    ? validatePassword(createUserForm.password).message
-                    : "Mínimo 8 caracteres con mayúscula, minúscula, número y símbolo"
-                }
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={createUserForm.temporary_password}
-                    onChange={(e) =>
-                      setCreateUserForm({
-                        ...createUserForm,
-                        temporary_password: e.target.checked,
-                      })
-                    }
-                  />
-                }
-                label="Contraseña temporal (el usuario debe cambiarla en el primer login)"
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <FormControl fullWidth>
-                <InputLabel>Roles del Usuario</InputLabel>
-                <Select
-                  multiple
-                  value={createUserForm.roles}
-                  onChange={(e) =>
-                    setCreateUserForm({
-                      ...createUserForm,
-                      roles:
-                        typeof e.target.value === "string"
-                          ? e.target.value.split(",")
-                          : e.target.value,
-                    })
-                  }
-                  label="Roles del Usuario"
-                >
-                  <MenuItem value="user">Usuario</MenuItem>
-                  <MenuItem value="tecnico">Inspector</MenuItem>
-                  <MenuItem value="supervisor">Supervisor</MenuItem>
-                  <MenuItem value="superintendente">Superintendente</MenuItem>
-                  <MenuItem value="admin">Administrador</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
+          )}
         </DialogContent>
-
-        <DialogActions sx={{ p: 3, borderTop: "1px solid #e0e0e0" }}>
-          <Button
-            onClick={cerrarModalCrearUsuario}
-            color="inherit"
-            disabled={submitting}
-            variant="outlined"
-          >
-            Cancelar
-          </Button>
-
-          <Button
-            onClick={crearUsuarioParaTrabajador}
-            variant="contained"
-            disabled={
-              submitting ||
-              !createUserForm.username ||
-              !createUserForm.password ||
-              !validatePassword(createUserForm.password).isValid
-            }
-            startIcon={
-              submitting ? <CircularProgress size={16} color="inherit" /> : null
-            }
-            color="primary"
-          >
-            {submitting ? "Creando..." : "Crear Usuario"}
-          </Button>
+        <DialogActions>
+          <Button onClick={() => setDetalleTrabajador(null)}>Cerrar</Button>
         </DialogActions>
       </Dialog>
-
-      {/* MODAL DE GESTIÓN AVANZADA DE USUARIO */}
-      <UserManagementModal
-        open={openUserManagementModal}
-        onClose={cerrarModalGestionUsuario}
-        trabajador={selectedWorkerForManagement}
-        onSuccess={(message) => {
-          mostrarNotificacion(message, "success");
-          cargarTrabajadores();
-        }}
-        onError={(message) => mostrarNotificacion(message, "error")}
-      />
-
-      {/* SNACKBAR FOR NOTIFICATIONS */}
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={6000}
-        onClose={cerrarNotificacion}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
-      >
-        <Alert
-          onClose={cerrarNotificacion}
-          severity={notification.severity}
-          variant="filled"
-          sx={{ width: "100%" }}
-        >
-          {notification.message}
-        </Alert>
-      </Snackbar>
     </Container>
   );
 }

@@ -11,7 +11,7 @@ import {
   TextField,
 } from '@mui/material';
 import { FilterAlt, Search as SearchIcon } from '@mui/icons-material';
-import { obtenerAreas } from '@/lib/actions/area-actions';
+import { obtenerAreasAdapter } from '../../../infrastructure/adapters/catalogDataAdapter';
 
 interface AreaSelectorPanelProps {
   userArea?: string;
@@ -29,7 +29,7 @@ export function AreaSelectorPanel({ userArea, onConfirm }: AreaSelectorPanelProp
   useEffect(() => {
     async function fetchAreas() {
       try {
-        const names = await obtenerAreas();
+        const names = await obtenerAreasAdapter();
         setAvailableAreas(names);
       } catch {
         setFetchError(true);

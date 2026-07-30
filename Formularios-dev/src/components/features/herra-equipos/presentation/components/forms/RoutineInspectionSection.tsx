@@ -21,7 +21,7 @@ import {
 } from "@mui/material";
 import { Add, Delete } from "@mui/icons-material";
 import dayjs from "dayjs";
-import { UseFormRegister, FieldErrors, useForm } from "react-hook-form";
+import { UseFormRegister, FieldErrors, useForm, useWatch } from "react-hook-form";
 import { FormDataHerraEquipos, RoutineInspectionConfig, RoutineInspectionEntry } from "../../../types/IProps";
 import AutocompleteCustom from "@/components/ui/autocomplete/AutocompleteCustom";
 import { SignatureField } from "@/components/ui/signature/SignatureField";
@@ -57,13 +57,13 @@ export function RoutineInspectionSection({
     signature: "",
   });
 
-  const { control: tempControl, setValue: tempSetValue, watch, reset: resetTempForm } = useForm<TempEntryForm>({
+  const { control: tempControl, setValue: tempSetValue, reset: resetTempForm } = useForm<TempEntryForm>({
     defaultValues: {
       tempSignature: "",
     },
   });
 
-  const tempSignature = watch("tempSignature");
+  const tempSignature = useWatch({ control: tempControl, name: "tempSignature" });
 
   const maxEntries = config.maxEntries || 10;
   const canAddMore = value.length < maxEntries;

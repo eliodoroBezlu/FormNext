@@ -3,7 +3,12 @@ import { List, Divider, ListSubheader, Collapse, Box } from "@mui/material";
 import { NavigationItem, type IconName } from "./NavigationItem";
 import { usePathname, useRouter } from "next/navigation";
 import { ExpandLess, ExpandMore } from "@mui/icons-material";
-import { Role, UserRole } from "@/lib/routePermissions";
+import {
+  Role,
+  UserRole,
+  esRolRestringido,
+  tieneRolExacto,
+} from "@/lib/routePermissions";
 import { useUserRole } from "@/hooks/useUserRole";
 
 type NavigationItemBase = {
@@ -53,11 +58,29 @@ export const NAVIGATION: NavigationItem[] = [
     segment: "form-herra-equipos",
     title: "Formulario de Inspección de herramientas y equipos",
     icon: "description",
+    requiredRoles: [
+      Role.ADMIN,
+      Role.SUPER_ADMIN,
+      Role.SUPERINTENDENTE,
+      Role.SUPERVISOR,
+      Role.TECNICO,
+      Role.INSPECTOR,
+      Role.INSPECTOR_ASIGNADO,
+    ],
   },
   {
     segment: "mis-inspecciones",
     title: "Mis Inspecciones",
     icon: "description",
+    requiredRoles: [
+      Role.ADMIN,
+      Role.SUPER_ADMIN,
+      Role.SUPERINTENDENTE,
+      Role.SUPERVISOR,
+      Role.TECNICO,
+      Role.INSPECTOR,
+      Role.INSPECTOR_ASIGNADO,
+    ],
   },
   {
     segment: "plan-accion",
@@ -91,12 +114,6 @@ export const NAVIGATION: NavigationItem[] = [
         requiredRoles: [Role.ADMIN, Role.SUPERINTENDENTE],
       },
       {
-        segment: "extinguishers",
-        title: "Extintores",
-        icon: "description",
-        requiredRoles: [Role.ADMIN, Role.SUPERINTENDENTE],
-      },
-      {
         segment: "inspectionschedule",
         title: "IRO's ISOP",
         icon: "description",
@@ -114,7 +131,12 @@ export const NAVIGATION: NavigationItem[] = [
     segment: "reports",
     title: "Reports",
     icon: "barChart",
-    requiredRoles: [Role.ADMIN, Role.SUPERINTENDENTE, Role.SUPERVISOR],
+    requiredRoles: [
+      Role.ADMIN,
+      Role.SUPERINTENDENTE,
+      Role.SUPERVISOR,
+      Role.INSPECTOR_ASIGNADO,
+    ],
     children: [
       {
         segment: "sistemas-de-emergencia",
@@ -132,7 +154,12 @@ export const NAVIGATION: NavigationItem[] = [
         segment: "report-herra-equipos",
         title: "Herramientas Equipos",
         icon: "description",
-        requiredRoles: [Role.ADMIN, Role.SUPERINTENDENTE, Role.SUPERVISOR],
+        requiredRoles: [
+          Role.ADMIN,
+          Role.SUPERINTENDENTE,
+          Role.SUPERVISOR,
+          Role.INSPECTOR_ASIGNADO,
+        ],
       },
     ],
   },
@@ -142,7 +169,8 @@ export function Navigation({ onNavigate }: { onNavigate: () => void }) {
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState<{ [key: string]: boolean }>({});
-  const { hasAnyRole, userRole } = useUserRole();
+  const { hasAnyRole, userRole, user } = useUserRole();
+  const roles = user?.roles;
 
   const handleClick = (segment: string) => {
     setOpen((prevOpen) => ({ ...prevOpen, [segment]: !prevOpen[segment] }));
@@ -155,10 +183,24 @@ export function Navigation({ onNavigate }: { onNavigate: () => void }) {
   const canViewItem = (item: NavigationItem): boolean => {
     if (item.kind === "header" || item.kind === "divider") return true;
 
-    if (!item.requiredRoles || item.requiredRoles.length === 0) return true;
-
     if (item.excludeRoles && userRole && item.excludeRoles.includes(userRole)) {
       return false;
+    }
+
+    // Un ítem sin `requiredRoles` es visible para todos… salvo para los roles
+    // restringidos, que solo ven lo que se les asigna explícitamente. Sin esta
+    // regla, cualquier ítem al que se le olvide poner `requiredRoles` queda
+    // expuesto — que es exactamente lo que pasaba con "Formularios de
+    // Inspección de Seguridad".
+    if (!item.requiredRoles || item.requiredRoles.length === 0) {
+      return !esRolRestringido(roles);
+    }
+
+    // Los roles restringidos se evalúan contra sus roles reales, nunca contra
+    // `ROLE_HIERARCHY`: una jerarquía que absorbe hacia arriba no sabe
+    // expresar «ve menos».
+    if (esRolRestringido(roles)) {
+      return tieneRolExacto(roles, item.requiredRoles);
     }
 
     return hasAnyRole(item.requiredRoles);
@@ -169,57 +211,55 @@ export function Navigation({ onNavigate }: { onNavigate: () => void }) {
     parentSegment = "",
     level = 0,
   ) => {
-    return items
-      .filter(canViewItem)
-      .map((item, index) => {
-        if (item.kind === "header") {
-          return <ListSubheader key={index}>{item.title}</ListSubheader>;
-        }
-        if (item.kind === "divider") {
-          return <Divider key={index} />;
-        }
+    return items.filter(canViewItem).map((item, index) => {
+      if (item.kind === "header") {
+        return <ListSubheader key={index}>{item.title}</ListSubheader>;
+      }
+      if (item.kind === "divider") {
+        return <Divider key={index} />;
+      }
 
-        const fullSegment = parentSegment
-          ? `${parentSegment}/${item.segment}`
-          : item.segment;
-        const fullPath = `/dashboard/${fullSegment}`;
+      const fullSegment = parentSegment
+        ? `${parentSegment}/${item.segment}`
+        : item.segment;
+      const fullPath = `/dashboard/${fullSegment}`;
 
-        const visibleChildren = item.children?.filter(canViewItem) || [];
-        const hasChildren = visibleChildren.length > 0;
+      const visibleChildren = item.children?.filter(canViewItem) || [];
+      const hasChildren = visibleChildren.length > 0;
 
-        return (
-          <React.Fragment key={index}>
-            <NavigationItem
-              title={item.title}
-              icon={item.icon}
-              selected={pathname === fullPath}
-              onClick={() => {
-                if (hasChildren) {
-                  handleClick(fullSegment);
-                } else {
-                  router.push(fullPath);
-                  resetOpenMenus();
-                  onNavigate();
-                }
-              }}
-            >
-              {hasChildren &&
-                (open[fullSegment] ? <ExpandLess /> : <ExpandMore />)}
-            </NavigationItem>
-            {hasChildren && (
-              <Collapse in={open[fullSegment]} timeout="auto" unmountOnExit>
-                <List
-                  component="div"
-                  disablePadding
-                  sx={{ paddingLeft: level > 0 ? 2 : 3 }}
-                >
-                  {renderNavItems(visibleChildren, fullSegment, level + 1)}
-                </List>
-              </Collapse>
-            )}
-          </React.Fragment>
-        );
-      });
+      return (
+        <React.Fragment key={index}>
+          <NavigationItem
+            title={item.title}
+            icon={item.icon}
+            selected={pathname === fullPath}
+            onClick={() => {
+              if (hasChildren) {
+                handleClick(fullSegment);
+              } else {
+                router.push(fullPath);
+                resetOpenMenus();
+                onNavigate();
+              }
+            }}
+          >
+            {hasChildren &&
+              (open[fullSegment] ? <ExpandLess /> : <ExpandMore />)}
+          </NavigationItem>
+          {hasChildren && (
+            <Collapse in={open[fullSegment]} timeout="auto" unmountOnExit>
+              <List
+                component="div"
+                disablePadding
+                sx={{ paddingLeft: level > 0 ? 2 : 3 }}
+              >
+                {renderNavItems(visibleChildren, fullSegment, level + 1)}
+              </List>
+            </Collapse>
+          )}
+        </React.Fragment>
+      );
+    });
   };
 
   return (

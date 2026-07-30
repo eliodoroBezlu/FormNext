@@ -26,7 +26,15 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import WarningIcon from "@mui/icons-material/Warning";
 import CancelIcon from "@mui/icons-material/Cancel";
-import { FormTemplateHerraEquipos, FormDataHerraEquipos, QuestionResponse, RoutineInspectionEntry, Section, Question } from "../types/IProps";
+import {
+  FormTemplateHerraEquipos,
+  FormDataHerraEquipos,
+  QuestionResponse,
+  RoutineInspectionEntry,
+  Section,
+  Question,
+  sanitizeFieldKey,
+} from "../types/IProps";
 import dayjs from "dayjs";
 
 interface LocalDamage {
@@ -65,6 +73,7 @@ interface Step5ReviewSectionProps {
   onApprove?: (comments?: string | null) => void;
   onReject?: (reason: string | null) => void;
   isSubmitDisabled?: boolean;
+  isViewMode?: boolean;
 }
 
 export function Step5ReviewSection({
@@ -84,6 +93,7 @@ export function Step5ReviewSection({
   onApprove,
   onReject,
   isSubmitDisabled = false,
+  isViewMode = false,
 }: Step5ReviewSectionProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
@@ -105,10 +115,26 @@ export function Step5ReviewSection({
   };
 
   // 1. FILTRAR Y ORDENAR CAMPOS DE VERIFICACIÓN (Paso 1 y Paso 2)
-  const step1Labels = ["TAG", "Equipo", "Herramienta", "Instrumento", "Código de Instrumento", "Identificación", "Código del Equipo", "Área", "Planta", "Ubicación", "Lugar"];
+  const step1Labels = [
+    "TAG",
+    "Equipo",
+    "Herramienta",
+    "Instrumento",
+    "Código de Instrumento",
+    "Identificación",
+    "Código del Equipo",
+    "Área",
+    "Planta",
+    "Ubicación",
+    "Lugar",
+  ];
   const verificationData = formData.verification || {};
-  const fieldsStep1 = template.verificationFields.filter((f) => step1Labels.includes(f.label));
-  const fieldsStep2 = template.verificationFields.filter((f) => !step1Labels.includes(f.label));
+  const fieldsStep1 = template.verificationFields.filter((f) =>
+    step1Labels.includes(f.label),
+  );
+  const fieldsStep2 = template.verificationFields.filter(
+    (f) => !step1Labels.includes(f.label),
+  );
 
   // Interface for flattened review rows (supporting subsections recursively)
   interface FlatReviewRow {
@@ -125,7 +151,7 @@ export function Step5ReviewSection({
     section: Section,
     sectionPath: string,
     level: number,
-    responsesObj: Record<string, unknown>
+    responsesObj: Record<string, unknown>,
   ) => {
     // Add section header row
     flatReviewRows.push({
@@ -139,7 +165,9 @@ export function Step5ReviewSection({
     if (section.questions && section.questions.length > 0) {
       section.questions.forEach((question: Question, qIdx: number) => {
         const questionKey = `q${qIdx}`;
-        const response: QuestionResponse = (responsesObj?.[questionKey] as QuestionResponse) || {
+        const response: QuestionResponse = (responsesObj?.[
+          questionKey
+        ] as QuestionResponse) || {
           value: "",
           description: "",
           observacion: "",
@@ -158,16 +186,27 @@ export function Step5ReviewSection({
     if (section.subsections && section.subsections.length > 0) {
       section.subsections.forEach((subsection: Section, subIdx: number) => {
         const subPath = `sub${subIdx}`;
-        const subResponses = (responsesObj?.[subPath] as Record<string, unknown>) || {};
-        collectRows(subsection, `${sectionPath}.${subPath}`, level + 1, subResponses);
+        const subResponses =
+          (responsesObj?.[subPath] as Record<string, unknown>) || {};
+        collectRows(
+          subsection,
+          `${sectionPath}.${subPath}`,
+          level + 1,
+          subResponses,
+        );
       });
     }
   };
 
-  if (formType === "standard" || formType === "vehicle" || formType === "scaffold") {
+  if (
+    formType === "standard" ||
+    formType === "vehicle" ||
+    formType === "scaffold"
+  ) {
     template.sections.forEach((section, sIdx) => {
       const sectionKey = `section_${sIdx}`;
-      const sectionResponses = (formData.responses?.[sectionKey] as Record<string, unknown>) || {};
+      const sectionResponses =
+        (formData.responses?.[sectionKey] as Record<string, unknown>) || {};
       collectRows(section, sectionKey, 0, sectionResponses);
     });
   }
@@ -188,7 +227,11 @@ export function Step5ReviewSection({
     const valStr = String(value).toLowerCase().trim();
 
     // Bueno / Sí / Conforme
-    if (["bueno", "si", "sí", "bien", "operativo", "conforme", "true"].includes(valStr)) {
+    if (
+      ["bueno", "si", "sí", "bien", "operativo", "conforme", "true"].includes(
+        valStr,
+      )
+    ) {
       return (
         <Chip
           icon={<CheckCircleIcon sx={{ "&&": { color: "#ffffff" } }} />}
@@ -220,7 +263,11 @@ export function Step5ReviewSection({
     }
 
     // Malo / No / No conforme
-    if (["malo", "no", "mal", "mantenimiento", "no conforme", "false"].includes(valStr)) {
+    if (
+      ["malo", "no", "mal", "mantenimiento", "no conforme", "false"].includes(
+        valStr,
+      )
+    ) {
       return (
         <Chip
           icon={<CancelIcon sx={{ "&&": { color: "#ffffff" } }} />}
@@ -236,7 +283,13 @@ export function Step5ReviewSection({
     }
 
     // Por defecto gris
-    return <Chip label={String(value).toUpperCase()} size="small" variant="outlined" />;
+    return (
+      <Chip
+        label={String(value).toUpperCase()}
+        size="small"
+        variant="outlined"
+      />
+    );
   };
 
   return (
@@ -263,12 +316,21 @@ export function Step5ReviewSection({
           </Typography>
         </Box>
 
-        <Box className="save-submit-buttons" sx={{ display: "flex", gap: 1.5 }}>
+        <Box
+          className="save-submit-buttons"
+          sx={{ display: "flex", gap: 1.5 }}
+        >
           {inspectionId ? (
             <Button
               variant="contained"
               color="secondary"
-              startIcon={downloadingPdf ? <CircularProgress size={20} color="inherit" /> : <DownloadIcon />}
+              startIcon={
+                downloadingPdf ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  <DownloadIcon />
+                )
+              }
               onClick={handleDownloadPdf}
               disabled={downloadingPdf}
               sx={{
@@ -277,10 +339,13 @@ export function Step5ReviewSection({
                 fontWeight: 600,
               }}
             >
-              {downloadingPdf ? "Generando..." : "Certificado PDF"}
+              {downloadingPdf ? "Generando..." : "Generar PDF"}
             </Button>
           ) : (
-            <Alert severity="info" sx={{ py: 0.5, px: 1.5, fontSize: "0.85rem" }}>
+            <Alert
+              severity="info"
+              sx={{ py: 0.5, px: 1.5, fontSize: "0.85rem" }}
+            >
               PDF disponible después de guardar borrador o enviar
             </Alert>
           )}
@@ -290,48 +355,120 @@ export function Step5ReviewSection({
       {pdfError && <Alert severity="error">{pdfError}</Alert>}
 
       {/* 1. SECCIÓN: DATOS DE VERIFICACIÓN (PASO 1 Y PASO 2) */}
-      <Card sx={{ bgcolor: isDark ? "background.paper" : "#f8fafc", border: "1px solid", borderColor: "divider" }}>
+      <Card
+        sx={{
+          bgcolor: isDark ? "background.paper" : "#f8fafc",
+          border: "1px solid",
+          borderColor: "divider",
+        }}
+      >
         <CardContent>
-          <Typography variant="subtitle1" fontWeight={700} color="primary" gutterBottom sx={{ mb: 2 }}>
+          <Typography
+            variant="subtitle1"
+            fontWeight={700}
+            color="primary"
+            gutterBottom
+            sx={{ mb: 2 }}
+          >
             📋 Datos de Identificación y Verificación (Pasos 1 y 2)
           </Typography>
 
           <Grid container spacing={2}>
             {/* Campos de Paso 1: Herramienta y Área */}
             <Grid size={{ xs: 12, md: 6 }}>
-              <Typography variant="subtitle2" color="text.secondary" fontWeight={600} gutterBottom>
+              <Typography
+                variant="subtitle2"
+                color="text.secondary"
+                fontWeight={600}
+                gutterBottom
+              >
                 HERRAMIENTA Y ÁREA (Paso 1)
               </Typography>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, pl: 1, borderLeft: "3px solid", borderColor: "primary.main" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 1.5,
+                  pl: 1,
+                  borderLeft: "3px solid",
+                  borderColor: "primary.main",
+                }}
+              >
                 {fieldsStep1.map((field) => (
-                  <Box key={field.label} sx={{ display: "flex", justifyContent: "space-between", borderBottom: "1px dashed", borderColor: "divider", pb: 0.5 }}>
-                    <Typography variant="body2" fontWeight={500} color="text.secondary">
+                  <Box
+                    key={field.label}
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      borderBottom: "1px dashed",
+                      borderColor: "divider",
+                      pb: 0.5,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      fontWeight={500}
+                      color="text.secondary"
+                    >
                       {field.label}:
                     </Typography>
                     <Typography variant="body2" fontWeight={600}>
-                      {renderValue(verificationData[field.label])}
+                      {renderValue(
+                        verificationData[sanitizeFieldKey(field.label)],
+                      )}
                     </Typography>
                   </Box>
                 ))}
                 {fieldsStep1.length === 0 && (
-                  <Typography variant="caption" color="text.secondary">No se definieron campos para este paso.</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    No se definieron campos para este paso.
+                  </Typography>
                 )}
               </Box>
             </Grid>
 
             {/* Campos de Paso 2: Datos Generales */}
             <Grid size={{ xs: 12, md: 6 }}>
-              <Typography variant="subtitle2" color="text.secondary" fontWeight={600} gutterBottom>
+              <Typography
+                variant="subtitle2"
+                color="text.secondary"
+                fontWeight={600}
+                gutterBottom
+              >
                 DATOS GENERALES (Paso 2)
               </Typography>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, pl: 1, borderLeft: "3px solid", borderColor: "secondary.main" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 1.5,
+                  pl: 1,
+                  borderLeft: "3px solid",
+                  borderColor: "secondary.main",
+                }}
+              >
                 {fieldsStep2.map((field) => (
-                  <Box key={field.label} sx={{ display: "flex", justifyContent: "space-between", borderBottom: "1px dashed", borderColor: "divider", pb: 0.5 }}>
-                    <Typography variant="body2" fontWeight={500} color="text.secondary">
+                  <Box
+                    key={field.label}
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      borderBottom: "1px dashed",
+                      borderColor: "divider",
+                      pb: 0.5,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      fontWeight={500}
+                      color="text.secondary"
+                    >
                       {field.label}:
                     </Typography>
                     <Typography variant="body2" fontWeight={600}>
-                      {renderValue(verificationData[field.label])}
+                      {renderValue(
+                        verificationData[sanitizeFieldKey(field.label)],
+                      )}
                     </Typography>
                   </Box>
                 ))}
@@ -339,10 +476,34 @@ export function Step5ReviewSection({
                 {formType === "grouped" && formData.accesoriosConfig && (
                   <>
                     <Divider sx={{ my: 1 }} />
-                    <Typography variant="caption" color="text.secondary" fontWeight={600}>CANTIDADES A INSPECCIONAR:</Typography>
-                    {Object.entries(formData.accesoriosConfig as Record<string, LocalAccessoryConfig>).map(([key, configVal]) => (
-                      <Box key={key} sx={{ display: "flex", justifyContent: "space-between", borderBottom: "1px dashed", borderColor: "divider", pb: 0.5 }}>
-                        <Typography variant="body2" fontWeight={500} color="text.secondary">
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      fontWeight={600}
+                    >
+                      CANTIDADES A INSPECCIONAR:
+                    </Typography>
+                    {Object.entries(
+                      formData.accesoriosConfig as Record<
+                        string,
+                        LocalAccessoryConfig
+                      >,
+                    ).map(([key, configVal]) => (
+                      <Box
+                        key={key}
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          borderBottom: "1px dashed",
+                          borderColor: "divider",
+                          pb: 0.5,
+                        }}
+                      >
+                        <Typography
+                          variant="body2"
+                          fontWeight={500}
+                          color="text.secondary"
+                        >
                           {key.toUpperCase()}:
                         </Typography>
                         <Typography variant="body2" fontWeight={600}>
@@ -353,7 +514,9 @@ export function Step5ReviewSection({
                   </>
                 )}
                 {fieldsStep2.length === 0 && formType !== "grouped" && (
-                  <Typography variant="caption" color="text.secondary">No se definieron campos para este paso.</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    No se definieron campos para este paso.
+                  </Typography>
                 )}
               </Box>
             </Grid>
@@ -364,19 +527,47 @@ export function Step5ReviewSection({
       {/* 2. SECCIÓN: CUERPO DEL FORMULARIO / CHECKLIST (PASO 3) */}
       <Card sx={{ border: "1px solid", borderColor: "divider" }}>
         <CardContent>
-          <Typography variant="subtitle1" fontWeight={700} color="primary" gutterBottom sx={{ mb: 2 }}>
+          <Typography
+            variant="subtitle1"
+            fontWeight={700}
+            color="primary"
+            gutterBottom
+            sx={{ mb: 2 }}
+          >
             🔍 Estado de Componentes / Checklist (Paso 3)
           </Typography>
 
           {/* RENDER POR TIPO: STANDARD O VEHICLE O SCAFFOLD */}
-          {(formType === "standard" || formType === "vehicle" || formType === "scaffold") && (
-            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+          {(formType === "standard" ||
+            formType === "vehicle" ||
+            formType === "scaffold") && (
+            <TableContainer
+              sx={{
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 2,
+              }}
+            >
               <Table size="small">
-                <TableHead sx={{ bgcolor: isDark ? "rgba(255, 255, 255, 0.05)" : "#f1f5f9" }}>
+                <TableHead
+                  sx={{
+                    bgcolor: isDark ? "rgba(255, 255, 255, 0.05)" : "#f1f5f9",
+                  }}
+                >
                   <TableRow>
-                    <TableCell sx={{ fontWeight: "bold" }}>Sección / Componente</TableCell>
-                    <TableCell sx={{ fontWeight: "bold" }} width="150px" align="center">Estado</TableCell>
-                    <TableCell sx={{ fontWeight: "bold" }}>Observaciones / Comentarios</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>
+                      Sección / Componente
+                    </TableCell>
+                    <TableCell
+                      sx={{ fontWeight: "bold" }}
+                      width="150px"
+                      align="center"
+                    >
+                      Estado
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>
+                      Observaciones / Comentarios
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -406,7 +597,9 @@ export function Step5ReviewSection({
                         key={row.id}
                         sx={{
                           "&:hover": {
-                            bgcolor: isDark ? "rgba(255, 255, 255, 0.02)" : "rgba(0, 0, 0, 0.01)",
+                            bgcolor: isDark
+                              ? "rgba(255, 255, 255, 0.02)"
+                              : "rgba(0, 0, 0, 0.01)",
                           },
                         }}
                       >
@@ -420,7 +613,9 @@ export function Step5ReviewSection({
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2">
-                            {row.response?.observacion || row.response?.description || "Sin observaciones"}
+                            {row.response?.observacion ||
+                              row.response?.description ||
+                              "Sin observaciones"}
                           </Typography>
                         </TableCell>
                       </TableRow>
@@ -433,24 +628,54 @@ export function Step5ReviewSection({
 
           {/* RENDER POR TIPO: GROUPED ACCESSORIES */}
           {formType === "grouped" && formData.responses && (
-            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+            <TableContainer
+              sx={{
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 2,
+              }}
+            >
               <Table size="small">
-                <TableHead sx={{ bgcolor: isDark ? "rgba(255, 255, 255, 0.05)" : "#f1f5f9" }}>
+                <TableHead
+                  sx={{
+                    bgcolor: isDark ? "rgba(255, 255, 255, 0.05)" : "#f1f5f9",
+                  }}
+                >
                   <TableRow>
-                    <TableCell sx={{ fontWeight: "bold" }}>Accesorio / Ítem</TableCell>
-                    <TableCell sx={{ fontWeight: "bold" }} align="center">Estado</TableCell>
-                    <TableCell sx={{ fontWeight: "bold" }}>Comentarios / Detalles</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>
+                      Accesorio / Ítem
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }} align="center">
+                      Estado
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>
+                      Comentarios / Detalles
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {template.sections.map((section, sIdx) => {
                     const sectionResponses = formData.responses?.[sIdx] || {};
-                    const questionsResponses = (sectionResponses as unknown as { questions?: QuestionResponse[] })?.questions || [];
+                    const questionsResponses =
+                      (
+                        sectionResponses as unknown as {
+                          questions?: QuestionResponse[];
+                        }
+                      )?.questions || [];
 
                     return (
                       <React.Fragment key={sIdx}>
                         <TableRow>
-                          <TableCell colSpan={3} sx={{ bgcolor: isDark ? "rgba(99, 102, 241, 0.1)" : "rgba(99, 102, 241, 0.05)", fontWeight: "bold", color: "primary.main" }}>
+                          <TableCell
+                            colSpan={3}
+                            sx={{
+                              bgcolor: isDark
+                                ? "rgba(99, 102, 241, 0.1)"
+                                : "rgba(99, 102, 241, 0.05)",
+                              fontWeight: "bold",
+                              color: "primary.main",
+                            }}
+                          >
                             {section.title || "Accesorios"}
                           </TableCell>
                         </TableRow>
@@ -460,14 +685,18 @@ export function Step5ReviewSection({
                           return (
                             <TableRow key={qIdx}>
                               <TableCell sx={{ pl: 3 }}>
-                                <Typography variant="body2" fontWeight={500}>{question.text}</Typography>
+                                <Typography variant="body2" fontWeight={500}>
+                                  {question.text}
+                                </Typography>
                               </TableCell>
                               <TableCell align="center">
                                 {renderStatusChip(response.value)}
                               </TableCell>
                               <TableCell>
                                 <Typography variant="body2">
-                                  {response.observacion || response.description || "Sin comentarios"}
+                                  {response.observacion ||
+                                    response.description ||
+                                    "Sin comentarios"}
                                 </Typography>
                               </TableCell>
                             </TableRow>
@@ -483,41 +712,98 @@ export function Step5ReviewSection({
 
           {/* DATO ADICIONAL VEHÍCULOS: MAPA DE DAÑOS Y IMAGEN GENERADA */}
           {formType === "vehicle" && formData.vehicle && (
-            <Box sx={{ mt: 3, p: 2, border: "1px solid", borderColor: "divider", borderRadius: 2, bgcolor: isDark ? "rgba(255,255,255,0.01)" : "#fafafa" }}>
-              <Typography variant="subtitle2" color="text.secondary" fontWeight={700} gutterBottom>
+            <Box
+              sx={{
+                mt: 3,
+                p: 2,
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 2,
+                bgcolor: isDark ? "rgba(255,255,255,0.01)" : "#fafafa",
+              }}
+            >
+              <Typography
+                variant="subtitle2"
+                color="text.secondary"
+                fontWeight={700}
+                gutterBottom
+              >
                 🚗 Registro de Daños del Vehículo
               </Typography>
               <Grid container spacing={2} sx={{ mt: 1 }}>
                 <Grid size={{ xs: 12, md: 6 }}>
-                  <Typography variant="body2" fontWeight={500}>Detalle de Daños Marcados:</Typography>
-                  <Box sx={{ mt: 1, maxHeight: "200px", overflowY: "auto", pl: 1 }}>
-                    {formData.vehicle.damages && formData.vehicle.damages.length > 0 ? (
-                      formData.vehicle.damages.map((damage: LocalDamage, dIdx: number) => (
-                        <Typography key={dIdx} variant="caption" display="block" color="text.secondary">
-                          • {damage.type} en coordenadas ({damage.x}%, {damage.y}%)
-                        </Typography>
-                      ))
+                  <Typography variant="body2" fontWeight={500}>
+                    Detalle de Daños Marcados:
+                  </Typography>
+                  <Box
+                    sx={{ mt: 1, maxHeight: "200px", overflowY: "auto", pl: 1 }}
+                  >
+                    {formData.vehicle.damages &&
+                    formData.vehicle.damages.length > 0 ? (
+                      formData.vehicle.damages.map(
+                        (damage: LocalDamage, dIdx: number) => (
+                          <Typography
+                            key={dIdx}
+                            variant="caption"
+                            display="block"
+                            color="text.secondary"
+                          >
+                            • {damage.type} en coordenadas ({damage.x}%,{" "}
+                            {damage.y}%)
+                          </Typography>
+                        ),
+                      )
                     ) : (
-                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic" }}>No se registraron daños estructurales.</Typography>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ fontStyle: "italic" }}
+                      >
+                        No se registraron daños estructurales.
+                      </Typography>
                     )}
                   </Box>
-                  <Typography variant="body2" fontWeight={500} sx={{ mt: 2 }}>Observaciones adicionales de daños:</Typography>
+                  <Typography variant="body2" fontWeight={500} sx={{ mt: 2 }}>
+                    Observaciones adicionales de daños:
+                  </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {formData.vehicle.damageObservations || "Sin observaciones específicas de daños."}
+                    {formData.vehicle.damageObservations ||
+                      "Sin observaciones específicas de daños."}
                   </Typography>
                 </Grid>
 
-                <Grid size={{ xs: 12, md: 6 }} sx={{ display: "flex", justifyContent: "center" }}>
+                <Grid
+                  size={{ xs: 12, md: 6 }}
+                  sx={{ display: "flex", justifyContent: "center" }}
+                >
                   {formData.vehicle.damageImageBase64 ? (
-                    <Box sx={{ border: "1px solid", borderColor: "divider", p: 1, borderRadius: 2, bgcolor: "#ffffff" }}>
+                    <Box
+                      sx={{
+                        border: "1px solid",
+                        borderColor: "divider",
+                        p: 1,
+                        borderRadius: 2,
+                        bgcolor: "#ffffff",
+                      }}
+                    >
                       <img
                         src={formData.vehicle.damageImageBase64}
                         alt="Esquema de daños"
-                        style={{ maxWidth: "100%", maxHeight: "200px", objectFit: "contain" }}
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "200px",
+                          objectFit: "contain",
+                        }}
                       />
                     </Box>
                   ) : (
-                    <Typography variant="caption" color="text.secondary" sx={{ alignSelf: "center" }}>Esquema de daños no generado.</Typography>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ alignSelf: "center" }}
+                    >
+                      Esquema de daños no generado.
+                    </Typography>
                   )}
                 </Grid>
               </Grid>
@@ -527,47 +813,95 @@ export function Step5ReviewSection({
           {/* DATO ADICIONAL SCAFFOLD: INSPECCIONES DIARIAS */}
           {formType === "scaffold" && formData.scaffold && (
             <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle2" color="text.secondary" fontWeight={700} gutterBottom>
+              <Typography
+                variant="subtitle2"
+                color="text.secondary"
+                fontWeight={700}
+                gutterBottom
+              >
                 🏗️ Historial de Inspecciones Rutinarias del Andamio
               </Typography>
-              <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, mt: 1 }}>
+              <TableContainer
+                sx={{
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  mt: 1,
+                }}
+              >
                 <Table size="small">
-                  <TableHead sx={{ bgcolor: isDark ? "rgba(255, 255, 255, 0.05)" : "#f1f5f9" }}>
+                  <TableHead
+                    sx={{
+                      bgcolor: isDark ? "rgba(255, 255, 255, 0.05)" : "#f1f5f9",
+                    }}
+                  >
                     <TableRow>
-                      <TableCell sx={{ fontWeight: "bold" }}>Fecha de Inspección</TableCell>
-                      <TableCell sx={{ fontWeight: "bold" }}>Nombre del Inspector</TableCell>
-                      <TableCell sx={{ fontWeight: "bold" }} align="center">Liberado / Conforme</TableCell>
-                      <TableCell sx={{ fontWeight: "bold" }}>Observaciones</TableCell>
-                      <TableCell sx={{ fontWeight: "bold" }} align="center">Firma</TableCell>
+                      <TableCell sx={{ fontWeight: "bold" }}>
+                        Fecha de Inspección
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: "bold" }}>
+                        Nombre del Inspector
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: "bold" }} align="center">
+                        Liberado / Conforme
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: "bold" }}>
+                        Observaciones
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: "bold" }} align="center">
+                        Firma
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {formData.scaffold.routineInspections && formData.scaffold.routineInspections.length > 0 ? (
-                      formData.scaffold.routineInspections.map((routine: RoutineInspectionEntry, rIdx: number) => (
-                        <TableRow key={rIdx}>
-                          <TableCell>{routine.date ? dayjs(routine.date).format("DD/MM/YYYY") : "—"}</TableCell>
-                          <TableCell>{routine.inspector || "—"}</TableCell>
-                          <TableCell align="center">
-                            {renderStatusChip(routine.response === "si" ? "SI" : "NO")}
-                          </TableCell>
-                          <TableCell>{routine.observations || "—"}</TableCell>
-                          <TableCell align="center">
-                            {routine.signature ? (
-                              <img
-                                src={routine.signature}
-                                alt="Firma"
-                                style={{ maxWidth: "100px", maxHeight: "50px", objectFit: "contain" }}
-                              />
-                            ) : (
-                              "—"
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))
+                    {formData.scaffold.routineInspections &&
+                    formData.scaffold.routineInspections.length > 0 ? (
+                      formData.scaffold.routineInspections.map(
+                        (routine: RoutineInspectionEntry, rIdx: number) => (
+                          <TableRow key={rIdx}>
+                            <TableCell>
+                              {routine.date
+                                ? dayjs(routine.date).format("DD/MM/YYYY")
+                                : "—"}
+                            </TableCell>
+                            <TableCell>{routine.inspector || "—"}</TableCell>
+                            <TableCell align="center">
+                              {renderStatusChip(
+                                routine.response === "si" ? "SI" : "NO",
+                              )}
+                            </TableCell>
+                            <TableCell>{routine.observations || "—"}</TableCell>
+                            <TableCell align="center">
+                              {routine.signature ? (
+                                <img
+                                  src={routine.signature}
+                                  alt="Firma"
+                                  style={{
+                                    maxWidth: "100px",
+                                    maxHeight: "50px",
+                                    objectFit: "contain",
+                                  }}
+                                />
+                              ) : (
+                                "—"
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ),
+                      )
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={5} align="center" sx={{ fontStyle: "italic", py: 2, color: "text.secondary" }}>
-                          Ninguna inspección diaria rutinaria ha sido registrada aún en este andamio.
+                        <TableCell
+                          colSpan={5}
+                          align="center"
+                          sx={{
+                            fontStyle: "italic",
+                            py: 2,
+                            color: "text.secondary",
+                          }}
+                        >
+                          Ninguna inspección diaria rutinaria ha sido registrada
+                          aún en este andamio.
                         </TableCell>
                       </TableRow>
                     )}
@@ -582,9 +916,16 @@ export function Step5ReviewSection({
       {/* 3. SECCIÓN: OBSERVACIONES GENERALES Y FUERA DE SERVICIO (PASO 4) */}
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: formData.outOfService?.activo ? 6 : 12 }}>
-          <Card sx={{ height: "100%", border: "1px solid", borderColor: "divider" }}>
+          <Card
+            sx={{ height: "100%", border: "1px solid", borderColor: "divider" }}
+          >
             <CardContent>
-              <Typography variant="subtitle1" fontWeight={700} color="primary" gutterBottom>
+              <Typography
+                variant="subtitle1"
+                fontWeight={700}
+                color="primary"
+                gutterBottom
+              >
                 📝 Observaciones Generales (Paso 4)
               </Typography>
               <Box
@@ -598,43 +939,96 @@ export function Step5ReviewSection({
                 }}
               >
                 <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
-                  {formData.generalObservations || "No se ingresaron observaciones generales."}
+                  {formData.generalObservations ||
+                    "No se ingresaron observaciones generales."}
                 </Typography>
               </Box>
 
               {/* Si es andamio, mostrar la conclusión final */}
-              {formType === "scaffold" && formData.scaffold?.finalConclusion && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                    Conclusión de Desmantelamiento / Final:
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {formData.scaffold.finalConclusion}
-                  </Typography>
-                </Box>
-              )}
+              {formType === "scaffold" &&
+                formData.scaffold?.finalConclusion && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight={600}
+                      gutterBottom
+                    >
+                      Conclusión de Desmantelamiento / Final:
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {formData.scaffold.finalConclusion}
+                    </Typography>
+                  </Box>
+                )}
             </CardContent>
           </Card>
         </Grid>
 
         {formData.outOfService?.activo && (
           <Grid size={{ xs: 12, md: 6 }}>
-            <Card sx={{ height: "100%", border: "1px solid", borderColor: "#ef4444", bgcolor: isDark ? "rgba(239, 68, 68, 0.05)" : "rgba(239, 68, 68, 0.02)" }}>
+            <Card
+              sx={{
+                height: "100%",
+                border: "1px solid",
+                borderColor: "#ef4444",
+                bgcolor: isDark
+                  ? "rgba(239, 68, 68, 0.05)"
+                  : "rgba(239, 68, 68, 0.02)",
+              }}
+            >
               <CardContent>
-                <Typography variant="subtitle1" fontWeight={700} color="error" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={700}
+                  color="error"
+                  gutterBottom
+                  sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                >
                   ⚠️ Equipo Fuera de Servicio
                 </Typography>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", borderBottom: "1px dashed", borderColor: "divider", pb: 0.5 }}>
-                    <Typography variant="body2" color="text.secondary">Responsable:</Typography>
-                    <Typography variant="body2" fontWeight={600}>{renderValue(formData.outOfService.responsable)}</Typography>
+                <Box
+                  sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      borderBottom: "1px dashed",
+                      borderColor: "divider",
+                      pb: 0.5,
+                    }}
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      Responsable:
+                    </Typography>
+                    <Typography variant="body2" fontWeight={600}>
+                      {renderValue(formData.outOfService.responsable)}
+                    </Typography>
                   </Box>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", borderBottom: "1px dashed", borderColor: "divider", pb: 0.5 }}>
-                    <Typography variant="body2" color="text.secondary">Fecha Tarjeta Roja:</Typography>
-                    <Typography variant="body2" fontWeight={600}>{renderValue(formData.outOfService.fechaTarjetaRoja)}</Typography>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      borderBottom: "1px dashed",
+                      borderColor: "divider",
+                      pb: 0.5,
+                    }}
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      Fecha Tarjeta Roja:
+                    </Typography>
+                    <Typography variant="body2" fontWeight={600}>
+                      {renderValue(formData.outOfService.fechaTarjetaRoja)}
+                    </Typography>
                   </Box>
-                  <Typography variant="body2" fontWeight={500} sx={{ mt: 1 }}>Detalle de Condición:</Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic" }}>
+                  <Typography variant="body2" fontWeight={500} sx={{ mt: 1 }}>
+                    Detalle de Condición:
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ fontStyle: "italic" }}
+                  >
                     {formData.outOfService.motivo || "No se especificó motivo."}
                   </Typography>
                 </Box>
@@ -647,7 +1041,13 @@ export function Step5ReviewSection({
       {/* 4. SECCIÓN: REVISIÓN DE FIRMAS (PASO 4) */}
       <Card sx={{ border: "1px solid", borderColor: "divider" }}>
         <CardContent>
-          <Typography variant="subtitle1" fontWeight={700} color="primary" gutterBottom sx={{ mb: 2 }}>
+          <Typography
+            variant="subtitle1"
+            fontWeight={700}
+            color="primary"
+            gutterBottom
+            sx={{ mb: 2 }}
+          >
             ✍️ Firmas de Validación (Paso 4)
           </Typography>
 
@@ -664,15 +1064,29 @@ export function Step5ReviewSection({
                   bgcolor: isDark ? "rgba(255,255,255,0.01)" : "#f8fafc",
                 }}
               >
-                <Typography variant="subtitle2" color="text.secondary" fontWeight={700} gutterBottom>
+                <Typography
+                  variant="subtitle2"
+                  color="text.secondary"
+                  fontWeight={700}
+                  gutterBottom
+                >
                   TÉCNICO / INSPECTOR
                 </Typography>
-                <Typography variant="body1" fontWeight={600} gutterBottom sx={{ mt: 1 }}>
-                  {formData.inspectorSignature?.inspectorName || formData.inspectorSignature?.name
-                    ? String(formData.inspectorSignature.inspectorName || formData.inspectorSignature.name)
+                <Typography
+                  variant="body1"
+                  fontWeight={600}
+                  gutterBottom
+                  sx={{ mt: 1 }}
+                >
+                  {formData.inspectorSignature?.inspectorName ||
+                  formData.inspectorSignature?.name
+                    ? String(
+                        formData.inspectorSignature.inspectorName ||
+                          formData.inspectorSignature.name,
+                      )
                     : "—"}
                 </Typography>
-                
+
                 <Box
                   sx={{
                     my: 2,
@@ -694,10 +1108,14 @@ export function Step5ReviewSection({
                       src={String(
                         formData.inspectorSignature.inspectorSignature ||
                           formData.inspectorSignature.signatureBase64 ||
-                          formData.inspectorSignature.signature
+                          formData.inspectorSignature.signature,
                       )}
                       alt="Firma del inspector"
-                      style={{ maxHeight: "100%", maxWidth: "100%", objectFit: "contain" }}
+                      style={{
+                        maxHeight: "100%",
+                        maxWidth: "100%",
+                        objectFit: "contain",
+                      }}
                     />
                   ) : (
                     <Typography variant="caption" color="text.secondary">
@@ -725,7 +1143,12 @@ export function Step5ReviewSection({
                 }}
               >
                 <Box>
-                  <Typography variant="subtitle2" color="text.secondary" fontWeight={700} gutterBottom>
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                    fontWeight={700}
+                    gutterBottom
+                  >
                     SUPERVISOR APROBADOR
                   </Typography>
                   {isApprovalReview ? (
@@ -743,27 +1166,34 @@ export function Step5ReviewSection({
                           formData.approval?.status === "approved"
                             ? "APROBADO POR SUPERVISOR"
                             : formData.approval?.status === "rejected"
-                            ? "RECHAZADO POR SUPERVISOR"
-                            : "PENDIENTE DE APROBACIÓN"
+                              ? "RECHAZADO POR SUPERVISOR"
+                              : "PENDIENTE DE APROBACIÓN"
                         }
                         color={
                           formData.approval?.status === "approved"
                             ? "success"
                             : formData.approval?.status === "rejected"
-                            ? "error"
-                            : "warning"
+                              ? "error"
+                              : "warning"
                         }
                         sx={{ fontWeight: "bold" }}
                       />
                       {formData.approval?.approvedBy && (
-                        <Typography variant="body2" sx={{ mt: 1, fontWeight: 600 }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ mt: 1, fontWeight: 600 }}
+                        >
                           Aprobado por: {formData.approval.approvedBy}
                         </Typography>
                       )}
                     </Box>
                   ) : (
                     <Box sx={{ mt: 2 }}>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic" }}>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ fontStyle: "italic" }}
+                      >
                         Esta inspección no requiere aprobación del supervisor
                       </Typography>
                     </Box>
@@ -773,16 +1203,24 @@ export function Step5ReviewSection({
                 {!isApprovalReview && (
                   <>
                     <Box sx={{ mt: 1 }}>
-                      {(formData.supervisorSignature?.supervisorName || formData.supervisorSignature?.name) && (
-                        <Typography variant="body1" fontWeight={600} gutterBottom>
-                          {String(formData.supervisorSignature.supervisorName || formData.supervisorSignature.name)}
+                      {(formData.supervisorSignature?.supervisorName ||
+                        formData.supervisorSignature?.name) && (
+                        <Typography
+                          variant="body1"
+                          fontWeight={600}
+                          gutterBottom
+                        >
+                          {String(
+                            formData.supervisorSignature.supervisorName ||
+                              formData.supervisorSignature.name,
+                          )}
                         </Typography>
                       )}
                     </Box>
 
-                    {(formData.supervisorSignature?.supervisorSignature ||
-                      formData.supervisorSignature?.signatureBase64 ||
-                      formData.supervisorSignature?.signature) ? (
+                    {formData.supervisorSignature?.supervisorSignature ||
+                    formData.supervisorSignature?.signatureBase64 ||
+                    formData.supervisorSignature?.signature ? (
                       <Box
                         sx={{
                           my: 2,
@@ -801,10 +1239,14 @@ export function Step5ReviewSection({
                           src={String(
                             formData.supervisorSignature.supervisorSignature ||
                               formData.supervisorSignature.signatureBase64 ||
-                              formData.supervisorSignature.signature
+                              formData.supervisorSignature.signature,
                           )}
                           alt="Firma del supervisor"
-                          style={{ maxHeight: "100%", maxWidth: "100%", objectFit: "contain" }}
+                          style={{
+                            maxHeight: "100%",
+                            maxWidth: "100%",
+                            objectFit: "contain",
+                          }}
                         />
                       </Box>
                     ) : null}
@@ -816,82 +1258,97 @@ export function Step5ReviewSection({
         </CardContent>
       </Card>
 
-      {showApprovalInputs && register && control && setValue && errors && onApprove && onReject && (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 3, mt: 3 }}>
-          <SupervisorSignature
-            register={register}
-            control={control}
-            errors={errors}
-            setValue={setValue}
-            config={getFormConfig(template.code)?.signatures?.supervisor}
-          />
-          <ApprovalSection
-            status={formData.status || "pending_approval"}
-            approval={formData.approval}
-            canApprove={true}
-            onApprove={onApprove}
-            onReject={onReject}
-            readonly={false}
-          />
-        </Box>
-      )}
-
-      {/* Botones de navegación del paso final */}
-      <Box
-        className="save-submit-buttons"
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          mt: 2,
-          pt: 2,
-          borderTop: "1px solid",
-          borderColor: "divider",
-        }}
-      >
-        {isApprovalReview ? (
-          <Button
-            variant="outlined"
-            startIcon={<ArrowBackIcon />}
-            onClick={onPrev}
-            disabled={isSubmitting}
-          >
-            Volver
-          </Button>
-        ) : (
-          <Button
-            variant="outlined"
-            startIcon={<ArrowBackIcon />}
-            onClick={onPrev}
-            disabled={isSubmitting}
-          >
-            Anterior
-          </Button>
+      {!isViewMode &&
+        showApprovalInputs &&
+        register &&
+        control &&
+        setValue &&
+        errors &&
+        onApprove &&
+        onReject && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3, mt: 3 }}>
+            <SupervisorSignature
+              register={register}
+              control={control}
+              errors={errors}
+              setValue={setValue}
+              config={getFormConfig(template.code)?.signatures?.supervisor}
+            />
+            <ApprovalSection
+              status={formData.status || "pending_approval"}
+              approval={formData.approval}
+              canApprove={true}
+              onApprove={onApprove}
+              onReject={onReject}
+              readonly={false}
+            />
+          </Box>
         )}
 
-        <Button
-          variant="contained"
-          color="success"
-          startIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-          onClick={onFinalSubmit}
-          disabled={isSubmitting || isSubmitDisabled}
+      {/* Botones de navegación del paso final — ocultos en modo solo lectura, ahí solo se ve el PDF */}
+      {!isViewMode && (
+        <Box
+          className="save-submit-buttons"
           sx={{
-            px: 4,
-            fontWeight: "bold",
-            background: "linear-gradient(135deg, #10B981, #059669)",
-            "&:hover": {
-              background: "linear-gradient(135deg, #059669, #047857)",
-            },
+            display: "flex",
+            justifyContent: "space-between",
+            mt: 2,
+            pt: 2,
+            borderTop: "1px solid",
+            borderColor: "divider",
           }}
         >
-          {isSubmitting
-            ? "Procesando..."
-            : showApprovalInputs
-            ? "Enviar Decisión de Aprobación"
-            : isApprovalReview
-            ? "Siguiente"
-            : "Guardar y Enviar"}
-        </Button>
-      </Box>
+          {isApprovalReview ? (
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIcon />}
+              onClick={onPrev}
+              disabled={isSubmitting}
+            >
+              Volver
+            </Button>
+          ) : (
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIcon />}
+              onClick={onPrev}
+              disabled={isSubmitting}
+            >
+              Anterior
+            </Button>
+          )}
+
+          <Button
+            variant="contained"
+            color="success"
+            startIcon={
+              isSubmitting ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : (
+                <SaveIcon />
+              )
+            }
+            onClick={onFinalSubmit}
+            disabled={isSubmitting || isSubmitDisabled}
+            sx={{
+              px: 4,
+              fontWeight: "bold",
+              background: "linear-gradient(135deg, #10B981, #059669)",
+              "&:hover": {
+                background: "linear-gradient(135deg, #059669, #047857)",
+              },
+            }}
+          >
+            {isSubmitting
+              ? "Procesando..."
+              : showApprovalInputs
+                ? "Enviar Decisión de Aprobación"
+                : isApprovalReview
+                  ? "Siguiente"
+                  : "Guardar y Enviar"}
+          </Button>
+        </Box>
+      )}
     </Box>
   );
 }

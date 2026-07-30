@@ -71,13 +71,36 @@ export interface VerificationFieldHerraEquipos {
   obligatorio?: boolean
 }
 
+export type UnidadFrecuencia =
+  | "diaria"
+  | "semanal"
+  | "mensual"
+  | "trimestral"
+  | "semestral"
+  | "anual"
+  | "personalizada"
+
+export interface FrecuenciaInspeccionHerraEquipos {
+  unidad: UnidadFrecuencia
+  valorPersonalizado?: number
+  activa: boolean
+}
+
 export interface FormBuilderDataHerraEquipos {
   name: string
   code: string
   revision: string
   type: "interna" | "externa"
+  descripcion?: string
   verificationFields: VerificationFieldHerraEquipos[]
   sections: SectionHerraEquipos[]
+  campoCodigoEquipo?: string
+  frecuencia?: FrecuenciaInspeccionHerraEquipos
+  /**
+   * Roles que ven y pueden llenar esta plantilla.
+   * Vacío = visible para todos (comportamiento por defecto).
+   */
+  rolesVisibles?: string[]
 }
 
 export interface FormTemplateHerraEquipos extends FormBuilderDataHerraEquipos {

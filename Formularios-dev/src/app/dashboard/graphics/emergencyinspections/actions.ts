@@ -2,6 +2,7 @@
 
 import { getAuthHeaders, handleApiResponse } from "@/lib/actions/helpers";
 import { API_BASE_URL } from "@/lib/constants";
+import { obtenerAreasCompletas, AreaBackend } from "@/lib/actions/area-actions";
 import { FormularioInspeccion, Tag, Extintor } from "./types/IProps";
 
 // Obtener todos los tags
@@ -45,10 +46,11 @@ export async function obtenerDashboardData(): Promise<{
   tags: Tag[];
   inspecciones: FormularioInspeccion[];
   extintores: Extintor[];
+  areas: AreaBackend[];
 }> {
   const headers = await getAuthHeaders();
 
-  const [tagsResponse, inspeccionesResponse, extintoresResponse] = await Promise.all([
+  const [tagsResponse, inspeccionesResponse, extintoresResponse, areas] = await Promise.all([
     fetch(`${API_BASE_URL}/tag/`, {
       method: "GET",
       headers,
@@ -64,6 +66,8 @@ export async function obtenerDashboardData(): Promise<{
       headers,
       cache: "no-store",
     }),
+    // Fuente canónica de Superintendencia/Área (no derivada de texto libre en inspecciones)
+    obtenerAreasCompletas(),
   ]);
 
   const [tags, inspecciones, extintores] = await Promise.all([
@@ -72,5 +76,5 @@ export async function obtenerDashboardData(): Promise<{
     handleApiResponse<Extintor[]>(extintoresResponse),
   ]);
 
-  return { tags, inspecciones, extintores };
+  return { tags, inspecciones, extintores, areas };
 }

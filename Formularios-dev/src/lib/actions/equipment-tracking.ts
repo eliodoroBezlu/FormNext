@@ -19,6 +19,42 @@ export interface CheckEquipmentStatusResponse {
   redirectToPreUso?: boolean;
 }
 
+export interface DisponibilidadEquipo {
+  codigo: string;
+  ultimaInspeccion: string | null;
+  proximaInspeccion: string | null;
+  disponible: boolean;
+}
+
+/**
+ * Disponibilidad de códigos de equipo para un template, según la frecuencia
+ * configurada en ese template. Si el template no tiene frecuencia activa,
+ * el backend devuelve todos los códigos como disponibles (sin restricción).
+ */
+export async function obtenerDisponibilidadEquipos(
+  templateCode: string,
+  area?: string,
+): Promise<DisponibilidadEquipo[]> {
+  try {
+    const headers = await getAuthHeaders();
+    const params = new URLSearchParams({ templateCode });
+    if (area) params.append("area", area);
+
+    const response = await fetch(
+      `${API_BASE_URL}/equipment-tracking/disponibilidad?${params.toString()}`,
+      { method: "GET", headers, cache: "no-store" },
+    );
+
+    return await handleApiResponse<DisponibilidadEquipo[]>(response);
+  } catch (error) {
+    console.error("❌ [ACTION] Error al obtener disponibilidad de equipos:", error);
+    // Ante un error, no bloquear al usuario: se resuelve como "sin datos" y
+    // el llamador debe tratarlo como "no restringir" (fail-open, igual que
+    // el comportamiento actual sin esta funcionalidad).
+    return [];
+  }
+}
+
 export async function checkEquipmentStatus(
   equipmentId: string,
   templateCode: string

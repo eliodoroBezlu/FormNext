@@ -10,6 +10,7 @@ export interface TareaObservacion {
   descripcionObservacion: string;
   accionPropuesta: string;
   responsableAreaCierre: string;
+  responsableAreaCierreUsername?: string;
   fechaCumplimientoAcordada: Date;
   fechaCumplimientoEfectiva?: Date;
   diasRetraso: number;
@@ -26,6 +27,14 @@ export interface TareaObservacion {
 
 export interface FormTareaData extends AddTareaDTO {
   estado?: string;
+}
+
+export interface HistorialAprobacion {
+  usuario: string;
+  fecha: Date;
+  estadoAnterior: string;
+  estadoNuevo: string;
+  observaciones?: string;
 }
 
 export interface PlanDeAccion {
@@ -45,6 +54,15 @@ export interface PlanDeAccion {
   porcentajeCierre: number;
 
   estado: "abierto" | "en-progreso" | "cerrado";
+
+  // Aprobación global del Superintendente — eje independiente del
+  // `aprobado` por tarea. Mientras no sea 'aprobado', el Supervisor
+  // no debe ver este plan (reforzado también en el backend).
+  estadoAprobacion: "pendiente" | "aprobado";
+  aprobadoPor?: string;
+  fechaAprobacion?: Date;
+  observacionesAprobacion?: string;
+  historialAprobacion?: HistorialAprobacion[];
 
   fechaCreacion: Date;
   fechaUltimaActualizacion: Date;
@@ -82,6 +100,7 @@ export interface AddTareaDTO {
   descripcionObservacion: string;
   accionPropuesta: string;
   responsableAreaCierre: string;
+  responsableAreaCierreUsername?: string;
   fechaCumplimientoAcordada: Date | string;
   fechaCumplimientoEfectiva?: Date | string;
 }

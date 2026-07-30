@@ -9,6 +9,9 @@ import {
   flattenSections,
   createInitialSections,
   calculateSectionMetrics,
+  sanitizeFieldKey,
+  sanitizeVerificationListObject,
+  verificationListFieldPath,
   type ValoracionValue,
 } from "@/components/features/iro-isop/domain/models/IroIsopDomain";
 import { iroIsopAdapter } from "@/components/features/iro-isop/infrastructure/adapters/iroIsopAdapter";
@@ -36,7 +39,7 @@ export const useIroIsopForm = ({
       mode: "onTouched",
       defaultValues: initialData
         ? {
-            verificationList: initialData.verificationList,
+            verificationList: sanitizeVerificationListObject(initialData.verificationList),
             inspectionTeam: initialData.inspectionTeam,
             sections: initialData.sections || createInitialSections(template.sections),
             aspectosPositivos: initialData.aspectosPositivos || "",
@@ -50,7 +53,7 @@ export const useIroIsopForm = ({
                   !!field._id
               )
               .reduce((acc: Record<string, string>, field: VerificationField) => {
-                acc[field.label] = "";
+                acc[sanitizeFieldKey(field.label)] = "";
                 return acc;
               }, {} as Record<string, string>),
             inspectionTeam: [
@@ -101,7 +104,7 @@ export const useIroIsopForm = ({
   useEffect(() => {
     if (initialData) {
       reset({
-        verificationList: initialData.verificationList,
+        verificationList: sanitizeVerificationListObject(initialData.verificationList),
         inspectionTeam: initialData.inspectionTeam,
         sections: initialData.sections || createInitialSections(template.sections),
         aspectosPositivos: initialData.aspectosPositivos || "",
@@ -229,6 +232,19 @@ export const useIroIsopForm = ({
     (data: InspectionFormData) => {
       if (readonly) return;
 
+      // El path interno de RHF para estos campos está saneado
+      // (verificationListFieldPath) para que un punto en la etiqueta de la
+      // plantilla (ej. "AÑO VEH./EQU.") no rompa la resolución del path.
+      // Acá se reconstruye el objeto plano con las etiquetas reales como
+      // clave, que es lo que espera el resto del sistema.
+      const cleanVerificationList: Record<string, string> = {};
+      for (const field of template.verificationFields) {
+        if (!field.label) continue;
+        const value = getValues(verificationListFieldPath(field.label) as Path<InspectionFormData>);
+        cleanVerificationList[field.label] = (value as string) ?? "";
+      }
+      data.verificationList = cleanVerificationList;
+
       setSubmitting(true);
       setError(null);
       setSuccess(null);
@@ -298,7 +314,7 @@ export const useIroIsopForm = ({
         }
       });
     },
-    [template._id, onSave, readonly, isEditMode, initialData]
+    [template._id, template.verificationFields, onSave, readonly, isEditMode, initialData, getValues]
   );
 
   return {

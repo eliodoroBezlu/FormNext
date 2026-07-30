@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useTransition,
-  useMemo,
-} from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Container,
   Button,
@@ -24,6 +18,10 @@ import {
   Typography,
   Chip,
   Snackbar,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -35,49 +33,33 @@ import { PlanCardList } from "@/components/features/planes-de-accion/presentatio
 import { PlanDetailView } from "@/components/features/planes-de-accion/presentation/components/PlanDetailView";
 import { PlanSummary } from "@/components/features/planes-de-accion/presentation/components/PlanSummary";
 import {
-  actualizarPlan,
-  actualizarTarea,
-  agregarTarea,
-  aprobarTarea,
-  crearPlan,
-  eliminarPlan,
-  eliminarTarea,
-  generarPlanDesdeInstancia,
-  obtenerInspecciones,
-  obtenerPlanes,
+  usePlanesAccion,
   PopulatedFormInstance,
-} from "@/components/features/planes-de-accion/presentation/hooks/use-planes-accion";
+} from "@/components/features/planes-de-accion/application/hooks/use-planes-accion";
 import {
-  UpdateTareaDTO,
-  AddTareaDTO,
   CreatePlanDeAccionDTO,
   PlanDeAccion,
-  PlanSummary as PlanSummaryType,
-  TareaObservacion,
 } from "@/components/features/planes-de-accion/domain/models/IProps";
 import { QuestionResponse, SectionResponse } from "@/types/formTypes";
 
-type TabValue = "abierto" | "en-progreso" | "cerrado" | "aprobado";
-
 export default function PlanesDeAccionPage() {
-  const [planes, setPlanes] = useState<PlanDeAccion[]>([]);
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<TabValue>("abierto");
   const [localError, setLocalError] = useState<string | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<PlanDeAccion | null>(null);
 
   const [openGenerarModal, setOpenGenerarModal] = useState(false);
   const [openCreatePlanModal, setOpenCreatePlanModal] = useState(false);
   const [openEditHeaderModal, setOpenEditHeaderModal] = useState(false);
 
-  const [inspecciones, setInspecciones] = useState<PopulatedFormInstance[]>([]);
+  const [planBeingEdited, setPlanBeingEdited] = useState<PlanDeAccion | null>(
+    null,
+  );
+
   const [selectedInstancia, setSelectedInstancia] =
     useState<PopulatedFormInstance | null>(null);
   const [incluirPuntaje3, setIncluirPuntaje3] = useState(false);
   const [incluirSoloConComentario, setIncluirSoloConComentario] =
     useState(true);
-  const [loadingInspecciones, setLoadingInspecciones] = useState(false);
+  const [filtroAreaGenerar, setFiltroAreaGenerar] = useState<string>("");
+  const [filtroAnioGenerar, setFiltroAnioGenerar] = useState<string>("");
 
   const [newPlanData, setNewPlanData] = useState<CreatePlanDeAccionDTO>({
     vicepresidencia: "",
@@ -93,33 +75,89 @@ export default function PlanesDeAccionPage() {
     areaFisica: "",
   });
 
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: "success" | "error" | "warning" | "info";
-  }>({ open: false, message: "", severity: "info" });
+  const {
+    planesVisibles,
+    isPending,
+    error,
+    activeTab,
+    setActiveTab,
+    selectedPlan,
+    handleViewPlan,
+    handleBackToList,
+    loadingInspecciones,
+    instanceIdsUsadas,
+    inspeccionesDisponibles,
+    summary,
+    filteredPlanes,
+    snackbar,
+    closeSnackbar,
+    loadPlanes,
+    cargarInspecciones,
+    cargarAreas,
+    crearPlan,
+    actualizarPlanHeader,
+    eliminarPlan,
+    generarPlan,
+    agregarTarea,
+    actualizarTarea,
+    eliminarTarea,
+    aprobarTarea,
+    aprobarPlanGlobal,
+    isAdmin,
+    puedeAprobarPlan,
+    areasParaFiltro,
+    añosDisponibles,
+    filtroArea,
+    setFiltroArea,
+    filtroAnio,
+    setFiltroAnio,
+  } = usePlanesAccion();
 
-  const showSnackbar = (
-    message: string,
-    severity: "success" | "error" | "warning" | "info",
-  ) => setSnackbar({ open: true, message, severity });
+  useEffect(() => {
+    loadPlanes();
+    cargarInspecciones();
+    cargarAreas();
+  }, [loadPlanes, cargarInspecciones, cargarAreas]);
 
-  const handleCloseSnackbar = () =>
-    setSnackbar((prev) => ({ ...prev, open: false }));
+  const SIN_AREA = "Sin área";
 
-  // ✅ IDs de inspecciones ya usadas en planes existentes
-  const instanceIdsUsadas = useMemo(() => {
-    return new Set(
-      planes.map((plan) => plan.instanceId).filter((id): id is string => !!id),
-    );
-  }, [planes]);
+  const getAreaInspeccion = (option: PopulatedFormInstance): string =>
+    option.verificationList?.["Área"] ||
+    option.verificationList?.["Lugar"] ||
+    SIN_AREA;
 
-  // ✅ Solo inspecciones que NO tienen plan generado
-  const inspeccionesDisponibles = useMemo(() => {
-    return inspecciones.filter(
-      (inspeccion) => !instanceIdsUsadas.has(inspeccion._id),
-    );
-  }, [inspecciones, instanceIdsUsadas]);
+  // ✅ Opciones y filtro de Área/Año para el modal "Generar desde Inspección"
+  const areasInspeccionOptions = useMemo(
+    () => [...new Set(inspeccionesDisponibles.map(getAreaInspeccion))].sort(),
+    [inspeccionesDisponibles],
+  );
+
+  const añosInspeccionOptions = useMemo(
+    () =>
+      [
+        ...new Set(
+          inspeccionesDisponibles.map((i) =>
+            new Date(i.createdAt).getFullYear().toString(),
+          ),
+        ),
+      ].sort((a, b) => Number(b) - Number(a)),
+    [inspeccionesDisponibles],
+  );
+
+  const inspeccionesFiltradasParaGenerar = useMemo(() => {
+    return inspeccionesDisponibles.filter((i) => {
+      if (filtroAreaGenerar && getAreaInspeccion(i) !== filtroAreaGenerar) {
+        return false;
+      }
+      if (
+        filtroAnioGenerar &&
+        new Date(i.createdAt).getFullYear().toString() !== filtroAnioGenerar
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [inspeccionesDisponibles, filtroAreaGenerar, filtroAnioGenerar]);
 
   // ✅ Preview de preguntas que se generarán
   const previewPreguntas = useMemo(() => {
@@ -173,69 +211,6 @@ export default function PlanesDeAccionPage() {
     return { included, excludedByComment };
   }, [selectedInstancia, incluirPuntaje3, incluirSoloConComentario]);
 
-  const calculateGlobalSummary = useCallback((): PlanSummaryType => {
-    const totalPlanes = planes.length;
-    const planesAbiertos = planes.filter((p) => p.estado === "abierto").length;
-    const planesEnProgreso = planes.filter(
-      (p) => p.estado === "en-progreso",
-    ).length;
-    const planesCerrados = planes.filter((p) => p.estado === "cerrado").length;
-    const porcentajeCierre =
-      totalPlanes > 0 ? (planesCerrados / totalPlanes) * 100 : 0;
-    return {
-      totalPlanes,
-      planesAbiertos,
-      planesEnProgreso,
-      planesCerrados,
-      porcentajeCierre,
-    };
-  }, [planes]);
-
-  const summary = calculateGlobalSummary();
-
-  const filteredPlanes = planes.filter((plan) => {
-    if (activeTab === "aprobado") {
-      return (
-        plan.tareas.length > 0 && plan.tareas.every((t: TareaObservacion) => t.aprobado === true)
-      );
-    }
-    return plan.estado === activeTab;
-  });
-
-  const loadPlanes = useCallback(async () => {
-    startTransition(async () => {
-      setError(null);
-      try {
-        const result = await obtenerPlanes();
-        setPlanes(result);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Error al cargar planes");
-      }
-    });
-  }, []);
-
-  const cargarListaInspecciones = useCallback(async () => {
-    setLoadingInspecciones(true);
-    try {
-      const data = await obtenerInspecciones();
-      setInspecciones(data);
-    } catch (err) {
-      console.error("Error cargando inspecciones:", err);
-      setInspecciones([]);
-      setLocalError("No se pudieron cargar las inspecciones");
-    } finally {
-      setLoadingInspecciones(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadPlanes();
-    cargarListaInspecciones();
-  }, [loadPlanes, cargarListaInspecciones]);
-
-  const handleViewPlan = (plan: PlanDeAccion) => setSelectedPlan(plan);
-  const handleBackToList = () => setSelectedPlan(null);
-
   const handleOpenCreatePlanModal = () => {
     setNewPlanData({
       vicepresidencia: "",
@@ -246,7 +221,7 @@ export default function PlanesDeAccionPage() {
     setOpenCreatePlanModal(true);
   };
 
-  const handleCreatePlan = () => {
+  const handleCreatePlan = async () => {
     if (
       !newPlanData.vicepresidencia ||
       !newPlanData.superintendenciaSenior ||
@@ -256,19 +231,13 @@ export default function PlanesDeAccionPage() {
       setLocalError("Todos los campos son obligatorios");
       return;
     }
-    startTransition(async () => {
-      setLocalError(null);
-      const result = await crearPlan(newPlanData);
-      if (result.success && result.data) {
-        setOpenCreatePlanModal(false);
-        showSnackbar("✅ Plan creado exitosamente", "success");
-        setSelectedPlan(result.data);
-        await loadPlanes();
-      } else {
-        setLocalError(result.error || "Error al crear plan");
-        showSnackbar(`❌ ${result.error}`, "error");
-      }
-    });
+    setLocalError(null);
+    const result = await crearPlan(newPlanData);
+    if (result.success) {
+      setOpenCreatePlanModal(false);
+    } else {
+      setLocalError(result.error || "Error al crear plan");
+    }
   };
 
   const handleOpenEditHeaderModal = (plan: PlanDeAccion) => {
@@ -278,45 +247,36 @@ export default function PlanesDeAccionPage() {
       superintendencia: plan.superintendencia,
       areaFisica: plan.areaFisica,
     });
+    setPlanBeingEdited(plan);
     setOpenEditHeaderModal(true);
   };
 
-  const handleUpdatePlanHeader = () => {
-    if (!selectedPlan) return;
-    startTransition(async () => {
-      setLocalError(null);
-      const result = await actualizarPlan(selectedPlan._id, editHeaderData);
-      if (result.success && result.data) {
-        setSelectedPlan(result.data);
-        setOpenEditHeaderModal(false);
-        showSnackbar("✅ Datos organizacionales actualizados", "success");
-        await loadPlanes();
-      } else {
-        setLocalError(result.error || "Error al actualizar");
-        showSnackbar(`❌ ${result.error}`, "error");
-      }
-    });
+  const handleUpdatePlanHeader = async () => {
+    if (!planBeingEdited) return;
+    setLocalError(null);
+    const result = await actualizarPlanHeader(
+      planBeingEdited._id,
+      editHeaderData,
+    );
+    if (result.success) {
+      setOpenEditHeaderModal(false);
+    } else {
+      setLocalError(result.error || "Error al actualizar");
+    }
   };
 
-  const handleDeletePlan = (planId: string) => {
+  const handleDeletePlan = async (planId: string) => {
     if (
       !confirm(
-        "¿Está seguro de eliminar este plan? Se eliminarán todas sus tareas.",
+        "¿Está seguro de dar de baja este plan? Dejará de aparecer en los listados junto con sus tareas.",
       )
     )
       return;
-    startTransition(async () => {
-      setLocalError(null);
-      const result = await eliminarPlan(planId);
-      if (result.success) {
-        if (selectedPlan?._id === planId) setSelectedPlan(null);
-        showSnackbar("✅ Plan eliminado exitosamente", "success");
-        await loadPlanes();
-      } else {
-        setLocalError(result.error || "Error al eliminar");
-        showSnackbar(`❌ ${result.error}`, "error");
-      }
-    });
+    setLocalError(null);
+    const result = await eliminarPlan(planId);
+    if (!result.success) {
+      setLocalError(result.error || "Error al eliminar");
+    }
   };
 
   const handleOpenGenerarModal = () => setOpenGenerarModal(true);
@@ -326,105 +286,25 @@ export default function PlanesDeAccionPage() {
     setSelectedInstancia(null);
     setIncluirPuntaje3(false);
     setIncluirSoloConComentario(false);
+    setFiltroAreaGenerar("");
+    setFiltroAnioGenerar("");
   };
 
-  const handleGenerarPlan = () => {
+  const handleGenerarPlan = async () => {
     if (!selectedInstancia) {
       setLocalError("Debe seleccionar una inspección");
       return;
     }
-    startTransition(async () => {
-      setLocalError(null);
-      const result = await generarPlanDesdeInstancia(selectedInstancia._id, {
-        incluirPuntaje3,
-        incluirSoloConComentario,
-      });
-      if (result.success && result.data) {
-        if (result.data.tareas.length === 0) {
-          showSnackbar(
-            "⚠️ No se encontraron observaciones que cumplan los criterios.",
-            "warning",
-          );
-        } else {
-          showSnackbar(
-            `✅ Plan generado con ${result.data.tareas.length} tarea${result.data.tareas.length !== 1 ? "s" : ""}`,
-            "success",
-          );
-          setSelectedPlan(result.data);
-        }
-        handleCloseGenerarModal();
-        await loadPlanes();
-      } else {
-        const errorMessage = result.error || "Error al generar plan";
-        if (errorMessage.includes("no se encontraron observaciones")) {
-          showSnackbar(
-            "⚠️ No se encontraron observaciones que cumplan los criterios.",
-            "warning",
-          );
-        } else if (errorMessage.includes("not found")) {
-          showSnackbar("❌ La inspección seleccionada no existe", "error");
-        } else {
-          showSnackbar(`❌ ${errorMessage}`, "error");
-        }
-        setLocalError(errorMessage);
-      }
+    setLocalError(null);
+    const result = await generarPlan(selectedInstancia._id, {
+      incluirPuntaje3,
+      incluirSoloConComentario,
     });
-  };
-
-  const handleAddTarea = async (data: AddTareaDTO) => {
-    if (!selectedPlan) return;
-    startTransition(async () => {
-      const result = await agregarTarea(selectedPlan._id, data);
-      if (result.success && result.data) {
-        setSelectedPlan(result.data);
-        showSnackbar("✅ Tarea agregada exitosamente", "success");
-      } else {
-        showSnackbar(`❌ ${result.error}`, "error");
-        throw new Error(result.error);
-      }
-    });
-  };
-
-  const handleUpdateTarea = async (tareaId: string, data: UpdateTareaDTO) => {
-    if (!selectedPlan) return;
-    startTransition(async () => {
-      const result = await actualizarTarea(selectedPlan._id, tareaId, data);
-      if (result.success && result.data) {
-        setSelectedPlan(result.data);
-        showSnackbar("✅ Tarea actualizada exitosamente", "success");
-      } else {
-        showSnackbar(`❌ ${result.error}`, "error");
-        throw new Error(result.error);
-      }
-    });
-  };
-
-  const handleDeleteTarea = async (tareaId: string) => {
-    if (!selectedPlan) return;
-    startTransition(async () => {
-      const result = await eliminarTarea(selectedPlan._id, tareaId);
-      if (result.success && result.data) {
-        setSelectedPlan(result.data);
-        showSnackbar("✅ Tarea eliminada exitosamente", "success");
-      } else {
-        showSnackbar(`❌ ${result.error}`, "error");
-        throw new Error(result.error);
-      }
-    });
-  };
-
-  const handleApproveTarea = async (tareaId: string) => {
-    if (!selectedPlan) return;
-    startTransition(async () => {
-      const result = await aprobarTarea(selectedPlan._id, tareaId);
-      if (result.success && result.data) {
-        setSelectedPlan(result.data);
-        showSnackbar("✅ Tarea aprobada exitosamente", "success");
-      } else {
-        showSnackbar(`❌ ${result.error}`, "error");
-        throw new Error(result.error);
-      }
-    });
+    if (result.success) {
+      handleCloseGenerarModal();
+    } else {
+      setLocalError(result.error || "Error al generar plan");
+    }
   };
 
   // ==========================================
@@ -439,10 +319,12 @@ export default function PlanesDeAccionPage() {
           error={error}
           onBack={handleBackToList}
           onEditHeader={() => handleOpenEditHeaderModal(selectedPlan)}
-          onAddTarea={handleAddTarea}
-          onUpdateTarea={handleUpdateTarea}
-          onDeleteTarea={handleDeleteTarea}
-          onApproveTarea={handleApproveTarea}
+          onAddTarea={agregarTarea}
+          onUpdateTarea={actualizarTarea}
+          onDeleteTarea={eliminarTarea}
+          onApproveTarea={aprobarTarea}
+          onApprovePlan={aprobarPlanGlobal}
+          puedeAprobarPlan={puedeAprobarPlan}
         />
 
         <Dialog
@@ -522,11 +404,11 @@ export default function PlanesDeAccionPage() {
         <Snackbar
           open={snackbar.open}
           autoHideDuration={6000}
-          onClose={handleCloseSnackbar}
+          onClose={closeSnackbar}
           anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         >
           <Alert
-            onClose={handleCloseSnackbar}
+            onClose={closeSnackbar}
             severity={snackbar.severity}
             variant="filled"
             sx={{ width: "100%" }}
@@ -560,15 +442,17 @@ export default function PlanesDeAccionPage() {
       )}
 
       <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end", mb: 3 }}>
-        <Button
-          variant="contained"
-          color="secondary"
-          startIcon={<AutoIcon />}
-          onClick={handleOpenGenerarModal}
-          disabled={isPending}
-        >
-          Generar desde Inspección
-        </Button>
+        {isAdmin && (
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<AutoIcon />}
+            onClick={handleOpenGenerarModal}
+            disabled={isPending}
+          >
+            Generar desde Inspección
+          </Button>
+        )}
         <Button
           variant="contained"
           startIcon={<AddIcon />}
@@ -579,7 +463,47 @@ export default function PlanesDeAccionPage() {
         </Button>
       </Box>
 
-      <PlanTabs activeTab={activeTab} planes={planes} onChange={setActiveTab} />
+      <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap" }}>
+        <FormControl size="small" sx={{ minWidth: 220 }}>
+          <InputLabel id="filtro-area-label">Área</InputLabel>
+          <Select
+            labelId="filtro-area-label"
+            label="Área"
+            value={filtroArea}
+            onChange={(e) => setFiltroArea(e.target.value)}
+          >
+            <MenuItem value="">Todas las áreas</MenuItem>
+            {areasParaFiltro.map((area) => (
+              <MenuItem key={area} value={area}>
+                {area}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" sx={{ minWidth: 160 }}>
+          <InputLabel id="filtro-anio-label">Año</InputLabel>
+          <Select
+            labelId="filtro-anio-label"
+            label="Año"
+            value={filtroAnio}
+            onChange={(e) => setFiltroAnio(e.target.value)}
+          >
+            <MenuItem value="">Todos los años</MenuItem>
+            {añosDisponibles.map((anio) => (
+              <MenuItem key={anio} value={anio}>
+                {anio}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
+
+      <PlanTabs
+        activeTab={activeTab}
+        planes={planesVisibles}
+        onChange={setActiveTab}
+      />
 
       <PlanCardList
         planes={filteredPlanes}
@@ -713,14 +637,63 @@ export default function PlanesDeAccionPage() {
               )}
             </Box>
 
+            {/* ✅ Filtros para acotar la lista de inspecciones */}
+            {inspeccionesDisponibles.length > 0 && (
+              <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+                <FormControl size="small" sx={{ minWidth: 200 }}>
+                  <InputLabel id="filtro-area-generar-label">Área</InputLabel>
+                  <Select
+                    labelId="filtro-area-generar-label"
+                    label="Área"
+                    value={filtroAreaGenerar}
+                    onChange={(e) => {
+                      setFiltroAreaGenerar(e.target.value);
+                      setSelectedInstancia(null);
+                    }}
+                  >
+                    <MenuItem value="">Todas las áreas</MenuItem>
+                    {areasInspeccionOptions.map((area) => (
+                      <MenuItem key={area} value={area}>
+                        {area}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <FormControl size="small" sx={{ minWidth: 160 }}>
+                  <InputLabel id="filtro-anio-generar-label">Año</InputLabel>
+                  <Select
+                    labelId="filtro-anio-generar-label"
+                    label="Año"
+                    value={filtroAnioGenerar}
+                    onChange={(e) => {
+                      setFiltroAnioGenerar(e.target.value);
+                      setSelectedInstancia(null);
+                    }}
+                  >
+                    <MenuItem value="">Todos los años</MenuItem>
+                    {añosInspeccionOptions.map((anio) => (
+                      <MenuItem key={anio} value={anio}>
+                        {anio}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            )}
+
             {inspeccionesDisponibles.length === 0 && !loadingInspecciones ? (
               <Alert severity="warning">
                 Todas las inspecciones disponibles ya tienen un plan de acción
                 generado.
               </Alert>
+            ) : inspeccionesFiltradasParaGenerar.length === 0 ? (
+              <Alert severity="warning">
+                Ninguna inspección coincide con los filtros seleccionados.
+              </Alert>
             ) : (
               <Autocomplete
-                options={inspeccionesDisponibles} // ✅ Solo las disponibles
+                options={inspeccionesFiltradasParaGenerar} // ✅ Solo las disponibles y filtradas
                 loading={loadingInspecciones}
                 getOptionKey={(option) => option._id}
                 getOptionLabel={(option) => {
@@ -1025,11 +998,11 @@ export default function PlanesDeAccionPage() {
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
+        onClose={closeSnackbar}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
         <Alert
-          onClose={handleCloseSnackbar}
+          onClose={closeSnackbar}
           severity={snackbar.severity}
           variant="filled"
           sx={{ width: "100%" }}

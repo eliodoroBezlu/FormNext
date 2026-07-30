@@ -13,6 +13,35 @@ export const TEMPLATE_EQUIPMENT_MAP: Record<string, string[]> = {
 const normalizeLabel = (label: string): string =>
   label.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
+// RHF separa su path interno de get/set por cada "." \u2014 una etiqueta de
+// plantilla que ya trae un punto (ej. "A\u00d1O VEH./EQU.") rompe esa resoluci\u00f3n
+// y termina anidada o perdida en vez de guardarse como una sola clave plana.
+// Se sanea el punto SOLO para el path interno de RHF (Controller `name`,
+// `setValue`, `getValues`, `trigger`, `watch`); la etiqueta real de la
+// plantilla sigue siendo siempre la clave del objeto final que ve el resto
+// del sistema (backend, Excel/PDF, reportes).
+const DOT_PLACEHOLDER = "\u2024"; // ONE DOT LEADER \u2014 no es "." "," "[" "]"
+
+export const sanitizeFieldKey = (label: string): string =>
+  label.replace(/\./g, DOT_PLACEHOLDER);
+
+export const verificationFieldPath = (label: string): string =>
+  `verification.${sanitizeFieldKey(label)}`;
+
+// Convierte un objeto `verification` con claves reales (como llega del
+// backend en modo edici\u00f3n) a uno con claves saneadas, para hidratar el
+// estado inicial de RHF de forma consistente con `verificationFieldPath`.
+export const sanitizeVerificationObject = <T extends Record<string, unknown>>(
+  verification: T | undefined,
+): T => {
+  if (!verification) return {} as T;
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(verification)) {
+    result[sanitizeFieldKey(key)] = value;
+  }
+  return result as T;
+};
+
 export const isEquipmentCodeField = (label: string): boolean => {
   const clean = normalizeLabel(label);
   return (
@@ -123,10 +152,30 @@ export const autofillEquipmentFields = (
   equipo?: EquipoBackend,
 ) => {
   templateFields.forEach((field) => {
-    const targetKey = `verification.${field.label}`;
+    const targetKey = verificationFieldPath(field.label);
     const value = resolveAutofillValue(field.label, area, code, equipo);
     if (value !== undefined) {
       setValue(targetKey, value, { shouldValidate: true, shouldDirty: true });
     }
   });
+};
+
+/**
+ * Reconstruye `verification` como objeto plano con las etiquetas reales de
+ * la plantilla como clave, justo antes de enviarlo al backend. Lee cada
+ * valor por el mismo path saneado (`verificationFieldPath`) con el que se
+ * registró el campo, así que siempre recupera el valor correcto sin
+ * importar si la etiqueta trae puntos.
+ */
+export const rebuildVerification = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getValues: any,
+  templateFields: { label: string }[],
+): Record<string, string> => {
+  const result: Record<string, string> = {};
+  templateFields.forEach((field) => {
+    const value = getValues(verificationFieldPath(field.label));
+    result[field.label] = (value as string) ?? "";
+  });
+  return result;
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Controller, useForm, FieldErrors, Path } from "react-hook-form";
+import { Controller, useForm, useWatch, FieldErrors, Path } from "react-hook-form";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Box, Typography, Paper, Alert, Button, Chip } from "@mui/material";
 import {
@@ -11,6 +11,9 @@ import {
   isEquipmentCodeField,
   isAreaField,
   autofillEquipmentFields,
+  rebuildVerification,
+  verificationFieldPath,
+  sanitizeVerificationObject,
   TEMPLATE_EQUIPMENT_MAP,
 } from "../../../types/IProps";
 import { getFormConfig } from "../../../config/form-config.helpers";
@@ -51,8 +54,6 @@ interface ScaffoldInspectionFormProps {
   areas?: string[];
 }
 
-
-
 export function ScaffoldInspectionForm({
   template,
   onSubmit,
@@ -70,6 +71,10 @@ export function ScaffoldInspectionForm({
   const { user, hasRole } = useUserRole();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isViewModeUrl = searchParams.get("mode") === "view";
+
+  // Usar cualquiera de los dos (por prop o por URL)
+  const currentViewMode = isViewMode || isViewModeUrl;
 
   const canApprove = () => {
     if (!config?.approval?.enabled) return false;
@@ -117,7 +122,11 @@ export function ScaffoldInspectionForm({
       ];
 
   // Active step state read from search query parameter or startStep prop
-  const initialStep = isApprovalReview ? 6 : (startStep !== undefined ? startStep : parseInt(searchParams.get("step") || "1", 10));
+  const initialStep = isApprovalReview
+    ? 6
+    : startStep !== undefined
+      ? startStep
+      : parseInt(searchParams.get("step") || "1", 10);
   const [activeStep, setActiveStep] = useState(initialStep);
 
   const updateStepQueryParam = (step: number) => {
@@ -151,7 +160,7 @@ export function ScaffoldInspectionForm({
 
   const defaultValues: FormDataHerraEquipos = {
     ...initialData,
-    verification: initialData?.verification || {},
+    verification: sanitizeVerificationObject(initialData?.verification),
     responses: initialData?.responses || {},
     generalObservations: initialData?.generalObservations || "",
     scaffold: initialData?.scaffold || {
@@ -188,13 +197,22 @@ export function ScaffoldInspectionForm({
     formState: { errors, isSubmitting, isDirty },
   } = useForm<FormDataHerraEquipos>({ defaultValues, mode: "onTouched" });
 
+  // Snapshot completo del formulario para el paso de revisión. Antes era
+  // `watch()`, que no es memoizable y hacía que el React Compiler se saltara
+  // la optimización de todo este componente.
+  // `useWatch` provee la suscripción (re-render al cambiar cualquier campo) y
+  // `getValues` el snapshot completo: sin `name`, `useWatch` devuelve
+  // `DeepPartial<T>` y el paso de revisión necesita el tipo completo.
+  useWatch({ control });
+  const formDataCompleto = getValues();
+
   const [hasSubmitErrors, setHasSubmitErrors] = useState(false);
 
   useEffect(() => {
     if (initialData) {
       reset({
         ...initialData,
-        verification: initialData.verification || {},
+        verification: sanitizeVerificationObject(initialData.verification),
         responses: initialData.responses || {},
         generalObservations: initialData.generalObservations || "",
         scaffold: initialData.scaffold || {
@@ -227,7 +245,10 @@ export function ScaffoldInspectionForm({
   useEffect(() => {
     if (!isDirty || fieldsReadonly || readonly) return;
     const handler = (e: BeforeUnloadEvent) => {
-      if ((window as Window & { bypassBeforeUnload?: boolean }).bypassBeforeUnload) return;
+      if (
+        (window as Window & { bypassBeforeUnload?: boolean }).bypassBeforeUnload
+      )
+        return;
       e.preventDefault();
       e.returnValue = "";
     };
@@ -248,8 +269,6 @@ export function ScaffoldInspectionForm({
   // ============================================
   // LÓGICA DE APROBACIÓN
   // ============================================
-
-
 
   const shouldShowApprovalSection = () => {
     if (!config?.approval?.enabled) return false;
@@ -374,6 +393,10 @@ export function ScaffoldInspectionForm({
   };
 
   const handleFormSubmit = (data: FormDataHerraEquipos) => {
+    data.verification = rebuildVerification(
+      getValues,
+      template.verificationFields,
+    );
     setHasSubmitErrors(false);
     const resolvedData = applyApprovalLogic(data, InspectionStatus.IN_PROGRESS);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -382,6 +405,10 @@ export function ScaffoldInspectionForm({
   };
 
   const handleFormSaveProgress = (data: FormDataHerraEquipos) => {
+    data.verification = rebuildVerification(
+      getValues,
+      template.verificationFields,
+    );
     if (onSaveProgress) {
       const resolvedData = applyApprovalLogic(
         data,
@@ -394,6 +421,10 @@ export function ScaffoldInspectionForm({
   };
 
   const handleFormFinalize = (data: FormDataHerraEquipos) => {
+    data.verification = rebuildVerification(
+      getValues,
+      template.verificationFields,
+    );
     if (onFinalize) {
       const resolvedData = applyApprovalLogic(data, InspectionStatus.COMPLETED);
       resolvedData.status = InspectionStatus.COMPLETED;
@@ -404,6 +435,10 @@ export function ScaffoldInspectionForm({
   };
 
   const handleFormSaveDraft = (data: FormDataHerraEquipos) => {
+    data.verification = rebuildVerification(
+      getValues,
+      template.verificationFields,
+    );
     if (onSaveDraft) {
       const resolvedData = applyApprovalLogic(data, InspectionStatus.DRAFT);
       onSaveDraft(resolvedData);
@@ -428,8 +463,6 @@ export function ScaffoldInspectionForm({
       });
     });
   };
-
-
 
   const handleApprovalSubmit = () => {
     handleFormSubmit(getValues());
@@ -480,10 +513,13 @@ export function ScaffoldInspectionForm({
   };
 
   // Step 1 should contain ONLY Area and Code/TAG fields (used for edit mode navigation)
-  const step1Fields = template.verificationFields.filter((f) => isEquipmentCodeField(f.label) || isAreaField(f.label));
+  const step1Fields = template.verificationFields.filter(
+    (f) => isEquipmentCodeField(f.label) || isAreaField(f.label),
+  );
 
   // Mapped forms with equipment: show equipment selector in step 1 (new inspections only)
-  const hasEquipmentSelection = TEMPLATE_EQUIPMENT_MAP[template.code] !== undefined && !initialData;
+  const hasEquipmentSelection =
+    TEMPLATE_EQUIPMENT_MAP[template.code] !== undefined && !initialData;
 
   // Stepper Section Navigation Handlers
   const handleNextStep = async () => {
@@ -491,14 +527,18 @@ export function ScaffoldInspectionForm({
       if (hasEquipmentSelection) {
         handleStepChange(2);
       } else {
-        const step1FieldNames = step1Fields.map((f) => `verification.${f.label}`);
+        const step1FieldNames = step1Fields.map((f) =>
+          verificationFieldPath(f.label),
+        );
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const isValid = await trigger(step1FieldNames as any);
         if (isValid) handleStepChange(2);
       }
     } else if (activeStep === 2) {
       // Always validate ALL verification fields
-      const step2FieldNames = template.verificationFields.map((f) => `verification.${f.label}`);
+      const step2FieldNames = template.verificationFields.map((f) =>
+        verificationFieldPath(f.label),
+      );
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const isValid = await trigger(step2FieldNames as any);
       if (isValid) handleStepChange(3);
@@ -531,6 +571,10 @@ export function ScaffoldInspectionForm({
 
       if (onSaveDraft) {
         handleSubmit(async (data) => {
+          data.verification = rebuildVerification(
+            getValues,
+            template.verificationFields,
+          );
           const resolvedData = applyApprovalLogic(data, InspectionStatus.DRAFT);
           await onSaveDraft(resolvedData);
           if (initialData?._id) {
@@ -563,8 +607,16 @@ export function ScaffoldInspectionForm({
       >
         {/* ── Header ── */}
         <Box>
-          <Box display="flex" alignItems="center" gap={2} mb={1} flexWrap="wrap">
-            <Typography variant="h5" fontWeight={600}>{config.formName}</Typography>
+          <Box
+            display="flex"
+            alignItems="center"
+            gap={2}
+            mb={1}
+            flexWrap="wrap"
+          >
+            <Typography variant="h5" fontWeight={600}>
+              {config.formName}
+            </Typography>
             {getStatusChip()}
           </Box>
           <Typography variant="body2" color="text.secondary">
@@ -572,12 +624,14 @@ export function ScaffoldInspectionForm({
           </Typography>
         </Box>
 
-        <FormStepperHeader activeStep={activeStep} steps={formSteps} />
+        {!currentViewMode && (
+          <FormStepperHeader activeStep={activeStep} steps={formSteps} />
+        )}
 
         {hasSubmitErrors && Object.keys(errors).length > 0 && (
           <Alert severity="error" onClose={() => setHasSubmitErrors(false)}>
-            Hay campos con errores. Revise el formulario — los campos marcados en
-            rojo requieren su atención.
+            Hay campos con errores. Revise el formulario — los campos marcados
+            en rojo requieren su atención.
           </Alert>
         )}
 
@@ -585,26 +639,44 @@ export function ScaffoldInspectionForm({
         {activeStep < 5 && getInfoAlert()}
 
         {/* STEP 1: HERRAMIENTA Y ÁREA */}
-        {activeStep === 1 && (
-          hasEquipmentSelection ? (
+        {activeStep === 1 &&
+          (hasEquipmentSelection ? (
             <EquipmentSelectionStep
               templateCode={template.code}
               templateName={template.name}
               equipos={equipos || []}
               areas={areas || []}
               onSelect={(area, code, equipo) => {
-                autofillEquipmentFields(setValue, template.verificationFields, area, code, equipo);
+                autofillEquipmentFields(
+                  setValue,
+                  template.verificationFields,
+                  area,
+                  code,
+                  equipo,
+                );
                 handleStepChange(2);
               }}
               onSkip={() => {
                 // Clear fields first, then set default area from logged in user if available
                 template.verificationFields.forEach((field) => {
-                  setValue(`verification.${field.label}` as Path<FormDataHerraEquipos>, "");
+                  setValue(
+                    verificationFieldPath(
+                      field.label,
+                    ) as Path<FormDataHerraEquipos>,
+                    "",
+                  );
                 });
                 if (user?.area) {
-                  const areaField = template.verificationFields.find(f => isAreaField(f.label));
+                  const areaField = template.verificationFields.find((f) =>
+                    isAreaField(f.label),
+                  );
                   if (areaField) {
-                    setValue(`verification.${areaField.label}` as Path<FormDataHerraEquipos>, user.area);
+                    setValue(
+                      verificationFieldPath(
+                        areaField.label,
+                      ) as Path<FormDataHerraEquipos>,
+                      user.area,
+                    );
                   }
                 }
                 handleStepChange(2);
@@ -620,8 +692,7 @@ export function ScaffoldInspectionForm({
               isEditMode={!!initialData}
               templateCode={template.code}
             />
-          )
-        )}
+          ))}
 
         {/* STEP 2: DATOS GENERALES — siempre muestra TODOS los campos de verificación */}
         {activeStep === 2 && (
@@ -673,12 +744,20 @@ export function ScaffoldInspectionForm({
             {config.routineInspection?.enabled && shouldShowRoutines && (
               <>
                 <Box
-                  sx={{ borderTop: "2px dashed", borderColor: "warning.main", pt: 3 }}
+                  sx={{
+                    borderTop: "2px dashed",
+                    borderColor: "warning.main",
+                    pt: 3,
+                  }}
                 >
                   <Typography variant="h6" color="warning.main" gutterBottom>
                     📋 Inspecciones Rutinarias Diarias
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mb: 2 }}
+                  >
                     Esta sección registra las inspecciones diarias del andamio
                     mientras esté en uso
                   </Typography>
@@ -712,7 +791,9 @@ export function ScaffoldInspectionForm({
               <Controller
                 name="scaffold.finalConclusion"
                 control={control}
-                rules={{ required: "Debe seleccionar una opción de conclusión" }}
+                rules={{
+                  required: "Debe seleccionar una opción de conclusión",
+                }}
                 render={({ field }) => (
                   <ScaffoldConclusionSection
                     config={config.conclusion!}
@@ -773,7 +854,9 @@ export function ScaffoldInspectionForm({
             {/* Sección de Aprobación */}
             {shouldShowApprovalSection() && !isApprovalReview && (
               <ApprovalSection
-                status={initialData!.status || InspectionStatus.PENDING_APPROVAL}
+                status={
+                  initialData!.status || InspectionStatus.PENDING_APPROVAL
+                }
                 approval={initialData!.approval}
                 canApprove={canApprove()}
                 onApprove={handleLocalApprove}
@@ -794,13 +877,14 @@ export function ScaffoldInspectionForm({
         {activeStep === 5 && (
           <Step5ReviewSection
             template={template}
-            formData={watch()}
+            formData={formDataCompleto}
             onPrev={handlePrevStep}
             onFinalSubmit={
               isApprovalReview
                 ? handleNextStep
                 : isInProgress
-                  ? () => handleSubmit(handleFormFinalize, handleInvalidSubmit)()
+                  ? () =>
+                      handleSubmit(handleFormFinalize, handleInvalidSubmit)()
                   : handleSubmit(handleFormSubmit, handleInvalidSubmit)
             }
             isSubmitting={isSubmitting}
@@ -808,6 +892,7 @@ export function ScaffoldInspectionForm({
             formType="scaffold"
             isApprovalReview={isApprovalReview}
             showApprovalInputs={false}
+            isViewMode={currentViewMode}
           />
         )}
 
@@ -815,7 +900,7 @@ export function ScaffoldInspectionForm({
         {activeStep === 6 && (
           <Step5ReviewSection
             template={template}
-            formData={watch()}
+            formData={formDataCompleto}
             onPrev={handlePrevStep}
             onFinalSubmit={handleApprovalSubmit}
             isSubmitting={isSubmitting}

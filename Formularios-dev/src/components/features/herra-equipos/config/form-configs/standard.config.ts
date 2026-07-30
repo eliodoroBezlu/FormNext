@@ -974,11 +974,199 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
       items: [
         {
           sectionTitle: "ROOT",
-          label: "Seleccione los elementos de protección contra caídas (SPCC) a inspeccionar",
-          helperText: "Puede seleccionar uno o más elementos y continúe con la inspección",
+          label:
+            "Seleccione los elementos de protección contra caídas (SPCC) a inspeccionar",
+          helperText:
+            "Puede seleccionar uno o más elementos y continúe con la inspección",
           required: true,
         },
       ],
     },
+  },
+
+  "3.04.P37.F37": {
+    formCode: "3.04.P37.F37",
+    formName: "INSPECCIÓN FRECUENTE DE MONTACARGAS TELESCÓPICOS Y DE MÁSTIL",
+    formType: "standard",
+    signatures: {
+      inspector: {
+        enabled: true,
+        title: "Inspector",
+        fields: {
+          name: {
+            enabled: true,
+            type: "text",
+            label: "Inspecttor",
+            required: true,
+            fieldName: "inspectorSignature.inspectorName",
+          },
+          signature: {
+            type: "canvas",
+            enabled: true,
+            required: true,
+            fieldName: "inspectorSignature.inspectorSignature",
+          },
+        },
+      },
+      supervisor: {
+        enabled: false,
+      },
+    },
+    // ✅ NUEVAS CONFIGURACIONES
+    questionObservations: {
+      enabled: true,
+      required: false,
+      label: "Observaciones",
+      placeholder: "Comentarios adicionales sobre esta pregunta...",
+    },
+    generalObservations: {
+      enabled: true,
+      required: false,
+      label: "Observaciones",
+      placeholder: "Ingrese observaciones generales de la inspección...",
+      maxLength: 1000,
+      helperText: "Máximo 1000 caracteres",
+    },
+    requiresPhotos: true,
+    allowDraft: true,
+  },
+  "3.04.P37.F35": {
+    formCode: "3.04.P37.F35",
+    formName: "INSPECCIÓN FRECUENTE DE GRÚA RT",
+    formType: "standard",
+    signatures: {
+      inspector: {
+        enabled: true,
+        title: "Inspector",
+        fields: {
+          name: {
+            enabled: true,
+            type: "text",
+            label: "Inspector",
+            required: true,
+            fieldName: "inspectorSignature.inspectorName",
+          },
+          signature: {
+            type: "canvas",
+            enabled: true,
+            required: true,
+            fieldName: "inspectorSignature.inspectorSignature",
+          },
+        },
+      },
+      supervisor: {
+        enabled: false,
+      },
+    },
+    // ✅ NUEVAS CONFIGURACIONES
+    questionObservations: {
+      enabled: true,
+      required: false,
+      label: "Observaciones",
+      placeholder: "Comentarios adicionales sobre esta pregunta...",
+    },
+    generalObservations: {
+      enabled: true,
+      required: false,
+      label: "Observaciones",
+      placeholder: "Ingrese observaciones generales de la inspección...",
+      maxLength: 1000,
+      helperText: "Máximo 1000 caracteres",
+    },
+    requiresPhotos: true,
+    allowDraft: true,
+  },
+  "3.04.P37.F36": {
+    formCode: "3.04.P37.F36",
+    formName:
+      "INSPECCIÓN FRECUENTE DE CAMIONES GRÚA TELESCÓPICOS Y ARTICULADOS",
+    formType: "standard",
+    signatures: {
+      inspector: {
+        enabled: true,
+        title: "Inspector",
+        fields: {
+          name: {
+            enabled: true,
+            type: "text",
+            label: "Inspector",
+            required: true,
+            fieldName: "inspectorSignature.inspectorName",
+          },
+          signature: {
+            type: "canvas",
+            enabled: true,
+            required: true,
+            fieldName: "inspectorSignature.inspectorSignature",
+          },
+        },
+      },
+      supervisor: {
+        enabled: false,
+      },
+    },
+    // ✅ NUEVAS CONFIGURACIONES
+    questionObservations: {
+      enabled: true,
+      required: false,
+      label: "Observaciones",
+      placeholder: "Comentarios adicionales sobre esta pregunta...",
+    },
+    generalObservations: {
+      enabled: true,
+      required: false,
+      label: "Observaciones",
+      placeholder: "Ingrese observaciones generales de la inspección...",
+      maxLength: 1000,
+      helperText: "Máximo 1000 caracteres",
+    },
+    requiresPhotos: true,
+    allowDraft: true,
+  },
+  "3.04.P37.F31": {
+    formCode: "3.04.P37.F31",
+    formName: "INSPECCIÓN FRECUENTE DE GRÚA AT",
+    formType: "standard",
+    signatures: {
+      inspector: {
+        enabled: true,
+        title: "Inspector",
+        fields: {
+          name: {
+            enabled: true,
+            type: "text",
+            label: "Inspector",
+            required: true,
+            fieldName: "inspectorSignature.inspectorName",
+          },
+          signature: {
+            type: "canvas",
+            enabled: true,
+            required: true,
+            fieldName: "inspectorSignature.inspectorSignature",
+          },
+        },
+      },
+      supervisor: {
+        enabled: false,
+      },
+    },
+    // ✅ NUEVAS CONFIGURACIONES
+    questionObservations: {
+      enabled: true,
+      required: false,
+      label: "Observaciones",
+      placeholder: "Comentarios adicionales sobre esta pregunta...",
+    },
+    generalObservations: {
+      enabled: true,
+      required: false,
+      label: "Observaciones",
+      placeholder: "Ingrese observaciones generales de la inspección...",
+      maxLength: 1000,
+      helperText: "Máximo 1000 caracteres",
+    },
+    requiresPhotos: true,
+    allowDraft: true,
   },
 };

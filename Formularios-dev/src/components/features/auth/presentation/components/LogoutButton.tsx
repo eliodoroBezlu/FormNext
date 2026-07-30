@@ -3,7 +3,7 @@
 import { useTransition } from 'react';
 import { MenuItem, CircularProgress, ListItemIcon, ListItemText } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
-import { logoutAction } from '@/app/actions/auth';
+import { authAdapter } from '../../infrastructure/adapters/authAdapter';
 
 interface LogoutButtonProps {
   onClose?: () => void;
@@ -15,7 +15,7 @@ export function LogoutButton({ onClose }: LogoutButtonProps) {
   const handleLogout = () => {
     onClose?.();
     startTransition(async () => {
-      await logoutAction();
+      await authAdapter.logout();
     });
   };
 

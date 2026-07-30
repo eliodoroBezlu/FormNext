@@ -7,13 +7,28 @@ import {
   Box,
   Alert,
   Typography,
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
 } from '@mui/material';
-import { ArrowBack, Add as AddIcon, Edit as EditIcon } from '@mui/icons-material';
+import {
+  ArrowBack,
+  Add as AddIcon,
+  Edit as EditIcon,
+  Download as DownloadIcon,
+  CheckCircle as CheckCircleIcon,
+} from '@mui/icons-material';
 import { PlanDeAccion, TareaObservacion, AddTareaDTO, UpdateTareaDTO } from '../../domain/models/IProps';
 import { TareasTable } from './TareasTable';
 import { TareaFormModal } from './TareaFormModal';
 import { HeaderInfo } from './HeaderInfo';
 import { TaskSummary } from './TaskSummary';
+import { useUserRole } from '@/hooks/useUserRole';
+import { Role } from '@/lib/routePermissions';
+import { downloadAdapter } from '../../infrastructure/adapters/downloadAdapter';
 
 interface PlanDetailViewProps {
   plan: PlanDeAccion;
@@ -25,6 +40,8 @@ interface PlanDetailViewProps {
   onUpdateTarea: (tareaId: string, data: UpdateTareaDTO) => Promise<void>;
   onDeleteTarea: (tareaId: string) => Promise<void>;
   onApproveTarea: (tareaId: string) => Promise<void>;
+  onApprovePlan: (planId: string, observaciones?: string) => Promise<unknown>;
+  puedeAprobarPlan: boolean;
 }
 
 export function PlanDetailView({
@@ -37,10 +54,21 @@ export function PlanDetailView({
   onUpdateTarea,
   onDeleteTarea,
   onApproveTarea,
+  onApprovePlan,
+  puedeAprobarPlan,
 }: PlanDetailViewProps) {
   const [openTareaModal, setOpenTareaModal] = useState(false);
   const [selectedTarea, setSelectedTarea] = useState<TareaObservacion | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [openAprobarPlanModal, setOpenAprobarPlanModal] = useState(false);
+  const [observacionesAprobacion, setObservacionesAprobacion] = useState('');
+  const [isAprobandoPlan, setIsAprobandoPlan] = useState(false);
+
+  const planAprobado = plan.estadoAprobacion === 'aprobado';
+
+  const { hasRole } = useUserRole();
+  const isAdmin = hasRole(Role.ADMIN);
 
   const handleOpenAddTarea = () => {
     setSelectedTarea(null);
@@ -74,7 +102,7 @@ export function PlanDetailView({
 };
 
   const handleDeleteTarea = async (tareaId: string) => {
-    if (confirm('¿Está seguro de que desea eliminar esta tarea?')) {
+    if (confirm('¿Está seguro de que desea dar de baja esta tarea?')) {
       try {
         setLocalError(null);
         await onDeleteTarea(tareaId);
@@ -95,6 +123,34 @@ export function PlanDetailView({
     }
   };
 
+  const handleAprobarPlan = async () => {
+    try {
+      setLocalError(null);
+      setIsAprobandoPlan(true);
+      await onApprovePlan(plan._id, observacionesAprobacion || undefined);
+      setOpenAprobarPlanModal(false);
+      setObservacionesAprobacion('');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al aprobar el plan';
+      setLocalError(errorMessage);
+    } finally {
+      setIsAprobandoPlan(false);
+    }
+  };
+
+  const handleDownloadExcel = async () => {
+    try {
+      setLocalError(null);
+      setIsDownloading(true);
+      await downloadAdapter.downloadPlanExcel(plan._id);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al descargar el Excel';
+      setLocalError(errorMessage);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Button startIcon={<ArrowBack />} onClick={onBack} sx={{ mb: 3 }}>
@@ -108,7 +164,6 @@ export function PlanDetailView({
           superintendencia: plan.superintendencia,
           areaFisica: plan.areaFisica,
         }}
-        isEditable={true}
       />
 
       <TaskSummary
@@ -124,6 +179,35 @@ export function PlanDetailView({
       {(error || localError) && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setLocalError(null)}>
           {error || localError}
+        </Alert>
+      )}
+
+      {puedeAprobarPlan && (
+        <Alert
+          severity={planAprobado ? 'success' : 'warning'}
+          sx={{ mb: 3 }}
+          action={
+            !planAprobado && (
+              <Button
+                type="button"
+                color="inherit"
+                size="small"
+                startIcon={<CheckCircleIcon />}
+                onClick={() => setOpenAprobarPlanModal(true)}
+                disabled={isLoading}
+              >
+                Aprobar Plan
+              </Button>
+            )
+          }
+        >
+          {planAprobado
+            ? `Aprobado por ${plan.aprobadoPor} el ${
+                plan.fechaAprobacion
+                  ? new Date(plan.fechaAprobacion).toLocaleDateString('es-ES')
+                  : ''
+              }${plan.observacionesAprobacion ? ` — "${plan.observacionesAprobacion}"` : ''}`
+            : 'Pendiente de aprobación global del Superintendente. El Supervisor no podrá ver este plan hasta que sea aprobado.'}
         </Alert>
       )}
 
@@ -172,18 +256,39 @@ export function PlanDetailView({
             {plan.estado.toUpperCase()}
           </Box>
         </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          <strong>Aprobación Superintendente:</strong>{' '}
+          <Chip
+            size="small"
+            color={planAprobado ? 'success' : 'warning'}
+            label={planAprobado ? 'Aprobado' : 'Pendiente'}
+          />
+        </Typography>
       </Box>
 
       <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mb: 3 }}>
         <Button
+          type="button"
           variant="outlined"
-          startIcon={<EditIcon />}
-          onClick={onEditHeader}
-          disabled={isLoading}
+          startIcon={<DownloadIcon />}
+          onClick={handleDownloadExcel}
+          disabled={isDownloading}
         >
-          Editar Datos Organizacionales
+          {isDownloading ? 'Generando...' : 'Descargar Excel'}
         </Button>
+        {isAdmin && (
+          <Button
+            type="button"
+            variant="outlined"
+            startIcon={<EditIcon />}
+            onClick={onEditHeader}
+            disabled={isLoading}
+          >
+            Editar Datos Organizacionales
+          </Button>
+        )}
         <Button
+          type="button"
           variant="contained"
           startIcon={<AddIcon />}
           onClick={handleOpenAddTarea}
@@ -195,6 +300,7 @@ export function PlanDetailView({
 
       <TareasTable
         tareas={plan.tareas}
+        esGeneradaDesdeInspeccion={plan.instanceId !== undefined}
         onEdit={handleEditTarea}
         onDelete={handleDeleteTarea}
         onApprove={handleApproveTarea}
@@ -204,9 +310,52 @@ export function PlanDetailView({
         open={openTareaModal}
         isLoading={isLoading}
         tarea={selectedTarea}
+        plan={plan}
         onClose={handleCloseTareaModal}
         onSubmit={handleSubmitTarea}
       />
+
+      <Dialog
+        open={openAprobarPlanModal}
+        onClose={() => setOpenAprobarPlanModal(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>Aprobar Plan de Acción</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Al aprobar, este plan quedará disponible para que el Supervisor
+            correspondiente lo visualice y gestione. Esta acción no se puede
+            deshacer.
+          </Typography>
+          <TextField
+            label="Observaciones (opcional)"
+            fullWidth
+            multiline
+            minRows={3}
+            value={observacionesAprobacion}
+            onChange={(e) => setObservacionesAprobacion(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            type="button"
+            onClick={() => setOpenAprobarPlanModal(false)}
+            disabled={isAprobandoPlan}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            variant="contained"
+            color="success"
+            onClick={handleAprobarPlan}
+            disabled={isAprobandoPlan}
+          >
+            {isAprobandoPlan ? 'Aprobando...' : 'Confirmar Aprobación'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }

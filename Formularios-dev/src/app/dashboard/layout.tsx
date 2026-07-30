@@ -25,7 +25,7 @@ import { lightTheme, darkTheme } from "../../styles/theme";
 import { LogoutButton } from "@/components/features/auth/presentation/components/LogoutButton";
 import { useUserRole } from "@/hooks/useUserRole";
 import { DynamicBreadcrumbs } from "@/components/layout/navigation/DynamicBreadcrumbs";
-import { NotificationBell } from "@/components/features/dashboard/NotificationBell";
+import { NotificationBell } from "@/components/features/dashboard/presentation/components/NotificationBell";
 
 const drawerWidth = 300;
 

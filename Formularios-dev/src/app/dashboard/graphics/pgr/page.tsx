@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { pgrService } from "@/services/pgrService";
-import { Pgr, ActividadPgr } from "@/types/pgr";
+import React, { useEffect, useMemo } from "react";
+import { usePgrList } from "@/components/features/pgr/application/hooks/usePgrList";
+import { ActividadPgr, Pgr } from "@/components/features/pgr/domain/models/IProps";
+import { getPgrEstadoColor } from "@/components/features/pgr/domain/pgrHelpers";
 import {
   Box,
   Typography,
@@ -20,7 +21,9 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Button
+  Button,
+  Chip,
+  useTheme,
 } from "@mui/material";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import TableViewIcon from "@mui/icons-material/TableView";
@@ -39,77 +42,60 @@ import {
 } from "recharts";
 
 export default function PgrDashboard() {
-  const [metricas, setMetricas] = useState({
-    totalTareas: 0,
-    avance: 0,
-    tareasAtrasadas: 0,
-    planesAprobados: 0,
-  });
-
-  const [distribucion, setDistribucion] = useState([
-    { name: "Completado", value: 0 },
-    { name: "En Proceso", value: 0 },
-    { name: "Atrasado", value: 0 },
-  ]);
-
-  const [tareasResponsable, setTareasResponsable] = useState<{name: string, tareas: number}[]>([]);
-  const [planesList, setPlanesList] = useState<Pgr[]>([]);
+  const theme = useTheme();
+  const { planes, isLoading, loadPlanes } = usePgrList();
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const planes = await pgrService.obtenerTodos();
-        let totalTareas = 0;
-        let tareasAtrasadas = 0;
-        let tareasCompletadas = 0;
-        let planesAprobados = 0;
+    loadPlanes();
+  }, [loadPlanes]);
 
-        const responsableMap: Record<string, number> = {};
+  const metricas = useMemo(() => {
+    let totalTareas = 0;
+    let tareasAtrasadas = 0;
+    let tareasCompletadas = 0;
+    let planesAprobados = 0;
 
-        planes.forEach((plan: Pgr) => {
-          if (plan.estado === 'APROBADO') planesAprobados++;
+    planes.forEach((plan: Pgr) => {
+      if (plan.estado === "APROBADO") planesAprobados++;
 
-          plan.actividades?.forEach((actividad: ActividadPgr) => {
-            totalTareas++;
-            if (actividad.semaforoTiempo === 'Atrasado') tareasAtrasadas++;
-            if (actividad.estadoAprobacion === 'APROBADO' && actividad.fechaEjecucion) tareasCompletadas++;
+      plan.actividades?.forEach((actividad: ActividadPgr) => {
+        totalTareas++;
+        if (actividad.semaforoTiempo === "Atrasado") tareasAtrasadas++;
+        if (actividad.estadoAprobacion === "APROBADO" && actividad.fechaEjecucion)
+          tareasCompletadas++;
+      });
+    });
 
-            if (actividad.responsable) {
-              responsableMap[actividad.responsable] = (responsableMap[actividad.responsable] || 0) + 1;
-            }
-          });
-        });
+    const avance = totalTareas > 0 ? Math.round((tareasCompletadas / totalTareas) * 100) : 0;
 
-        const avance = totalTareas > 0 ? Math.round((tareasCompletadas / totalTareas) * 100) : 0;
-        const tareasEnProceso = totalTareas - tareasCompletadas - tareasAtrasadas;
+    return { totalTareas, avance, tareasAtrasadas, planesAprobados, tareasCompletadas };
+  }, [planes]);
 
-        setMetricas({
-          totalTareas,
-          avance,
-          tareasAtrasadas,
-          planesAprobados,
-        });
+  const distribucion = useMemo(() => {
+    const tareasEnProceso =
+      metricas.totalTareas - metricas.tareasCompletadas - metricas.tareasAtrasadas;
+    return [
+      { name: "Completado", value: metricas.tareasCompletadas },
+      { name: "En Proceso", value: tareasEnProceso > 0 ? tareasEnProceso : 0 },
+      { name: "Atrasado", value: metricas.tareasAtrasadas },
+    ];
+  }, [metricas]);
 
-        setDistribucion([
-          { name: "Completado", value: tareasCompletadas },
-          { name: "En Proceso", value: tareasEnProceso > 0 ? tareasEnProceso : 0 },
-          { name: "Atrasado", value: tareasAtrasadas },
-        ]);
-
-        const responsablesArray = Object.keys(responsableMap).map(key => ({
-          name: key,
-          tareas: responsableMap[key]
-        }));
-        setTareasResponsable(responsablesArray);
-        setPlanesList(planes);
-
-      } catch (error) {
-        console.error("Error fetching PGR data", error);
-      }
-    };
-    
-    fetchDashboardData();
-  }, []);
+  const tareasResponsable = useMemo(() => {
+    const responsableMap: Record<string, number> = {};
+    planes.forEach((plan) => {
+      plan.actividades?.forEach((actividad: ActividadPgr) => {
+        if (actividad.responsable) {
+          responsableMap[actividad.responsable] =
+            (responsableMap[actividad.responsable] || 0) + 1;
+        }
+      });
+    });
+    return Object.keys(responsableMap).map((key) => ({
+      name: key,
+      tareas: responsableMap[key],
+    }));
+  }, [planes]);
 
   const COLORS = ["#00C49F", "#0088FE", "#FF8042"];
 
@@ -257,7 +243,7 @@ export default function PgrDashboard() {
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="tareas" fill="#1976d2" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="tareas" fill={theme.palette.primary.main} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </Paper>
@@ -269,17 +255,17 @@ export default function PgrDashboard() {
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h6" fontWeight="bold">Tabla de Consolidación</Typography>
           <Box gap={2} display="flex">
-            <Button variant="outlined" startIcon={<PictureAsPdfIcon />} color="inherit" sx={{ textTransform: "none", borderRadius: 2 }}>
+            <Button variant="outlined" startIcon={<PictureAsPdfIcon />} color="inherit" type="button" sx={{ textTransform: "none", borderRadius: 2 }}>
               Exportar PDF
             </Button>
-            <Button variant="outlined" startIcon={<TableViewIcon />} color="inherit" sx={{ textTransform: "none", borderRadius: 2 }}>
+            <Button variant="outlined" startIcon={<TableViewIcon />} color="inherit" type="button" sx={{ textTransform: "none", borderRadius: 2 }}>
               Exportar Excel
             </Button>
           </Box>
         </Box>
         <TableContainer>
           <Table size="small">
-            <TableHead sx={{ backgroundColor: '#F9FAFB' }}>
+            <TableHead sx={{ backgroundColor: theme.palette.action.hover }}>
               <TableRow>
                 <TableCell sx={{ fontWeight: 'bold' }}>Código</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Empresa</TableCell>
@@ -291,14 +277,14 @@ export default function PgrDashboard() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {planesList.length === 0 ? (
+              {!isLoading && planes.length === 0 ? (
                 <TableRow>
                    <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                      No hay planes que coincidan con los filtros
                    </TableCell>
                 </TableRow>
               ) : (
-                planesList.map((plan) => {
+                planes.map((plan) => {
                    const total = plan.actividades?.length || 0;
                    const completadas = plan.actividades?.filter((a: ActividadPgr) => a.estadoAprobacion === 'APROBADO' && a.fechaEjecucion).length || 0;
                    const avance = total > 0 ? Math.round((completadas / total) * 100) : 0;
@@ -309,13 +295,12 @@ export default function PgrDashboard() {
                         <TableCell>{plan.gerencia}</TableCell>
                         <TableCell>{plan.gestion}</TableCell>
                         <TableCell>
-                          <Typography variant="body2" sx={{ 
-                            backgroundColor: plan.estado === 'APROBADO' ? '#E8F5E9' : (plan.estado === 'CORREGIR' ? '#FFEBEE' : '#E3F2FD'), 
-                            color: plan.estado === 'APROBADO' ? '#2E7D32' : (plan.estado === 'CORREGIR' ? '#C62828' : '#1565C0'),
-                            px: 1, py: 0.5, borderRadius: 1, display: 'inline-block', fontSize: '0.75rem', fontWeight: 'bold'
-                          }}>
-                            {plan.estado}
-                          </Typography>
+                          <Chip
+                            label={plan.estado}
+                            color={getPgrEstadoColor(plan.estado)}
+                            size="small"
+                            sx={{ fontWeight: "bold" }}
+                          />
                         </TableCell>
                         <TableCell>{total}</TableCell>
                         <TableCell>{avance}%</TableCell>

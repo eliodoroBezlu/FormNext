@@ -4,7 +4,7 @@ import React from "react";
 import { Box, Typography, LinearProgress } from "@mui/material";
 import { Assignment } from "@mui/icons-material";
 import { useUserRole } from "@/hooks/useUserRole";
-import { MyInspectionsList } from "@/components/features/dashboard/MyInspectionsList";
+import { MisInspeccionesView } from "@/components/features/dashboard/presentation/components/MisInspeccionesView";
 
 export default function MisInspeccionesPage() {
   const { user, isLoading } = useUserRole();
@@ -59,7 +59,7 @@ export default function MisInspeccionesPage() {
       </Box>
 
       {/* List */}
-      <MyInspectionsList username={user.username} area={user.area} />
+      <MisInspeccionesView username={user.username} area={user.area} />
     </Box>
   );
 }

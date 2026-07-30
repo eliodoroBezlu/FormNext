@@ -1,32 +1,29 @@
 'use client'
 
-import { useState, useTransition, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { 
-  Box, 
-  TextField, 
-  Button, 
-  Typography, 
-  Paper, 
+import { useState, useRef, useEffect } from 'react';
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Paper,
   Alert,
   AlertTitle,
   CircularProgress,
   Avatar
 } from '@mui/material';
-import { 
+import {
   LockOpen as LockOpenIcon,
   Info as InfoIcon
 } from '@mui/icons-material';
-import { verify2FAAction } from '@/app/actions/auth';
+import { useVerify2FA } from '../../application/hooks/useVerify2FA';
 
 interface Props {
   tempToken: string;
 }
 
 export default function Verify2FAForm({ tempToken }: Props) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const { isPending, error, setError, verify } = useVerify2FA(tempToken);
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -73,23 +70,15 @@ export default function Verify2FAForm({ tempToken }: Props) {
     setError(null);
 
     const fullCode = code.join('');
-    
+
     if (fullCode.length !== 6) {
       setError('El código debe tener 6 dígitos');
       return;
     }
 
-    startTransition(async () => {
-      const result = await verify2FAAction(tempToken, fullCode);
-
-      if (result.success) {
-        router.push('/dashboard');
-        router.refresh();
-      } else {
-        setError(result.error || 'Código inválido');
-        setCode(['', '', '', '', '', '']);
-        inputRefs.current[0]?.focus();
-      }
+    verify(fullCode, () => {
+      setCode(['', '', '', '', '', '']);
+      inputRefs.current[0]?.focus();
     });
   }
 

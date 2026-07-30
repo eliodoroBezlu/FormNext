@@ -2,11 +2,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  deleteInspection as deleteInspectionAction,
-  getInspectionById,
-  getInspectionsHerraEquipos,
-  InspectionResponse,
-} from '@/lib/actions/inspection-herra-equipos';
+  inspectionAdapter,
+  type InspectionResponse,
+} from '../../infrastructure/adapters/inspectionAdapter';
 
 export type Inspection = InspectionResponse;
 
@@ -55,7 +53,7 @@ export const useInspections = () => {
       try {
         setLoading(true);
         setError(null);
-        const result = await getInspectionsHerraEquipos(filters);
+        const result = await inspectionAdapter.getInspections(filters);
         if (result.success && result.data) {
           setInspections(result.data);
         } else {
@@ -79,7 +77,7 @@ export const useInspections = () => {
     async (id: string) => {
       try {
         setLoading(true);
-        const result = await deleteInspectionAction(id);
+        const result = await inspectionAdapter.delete(id);
         if (result.success) {
           notify('Inspección eliminada correctamente', 'success');
           await loadInspections();
@@ -102,7 +100,7 @@ export const useInspections = () => {
     async (inspection: Inspection) => {
       try {
         setLoading(true);
-        const result = await getInspectionById(inspection._id);
+        const result = await inspectionAdapter.getById(inspection._id);
         if (result.success && result.data) {
           setSelectedInspection(result.data);
           setOpenDetailModal(true);
@@ -131,7 +129,7 @@ export const useInspections = () => {
     async (inspection: Inspection) => {
       try {
         setLoading(true);
-        const result = await getInspectionById(inspection._id);
+        const result = await inspectionAdapter.getById(inspection._id);
         if (result.success && result.data) {
           const draftData = {
             ...result.data,

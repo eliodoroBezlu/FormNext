@@ -1,4 +1,4 @@
-import { FormularioInspeccion, AreaStats, SistemasPasivos, SistemasActivos, SistemaInspeccion, Extintor, Tag } from '../types/IProps';
+import { FormularioInspeccion, AreaStats, SistemasPasivos, SistemasActivos, SistemaInspeccion, Extintor, Tag, TagDetalle } from '../types/IProps';
 
 type SistemaType = SistemasPasivos | SistemasActivos;
 
@@ -96,4 +96,46 @@ export function determinarEstado(cumplimiento: number): 'OPTIMO' | 'ADVERTENCIA'
   if (cumplimiento >= 90) return 'OPTIMO';
   if (cumplimiento >= 70) return 'ADVERTENCIA';
   return 'CRITICO';
+}
+
+// --- Detalle por tag (drill-down desde los gráficos) ---
+
+/**
+ * Desglosa un área en sus tags, con la cantidad de extintores activos (meta)
+ * e inspeccionados de cada uno, usando las mismas inspecciones ya filtradas
+ * (por superintendencia/área/mes/año) que alimentan los gráficos.
+ */
+export function calcularDetalleTagsPorArea(
+  area: string,
+  tags: Tag[],
+  extintores: Extintor[],
+  inspeccionesFiltradas: FormularioInspeccion[],
+): TagDetalle[] {
+  const tagsDelArea = [
+    ...new Set(tags.filter((t) => t.area === area && t.activo).map((t) => t.tag)),
+  ].sort();
+
+  return tagsDelArea.map((tag) => {
+    const inspeccion = inspeccionesFiltradas.find((ins) => ins.tag === tag);
+    const extintoresActivos = extintores.filter(
+      (e) => e.tag === tag && e.activo === true,
+    ).length;
+
+    const mesData = inspeccion?.meses[inspeccion.mesActual];
+    const extintoresInspeccionados = mesData?.inspeccionesExtintor?.length ?? 0;
+
+    const pctExtintores =
+      extintoresActivos > 0
+        ? Math.min(Math.round((extintoresInspeccionados / extintoresActivos) * 100), 100)
+        : 0;
+
+    return {
+      tag,
+      tieneInspeccion: !!inspeccion,
+      fechaUltimaModificacion: inspeccion?.fechaUltimaModificacion,
+      extintoresActivos,
+      extintoresInspeccionados,
+      pctExtintores,
+    };
+  });
 }

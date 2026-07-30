@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { Grid, Paper, Typography, CircularProgress, Box } from '@mui/material';
-import { PlanDeAccion } from '../../domain/models/IProps';
-import { PlanCard } from './PlanCard';
+import { Box, Paper, Typography, CircularProgress } from "@mui/material";
+import { PlanDeAccion } from "../../domain/models/IProps";
+import { PlanCard } from "./PlanCard";
 
 interface PlanCardListProps {
   planes: PlanDeAccion[];
@@ -12,10 +12,16 @@ interface PlanCardListProps {
   onDelete: (planId: string) => void;
 }
 
-export function PlanCardList({ planes, isLoading, onView, onEdit, onDelete }: PlanCardListProps) {
+export function PlanCardList({
+  planes,
+  isLoading,
+  onView,
+  onEdit,
+  onDelete,
+}: PlanCardListProps) {
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+      <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
         <CircularProgress size={60} />
       </Box>
     );
@@ -26,9 +32,9 @@ export function PlanCardList({ planes, isLoading, onView, onEdit, onDelete }: Pl
       <Paper
         sx={{
           p: 6,
-          textAlign: 'center',
-          bgcolor: '#f9f9f9',
-          border: '2px dashed #e0e0e0',
+          textAlign: "center",
+          bgcolor: "#f9f9f9",
+          border: "2px dashed #e0e0e0",
         }}
       >
         <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
@@ -42,12 +48,16 @@ export function PlanCardList({ planes, isLoading, onView, onEdit, onDelete }: Pl
   }
 
   return (
-    <Grid container spacing={3}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.75 }}>
       {planes.map((plan) => (
-        <Grid size={{xs:12, sm:6, md:4, lg:3}} key={plan._id}>
-          <PlanCard plan={plan} onView={onView} onEdit={onEdit} onDelete={onDelete} />
-        </Grid>
+        <PlanCard
+          key={plan._id}
+          plan={plan}
+          onView={onView}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       ))}
-    </Grid>
+    </Box>
   );
 }

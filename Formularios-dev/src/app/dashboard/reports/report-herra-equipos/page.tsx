@@ -35,6 +35,7 @@ import {
   InspectionResponse,
 } from "@/lib/actions/inspection-herra-equipos";
 import { getTemplatesHerraEquipos, TemplateHerraEquipo } from "@/lib/actions/template-herra-equipos";
+import { getArea, getEquipmentId } from "@/lib/utils/herra-equipos-fields";
 import {
   descargarExcelHerraEquipoCliente,
   descargarPdfHerraEquipoCliente,
@@ -58,29 +59,7 @@ import {
 
 
 
-const VERIFICATION_FIELD_NAMES: Record<string, string> = {
-  "3.04.P48.F03": "PLACA",
-  "1.02.P06.F37": "PLACA/N° INTERNO",
-  "3.04.P37.F24": "TAG",
-  "3.04.P37.F25": "TAG",
-  "3.04.P04.F23": "TAG del Puente Grúa",
-  "3.04.P04.F35": "Tag del puente grúa",
-  "1.02.P06.F33": "CÓDIGO DE LA ESCALERA",
-  "1.02.P06.F39": "IDENTIFICACIÓN INTERNA DEL EQUIPO",
-  "1.02.P06.F40": "UBICACIÓN FÍSICA EL EQUIPO",
-  "1.02.P06.F42": "IDENTIFICACIÓN INTERNA DEL EQUIPO",
-  "2.03.P10.F05": "CÓDIGO TALADRO",
-  "1.02.P06.F20": "Lugar exacto del trabajo/depósito (lugar físico)",
-  "1.02.P06.F30": "PROYECTO/Nº DE ORDEN DE TRABAJO",
-};
-
 // ── Helpers de extracción de campos dinámicos ─────────────────────────────
-const getEquipmentId = (i: InspectionResponse): string => {
-  const field = VERIFICATION_FIELD_NAMES[i.templateCode];
-  if (!field || !i.verification) return "N/A";
-  return i.verification[field]?.toString() || "N/A";
-};
-
 const getSuperintendenciaOGerencia = (i: InspectionResponse): string => {
   if (!i.verification) return "N/A";
   const v = i.verification;
@@ -92,20 +71,6 @@ const getSuperintendenciaOGerencia = (i: InspectionResponse): string => {
     v["Vicepresidencia/Gerencia"] ||
     v["Dirección/Gerencia"] ||
     v["EMPRESA"] ||
-    "N/A"
-  ).toString();
-};
-
-const getArea = (i: InspectionResponse): string => {
-  if (!i.verification) return "N/A";
-  const v = i.verification;
-  return (
-    v["ÁREA"] ||
-    v["Área"] ||
-    v["Area"] ||
-    v["AREA"] ||
-    v["AREA FÍSICA DE UBICACIÓN DE LA ESCALERA"] ||
-    v["UBICACIÓN FÍSICA DEL EQUIPO"] ||
     "N/A"
   ).toString();
 };

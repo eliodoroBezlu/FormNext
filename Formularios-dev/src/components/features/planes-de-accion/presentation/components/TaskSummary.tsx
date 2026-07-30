@@ -1,104 +1,156 @@
-'use client';
+"use client";
 
-import { Card, CardContent } from '@mui/material';
-import { Box, Grid, Paper, Typography } from '@mui/material';
-import { TaskSummary as TaskSummaryType } from '../../domain/models/IProps';
+import { Box, Typography } from "@mui/material";
+import {
+  AssignmentOutlined,
+  RadioButtonUncheckedOutlined,
+  AccessTimeOutlined,
+  CheckCircleOutlineOutlined,
+} from "@mui/icons-material";
+import { TaskSummary as TaskSummaryType } from "../../domain/models/IProps";
 
 interface TaskSummaryProps {
   summary: TaskSummaryType;
 }
 
 export function TaskSummary({ summary }: TaskSummaryProps) {
+  const metrics = [
+    {
+      label: "Total Tareas",
+      value: summary.totalTareas,
+      color: "#6366F1",
+      icon: AssignmentOutlined,
+    },
+    {
+      label: "Abiertas",
+      value: summary.tareasAbiertas,
+      color: "#3B82F6",
+      icon: RadioButtonUncheckedOutlined,
+    },
+    {
+      label: "En Progreso",
+      value: summary.tareasEnProgreso,
+      color: "#F59E0B",
+      icon: AccessTimeOutlined,
+    },
+    {
+      label: "Cerradas",
+      value: summary.tareasCerradas,
+      color: "#10B981",
+      icon: CheckCircleOutlineOutlined,
+    },
+  ];
+
+  const pctText = `${summary.porcentajeCierre}%`;
+
   return (
-    <Card sx={{ mb: 3, boxShadow: 1 }}>
-      <CardContent>
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
-            ESTADO DE TAREAS, % DE CIERRE
+    <Box sx={{ mb: 3 }}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "repeat(2, 1fr)", sm: "repeat(4, 1fr)" },
+          gap: 2.5,
+          mb: 1.75,
+        }}
+      >
+        {metrics.map(({ label, value, color, icon: Icon }) => (
+          <Box
+            key={label}
+            sx={{
+              position: "relative",
+              overflow: "hidden",
+              borderRadius: 4,
+              boxShadow: 1,
+              p: 2.75,
+              borderBottom: `3px solid ${color}`,
+              background: `linear-gradient(135deg, ${color}14, #fff)`,
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Typography
+                sx={{ fontSize: 13, color: "text.secondary", fontWeight: 500 }}
+              >
+                {label}
+              </Typography>
+              <Box
+                sx={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: "11px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  bgcolor: `${color}14`,
+                }}
+              >
+                <Icon sx={{ color, fontSize: 24 }} />
+              </Box>
+            </Box>
+            <Typography
+              sx={{
+                fontSize: 30,
+                fontWeight: 800,
+                color: "text.primary",
+                mt: 1,
+              }}
+            >
+              {value}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+
+      <Box
+        sx={{
+          bgcolor: "background.paper",
+          borderRadius: 3.5,
+          boxShadow: 1,
+          px: 2.5,
+          py: 2,
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            mb: 1,
+          }}
+        >
+          <Typography
+            sx={{ fontSize: 13, color: "text.secondary", fontWeight: 500 }}
+          >
+            Tasa de cierre
+          </Typography>
+          <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#10B981" }}>
+            {pctText}
           </Typography>
         </Box>
-
-        <Grid container spacing={0} sx={{ border: '2px solid #003d7a' }}>
-          <Grid size={{ xs: 12, sm: 3 }}>
-            <Paper
-              elevation={0}
-              sx={{
-                background: '#dc143c',
-                p: 2,
-                textAlign: 'center',
-                borderRadius: 0,
-                borderRight: '2px solid white',
-              }}
-            >
-              <Typography sx={{ color: 'white', fontWeight: 600, fontSize: '0.85rem' }}>
-                Tareas Abiertas
-              </Typography>
-              <Typography sx={{ color: 'white', fontSize: '1.5rem', fontWeight: 'bold', mt: 1 }}>
-                {summary.tareasAbiertas}
-              </Typography>
-            </Paper>
-          </Grid>
-
-          <Grid size={{ xs: 12, sm: 3 }}>
-            <Paper
-              elevation={0}
-              sx={{
-                background: '#228b22',
-                p: 2,
-                textAlign: 'center',
-                borderRadius: 0,
-                borderRight: '2px solid white',
-              }}
-            >
-              <Typography sx={{ color: 'white', fontWeight: 600, fontSize: '0.85rem' }}>
-                Tareas Cerradas
-              </Typography>
-              <Typography sx={{ color: 'white', fontSize: '1.5rem', fontWeight: 'bold', mt: 1 }}>
-                {summary.tareasCerradas}
-              </Typography>
-            </Paper>
-          </Grid>
-
-          <Grid size={{ xs: 12, sm: 3 }}>
-            <Paper
-              elevation={0}
-              sx={{
-                background: '#1e3a8a',
-                p: 2,
-                textAlign: 'center',
-                borderRadius: 0,
-                borderRight: '2px solid white',
-              }}
-            >
-              <Typography sx={{ color: 'white', fontWeight: 600, fontSize: '0.85rem' }}>
-                TOTAL TAREAS
-              </Typography>
-              <Typography sx={{ color: 'white', fontSize: '1.5rem', fontWeight: 'bold', mt: 1 }}>
-                {summary.totalTareas}
-              </Typography>
-            </Paper>
-          </Grid>
-
-          <Grid size={{ xs: 12, sm: 3 }}>
-            <Paper
-              elevation={0}
-              sx={{
-                background: '#ffff00',
-                p: 2,
-                textAlign: 'center',
-                borderRadius: 0,
-              }}
-            >
-              <Typography sx={{ color: 'black', fontWeight: 600, fontSize: '0.85rem' }}>
-                %
-              </Typography>
-              <Typography sx={{ color: 'black', fontSize: '1.5rem', fontWeight: 'bold', mt: 1 }}>
-                {summary.porcentajeCierre}%
-              </Typography>
-            </Paper>
-          </Grid>
-        </Grid>
-      </CardContent>
-    </Card>
+        <Box
+          sx={{
+            height: 8,
+            borderRadius: 6,
+            bgcolor: "#F1F5F9",
+            overflow: "hidden",
+          }}
+        >
+          <Box
+            sx={{
+              height: "100%",
+              width: `${Math.min(summary.porcentajeCierre, 100)}%`,
+              borderRadius: 6,
+              background: "linear-gradient(90deg, #10B981, #34D399)",
+              transition: "width .3s ease",
+            }}
+          />
+        </Box>
+      </Box>
+    </Box>
   );
 }

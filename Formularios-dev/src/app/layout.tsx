@@ -24,8 +24,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   
+  // `data-scroll-behavior`: globals.css declara `scroll-behavior: smooth`.
+  // Next 16 ya no lo neutraliza en las transiciones de ruta, así que sin este
+  // atributo la navegación haría scroll-to-top animado en vez de instantáneo.
   return (
-    <html lang="es" className={inter.variable}>
+    <html lang="es" className={inter.variable} data-scroll-behavior="smooth">
       <body className={inter.className}>
           <ThemeContextProvider>
             <LocalizationWrapper>

@@ -13,6 +13,8 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  PieChart,
+  Pie,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -20,7 +22,7 @@ import {
   Legend,
   Cell,
 } from "recharts";
-import { AreaStats, FormularioInspeccion, Extintor, Tag } from "../types/IProps";
+import { AreaStats, Extintor, FormularioInspeccion } from "../types/IProps";
 
 // ─── Paleta de colores semáforo ───────────────────────────────────────────────
 const COLORES_CUMPLIMIENTO: Record<string, string> = {
@@ -29,7 +31,7 @@ const COLORES_CUMPLIMIENTO: Record<string, string> = {
   CRITICO: "#ef4444",
 };
 
-const getColorSemaforo = (pct: number): string => {
+export const getColorSemaforo = (pct: number): string => {
   if (pct >= 90) return COLORES_CUMPLIMIENTO.OPTIMO;
   if (pct >= 60) return COLORES_CUMPLIMIENTO.ADVERTENCIA;
   return COLORES_CUMPLIMIENTO.CRITICO;
@@ -44,36 +46,36 @@ interface DashboardChartsProps {
   filtroSuperintendencia: string;
   filtroAreas: string[];
   filtroTags: string[];
-  tags: Tag[];
+  /** Áreas de la superintendencia seleccionada (todas si no hay ninguna elegida). */
+  areasDeSuperintendencia: string[];
+  /** Click en una barra de cualquiera de los dos gráficos — recibe el nombre completo del área. */
+  onAreaClick?: (area: string) => void;
 }
 
 
 
-interface ExtintoresChartData {
+interface ExtintoresConteoPorArea {
   name: string;
-  fullName: string;
-  Activos: number;
-  Inspeccionados: number;
-  InspeccionadosReales: number;
-  pct: number;
+  value: number;
+  inspeccionados: number;
+  [key: string]: string | number;
 }
 
-// ─── Tooltip personalizado para extintores ────────────────────────────────────
-interface CustomTooltipPayloadItem {
+// ─── Tooltip personalizado para cantidad/inspeccionados de extintores ────────
+interface CustomTooltipExtintoresPayloadItem {
   payload?: {
-    Activos?: number;
-    InspeccionadosReales?: number;
-    pct?: number;
+    value?: number;
+    inspeccionados?: number;
   };
 }
 
-const TooltipExtintores = ({
+const TooltipExtintoresCantidad = ({
   active,
   payload,
   label,
 }: {
   active?: boolean;
-  payload?: CustomTooltipPayloadItem[];
+  payload?: CustomTooltipExtintoresPayloadItem[];
   label?: string;
 }) => {
   if (!active || !payload || !payload.length) return null;
@@ -81,9 +83,9 @@ const TooltipExtintores = ({
   const data = payload[0]?.payload;
   if (!data) return null;
 
-  const activos = data.Activos ?? 0;
-  const inspeccionadosReales = data.InspeccionadosReales ?? 0;
-  const pct = data.pct ?? 0;
+  const cantidad = data.value ?? 0;
+  const inspeccionados = data.inspeccionados ?? 0;
+  const pct = cantidad > 0 ? Math.min(Math.round((inspeccionados / cantidad) * 100), 100) : 0;
 
   return (
     <Box
@@ -101,10 +103,10 @@ const TooltipExtintores = ({
         {label}
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        🎯 Meta (Activos): <strong>{activos}</strong>
+        🧯 Cantidad: <strong>{cantidad}</strong>
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        ✅ Inspeccionados: <strong>{inspeccionadosReales}</strong>
+        ✅ Inspeccionados: <strong>{inspeccionados}</strong>
       </Typography>
       <Box
         mt={0.5}
@@ -122,31 +124,27 @@ const TooltipExtintores = ({
   );
 };
 
-// ─── Tooltip personalizado para cobertura ──────────────────────────────────────
+// ─── Tooltip personalizado para cobertura (Inspeccionados vs No Inspeccionados) ─
+interface CoberturaGlobalSlice {
+  name: string;
+  value: number;
+  [key: string]: string | number;
+}
+
 interface CustomTooltipCoberturaPayloadItem {
-  payload?: {
-    MetaTags?: number;
-    InspeccionadosTags?: number;
-    "Cobertura %"?: number;
-  };
+  payload?: CoberturaGlobalSlice;
 }
 
 const TooltipCobertura = ({
   active,
   payload,
-  label,
 }: {
   active?: boolean;
   payload?: CustomTooltipCoberturaPayloadItem[];
-  label?: string;
 }) => {
   if (!active || !payload || !payload.length) return null;
   const data = payload[0]?.payload;
   if (!data) return null;
-
-  const meta = data.MetaTags ?? 0;
-  const inspeccionados = data.InspeccionadosTags ?? 0;
-  const pct = data["Cobertura %"] ?? 0;
 
   return (
     <Box
@@ -160,27 +158,9 @@ const TooltipCobertura = ({
         minWidth: 180,
       }}
     >
-      <Typography variant="subtitle2" fontWeight="bold" mb={0.5}>
-        {label}
+      <Typography variant="subtitle2" fontWeight="bold">
+        {data.name}: <strong>{data.value}</strong> tag{data.value !== 1 ? "s" : ""}
       </Typography>
-      <Typography variant="body2" color="text.secondary">
-        🎯 Meta (Tags): <strong>{meta}</strong>
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        ✅ Inspeccionados: <strong>{inspeccionados}</strong>
-      </Typography>
-      <Box
-        mt={0.5}
-        px={1}
-        py={0.25}
-        borderRadius={1}
-        display="inline-block"
-        sx={{ bgcolor: getColorSemaforo(pct), color: "white" }}
-      >
-        <Typography variant="caption" fontWeight="bold">
-          {pct}% cobertura
-        </Typography>
-      </Box>
     </Box>
   );
 };
@@ -194,9 +174,10 @@ export const DashboardCharts = ({
   filtroSuperintendencia = "",
   filtroAreas = [],
   filtroTags = [],
-  tags = [],
+  areasDeSuperintendencia = [],
+  onAreaClick,
 }: DashboardChartsProps) => {
-  // ── Gráfico 1: Cobertura de Inspecciones por Área (filtro global) ─────────
+  // ── Gráfico 1: Cobertura de Inspecciones (Inspeccionados vs No Inspeccionados) ─
   const coberturaPorArea = useMemo(() => {
     return estadisticasGlobales.map((area) => ({
       name: area.area.length > 14 ? area.area.substring(0, 14) + "…" : area.area,
@@ -207,83 +188,80 @@ export const DashboardCharts = ({
     }));
   }, [estadisticasGlobales]);
 
-  // ── Gráfico 2: Extintores por Área (filtros globales) ───────────────────
-  const extintoresPorArea: ExtintoresChartData[] = useMemo(() => {
-    // 1. Filtrar extintores en base a los filtros globales (superintendencia, areas, tags)
-    let extintoresFiltrados = extintores;
+  const coberturaGlobalPie: CoberturaGlobalSlice[] = useMemo(() => {
+    const totalMeta = coberturaPorArea.reduce((s, a) => s + a.MetaTags, 0);
+    const totalInspeccionado = coberturaPorArea.reduce((s, a) => s + a.InspeccionadosTags, 0);
+    const noInspeccionado = Math.max(totalMeta - totalInspeccionado, 0);
+
+    return [
+      { name: "Inspeccionados", value: totalInspeccionado },
+      { name: "No Inspeccionados", value: noInspeccionado },
+    ].filter((item) => item.value > 0);
+  }, [coberturaPorArea]);
+
+  // ── Extintores filtrados según los filtros globales (superintendencia, areas, tags) ──
+  // Nota: los tags no tienen un campo "superintendencia" propio en el
+  // backend — se filtra por pertenencia de área a la superintendencia
+  // seleccionada (areasDeSuperintendencia ya viene resuelta desde el
+  // catálogo canónico de Área/Superintendencia).
+  const extintoresFiltradosGlobal = useMemo(() => {
+    let filtrados = extintores;
 
     if (filtroSuperintendencia) {
-      const tagsMap = new Map(tags.map((t) => [t.tag, t.superintendencia]));
-      extintoresFiltrados = extintoresFiltrados.filter(
-        (e) => tagsMap.get(e.tag) === filtroSuperintendencia
+      filtrados = filtrados.filter((e) =>
+        areasDeSuperintendencia.includes(e.area)
       );
     }
 
     if (filtroAreas.length > 0) {
-      extintoresFiltrados = extintoresFiltrados.filter((e) =>
-        filtroAreas.includes(e.area)
-      );
+      filtrados = filtrados.filter((e) => filtroAreas.includes(e.area));
     }
 
     if (filtroTags.length > 0) {
-      extintoresFiltrados = extintoresFiltrados.filter((e) =>
-        filtroTags.includes(e.tag)
-      );
+      filtrados = filtrados.filter((e) => filtroTags.includes(e.tag));
     }
 
-    const areasConExtintores = [...new Set(extintoresFiltrados.map((e) => e.area))].sort();
+    return filtrados;
+  }, [extintores, filtroSuperintendencia, filtroAreas, filtroTags, areasDeSuperintendencia]);
 
-    return areasConExtintores.map((area) => {
-      // Activos (meta) en esa área
-      const activos = extintoresFiltrados.filter(
-        (e) => e.area === area && e.activo === true
-      ).length;
+  // ── Gráfico 2: Cantidad de Extintores por Área + Inspeccionados (bar chart) ──
+  const extintoresPorAreaConteo: ExtintoresConteoPorArea[] = useMemo(() => {
+    const areasConExtintores = [
+      ...new Set(extintoresFiltradosGlobal.map((e) => e.area)),
+    ].sort();
 
-      // Inspecciones de esta área en el conjunto de inspecciones filtradas
-      const inspeccionesDelArea = inspeccionesFiltradas.filter(
-        (ins) => ins.area === area
-      );
+    return areasConExtintores
+      .map((area) => {
+        const cantidad = extintoresFiltradosGlobal.filter((e) => e.area === area).length;
 
-      // Sumar extintores inspeccionados
-      const inspeccionados = inspeccionesDelArea.reduce((sum, ins) => {
-        const mesParaInspeccion = filtroMes || ins.mesActual;
-        const mesData = ins.meses[mesParaInspeccion];
-        return sum + (mesData?.inspeccionesExtintor?.length ?? 0);
-      }, 0);
+        const inspeccionesDelArea = inspeccionesFiltradas.filter((ins) => ins.area === area);
+        const inspeccionados = inspeccionesDelArea.reduce((sum, ins) => {
+          const mesParaInspeccion = filtroMes || ins.mesActual;
+          const mesData = ins.meses[mesParaInspeccion];
+          return sum + (mesData?.inspeccionesExtintor?.length ?? 0);
+        }, 0);
 
-      const pct =
-        activos > 0
-          ? Math.min(Math.round((inspeccionados / activos) * 100), 100)
-          : 0;
+        return {
+          name: area,
+          value: cantidad,
+          // Tope al total de extintores del área para visualización consistente.
+          inspeccionados: Math.min(inspeccionados, cantidad),
+        };
+      })
+      .filter((item) => item.value > 0);
+  }, [extintoresFiltradosGlobal, inspeccionesFiltradas, filtroMes]);
 
-      // Tope de 100% para visualización
-      const inspeccionadosMostrar = Math.min(inspeccionados, activos);
-
-      return {
-        name: area.length > 14 ? area.substring(0, 14) + "…" : area,
-        fullName: area,
-        Activos: activos,
-        Inspeccionados: inspeccionadosMostrar,
-        InspeccionadosReales: inspeccionados,
-        pct,
-      };
-    });
-  }, [
-    extintores,
-    inspeccionesFiltradas,
-    filtroSuperintendencia,
-    filtroAreas,
-    filtroTags,
-    filtroMes,
-    tags,
-  ]);
-
-  // Total global del mes seleccionado
-  const totalActivos = extintoresPorArea.reduce((s, a) => s + a.Activos, 0);
-  const totalInspeccionados = extintoresPorArea.reduce((s, a) => s + a.InspeccionadosReales, 0);
-  const pctGlobal =
-    totalActivos > 0
-      ? Math.min(Math.round((totalInspeccionados / totalActivos) * 100), 100)
+  const totalExtintores = extintoresPorAreaConteo.reduce(
+    (s, a) => s + a.value,
+    0,
+  );
+  const totalInspeccionados = extintoresPorAreaConteo.reduce(
+    (s, a) => s + a.inspeccionados,
+    0,
+  );
+  const pctGlobalInspeccionados =
+    totalExtintores > 0
+      ? Math.min(Math.round((totalInspeccionados / totalExtintores) * 100), 100)
       : 0;
 
 
@@ -304,80 +282,66 @@ export const DashboardCharts = ({
               Cobertura de Inspecciones por Área
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-              Porcentaje de tags de extintores inspeccionados respecto al total activo
+              Tags de extintores inspeccionados vs. no inspeccionados
             </Typography>
             <Box height={320}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={coberturaPorArea} margin={{ bottom: 24 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis
-                    dataKey="name"
-                    angle={-30}
-                    textAnchor="end"
-                    height={60}
-                    fontSize={11}
-                    tick={{ fill: "#6b7280" }}
-                  />
-                  <YAxis
-                    fontSize={11}
-                    domain={[0, 100]}
-                    tickFormatter={(v) => `${v}%`}
-                    tick={{ fill: "#6b7280" }}
-                  />
-                  <Tooltip content={<TooltipCobertura />} />
-                  <Bar dataKey="Cobertura %" radius={[4, 4, 0, 0]}>
-                    {coberturaPorArea.map((entry, index) => (
+                <PieChart>
+                  <Pie
+                    data={coberturaGlobalPie}
+                    cx="50%"
+                    cy="50%"
+                    dataKey="value"
+                    nameKey="name"
+                    outerRadius={110}
+                    labelLine={false}
+                    label={({ name, percent }) =>
+                      percent && percent > 0.05 ? `${name}: ${(percent * 100).toFixed(0)}%` : ""
+                    }
+                  >
+                    {coberturaGlobalPie.map((entry) => (
                       <Cell
-                        key={`cell-cobertura-${index}`}
-                        fill={getColorSemaforo(entry["Cobertura %"])}
+                        key={`cell-cobertura-${entry.name}`}
+                        fill={
+                          entry.name === "Inspeccionados"
+                            ? COLORES_CUMPLIMIENTO.OPTIMO
+                            : COLORES_CUMPLIMIENTO.CRITICO
+                        }
+                        stroke="#fff"
+                        strokeWidth={1}
                       />
                     ))}
-                  </Bar>
-                </BarChart>
+                  </Pie>
+                  <Tooltip content={<TooltipCobertura />} />
+                  <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
+                </PieChart>
               </ResponsiveContainer>
             </Box>
           </CardContent>
         </Card>
       </Grid>
 
-      {/* ── Gráfico 2: Seguimiento de Extintores por Área ─────────────────── */}
+      {/* ── Gráfico 2: Cantidad de Extintores por Área ────────────────────── */}
       <Grid size={{ xs: 12, md: 6 }}>
         <Card sx={{ height: "100%" }}>
           <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-            <Box
-              display="flex"
-              alignItems="center"
-              justifyContent="space-between"
-              flexWrap="wrap"
-              gap={1}
-              mb={0.5}
+            <Typography
+              variant="h6"
+              gutterBottom
+              color="primary"
+              fontWeight="bold"
+              sx={{ fontSize: { xs: "1rem", sm: "1.1rem", md: "1.25rem" } }}
             >
-              <Box>
-                <Typography
-                  variant="h6"
-                  color="primary"
-                  fontWeight="bold"
-                  sx={{ fontSize: { xs: "1rem", sm: "1.1rem", md: "1.25rem" } }}
-                >
-                  Seguimiento de Extintores por Área
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Meta mensual: inspeccionar el 100% de extintores activos
-                </Typography>
-              </Box>
-            </Box>
+              Cantidad de Extintores por Área
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+              Distribución de extintores registrados por área
+            </Typography>
 
-            {/* Resumen global del mes */}
-            <Box
-              display="flex"
-              gap={1}
-              mb={1.5}
-              flexWrap="wrap"
-              alignItems="center"
-            >
+            <Box display="flex" gap={1} mb={1.5} flexWrap="wrap" alignItems="center">
               <Chip
                 size="small"
-                label={`🎯 Meta total: ${totalActivos} extintores`}
+                label={`🧯 Cantidad total: ${totalExtintores} extintores`}
                 sx={{ bgcolor: "#e0f2fe", color: "#0369a1", fontWeight: 600, fontSize: "0.75rem" }}
               />
               <Chip
@@ -387,9 +351,9 @@ export const DashboardCharts = ({
               />
               <Chip
                 size="small"
-                label={`${pctGlobal}% global`}
+                label={`${pctGlobalInspeccionados}% global`}
                 sx={{
-                  bgcolor: getColorSemaforo(pctGlobal),
+                  bgcolor: getColorSemaforo(pctGlobalInspeccionados),
                   color: "white",
                   fontWeight: 700,
                   fontSize: "0.75rem",
@@ -400,7 +364,7 @@ export const DashboardCharts = ({
             <Box height={280}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={extintoresPorArea}
+                  data={extintoresPorAreaConteo}
                   margin={{ bottom: 24 }}
                   barCategoryGap="30%"
                   barGap={4}
@@ -426,34 +390,47 @@ export const DashboardCharts = ({
                     }}
                     tick={{ fill: "#6b7280" }}
                   />
-                  <Tooltip content={<TooltipExtintores />} />
+                  <Tooltip content={<TooltipExtintoresCantidad />} />
                   <Legend
                     formatter={(value) =>
-                      value === "Activos" ? "🎯 Activos (meta)" : "✅ Inspeccionados"
+                      value === "value" ? "🧯 Cantidad" : "✅ Inspeccionados"
                     }
                     wrapperStyle={{ fontSize: "0.8rem" }}
                   />
-                  {/* Barra de meta (activos) - gris de fondo */}
+                  {/* Barra de cantidad total de extintores del área - gris de fondo */}
                   <Bar
-                    dataKey="Activos"
-                    name="Activos"
+                    dataKey="value"
+                    name="value"
                     fill="#e2e8f0"
                     stroke="#94a3b8"
                     strokeWidth={1}
                     radius={[4, 4, 0, 0]}
+                    cursor={onAreaClick ? "pointer" : undefined}
+                    onClick={(entry) => {
+                      const name = (entry as { name?: string } | undefined)?.name;
+                      if (name) onAreaClick?.(name);
+                    }}
                   />
-                  {/* Barra de progreso (inspeccionados) - color semáforo */}
+                  {/* Barra de inspeccionados - color semáforo según % de cumplimiento */}
                   <Bar
-                    dataKey="Inspeccionados"
-                    name="Inspeccionados"
+                    dataKey="inspeccionados"
+                    name="inspeccionados"
                     radius={[4, 4, 0, 0]}
+                    cursor={onAreaClick ? "pointer" : undefined}
+                    onClick={(entry) => {
+                      const name = (entry as { name?: string } | undefined)?.name;
+                      if (name) onAreaClick?.(name);
+                    }}
                   >
-                    {extintoresPorArea.map((entry, index) => (
-                      <Cell
-                        key={`cell-ext-${index}`}
-                        fill={getColorSemaforo(entry.pct)}
-                      />
-                    ))}
+                    {extintoresPorAreaConteo.map((entry, index) => {
+                      const pct =
+                        entry.value > 0
+                          ? Math.round((entry.inspeccionados / entry.value) * 100)
+                          : 0;
+                      return (
+                        <Cell key={`cell-extintores-bar-${index}`} fill={getColorSemaforo(pct)} />
+                      );
+                    })}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>

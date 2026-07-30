@@ -76,11 +76,30 @@ export const VerificationFieldSchema = z.object({
   obligatorio: z.boolean().optional()
 })
 
+export const FrecuenciaInspeccionSchema = z.object({
+  unidad: z.enum([
+    "diaria",
+    "semanal",
+    "mensual",
+    "trimestral",
+    "semestral",
+    "anual",
+    "personalizada",
+  ]),
+  valorPersonalizado: z.number().optional(),
+  activa: z.boolean(),
+})
+
 export const FormBuilderDataSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
   code: z.string().min(1, "El código es obligatorio"),
   revision: z.string().min(1, "La revisión es obligatoria"),
   type: z.enum(["interna", "externa"]),
+  descripcion: z.string().optional(),
   verificationFields: z.array(VerificationFieldSchema),
-  sections: z.array(SectionSchema).min(1, "Debes agregar al menos una sección al formulario")
+  sections: z.array(SectionSchema).min(1, "Debes agregar al menos una sección al formulario"),
+  campoCodigoEquipo: z.string().optional(),
+  frecuencia: FrecuenciaInspeccionSchema.optional(),
+  /** Roles que ven esta plantilla. Vacío = visible para todos. */
+  rolesVisibles: z.array(z.string()).optional(),
 })

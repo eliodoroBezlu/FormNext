@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Controller, useForm, FieldErrors, Path } from "react-hook-form";
+import { Controller, useForm, useWatch, FieldErrors, Path } from "react-hook-form";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
@@ -19,6 +19,9 @@ import {
   isEquipmentCodeField,
   isAreaField,
   autofillEquipmentFields,
+  rebuildVerification,
+  verificationFieldPath,
+  sanitizeVerificationObject,
   TEMPLATE_EQUIPMENT_MAP,
 } from "../../../types/IProps";
 import { AlertSection } from "../../../common/AlertSection";
@@ -50,6 +53,7 @@ interface GroupedAccessoriesFormProps {
   readonly?: boolean;
   initialData?: FormDataHerraEquipos;
   startStep?: number;
+  isViewMode?: boolean;
   equipos?: EquipoBackend[];
   areas?: string[];
 }
@@ -61,12 +65,17 @@ export function GroupedAccessoriesForm({
   readonly = false,
   initialData,
   startStep,
+  isViewMode = false,
   equipos,
   areas,
 }: GroupedAccessoriesFormProps) {
   const config = getFormConfig(template.code);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isViewModeUrl = searchParams.get("mode") === "view";
+
+  // Usar cualquiera de los dos (por prop o por URL)
+  const currentViewMode = isViewMode || isViewModeUrl;
   const { user, hasRole } = useUserRole();
 
   const [approvalDecision, setApprovalDecision] = useState<{
@@ -171,7 +180,11 @@ export function GroupedAccessoriesForm({
       ];
 
   // Active step state read from search query parameter or startStep prop
-  const initialStep = isApprovalReview ? 6 : (startStep !== undefined ? startStep : parseInt(searchParams.get("step") || "1", 10));
+  const initialStep = isApprovalReview
+    ? 6
+    : startStep !== undefined
+      ? startStep
+      : parseInt(searchParams.get("step") || "1", 10);
   const [activeStep, setActiveStep] = useState(initialStep);
 
   const updateStepQueryParam = (step: number) => {
@@ -200,6 +213,7 @@ export function GroupedAccessoriesForm({
     mode: "onTouched",
     defaultValues: {
       ...initialData,
+      verification: sanitizeVerificationObject(initialData?.verification),
       inspectorSignature: {
         name: "",
         signature: "",
@@ -217,12 +231,22 @@ export function GroupedAccessoriesForm({
     },
   });
 
+  // Snapshot completo del formulario para el paso de revisión. Antes era
+  // `watch()`, que no es memoizable y hacía que el React Compiler se saltara
+  // la optimización de todo este componente.
+  // `useWatch` provee la suscripción (re-render al cambiar cualquier campo) y
+  // `getValues` el snapshot completo: sin `name`, `useWatch` devuelve
+  // `DeepPartial<T>` y el paso de revisión necesita el tipo completo.
+  useWatch({ control });
+  const formDataCompleto = getValues();
+
   const [hasSubmitErrors, setHasSubmitErrors] = useState(false);
 
   useEffect(() => {
     if (initialData) {
       reset({
         ...initialData,
+        verification: sanitizeVerificationObject(initialData.verification),
         inspectorSignature: {
           name: "",
           signature: "",
@@ -244,7 +268,10 @@ export function GroupedAccessoriesForm({
   useEffect(() => {
     if (!isDirty || readonly) return;
     const handler = (e: BeforeUnloadEvent) => {
-      if ((window as Window & { bypassBeforeUnload?: boolean }).bypassBeforeUnload) return;
+      if (
+        (window as Window & { bypassBeforeUnload?: boolean }).bypassBeforeUnload
+      )
+        return;
       e.preventDefault();
       e.returnValue = "";
     };
@@ -282,6 +309,10 @@ export function GroupedAccessoriesForm({
   };
 
   const handleFormSubmit = (data: FormDataHerraEquipos) => {
+    data.verification = rebuildVerification(
+      getValues,
+      template.verificationFields,
+    );
     setHasSubmitErrors(false);
     const completeData = { ...data };
     const isNewForm = !initialData || !initialData._id;
@@ -326,14 +357,21 @@ export function GroupedAccessoriesForm({
   };
 
   const handleDraftSave = (data: FormDataHerraEquipos) => {
+    data.verification = rebuildVerification(
+      getValues,
+      template.verificationFields,
+    );
     onSaveDraft?.(data);
   };
 
   // Step 1 should contain ONLY Area and Code/TAG fields (used for edit mode navigation)
-  const step1Fields = template.verificationFields.filter((f) => isEquipmentCodeField(f.label) || isAreaField(f.label));
+  const step1Fields = template.verificationFields.filter(
+    (f) => isEquipmentCodeField(f.label) || isAreaField(f.label),
+  );
 
   // Mapped forms with equipment: show equipment selector in step 1 (new inspections only)
-  const hasEquipmentSelection = TEMPLATE_EQUIPMENT_MAP[template.code] !== undefined && !initialData;
+  const hasEquipmentSelection =
+    TEMPLATE_EQUIPMENT_MAP[template.code] !== undefined && !initialData;
 
   // Stepper Section Navigation Handlers
   const handleNextStep = async () => {
@@ -341,7 +379,9 @@ export function GroupedAccessoriesForm({
       if (hasEquipmentSelection) {
         handleStepChange(2);
       } else {
-        const step1FieldNames = step1Fields.map((f) => `verification.${f.label}`);
+        const step1FieldNames = step1Fields.map((f) =>
+          verificationFieldPath(f.label),
+        );
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const isValid = await trigger(step1FieldNames as any);
         if (isValid) handleStepChange(2);
@@ -349,7 +389,9 @@ export function GroupedAccessoriesForm({
     } else if (activeStep === 2) {
       // Validate step 2 fields + accesoriosConfig count inputs
       // Always validate ALL verification fields
-      const step2FieldNames = template.verificationFields.map((f) => `verification.${f.label}`);
+      const step2FieldNames = template.verificationFields.map((f) =>
+        verificationFieldPath(f.label),
+      );
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const step2Valid = await trigger(step2FieldNames as any);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -379,6 +421,10 @@ export function GroupedAccessoriesForm({
 
       if (onSaveDraft) {
         handleSubmit(async (data) => {
+          data.verification = rebuildVerification(
+            getValues,
+            template.verificationFields,
+          );
           await onSaveDraft(data);
           if (initialData?._id) {
             handleStepChange(5);
@@ -417,36 +463,56 @@ export function GroupedAccessoriesForm({
           </Typography>
         </Box>
 
-        <FormStepperHeader activeStep={activeStep} steps={formSteps} />
+        {!currentViewMode && (
+          <FormStepperHeader activeStep={activeStep} steps={formSteps} />
+        )}
 
         {hasSubmitErrors && Object.keys(errors).length > 0 && (
           <Alert severity="error" onClose={() => setHasSubmitErrors(false)}>
-            Hay campos con errores. Revise el formulario — los campos marcados en
-            rojo requieren su atención.
+            Hay campos con errores. Revise el formulario — los campos marcados
+            en rojo requieren su atención.
           </Alert>
         )}
 
         {/* STEP 1: HERRAMIENTA Y ÁREA */}
-        {activeStep === 1 && (
-          hasEquipmentSelection ? (
+        {activeStep === 1 &&
+          (hasEquipmentSelection ? (
             <EquipmentSelectionStep
               templateCode={template.code}
               templateName={template.name}
               equipos={equipos || []}
               areas={areas || []}
               onSelect={(area, code, equipo) => {
-                autofillEquipmentFields(setValue, template.verificationFields, area, code, equipo);
+                autofillEquipmentFields(
+                  setValue,
+                  template.verificationFields,
+                  area,
+                  code,
+                  equipo,
+                );
                 handleStepChange(2);
               }}
               onSkip={() => {
                 // Clear fields first, then set default area from logged in user if available
                 template.verificationFields.forEach((field) => {
-                  setValue(`verification.${field.label}` as Path<FormDataHerraEquipos>, "");
+                  setValue(
+                    verificationFieldPath(
+                      field.label,
+                    ) as Path<FormDataHerraEquipos>,
+                    "",
+                  );
                 });
                 if (user?.area) {
-                  const areaField = template.verificationFields.find(f => isAreaField(f.label));
+                  const areaField = template.verificationFields.find((f) =>
+                    isAreaField(f.label),
+                  );
                   if (areaField) {
-                    setValue(`verification.${areaField.label}` as Path<FormDataHerraEquipos>, user.area);
+                    setValue(
+                      verificationFieldPath(
+                        areaField.label,
+                      ) as Path<FormDataHerraEquipos>,
+                      user.area,
+                    );
                   }
                 }
                 handleStepChange(2);
@@ -462,8 +528,7 @@ export function GroupedAccessoriesForm({
               isEditMode={!!initialData}
               templateCode={template.code}
             />
-          )
-        )}
+          ))}
 
         {/* STEP 2: DATOS GENERALES + CANTIDADES */}
         {activeStep === 2 && (
@@ -479,7 +544,10 @@ export function GroupedAccessoriesForm({
             />
 
             {config.formType === "grouped" && (
-              <Paper elevation={3} sx={{ p: 3, mb: 3, border: "2px solid #2196f3" }}>
+              <Paper
+                elevation={3}
+                sx={{ p: 3, mb: 3, border: "2px solid #2196f3" }}
+              >
                 <Box sx={{ mt: 3 }}>
                   <Typography
                     variant="subtitle1"
@@ -498,7 +566,9 @@ export function GroupedAccessoriesForm({
 
                   <Grid container spacing={2}>
                     {config.groupedConfig?.columns
-                      .filter((col) => col.applicability === "requiredWithCount")
+                      .filter(
+                        (col) => col.applicability === "requiredWithCount",
+                      )
                       .map((column) => (
                         <Grid size={{ xs: 6, sm: 3 }} key={column.key}>
                           <Controller
@@ -649,7 +719,7 @@ export function GroupedAccessoriesForm({
         {activeStep === 5 && (
           <Step5ReviewSection
             template={template}
-            formData={watch()}
+            formData={formDataCompleto}
             onPrev={handlePrevStep}
             onFinalSubmit={
               isApprovalReview
@@ -661,6 +731,7 @@ export function GroupedAccessoriesForm({
             formType="grouped"
             isApprovalReview={isApprovalReview}
             showApprovalInputs={false}
+            isViewMode={currentViewMode}
           />
         )}
 
@@ -668,7 +739,7 @@ export function GroupedAccessoriesForm({
         {activeStep === 6 && (
           <Step5ReviewSection
             template={template}
-            formData={watch()}
+            formData={formDataCompleto}
             onPrev={handlePrevStep}
             onFinalSubmit={handleApprovalSubmit}
             isSubmitting={isSubmitting}

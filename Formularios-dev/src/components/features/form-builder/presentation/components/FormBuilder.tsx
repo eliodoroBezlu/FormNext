@@ -1,5 +1,5 @@
 import type React from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import {
   Box,
   Typography,
@@ -18,14 +18,14 @@ import {
   ArrowBack,
   Save,
   Expand,
-  Image,
+  Image as ImageIcon,
   FolderOpen,
 } from "@mui/icons-material";
 import { Button } from "@/components/ui/buttons/Button";
 import { FormField } from "@/components/ui/inputs/FormField";
 import { FormBuilderData, FormTemplate } from "@/types/formTypes";
-import { useCallback, useEffect, useState, useTransition } from "react";
-import { createTemplate, updateTemplate } from "@/lib/actions/template-actions";
+import { useCallback, useEffect, useState } from "react";
+import { useFormBuilderSubmit } from "@/components/features/form-builder/application/hooks/useFormBuilderSubmit";
 import { SectionBuilder } from "./SectionBuilder";
 import { ImageSectionBuilder } from "./SectionBuilderView";
 
@@ -53,9 +53,6 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
   onCancel,
   mode = "create",
 }) => {
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(
     new Set([0])
   );
@@ -66,10 +63,16 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
   const isReadOnly = mode === "view";
   const isEditing = mode === "edit" && template;
 
+  const { onSubmit, isPending, error, setError, success, setSuccess } =
+    useFormBuilderSubmit({
+      template,
+      isEditing: Boolean(isEditing),
+      onSave,
+    });
+
   const {
     control,
     handleSubmit,
-    watch,
     reset,
     setValue,
     formState: { errors, isValid },
@@ -142,107 +145,12 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
     name: "simpleSections",
   });
 
-  const watchedSections = watch("sections");
-  const watchedSimpleSections = watch("simpleSections");
-  const watchedVerificationFields = watch("verificationFields");
-
-  const onSubmit = async (data: FormBuilderData) => {
-    if (data.sections.length === 0) {
-      setError("Debe agregar al menos una sección");
-      return;
-    }
-
-    startTransition(async () => {
-      setError(null);
-      setSuccess(null);
-
-      try {
-        const hasInvalidImages = (data.simpleSections || []).some((section) =>
-          section.questions?.some(
-            (question) => question.image && question.image.startsWith("blob:")
-          )
-        );
-
-        if (hasInvalidImages) {
-          setError(
-            "Hay imágenes que aún se están procesando. Por favor, espera a que terminen."
-          );
-          return;
-        }
-
-        const transformedData: FormBuilderData = {
-          ...data,
-          sections: data.sections.map((section, index) => {
-            const maxPoints = Number(section.maxPoints);
-
-            if (isNaN(maxPoints) || maxPoints < 0) {
-              throw new Error(
-                `Sección ${
-                  index + 1
-                }: El puntaje máximo debe ser un número mayor o igual a 0`
-              );
-            }
-
-            return {
-              ...section,
-              maxPoints: maxPoints,
-              questions: (section.questions || [])
-                .filter((q) => q.text?.trim())
-                .map((q) => q),
-            };
-          }),
-          simpleSections: (data.simpleSections || []).map((section) => ({
-            ...section,
-            questions: (section.questions || [])
-              .filter((q) => q.text?.trim())
-              .map((q) => q),
-          })),
-        };
-        const imageStats = (transformedData.simpleSections || []).flatMap(
-          (section) =>
-            (section.questions || [])
-              .filter((q) => q.image && q.image.startsWith("data:image/"))
-              .map((q) => {
-                const sizeInBytes = (q.image!.length * 3) / 4;
-                const sizeInKB = Math.round(sizeInBytes / 1024);
-                return sizeInKB;
-              })
-        );
-
-        if (imageStats.length > 0) {
-          const totalImageSize = imageStats.reduce(
-            (sum, size) => sum + size,
-            0
-          );
-          console.log(
-            `Total de imágenes: ${imageStats.length}, Tamaño total: ${totalImageSize}KB`
-          );
-
-          if (totalImageSize > 5000) {
-            console.warn(
-              "⚠️ Tamaño total de imágenes muy grande:",
-              totalImageSize,
-              "KB"
-            );
-          }
-        }
-        console.log("Datos transformados para envío:", transformedData);
-
-        const result = isEditing
-          ? await updateTemplate(template._id, transformedData)
-          : await createTemplate(transformedData);
-
-        if (result.success) {
-          setSuccess(result.message || "Operación completada exitosamente");
-          onSave(result.data as FormTemplate);
-        } else {
-          setError(result.error || "Error desconocido");
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Error inesperado");
-      }
-    });
-  };
+  const watchedSections = useWatch({ control, name: "sections" });
+  const watchedSimpleSections = useWatch({ control, name: "simpleSections" });
+  const watchedVerificationFields = useWatch({
+    control,
+    name: "verificationFields",
+  });
 
   const addVerificationField = useCallback(() => {
     appendVerificationField({
@@ -449,7 +357,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
               color={imageStats.processing > 0 ? "warning" : "info"}
               variant="outlined"
               size="small"
-              icon={<Image />}
+              icon={<ImageIcon />}
             />
           )}
 
@@ -728,7 +636,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
                   </Button>
                   <Button
                     variant="outlined"
-                    startIcon={<Image />}
+                    startIcon={<ImageIcon />}
                     onClick={addImageSection}
                     size="small"
                     color="info"
@@ -779,7 +687,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
                   </Button>
                   <Button
                     variant="outlined"
-                    startIcon={<Image />}
+                    startIcon={<ImageIcon />}
                     onClick={addImageSection}
                     size="small"
                     color="info"

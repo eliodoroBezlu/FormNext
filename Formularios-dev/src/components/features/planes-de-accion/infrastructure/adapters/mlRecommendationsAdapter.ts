@@ -42,18 +42,10 @@ export async function getMLRecommendation(
   error?: string;
 }> {
   try {
-    console.log('🔄 [Server Action] Obteniendo recomendación ML');
-    console.log('📝 Params:', JSON.stringify(params, null, 2));
-
-    // 🔥 Obtener headers con autenticación
     const headers = await getAuthHeaders();
 
-    // 🔥 URL del backend NestJS
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
     const endpoint = `${apiUrl}/ml-recommendations/recommend`;
-
-    console.log('🎯 Endpoint:', endpoint);
-    console.log('🔑 Headers:', { ...headers, Authorization: 'Bearer [REDACTED]' });
 
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -62,12 +54,10 @@ export async function getMLRecommendation(
       cache: 'no-store',
     });
 
-    console.log('📡 Response Status:', response.status);
-
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ Error Response:', errorText);
-      
+      console.error('Error obteniendo recomendación ML:', errorText);
+
       // 🔥 Manejo específico de errores de autenticación
       if (response.status === 401) {
         return {
@@ -90,7 +80,6 @@ export async function getMLRecommendation(
     }
 
     const data = await response.json();
-    console.log('✅ Data recibida:', JSON.stringify(data, null, 2));
 
     if (data.status === 'success' && data.recommendation) {
       return {
@@ -98,15 +87,14 @@ export async function getMLRecommendation(
         recommendation: data.recommendation,
       };
     } else {
-      console.warn('⚠️ Respuesta sin recomendación válida:', data);
       return {
         success: false,
         error: 'Respuesta inválida del servidor',
       };
     }
   } catch (error) {
-    console.error('❌ Error en Server Action:', error);
-    
+    console.error('Error obteniendo recomendación ML:', error);
+
     // 🔥 Manejo específico de error de autenticación
     if (error instanceof Error && error.message.includes('authentication')) {
       return {
@@ -133,8 +121,6 @@ export async function getRecommendedActions(
   error?: string;
 }> {
   try {
-    console.log('🔍 [getRecommendedActions] Llamando a getMLRecommendation...');
-    
     const result = await getMLRecommendation({
       question_text: questionText,
       current_response: 0,
@@ -142,23 +128,19 @@ export async function getRecommendedActions(
       context: {},
     });
 
-    console.log('📊 Resultado de getMLRecommendation:', result);
-
     if (result.success && result.recommendation?.recommended_actions) {
-      console.log('✅ Acciones encontradas:', result.recommendation.recommended_actions);
       return {
         success: true,
         actions: result.recommendation.recommended_actions,
       };
     } else {
-      console.warn('⚠️ No se encontraron acciones');
       return {
         success: false,
         error: result.error || 'No se encontraron recomendaciones',
       };
     }
   } catch (error) {
-    console.error('❌ Error en getRecommendedActions:', error);
+    console.error('Error en getRecommendedActions:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido',
@@ -183,8 +165,6 @@ export async function authenticatedFetch<T>(
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
     const url = `${apiUrl}${endpoint}`;
 
-    console.log('🌐 Fetching:', url);
-
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -196,7 +176,7 @@ export async function authenticatedFetch<T>(
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ Error Response:', errorText);
+      console.error('Error en authenticatedFetch:', errorText);
 
       if (response.status === 401 || response.status === 403) {
         return {

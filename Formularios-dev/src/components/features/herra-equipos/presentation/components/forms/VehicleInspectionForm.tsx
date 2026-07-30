@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { useForm, Controller, FieldErrors, Path } from "react-hook-form";
+import { useForm, Controller, useWatch, FieldErrors, Path } from "react-hook-form";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
@@ -21,6 +21,9 @@ import {
   isEquipmentCodeField,
   isAreaField,
   autofillEquipmentFields,
+  rebuildVerification,
+  verificationFieldPath,
+  sanitizeVerificationObject,
   TEMPLATE_EQUIPMENT_MAP,
 } from "../../../types/IProps";
 import { getFormConfig } from "../../../config/form-config.helpers";
@@ -58,8 +61,6 @@ interface VehicleInspectionFormProps {
   areas?: string[];
 }
 
-
-
 export function VehicleInspectionForm({
   template,
   onSubmit,
@@ -75,6 +76,10 @@ export function VehicleInspectionForm({
   const { user, hasRole } = useUserRole();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isViewModeUrl = searchParams.get("mode") === "view";
+
+  // Usar cualquiera de los dos (por prop o por URL)
+  const currentViewMode = isViewMode || isViewModeUrl;
 
   const canApprove = () => {
     if (!config?.approval?.enabled) return false;
@@ -122,7 +127,11 @@ export function VehicleInspectionForm({
       ];
 
   // Active step state read from search query parameter or startStep prop
-  const initialStep = isApprovalReview ? 6 : (startStep !== undefined ? startStep : parseInt(searchParams.get("step") || "1", 10));
+  const initialStep = isApprovalReview
+    ? 6
+    : startStep !== undefined
+      ? startStep
+      : parseInt(searchParams.get("step") || "1", 10);
   const [activeStep, setActiveStep] = useState(initialStep);
 
   const updateStepQueryParam = (step: number) => {
@@ -149,14 +158,12 @@ export function VehicleInspectionForm({
     handleSubmit,
     getValues,
     setValue,
-    watch,
     reset,
     trigger,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<FormDataHerraEquipos>({
     mode: "onTouched",
     defaultValues: {
-      verification: {},
       responses: {},
       vehicle: {
         tipoInspeccion: undefined,
@@ -168,6 +175,7 @@ export function VehicleInspectionForm({
         damageImageBase64: "",
       },
       ...initialData,
+      verification: sanitizeVerificationObject(initialData?.verification),
       inspectorSignature: {
         name: "",
         signature: "",
@@ -186,12 +194,22 @@ export function VehicleInspectionForm({
   });
 
   const vehicleDamageRef = useRef<VehicleDamageSelectorRef>(null);
+  // Snapshot completo del formulario para el paso de revisión. Antes era
+  // `watch()`, que no es memoizable y hacía que el React Compiler se saltara
+  // la optimización de todo este componente.
+  // `useWatch` provee la suscripción (re-render al cambiar cualquier campo) y
+  // `getValues` el snapshot completo: sin `name`, `useWatch` devuelve
+  // `DeepPartial<T>` y el paso de revisión necesita el tipo completo.
+  useWatch({ control });
+  const formDataCompleto = getValues();
+
   const [hasSubmitErrors, setHasSubmitErrors] = useState(false);
 
   useEffect(() => {
     if (initialData) {
       reset({
         ...initialData,
+        verification: sanitizeVerificationObject(initialData.verification),
         inspectorSignature: {
           name: "",
           signature: "",
@@ -213,7 +231,10 @@ export function VehicleInspectionForm({
   useEffect(() => {
     if (!isDirty || readonly) return;
     const handler = (e: BeforeUnloadEvent) => {
-      if ((window as Window & { bypassBeforeUnload?: boolean }).bypassBeforeUnload) return;
+      if (
+        (window as Window & { bypassBeforeUnload?: boolean }).bypassBeforeUnload
+      )
+        return;
       e.preventDefault();
       e.returnValue = "";
     };
@@ -232,7 +253,6 @@ export function VehicleInspectionForm({
   }
 
   // ✅ Misma lógica que StandardInspectionForm
-
 
   const shouldShowApprovalSection = () => {
     if (!config?.approval?.enabled) return false;
@@ -283,8 +303,6 @@ export function VehicleInspectionForm({
     }
   };
 
-
-
   const handleApprovalSubmit = () => {
     handleFormSubmit(getValues());
   };
@@ -309,6 +327,13 @@ export function VehicleInspectionForm({
   };
 
   const handleFormSubmit = async (data: FormDataHerraEquipos) => {
+    // RHF anida etiquetas con punto (ej. "AÑO VEH./EQU.") en vez de
+    // guardarlas planas — reconstruir antes de enviar. Ver EquipmentAutofill.ts.
+    data.verification = rebuildVerification(
+      getValues,
+      template.verificationFields,
+    );
+
     // Limpiar tempId de damages
     if (data.vehicle?.damages) {
       data.vehicle.damages = data.vehicle.damages.map((damage) => ({
@@ -370,6 +395,10 @@ export function VehicleInspectionForm({
   };
 
   const handleSaveDraftWithImage = async (data: FormDataHerraEquipos) => {
+    data.verification = rebuildVerification(
+      getValues,
+      template.verificationFields,
+    );
     if (vehicleDamageRef.current) {
       const damageImage = await vehicleDamageRef.current.generateBase64();
       if (data.vehicle) {
@@ -382,10 +411,13 @@ export function VehicleInspectionForm({
   };
 
   // Step 1 should contain ONLY Area and Code/TAG fields (used for edit mode navigation)
-  const step1Fields = template.verificationFields.filter((f) => isEquipmentCodeField(f.label) || isAreaField(f.label));
+  const step1Fields = template.verificationFields.filter(
+    (f) => isEquipmentCodeField(f.label) || isAreaField(f.label),
+  );
 
   // Mapped forms with equipment: show equipment selector in step 1 (new inspections only)
-  const hasEquipmentSelection = TEMPLATE_EQUIPMENT_MAP[template.code] !== undefined && !initialData;
+  const hasEquipmentSelection =
+    TEMPLATE_EQUIPMENT_MAP[template.code] !== undefined && !initialData;
 
   // Stepper Section Navigation Handlers
   const handleNextStep = async () => {
@@ -393,7 +425,9 @@ export function VehicleInspectionForm({
       if (hasEquipmentSelection) {
         handleStepChange(2);
       } else {
-        const step1FieldNames = step1Fields.map((f) => `verification.${f.label}`);
+        const step1FieldNames = step1Fields.map((f) =>
+          verificationFieldPath(f.label),
+        );
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const isValid = await trigger(step1FieldNames as any);
         if (isValid) handleStepChange(2);
@@ -401,18 +435,26 @@ export function VehicleInspectionForm({
     } else if (activeStep === 2) {
       // Validate step 2 verification + vehicle-specific header inputs
       // Always validate ALL verification fields
-      const step2FieldNames = template.verificationFields.map((f) => `verification.${f.label}`);
+      const step2FieldNames = template.verificationFields.map((f) =>
+        verificationFieldPath(f.label),
+      );
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const step2Valid = await trigger(step2FieldNames as any);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const vehicleValid = await trigger(["vehicle.tipoInspeccion", "vehicle.certificacionMSC"] as any);
+      const vehicleValid = await trigger([
+        "vehicle.tipoInspeccion",
+        "vehicle.certificacionMSC",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ] as any);
       if (step2Valid && vehicleValid) handleStepChange(3);
     } else if (activeStep === 3) {
       // Validate checklist & damages + next inspection date
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const responsesValid = await trigger("responses" as any);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const nextInspValid = await trigger(["vehicle.fechaProximaInspeccion", "vehicle.responsableProximaInspeccion"] as any);
+      const nextInspValid = await trigger([
+        "vehicle.fechaProximaInspeccion",
+        "vehicle.responsableProximaInspeccion",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ] as any);
       if (responsesValid && nextInspValid) handleStepChange(4);
     } else if (activeStep === 4) {
       const step4FieldNames = [
@@ -433,6 +475,10 @@ export function VehicleInspectionForm({
 
       if (onSaveDraft) {
         handleSubmit(async (data) => {
+          data.verification = rebuildVerification(
+            getValues,
+            template.verificationFields,
+          );
           if (vehicleDamageRef.current) {
             const damageImage = await vehicleDamageRef.current.generateBase64();
             if (data.vehicle) {
@@ -477,12 +523,14 @@ export function VehicleInspectionForm({
           </Typography>
         </Box>
 
-        <FormStepperHeader activeStep={activeStep} steps={formSteps} />
+        {!currentViewMode && (
+          <FormStepperHeader activeStep={activeStep} steps={formSteps} />
+        )}
 
         {hasSubmitErrors && Object.keys(errors).length > 0 && (
           <Alert severity="error" onClose={() => setHasSubmitErrors(false)}>
-            Hay campos con errores. Revise el formulario — los campos marcados en
-            rojo requieren su atención.
+            Hay campos con errores. Revise el formulario — los campos marcados
+            en rojo requieren su atención.
           </Alert>
         )}
 
@@ -495,26 +543,44 @@ export function VehicleInspectionForm({
         )}
 
         {/* STEP 1: HERRAMIENTA Y ÁREA */}
-        {activeStep === 1 && (
-          hasEquipmentSelection ? (
+        {activeStep === 1 &&
+          (hasEquipmentSelection ? (
             <EquipmentSelectionStep
               templateCode={template.code}
               templateName={template.name}
               equipos={equipos || []}
               areas={areas || []}
               onSelect={(area, code, equipo) => {
-                autofillEquipmentFields(setValue, template.verificationFields, area, code, equipo);
+                autofillEquipmentFields(
+                  setValue,
+                  template.verificationFields,
+                  area,
+                  code,
+                  equipo,
+                );
                 handleStepChange(2);
               }}
               onSkip={() => {
                 // Clear fields first, then set default area from logged in user if available
                 template.verificationFields.forEach((field) => {
-                  setValue(`verification.${field.label}` as Path<FormDataHerraEquipos>, "");
+                  setValue(
+                    verificationFieldPath(
+                      field.label,
+                    ) as Path<FormDataHerraEquipos>,
+                    "",
+                  );
                 });
                 if (user?.area) {
-                  const areaField = template.verificationFields.find(f => isAreaField(f.label));
+                  const areaField = template.verificationFields.find((f) =>
+                    isAreaField(f.label),
+                  );
                   if (areaField) {
-                    setValue(`verification.${areaField.label}` as Path<FormDataHerraEquipos>, user.area);
+                    setValue(
+                      verificationFieldPath(
+                        areaField.label,
+                      ) as Path<FormDataHerraEquipos>,
+                      user.area,
+                    );
                   }
                 }
                 handleStepChange(2);
@@ -530,8 +596,7 @@ export function VehicleInspectionForm({
               isEditMode={!!initialData}
               templateCode={template.code}
             />
-          )
-        )}
+          ))}
 
         {/* STEP 2: DATOS GENERALES + TIPO DE INSPECCIÓN/MSC */}
         {activeStep === 2 && (
@@ -575,7 +640,9 @@ export function VehicleInspectionForm({
                       <Controller
                         name="vehicle.tipoInspeccion"
                         control={control}
-                        rules={{ required: "Debe seleccionar un tipo de inspección" }}
+                        rules={{
+                          required: "Debe seleccionar un tipo de inspección",
+                        }}
                         render={({ field }) => (
                           <Box sx={{ display: "flex", gap: 2 }}>
                             {["inicial", "periodica"].map((tipo) => (
@@ -586,14 +653,21 @@ export function VehicleInspectionForm({
                                     checked={field.value === tipo}
                                     onChange={() => field.onChange(tipo)}
                                     disabled={readonly}
-                                    sx={{ "&.Mui-checked": { color: "#1976d2" } }}
+                                    sx={{
+                                      "&.Mui-checked": { color: "#1976d2" },
+                                    }}
                                   />
                                 }
                                 label={
                                   <Typography
-                                    sx={{ fontWeight: "bold", fontSize: "1rem" }}
+                                    sx={{
+                                      fontWeight: "bold",
+                                      fontSize: "1rem",
+                                    }}
                                   >
-                                    {tipo === "inicial" ? "INICIAL" : "PERIÓDICA"}
+                                    {tipo === "inicial"
+                                      ? "INICIAL"
+                                      : "PERIÓDICA"}
                                   </Typography>
                                 }
                                 sx={{
@@ -668,12 +742,17 @@ export function VehicleInspectionForm({
                                     checked={field.value === opt.value}
                                     onChange={() => field.onChange(opt.value)}
                                     disabled={readonly}
-                                    sx={{ "&.Mui-checked": { color: opt.color } }}
+                                    sx={{
+                                      "&.Mui-checked": { color: opt.color },
+                                    }}
                                   />
                                 }
                                 label={
                                   <Typography
-                                    sx={{ fontWeight: "bold", fontSize: "1rem" }}
+                                    sx={{
+                                      fontWeight: "bold",
+                                      fontSize: "1rem",
+                                    }}
                                   >
                                     {opt.label}
                                   </Typography>
@@ -801,7 +880,8 @@ export function VehicleInspectionForm({
                         name="vehicle.fechaProximaInspeccion"
                         control={control}
                         rules={{
-                          required: "La fecha de próxima inspección es obligatoria",
+                          required:
+                            "La fecha de próxima inspección es obligatoria",
                         }}
                         render={({ field, fieldState }) => (
                           <TextField
@@ -815,7 +895,10 @@ export function VehicleInspectionForm({
                             sx={{
                               "& .MuiOutlinedInput-root": {
                                 backgroundColor: "#fff",
-                                "& fieldset": { borderColor: "#000", borderWidth: 2 },
+                                "& fieldset": {
+                                  borderColor: "#000",
+                                  borderWidth: 2,
+                                },
                               },
                               "& input": {
                                 fontWeight: "bold",
@@ -868,7 +951,10 @@ export function VehicleInspectionForm({
                             sx={{
                               "& .MuiOutlinedInput-root": {
                                 backgroundColor: "#fff",
-                                "& fieldset": { borderColor: "#000", borderWidth: 2 },
+                                "& fieldset": {
+                                  borderColor: "#000",
+                                  borderWidth: 2,
+                                },
                               },
                               "& input": {
                                 fontWeight: "bold",
@@ -884,8 +970,8 @@ export function VehicleInspectionForm({
                 </Grid>
                 <Alert severity="info" sx={{ mt: 3 }}>
                   <Typography variant="body2">
-                    <strong>ℹ️ Información:</strong> Estos datos se utilizan para
-                    programar la siguiente inspección del vehículo.
+                    <strong>ℹ️ Información:</strong> Estos datos se utilizan
+                    para programar la siguiente inspección del vehículo.
                   </Typography>
                 </Alert>
               </Paper>
@@ -930,7 +1016,9 @@ export function VehicleInspectionForm({
             {/* Aprobación */}
             {shouldShowApprovalSection() && !isApprovalReview && (
               <ApprovalSection
-                status={initialData!.status || InspectionStatus.PENDING_APPROVAL}
+                status={
+                  initialData!.status || InspectionStatus.PENDING_APPROVAL
+                }
                 approval={initialData!.approval}
                 canApprove={canApprove()}
                 onApprove={handleLocalApprove}
@@ -948,7 +1036,7 @@ export function VehicleInspectionForm({
         {activeStep === 5 && (
           <Step5ReviewSection
             template={template}
-            formData={watch()}
+            formData={formDataCompleto}
             onPrev={handlePrevStep}
             onFinalSubmit={
               isApprovalReview
@@ -960,6 +1048,7 @@ export function VehicleInspectionForm({
             formType="vehicle"
             isApprovalReview={isApprovalReview}
             showApprovalInputs={false}
+            isViewMode={currentViewMode}
           />
         )}
 
@@ -967,7 +1056,7 @@ export function VehicleInspectionForm({
         {activeStep === 6 && (
           <Step5ReviewSection
             template={template}
-            formData={watch()}
+            formData={formDataCompleto}
             onPrev={handlePrevStep}
             onFinalSubmit={handleApprovalSubmit}
             isSubmitting={isSubmitting}

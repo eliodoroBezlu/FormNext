@@ -2,9 +2,9 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useUserRole } from '@/hooks/useUserRole';
 import {
-  getPendingApprovals,
-  InspectionResponse,
-} from '@/lib/actions/inspection-herra-equipos';
+  inspectionAdapter,
+  type InspectionResponse,
+} from '../../infrastructure/adapters/inspectionAdapter';
 import { Role } from '@/lib/routePermissions';
 
 // ─── Cache helpers ──────────────────────────────────────────────────────────
@@ -118,7 +118,7 @@ export const useApprovals = () => {
       try {
         setLoading(true);
         setError(null);
-        const result = await getPendingApprovals(
+        const result = await inspectionAdapter.getPendingApprovals(
           user.username,
           isAdmin ? undefined : areas,
           isAdmin,

@@ -1,10 +1,13 @@
 "use server";
 
 import { getAuthHeaders, handleApiResponse } from "@/lib/actions/helpers";
+import { obtenerAreasCompletas, type AreaBackend } from "@/lib/actions/area-actions";
 import {
   AddTareaDTO,
   CreatePlanDeAccionDTO,
+  GenerarPlanesOptions,
   PlanDeAccion,
+  PlanSummary,
   UpdatePlanDeAccionDTO,
   UpdateTareaDTO,
 } from "../../domain/models/IProps";
@@ -14,24 +17,15 @@ import {
   QuestionResponse,
 } from "@/types/formTypes";
 
-const API_URL = process.env.API_URL || "http://localhost:3002";
+export async function obtenerAreas(): Promise<AreaBackend[]> {
+  return obtenerAreasCompletas();
+}
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
 
 // ==========================================
 // TIPOS
 // ==========================================
-
-export interface GenerarPlanesOptions {
-  incluirPuntaje3?: boolean;
-  incluirSoloConComentario?: boolean;
-}
-
-export interface PlanSummary {
-  totalPlanes: number;
-  planesAbiertos: number;
-  planesEnProgreso: number;
-  planesCerrados: number;
-  porcentajeCierre: number;
-}
 
 export interface PlanesFilters {
   estado?: string;
@@ -189,11 +183,6 @@ export async function generarPlanDesdeInstancia(
   instanceId: string,
   opciones: GenerarPlanesOptions = {},
 ): Promise<ActionResult<PlanDeAccion>> {
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("🎯 [GENERAR PLAN] Iniciando...");
-  console.log("  📋 Instance ID:", instanceId);
-  console.log("  ⚙️ Opciones:", opciones);
-
   try {
     const headers = await getAuthHeaders();
 
@@ -212,8 +201,6 @@ export async function generarPlanDesdeInstancia(
       params.toString() ? `?${params}` : ""
     }`;
 
-    console.log("  🌐 URL:", url);
-
     const response = await fetch(url, {
       method: "POST",
       headers,
@@ -221,17 +208,13 @@ export async function generarPlanDesdeInstancia(
 
     const plan = await handleApiResponse<PlanDeAccion>(response);
 
-    console.log("✅ [GENERAR PLAN] Plan creado:", plan._id);
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
     return {
       success: true,
       data: plan,
       message: "Plan generado exitosamente",
     };
   } catch (error) {
-    console.error("❌ [GENERAR PLAN] Error:", error);
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.error("Error generando plan:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Error al generar plan",
@@ -277,19 +260,6 @@ export async function actualizarTarea(
   tareaId: string,
   data: UpdateTareaDTO,
 ): Promise<ActionResult<PlanDeAccion>> {
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("🎯 [ACTUALIZAR TAREA] Iniciando...");
-  console.log("  📋 Plan ID:", planId);
-  console.log("  📋 Tarea ID:", tareaId);
-  console.log("  📦 Data:", data);
-
-  if (data.evidencias) {
-    console.log("  📎 Evidencias:", data.evidencias.length);
-    data.evidencias.forEach((ev, i) => {
-      console.log(`    [${i}]:`, { nombre: ev.nombre, url: ev.url });
-    });
-  }
-
   try {
     const headers = await getAuthHeaders();
 
@@ -304,17 +274,13 @@ export async function actualizarTarea(
 
     const plan = await handleApiResponse<PlanDeAccion>(response);
 
-    console.log("✅ [ACTUALIZAR TAREA] Tarea actualizada exitosamente");
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
     return {
       success: true,
       data: plan,
       message: "Tarea actualizada exitosamente",
     };
   } catch (error) {
-    console.error("❌ [ACTUALIZAR TAREA] Error:", error);
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.error("Error actualizando tarea:", error);
     return {
       success: false,
       error:
@@ -381,6 +347,39 @@ export async function aprobarTarea(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Error al aprobar tarea",
+    };
+  }
+}
+
+export async function aprobarPlanGlobal(
+  planId: string,
+  observaciones?: string,
+): Promise<ActionResult<PlanDeAccion>> {
+  try {
+    const headers = await getAuthHeaders();
+
+    const response = await fetch(
+      `${API_URL}/planes-accion/${planId}/aprobar-global`,
+      {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ observaciones }),
+      },
+    );
+
+    const plan = await handleApiResponse<PlanDeAccion>(response);
+
+    return {
+      success: true,
+      data: plan,
+      message: "Plan aprobado exitosamente",
+    };
+  } catch (error) {
+    console.error("Error aprobando plan globalmente:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Error al aprobar el plan",
     };
   }
 }
@@ -470,10 +469,6 @@ export async function obtenerInspecciones(): Promise<PopulatedFormInstance[]> {
         });
       });
     });
-
-    console.log(
-      `✅ Inspecciones con observaciones críticas: ${inspeccionesConObservaciones.length} de ${instancias.length}`,
-    );
 
     return inspeccionesConObservaciones;
   } catch (error) {

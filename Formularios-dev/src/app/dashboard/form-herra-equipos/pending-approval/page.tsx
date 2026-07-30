@@ -2,7 +2,7 @@
 
 import React, { Suspense } from "react";
 import { Box, CircularProgress } from "@mui/material";
-import { PendingApprovalsList } from "@/components/features/herra-equipos/PendingApprovalsList";
+import { PendingApprovalsList } from "@/components/features/herra-equipos/presentation/components/management/PendingApprovalsList";
 
 export default function PendingApprovalsPage() {
   return (

@@ -10,7 +10,8 @@ import {
   FormTemplateHerraEquipos,
   FormDataHerraEquipos,
 } from "@/components/features/herra-equipos/types/IProps";
-import { UnifiedFormRouter } from "@/components/features/herra-equipos/UnifiedFormRouter";
+import { UnifiedFormRouter } from "@/components/features/herra-equipos/presentation/components/forms/UnifiedFormRouter";
+import { getFormConfig } from "@/components/features/herra-equipos/config/form-config.helpers";
 import {
   saveDraftInspection,
   submitInspection,
@@ -21,24 +22,12 @@ import {
 } from "@/lib/actions/inspection-herra-equipos";
 import { TagVerificationModal } from "@/components/features/herra-equipos/common/TagVerificationModal";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const SPECIALIZED_FORMS: Record<string, React.ComponentType<any>> = {
-  "1.02.P06.F19": UnifiedFormRouter,
-  "1.02.P06.F20": UnifiedFormRouter,
-  "1.02.P06.F39": UnifiedFormRouter,
-  "1.02.P06.F42": UnifiedFormRouter,
-  "1.02.P06.F40": UnifiedFormRouter,
-  "2.03.P10.F05": UnifiedFormRouter,
-  "3.04.P04.F23": UnifiedFormRouter,
-  "3.04.P37.F19": UnifiedFormRouter,
-  "3.04.P37.F24": UnifiedFormRouter,
-  "3.04.P37.F25": UnifiedFormRouter,
-  "3.04.P48.F03": UnifiedFormRouter,
-  "1.02.P06.F37": UnifiedFormRouter,
-  "3.04.P04.F35": UnifiedFormRouter,
-  "1.02.P06.F30": UnifiedFormRouter,
-  "1.02.P06.F33": UnifiedFormRouter,
-};
+/**
+ * Igual que en la página de creación: la UI especializada se decide por la
+ * existencia de config, no por una lista de códigos hardcodeada que hay que
+ * mantener a mano en dos archivos.
+ */
+const tieneUiEspecializada = (code: string) => getFormConfig(code) !== null;
 
 const FORMS_REQUIRING_TAG_VERIFICATION = ["3.04.P37.F24", "3.04.P37.F25"];
 
@@ -422,7 +411,7 @@ export default function FormularioDinamicoPage() {
       </Box>
     );
 
-  const SpecializedComponent = SPECIALIZED_FORMS[template.code];
+  const usaUiEspecializada = tieneUiEspecializada(template.code);
   const initialFormData = existingInspection || duplicateData || undefined;
 
   return (
@@ -575,8 +564,8 @@ export default function FormularioDinamicoPage() {
           }),
         }}
       >
-        {SpecializedComponent ? (
-          <SpecializedComponent
+        {usaUiEspecializada ? (
+          <UnifiedFormRouter
             template={template}
             onSubmit={handleFinalSubmit}
             onSaveDraft={isPendingApproval ? undefined : handleSaveDraft}

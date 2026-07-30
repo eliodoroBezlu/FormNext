@@ -22,7 +22,7 @@ import {
   Add,
   Delete,
   ExpandMore,
-  Image,
+  Image as ImageIcon,
   CloudUpload,
 } from "@mui/icons-material";
 import { Button } from "@/components/ui/buttons/Button";
@@ -547,7 +547,7 @@ export const ImageSectionBuilder: React.FC<ImageSectionBuilderProps> = ({
                           variant={question?.image ? "outlined" : "contained"}
                           size="small"
                           startIcon={
-                            question?.image ? <Image /> : <CloudUpload />
+                            question?.image ? <ImageIcon /> : <CloudUpload />
                           }
                           disabled={
                             disabled ||

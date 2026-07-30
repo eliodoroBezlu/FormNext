@@ -10,6 +10,7 @@ import {
   verificarInspecciones,
   desactivarExtintor,
   obtenerExtintoresPorArea,
+  buscarTrabajadores,
 } from "@/app/actions/inspeccion";
 import { obtenerAreas } from "@/lib/actions/area-actions";
 import type {
@@ -20,6 +21,7 @@ import type {
   InspeccionExtintor,
   VerificarTagData,
   ExtintorAreaResponse,
+  Trabajador,
 } from "@/types/formTypes";
 
 export const emergencyAdapter = {
@@ -111,5 +113,12 @@ export const emergencyAdapter = {
     payload: { tag: string; extintores: InspeccionExtintor[]; area: string }
   ): Promise<{ success: boolean; message: string }> {
     return actualizarExtintoresPorTag(tag, payload);
+  },
+
+  /**
+   * Busca trabajadores por nombre/CI para autocompletar campos de responsable.
+   */
+  async searchTrabajadores(query: string): Promise<Trabajador[]> {
+    return buscarTrabajadores(query);
   },
 };

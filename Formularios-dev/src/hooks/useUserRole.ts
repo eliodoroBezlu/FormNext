@@ -39,6 +39,7 @@ interface User {
   roles: string[];
   permissions?: string[];
   area?: string; // área del Trabajador vinculado
+  superintendencia?: string; // superintendencia del Trabajador vinculado
 }
 
 // Caché global para evitar múltiples peticiones concurrentes
@@ -84,6 +85,9 @@ export const useUserRole = () => {
                 );
                 if (trabajador?.area) {
                   baseUser.area = trabajador.area;
+                }
+                if (trabajador?.superintendencia) {
+                  baseUser.superintendencia = trabajador.superintendencia;
                 }
               } catch (error) {
                 console.error(

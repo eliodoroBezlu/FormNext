@@ -29,7 +29,7 @@ export async function createTemplateHerraEquipo(
 
     const result = await handleApiResponse<TemplateHerraEquipo>(response);
     revalidatePath("/dashboard/form-herra-equipos");
-    revalidatePath("/dashboard/forms-builder");
+    revalidatePath("/dashboard/config/herramientas");
     return { success: true, data: result };
   } catch (error) {
     console.error("❌ [TEMPLATE_ACTION] Error al crear plantilla:", error);
@@ -60,7 +60,7 @@ export async function getTemplatesHerraEquipos(
     const response = await fetch(url, {
       method: "GET",
       headers,
-      next: { revalidate: 60 }, // ISR: revalidar cada 60 segundos
+      cache: "no-store", // Este listado se refresca desde un componente cliente tras crear/editar/borrar — sin cache, siempre trae el estado real.
     });
 
     const result = await handleApiResponse<TemplateHerraEquipo[]>(response);
@@ -118,7 +118,7 @@ export async function updateTemplateHerraEquipo(
 
     const result = await handleApiResponse<TemplateHerraEquipo>(response);
     revalidatePath("/dashboard/form-herra-equipos");
-    revalidatePath("/dashboard/forms-builder");
+    revalidatePath("/dashboard/config/herramientas");
     return { success: true, data: result };
   } catch (error) {
     console.error(`❌ [TEMPLATE_ACTION] Error al actualizar plantilla ${id}:`, error);
@@ -147,14 +147,14 @@ export async function deleteTemplateHerraEquipo(
     // DELETE en tu backend devuelve 204 No Content
     if (response.status === 204) {
       revalidatePath("/dashboard/form-herra-equipos");
-      revalidatePath("/dashboard/forms-builder");
+      revalidatePath("/dashboard/config/herramientas");
       return { success: true };
     }
 
     // Si no es 204, intentamos manejar como error
     await handleApiResponse(response); // esto lanzará error si no es ok
     revalidatePath("/dashboard/form-herra-equipos");
-    revalidatePath("/dashboard/forms-builder");
+    revalidatePath("/dashboard/config/herramientas");
     return { success: true };
   } catch (error) {
     console.error(`❌ [TEMPLATE_ACTION] Error al eliminar plantilla ${id}:`, error);

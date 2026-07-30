@@ -8,6 +8,7 @@ import { DataSourceType } from "@/lib/actions/dataSourceService";
 import type { Control } from "react-hook-form";
 import type { VerificationField } from "@/types/formTypes";
 import type { InspectionFormData } from "@/components/features/iro-isop/types/IProps";
+import { verificationListFieldPath } from "@/components/features/iro-isop/domain/models/IroIsopDomain";
 
 interface VerificationListSectionProps {
   control: Control<InspectionFormData>;
@@ -35,7 +36,7 @@ export const VerificationListSection = ({
           {verificationFields.map((field) => (
             <Grid size={{ xs: 12, sm: 6 }} key={field._id}>
               <FormField
-                name={`verificationList.${field.label}`}
+                name={verificationListFieldPath(field.label)}
                 control={control}
                 type={field.type}
                 label={field.required ? `${field.label} *` : field.label}

@@ -21,7 +21,7 @@ import { InspectionFormIroIsop } from "@/components/features/iro-isop/Inspection
 import { BaseCard } from "@/components/ui/cards/BaseCard";
 import { TemplateCard } from "@/components/ui/cards/TemplateCard";
 import { InspeccionSistemasEmergencia } from "@/components/features/sistemas-emergencia/InspeccionSistemasEmergencia";
-import NewInspectionTemplates from "@/components/features/herra-equipos/NewInspectionTemplates";
+import NewInspectionTemplates from "@/components/features/herra-equipos/presentation/components/management/NewInspectionTemplates";
 import { SuccessScreen } from "@/components/ui/feedback/SuccessScreen"; 
 
 import PageHeader from "@/components/layout/page-header/PageHeader";

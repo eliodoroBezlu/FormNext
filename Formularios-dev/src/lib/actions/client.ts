@@ -142,6 +142,13 @@ export async function descargarPdfHerraEquipoCliente(id: string): Promise<void> 
   );
 }
 
+export async function descargarExcelPlanAccionCliente(id: string): Promise<void> {
+  await descargarConAuth(
+    `${API_BASE_URL}/planes-accion/${id}/excel`,
+    `plan-accion-${id}.xlsx`
+  );
+}
+
 // ============= DESCARGA MASIVA (ZIP) =============
 
 /**

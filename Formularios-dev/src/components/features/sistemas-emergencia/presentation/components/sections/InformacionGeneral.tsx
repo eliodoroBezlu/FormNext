@@ -10,7 +10,7 @@ import {
   Autocomplete,
 } from "@mui/material";
 import { Controller } from "react-hook-form";
-import { buscarTrabajadores } from "@/app/actions/inspeccion";
+import { emergencyAdapter } from "@/components/features/sistemas-emergencia/infrastructure/adapters/emergencyAdapter";
 import {
   SUPERINTENDENCIAS,
   obtenerMesActual,
@@ -43,7 +43,7 @@ export const InformacionGeneral = ({
     }
     setLoading(true);
     try {
-      const response = await buscarTrabajadores(query);
+      const response = await emergencyAdapter.searchTrabajadores(query);
       setOpciones(response.map((item: { nomina: string }) => item.nomina));
     } catch (error) {
       console.error("Error al buscar responsables:", error);

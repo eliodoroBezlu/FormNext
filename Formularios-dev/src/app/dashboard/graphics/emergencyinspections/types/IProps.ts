@@ -98,6 +98,15 @@ export interface AreaStats {
   sistemasActivosCumplimiento: number;
 }
 
+export interface TagDetalle {
+  tag: string;
+  tieneInspeccion: boolean;
+  fechaUltimaModificacion?: string;
+  extintoresActivos: number;
+  extintoresInspeccionados: number;
+  pctExtintores: number;
+}
+
 
 export interface DashboardMetricsProps {
   tagsCount: number;
