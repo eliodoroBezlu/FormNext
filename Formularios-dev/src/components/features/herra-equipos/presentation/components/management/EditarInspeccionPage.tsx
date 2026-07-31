@@ -9,31 +9,16 @@ import { ArrowBack } from '@mui/icons-material';
 import { getTemplatesHerraEquipos } from '@/lib/actions/template-herra-equipos';
 import { FormTemplateHerraEquipos, FormDataHerraEquipos, InspectionStatus } from '@/components/features/herra-equipos/types/IProps';
 import { UnifiedFormRouter } from '@/components/features/herra-equipos/presentation/components/forms/UnifiedFormRouter';
+import { getFormConfig } from '@/components/features/herra-equipos/config/form-config.helpers';
 import { getInspectionById, InspectionResponse, updateInspection } from '@/lib/actions/inspection-herra-equipos';
 
-// Mapeo de códigos a componentes especializados (mismo que en FormularioDinamicoPage)
-const SPECIALIZED_FORMS: Record<string, React.ComponentType<{
-  template: FormTemplateHerraEquipos;
-  onSubmit: (data: FormDataHerraEquipos) => void;
-  onSaveDraft?: (data: FormDataHerraEquipos) => void;
-  initialData?: FormDataHerraEquipos;
-}>> = {
-  '1.02.P06.F19': UnifiedFormRouter,
-  '1.02.P06.F20': UnifiedFormRouter,
-  '1.02.P06.F39': UnifiedFormRouter,
-  '1.02.P06.F42': UnifiedFormRouter,
-  '1.02.P06.F40': UnifiedFormRouter,
-  '2.03.P10.F05': UnifiedFormRouter,
-  '3.04.P04.F23': UnifiedFormRouter,
-  '3.04.P37.F19': UnifiedFormRouter,
-  '3.04.P37.F24': UnifiedFormRouter,
-  '3.04.P37.F25': UnifiedFormRouter,
-  '3.04.P48.F03': UnifiedFormRouter,
-  '1.02.P06.F37': UnifiedFormRouter,
-  '3.04.P04.F35': UnifiedFormRouter,
-  '1.02.P06.F30': UnifiedFormRouter,
-  '1.02.P06.F33': UnifiedFormRouter
-};
+/**
+ * Igual que en las páginas de creación y edición por inspección: la UI
+ * especializada se decide por la existencia de config, no por una lista de
+ * códigos hardcodeada. Con la lista, una plantilla nueva perdía en silencio
+ * el stepper, las firmas y las observaciones.
+ */
+const tieneUiEspecializada = (code: string) => getFormConfig(code) !== null;
 
 export default function EditarInspeccionPage() {
   const params = useParams();
@@ -226,9 +211,7 @@ export default function EditarInspeccionPage() {
     );
   }
 
-  const SpecializedComponent = SPECIALIZED_FORMS[template.code];
-
-  if (!SpecializedComponent) {
+  if (!tieneUiEspecializada(template.code)) {
     return (
       <Box p={3}>
         <Alert severity="warning" sx={{ mb: 2 }}>
@@ -301,7 +284,7 @@ export default function EditarInspeccionPage() {
         </Alert>
       </Box>
 
-      <SpecializedComponent
+      <UnifiedFormRouter
         template={template}
         onSubmit={handleFinalSubmit}
         onSaveDraft={handleUpdate}
