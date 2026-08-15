@@ -72,6 +72,8 @@ export const VerificationFieldSchema = z.object({
   label: z.string().min(1, "El label es obligatorio"),
   type: z.enum(["text", "date", "number", "select", "autocomplete", "firma", "time"]),
   options: z.array(z.string()).optional(),
+  // Con `type: select`, admite un valor fuera de la lista.
+  permiteOtro: z.boolean().optional(),
   dataSource: z.string().optional(),
   obligatorio: z.boolean().optional()
 })

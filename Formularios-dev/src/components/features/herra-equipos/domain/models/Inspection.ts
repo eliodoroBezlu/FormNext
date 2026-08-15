@@ -79,6 +79,15 @@ export interface ScaffoldData {
 export interface FormDataHerraEquipos {
   _id?: string;
   verification: Record<string, string | number>;
+  /**
+   * RFID del equipo elegido en el selector.
+   *
+   * Va fuera de `verification` porque no es un dato del formulario: el
+   * inspector no lo escribe ni lo ve. Existe porque el código **ya no
+   * identifica la unidad** —hay SPCC distintos con el mismo ID interno— y sin
+   * esto la inspección no diría cuál de los dos se revisó.
+   */
+  rfidEquipo?: string;
   generalObservations?: string;
   responses: ResponsesData;
   outOfService?: OutOfServiceData;

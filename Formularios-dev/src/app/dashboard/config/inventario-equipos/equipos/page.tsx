@@ -52,6 +52,8 @@ import {
 import { obtenerAreasCompletas, AreaBackend } from "@/lib/actions/area-actions"
 import { obtenerUbicaciones, UbicacionBackend } from "@/lib/actions/ubicacion-actions"
 import { obtenerClasificaciones, ClasificacionBackend } from "@/lib/actions/clasificacion-actions"
+import { obtenerSuperintendencias, SuperintendenciaBackend } from "@/lib/actions/superintendecia-actions"
+import { obtenerGerencias, GerenciaBackend } from "@/lib/actions/gerencia-actions"
 import { obtenerConfigFormularios, ConfigFormularioBackend } from "@/lib/actions/config-formulario-actions"
 
 const initialFormData: EquipoForm = {
@@ -68,7 +70,14 @@ const initialFormData: EquipoForm = {
   estado: "Operativo",
   observaciones: "",
   tipo_equipo: "",
+  rfid: "",
+  placa: "",
+  ambito: "area",
   area_id: "",
+  superintendencia_id: "",
+  gerencia_id: "",
+  subarea: "",
+  responsable: "",
   ubicacion_id: "",
   clasificacion_id: "",
   especificaciones: {},
@@ -84,6 +93,10 @@ export default function GestionEquipos() {
   const [areas, setAreas] = useState<AreaBackend[]>([])
   const [ubicaciones, setUbicaciones] = useState<UbicacionBackend[]>([])
   const [clasificaciones, setClasificaciones] = useState<ClasificacionBackend[]>([])
+  // Catálogos de los ámbitos superiores: un equipo puede pertenecer a una
+  // superintendencia o a la gerencia, no solo a un área.
+  const [superintendencias, setSuperintendencias] = useState<SuperintendenciaBackend[]>([])
+  const [gerencias, setGerencias] = useState<GerenciaBackend[]>([])
   const [configs, setConfigs] = useState<ConfigFormularioBackend[]>([])
 
   // Paginación
@@ -138,16 +151,21 @@ export default function GestionEquipos() {
 
   const cargarCatalogos = async () => {
     try {
-      const [areasData, ubiData, classData, configData] = await Promise.all([
-        obtenerAreasCompletas(),
-        obtenerUbicaciones(),
-        obtenerClasificaciones(),
-        obtenerConfigFormularios(),
-      ])
+      const [areasData, ubiData, classData, configData, supData, gerData] =
+        await Promise.all([
+          obtenerAreasCompletas(),
+          obtenerUbicaciones(),
+          obtenerClasificaciones(),
+          obtenerConfigFormularios(),
+          obtenerSuperintendencias(),
+          obtenerGerencias(),
+        ])
       setAreas(areasData)
       setUbicaciones(ubiData)
       setClasificaciones(classData)
       setConfigs(configData)
+      setSuperintendencias(Array.isArray(supData) ? supData : [])
+      setGerencias(gerData)
     } catch (err) {
       console.error("Error al cargar catálogos:", err)
     }
@@ -195,7 +213,14 @@ export default function GestionEquipos() {
       estado: equipo.estado || "Operativo",
       observaciones: equipo.observaciones || "",
       tipo_equipo: equipo.tipo_equipo,
+      rfid: equipo.rfid || "",
+      placa: equipo.placa || "",
+      ambito: equipo.ambito ?? "area",
       area_id: equipo.area_id?._id || "",
+      superintendencia_id: equipo.superintendencia_id?._id || "",
+      gerencia_id: equipo.gerencia_id?._id || "",
+      subarea: equipo.subarea || "",
+      responsable: equipo.responsable || "",
       ubicacion_id: equipo.ubicacion_id?._id || "",
       clasificacion_id: equipo.clasificacion_id?._id || "",
       especificaciones: equipo.especificaciones || {},
@@ -560,6 +585,16 @@ export default function GestionEquipos() {
               <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   fullWidth
+                  label="Placa"
+                  variant="outlined"
+                  value={formData.placa}
+                  onChange={(e) => setFormData({ ...formData, placa: e.target.value })}
+                  helperText="Solo vehículos. Es un dato distinto del número interno."
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <TextField
+                  fullWidth
                   label="Código Antiguo"
                   variant="outlined"
                   value={formData.codigo_antiguo}
@@ -627,17 +662,80 @@ export default function GestionEquipos() {
               {/* Relaciones */}
               <Grid size={{ xs: 12, sm: 4 }}>
                 <FormControl fullWidth required>
-                  <InputLabel>Área</InputLabel>
+                  <InputLabel>Pertenece a</InputLabel>
                   <Select
-                    value={formData.area_id}
-                    label="Área"
-                    onChange={(e) => setFormData({ ...formData, area_id: e.target.value })}
+                    value={formData.ambito ?? "area"}
+                    label="Pertenece a"
+                    onChange={(e) =>
+                      // Al cambiar de nivel se limpian las otras referencias:
+                      // un equipo pertenece a uno solo.
+                      setFormData({
+                        ...formData,
+                        ambito: e.target.value as EquipoForm["ambito"],
+                        area_id: "",
+                        superintendencia_id: "",
+                        gerencia_id: "",
+                      })
+                    }
                   >
-                    {areas.map((a) => (
-                      <MenuItem key={a._id} value={a._id}>{a.nombre}</MenuItem>
-                    ))}
+                    <MenuItem value="area">Un área</MenuItem>
+                    <MenuItem value="superintendencia">
+                      Una superintendencia (lo ven todas sus áreas)
+                    </MenuItem>
+                    <MenuItem value="gerencia">
+                      La gerencia (lo ven todos)
+                    </MenuItem>
                   </Select>
                 </FormControl>
+              </Grid>
+
+              <Grid size={{ xs: 12, sm: 4 }}>
+                {(formData.ambito ?? "area") === "area" && (
+                  <FormControl fullWidth required>
+                    <InputLabel>Área</InputLabel>
+                    <Select
+                      value={formData.area_id ?? ""}
+                      label="Área"
+                      onChange={(e) => setFormData({ ...formData, area_id: e.target.value })}
+                    >
+                      {areas.map((a) => (
+                        <MenuItem key={a._id} value={a._id}>{a.nombre}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+                {formData.ambito === "superintendencia" && (
+                  <FormControl fullWidth required>
+                    <InputLabel>Superintendencia</InputLabel>
+                    <Select
+                      value={formData.superintendencia_id ?? ""}
+                      label="Superintendencia"
+                      onChange={(e) =>
+                        setFormData({ ...formData, superintendencia_id: e.target.value })
+                      }
+                    >
+                      {superintendencias.map((s) => (
+                        <MenuItem key={s._id} value={s._id}>{s.nombre}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+                {formData.ambito === "gerencia" && (
+                  <FormControl fullWidth required>
+                    <InputLabel>Gerencia</InputLabel>
+                    <Select
+                      value={formData.gerencia_id ?? ""}
+                      label="Gerencia"
+                      onChange={(e) =>
+                        setFormData({ ...formData, gerencia_id: e.target.value })
+                      }
+                    >
+                      {gerencias.map((g) => (
+                        <MenuItem key={g._id} value={g._id}>{g.nombre}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <FormControl fullWidth required>

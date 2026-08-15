@@ -1,6 +1,17 @@
 "use client";
 
-import { Alert, Container, Snackbar, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Container,
+  Snackbar,
+  Typography,
+} from "@mui/material";
+import TuneIcon from "@mui/icons-material/Tune";
+import Link from "next/link";
+import { Can } from "@/components/layout/wrappers/Can";
+import { Permission } from "@/lib/permissions";
 import { Pgr, PgrFilters } from "../../domain/models/IProps";
 import { PgrFiltersPanel } from "./PgrFiltersPanel";
 import { PgrTable } from "./PgrTable";
@@ -48,9 +59,29 @@ export function PgrListView({
 }: PgrListViewProps) {
   return (
     <Container maxWidth="xl">
-      <Typography variant="h4" gutterBottom sx={{ mt: 3, mb: 3 }}>
-        Gestión de Planes PGR
-      </Typography>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        sx={{ mt: 3, mb: 3 }}
+        gap={2}
+      >
+        <Typography variant="h4">Gestión de Planes PGR</Typography>
+        {/* Solo administración: el backend exige ADMIN para escribir los
+            catálogos, así que mostrarlo a otros roles sería ofrecer una
+            pantalla donde todo botón falla. */}
+        <Can perform={Permission.MANAGE_SETTINGS}>
+          <Button
+            variant="outlined"
+            startIcon={<TuneIcon />}
+            component={Link}
+            href="/dashboard/pgr/catalogos"
+            sx={{ whiteSpace: "nowrap" }}
+          >
+            Catálogos
+          </Button>
+        </Can>
+      </Box>
 
       <PgrFiltersPanel
         filters={filters}

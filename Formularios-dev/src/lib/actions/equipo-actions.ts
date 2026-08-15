@@ -21,7 +21,30 @@ export interface EquipoBackend {
   estado?: string;
   observaciones?: string;
   tipo_equipo: string;
-  area_id: AreaBackend;
+  /**
+   * Identificador físico (RFID EPC). Es lo que distingue dos equipos que
+   * comparten el mismo `codigo` — pasa en los SPCC.
+   */
+  rfid?: string;
+  /**
+   * Placa del vehículo. **Distinta de `codigo`**, que es el número interno de
+   * flota: la inspección los pide en dos campos separados.
+   */
+  placa?: string;
+  /**
+   * Nivel al que pertenece el equipo. Decide cuál de las tres referencias de
+   * abajo está poblada, y quién lo ve en el selector de inspección.
+   */
+  ambito?: "area" | "superintendencia" | "gerencia";
+  /** Poblada solo con `ambito: "area"`. */
+  area_id?: AreaBackend;
+  /** Poblada solo con `ambito: "superintendencia"`. */
+  superintendencia_id?: { _id: string; nombre: string };
+  /** Poblada solo con `ambito: "gerencia"`. */
+  gerencia_id?: { _id: string; nombre: string };
+  /** Sector o TAG del equipo de planta donde está montado. */
+  subarea?: string;
+  responsable?: string;
   ubicacion_id: UbicacionBackend;
   clasificacion_id: ClasificacionBackend;
   especificaciones: Record<string, unknown>;
@@ -43,7 +66,15 @@ export interface EquipoForm {
   estado?: string;
   observaciones?: string;
   tipo_equipo: string;
-  area_id: string;
+  rfid?: string;
+  placa?: string;
+  /** Nivel al que pertenece; decide cuál de las tres referencias se envía. */
+  ambito?: "area" | "superintendencia" | "gerencia";
+  area_id?: string;
+  superintendencia_id?: string;
+  gerencia_id?: string;
+  subarea?: string;
+  responsable?: string;
   ubicacion_id: string;
   clasificacion_id: string;
   especificaciones?: Record<string, unknown>;

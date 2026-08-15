@@ -8,7 +8,9 @@ import {
   Pgr,
   SeguimientoBatchDto,
   SeguimientoPgrDto,
+  ResultadoConsolidacion,
   UpdatePgrDto,
+  VistaPreviaConsolidacion,
 } from "../../domain/models/IProps";
 
 export interface ActionResult<T> {
@@ -237,6 +239,72 @@ export async function addSeguimientoBatch(
       success: false,
       error:
         error instanceof Error ? error.message : "Error al guardar seguimiento",
+    };
+  }
+}
+
+// ==========================================
+// Consolidación desde matrices de riesgo
+// ==========================================
+
+/**
+ * Qué actividades saldrían de las matrices aprobadas de la superintendencia
+ * de este PGR. No escribe nada: alimenta la pantalla de confirmación.
+ */
+export async function previsualizarConsolidacion(
+  pgrId: string,
+  desdoblarPorArea = false,
+): Promise<ActionResult<VistaPreviaConsolidacion>> {
+  try {
+    const headers = await getAuthHeaders();
+
+    const response = await fetch(
+      `${PGR_URL}/${pgrId}/consolidacion/previsualizar?desdoblarPorArea=${desdoblarPorArea}`,
+      { method: "GET", headers, cache: "no-store" },
+    );
+
+    const vista = await handleApiResponse<VistaPreviaConsolidacion>(response);
+
+    return { success: true, data: vista };
+  } catch (error) {
+    console.error("Error previsualizando la consolidación:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Error al previsualizar la consolidación",
+    };
+  }
+}
+
+/** Vuelca las actividades propuestas en el PGR. Es incremental. */
+export async function consolidarDesdeMatrices(
+  pgrId: string,
+  desdoblarPorArea = false,
+): Promise<ActionResult<ResultadoConsolidacion>> {
+  try {
+    const headers = await getAuthHeaders();
+
+    const response = await fetch(`${PGR_URL}/${pgrId}/consolidacion`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ desdoblarPorArea }),
+    });
+
+    const resultado = await handleApiResponse<ResultadoConsolidacion>(response);
+
+    return {
+      success: true,
+      data: resultado,
+      message: `${resultado.actividadesNuevas} actividad(es) nueva(s), ${resultado.actividadesActualizadas} actualizada(s)`,
+    };
+  } catch (error) {
+    console.error("Error consolidando desde las matrices:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Error al consolidar",
     };
   }
 }

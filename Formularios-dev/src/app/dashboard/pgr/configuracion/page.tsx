@@ -11,10 +11,14 @@ function PgrConfiguracionContent() {
     fields,
     remove,
     agregarActividad,
+    esCreacion,
     estadoPlan,
     comentariosRechazo,
     areasList,
     superintendenciasList,
+    unidades,
+    entregablesSugeridos,
+    gruposResponsables,
     isLoadingPlan,
     isPending,
     guardarBorrador,
@@ -29,10 +33,14 @@ function PgrConfiguracionContent() {
       fields={fields}
       removeActividad={remove}
       onAgregarActividad={agregarActividad}
+      esCreacion={esCreacion}
       estadoPlan={estadoPlan}
       comentariosRechazo={comentariosRechazo}
       areasList={areasList}
       superintendenciasList={superintendenciasList}
+      unidades={unidades}
+      entregablesSugeridos={entregablesSugeridos}
+      gruposResponsables={gruposResponsables}
       isLoadingPlan={isLoadingPlan}
       isPending={isPending}
       onGuardarBorrador={guardarBorrador}

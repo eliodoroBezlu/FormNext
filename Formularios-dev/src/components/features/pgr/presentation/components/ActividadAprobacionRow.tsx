@@ -15,7 +15,10 @@ import {
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import CancelIcon from "@mui/icons-material/Cancel";
 import { ActividadEstado, ActividadPgr, AprobacionRespuesta } from "../../domain/models/IProps";
-import { formatActividadLabel } from "../../domain/pgrHelpers";
+import {
+  formatActividadLabel,
+  textoResponsables,
+} from "../../domain/pgrHelpers";
 import { ProgramacionResumen } from "./ProgramacionResumen";
 
 export interface ActividadAprobacionRowProps {
@@ -58,7 +61,7 @@ export function ActividadAprobacionRow({
           <Typography variant="body2" color="text.secondary">
             Responsable:
           </Typography>
-          <Typography variant="body2">{actividad.responsable}</Typography>
+          <Typography variant="body2">{textoResponsables(actividad)}</Typography>
         </Grid>
         <Grid size={{ xs: 12, sm: 3 }}>
           <Typography variant="body2" color="text.secondary">

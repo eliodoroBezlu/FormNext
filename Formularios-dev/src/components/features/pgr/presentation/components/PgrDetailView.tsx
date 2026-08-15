@@ -23,11 +23,14 @@ import {
 } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
+import Link from "next/link";
 import { ActividadPgr, Pgr, PgrEstado } from "../../domain/models/IProps";
 import {
   getActividadEstadoColor,
   getSemaforoColor,
   MESES_PGR,
+  textoResponsables,
 } from "../../domain/pgrHelpers";
 import { IndicadoresPanel } from "./IndicadoresPanel";
 import { ProgramacionResumen } from "./ProgramacionResumen";
@@ -71,19 +74,34 @@ export function PgrDetailView({
             {isViewMode ? "Detalles Generales del PGR" : "Editar PGR"}
           </Typography>
         </Box>
-        {!isViewMode && (
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<SaveIcon />}
-            onClick={onSave}
-            disabled={saving}
-            type="button"
-            sx={{ borderRadius: 2, px: 3 }}
-          >
-            {saving ? "Guardando..." : "Guardar Cambios"}
-          </Button>
-        )}
+        <Box display="flex" alignItems="center" gap={1.5}>
+          {/* Un PGR aprobado ya no admite programación nueva: el backend la
+              rechaza, así que la entrada no se ofrece. */}
+          {pgr.estado !== PgrEstado.APROBADO && (
+            <Button
+              variant="outlined"
+              startIcon={<AccountTreeIcon />}
+              component={Link}
+              href={`/dashboard/pgr/consolidacion/${pgr._id}`}
+              sx={{ borderRadius: 2 }}
+            >
+              Consolidar matrices
+            </Button>
+          )}
+          {!isViewMode && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<SaveIcon />}
+              onClick={onSave}
+              disabled={saving}
+              type="button"
+              sx={{ borderRadius: 2, px: 3 }}
+            >
+              {saving ? "Guardando..." : "Guardar Cambios"}
+            </Button>
+          )}
+        </Box>
       </Box>
 
       <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
@@ -248,7 +266,7 @@ export function PgrDetailView({
                   pgr.actividades.map((act: ActividadPgr) => (
                     <TableRow key={act._id} hover>
                       <TableCell>{act.descripcion}</TableCell>
-                      <TableCell>{act.responsable}</TableCell>
+                      <TableCell>{textoResponsables(act)}</TableCell>
                       <TableCell sx={{ minWidth: 220 }}>
                         <ProgramacionResumen
                           programacion={act.programacion}

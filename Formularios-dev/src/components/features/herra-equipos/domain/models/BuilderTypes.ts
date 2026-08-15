@@ -66,7 +66,13 @@ export type VerificationFieldType =
 export interface VerificationFieldHerraEquipos {
   label: string
   type: VerificationFieldType
+  /** Valores ofrecidos cuando `type` es `select`. */
   options?: string[]
+  /**
+   * Con `type: select`, deja escribir un valor fuera de la lista. Se guarda el
+   * texto tal cual, no la palabra «Otro».
+   */
+  permiteOtro?: boolean
   dataSource?: string
   obligatorio?: boolean
 }

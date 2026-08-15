@@ -89,6 +89,12 @@ export const NAVIGATION: NavigationItem[] = [
     requiredRoles: [Role.ADMIN, Role.SUPERVISOR, Role.SUPERINTENDENTE],
   },
   {
+    segment: "matriz-riesgos",
+    title: "Matriz de Riesgos",
+    icon: "description",
+    requiredRoles: [Role.ADMIN, Role.SUPERVISOR, Role.SUPERINTENDENTE],
+  },
+  {
     segment: "pgr",
     title: "PGR",
     icon: "settings",

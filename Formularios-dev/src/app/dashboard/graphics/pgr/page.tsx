@@ -85,9 +85,11 @@ export default function PgrDashboard() {
     const responsableMap: Record<string, number> = {};
     planes.forEach((plan) => {
       plan.actividades?.forEach((actividad: ActividadPgr) => {
-        if (actividad.responsable) {
-          responsableMap[actividad.responsable] =
-            (responsableMap[actividad.responsable] || 0) + 1;
+        // Una actividad puede tener varios responsables —grupos o personas—:
+        // cuenta para cada uno, que es lo que mide la carga por responsable.
+        for (const responsable of actividad.responsables ?? []) {
+          responsableMap[responsable.nombre] =
+            (responsableMap[responsable.nombre] || 0) + 1;
         }
       });
     });

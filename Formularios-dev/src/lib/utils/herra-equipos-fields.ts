@@ -20,6 +20,30 @@ export function getArea(i: InspectionResponse): string {
   ).toString();
 }
 
+/** Mayúsculas, sin tildes y sin espacios de más, para comparar textos libres. */
+function normalizar(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toUpperCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * ¿La inspección corresponde al área buscada?
+ *
+ * Se compara por «contiene» y sin tildes porque el área la escribe cada
+ * inspector a mano en su formulario, y en la base conviven `Flotacion`,
+ * `flotación`, `Taller Flotacion` y `taller de flotación` para el mismo lugar.
+ * Una comparación exacta contra el maestro de áreas dejaría fuera la mayoría.
+ */
+export function coincideArea(i: InspectionResponse, filtro: string): boolean {
+  const buscado = normalizar(filtro);
+  if (!buscado) return true;
+  return normalizar(getArea(i)).includes(buscado);
+}
+
 /**
  * Campo de `verification` que identifica al equipo/elemento inspeccionado
  * (TAG, placa, código interno, etc.) — varía por plantilla, cada formulario

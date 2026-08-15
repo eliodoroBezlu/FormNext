@@ -144,6 +144,29 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
     requiredRoles: [Role.ADMIN, Role.SUPERVISOR, Role.SUPERINTENDENTE],
   },
 
+  // Matriz de riesgos (1.02.P06.F01). El supervisor elabora; aprobar queda
+  // reservado al superintendente, y eso lo gatea el backend, no la ruta.
+  {
+    path: "/dashboard/matriz-riesgos",
+    requiredRoles: [Role.ADMIN, Role.SUPERVISOR, Role.SUPERINTENDENTE],
+  },
+
+  // Consolidación matriz → PGR. Se lista solo esta ruta del módulo PGR: es la
+  // única que escribe programación derivada de las matrices, y el backend pide
+  // los mismos roles para el endpoint.
+  {
+    path: "/dashboard/pgr/consolidacion",
+    requiredRoles: [Role.ADMIN, Role.SUPERVISOR, Role.SUPERINTENDENTE],
+  },
+
+  // Catálogos del PGR (unidades de recurso, entregables, grupos de
+  // responsables). Solo administración: el backend exige ADMIN para escribir,
+  // así que ofrecer la pantalla a otros roles sería mostrar botones que fallan.
+  {
+    path: "/dashboard/pgr/catalogos",
+    requiredRoles: [Role.ADMIN],
+  },
+
   // Reportes - admin
   {
     path: "/dashboard/reports",

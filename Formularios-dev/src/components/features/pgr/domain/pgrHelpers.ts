@@ -1,6 +1,6 @@
 // Helpers puros de dominio para PGR — TypeScript puro, sin React, sin MUI.
 
-import { ActividadEstado, PgrEstado } from "./models/IProps";
+import { ActividadEstado, ActividadPgr, PgrEstado } from "./models/IProps";
 
 export type StatusColor = "success" | "error" | "warning" | "info" | "default";
 
@@ -189,4 +189,34 @@ export function normalizarProgramacion(actividad: {
       realMesAdelantado: 0,
     };
   });
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Render de los campos plurales de una actividad
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Responsables, recursos y entregables son listas en el modelo y una sola
+ * celda en el formulario oficial. Estos helpers existen para que las cinco
+ * vistas de solo lectura no repitan el mismo `map().join()` —y para que si
+ * mañana cambia el separador, cambie en un solo lugar.
+ */
+export function textoResponsables(
+  actividad: Pick<ActividadPgr, "responsables">,
+): string {
+  return (actividad.responsables ?? []).map((r) => r.nombre).join(", ");
+}
+
+export function textoRecursos(
+  actividad: Pick<ActividadPgr, "recursos">,
+): string {
+  return (actividad.recursos ?? [])
+    .map((r) => `${r.cantidad} ${r.unidad}`)
+    .join(", ");
+}
+
+export function textoEntregables(
+  actividad: Pick<ActividadPgr, "entregables">,
+): string {
+  return (actividad.entregables ?? []).join(", ");
 }

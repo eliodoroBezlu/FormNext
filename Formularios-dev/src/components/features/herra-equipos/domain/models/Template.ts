@@ -3,7 +3,10 @@ import { Section } from './Section';
 export interface VerificationField {
   label: string;
   type: string;
+  /** Valores ofrecidos cuando `type` es `select`. */
   options?: string[];
+  /** Con `type: select`, admite un valor fuera de la lista. */
+  permiteOtro?: boolean;
   dataSource?: string;
   obligatorio?: boolean;
 }

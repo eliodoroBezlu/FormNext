@@ -182,37 +182,11 @@ export function PgrEncabezadoFields({
             </FormControl>
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Controller
-              name="supervisor"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value ?? ""}
-                  label="Supervisor"
-                  fullWidth
-                  disabled={disabled}
-                />
-              )}
-            />
-          </Grid>
-
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Controller
-              name="responsable"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value ?? ""}
-                  label="Responsable"
-                  fullWidth
-                  disabled={disabled}
-                />
-              )}
-            />
-          </Grid>
+          {/*
+            «Supervisor» y «Responsable» se quitaron de la cabecera: la
+            responsabilidad se declara por actividad, donde admite grupos y
+            personas. En los 17 planes cargados ninguno los tenía llenos.
+          */}
 
           {/*
             Parámetros de cálculo de los indicadores. En la planilla original

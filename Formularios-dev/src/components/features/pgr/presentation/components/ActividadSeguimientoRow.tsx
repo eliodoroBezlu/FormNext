@@ -28,6 +28,8 @@ import {
   getSemaforoBackground,
   getSemaforoColor,
   MESES_PGR,
+  textoEntregables,
+  textoResponsables,
 } from "../../domain/pgrHelpers";
 import { EvidenciasUploader } from "./EvidenciasUploader";
 import { LeyendaCategorias, ProgramacionResumen } from "./ProgramacionResumen";
@@ -120,12 +122,12 @@ export function ActividadSeguimientoRow({
         </Grid>
         <Grid size={{ xs: 12, sm: 3 }}>
           <Typography variant="body2" color="text.secondary">
-            Responsable: <Typography component="span" color="text.primary">{actividad.responsable}</Typography>
+            Responsable: <Typography component="span" color="text.primary">{textoResponsables(actividad)}</Typography>
           </Typography>
         </Grid>
         <Grid size={{ xs: 12, sm: 3 }}>
           <Typography variant="body2" color="text.secondary">
-            Entregable: <Typography component="span" color="text.primary">{actividad.entregable}</Typography>
+            Entregable: <Typography component="span" color="text.primary">{textoEntregables(actividad)}</Typography>
           </Typography>
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>

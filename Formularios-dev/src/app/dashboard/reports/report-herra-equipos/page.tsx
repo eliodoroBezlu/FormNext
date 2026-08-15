@@ -35,7 +35,24 @@ import {
   InspectionResponse,
 } from "@/lib/actions/inspection-herra-equipos";
 import { getTemplatesHerraEquipos, TemplateHerraEquipo } from "@/lib/actions/template-herra-equipos";
-import { getArea, getEquipmentId } from "@/lib/utils/herra-equipos-fields";
+import {
+  coincideArea,
+  getArea,
+  getEquipmentId,
+} from "@/lib/utils/herra-equipos-fields";
+import AutocompleteCustom from "@/components/ui/autocomplete/AutocompleteCustom";
+import { InspectionStatusChip } from "@/components/features/herra-equipos/common/InspectionStatusChip";
+import { InspectionStatus } from "@/components/features/herra-equipos/types/IProps";
+
+/** Orden en que se muestran los estados en el resumen: el ciclo de vida real. */
+const ESTADOS_INSPECCION = [
+  InspectionStatus.DRAFT,
+  InspectionStatus.IN_PROGRESS,
+  InspectionStatus.PENDING_APPROVAL,
+  InspectionStatus.APPROVED,
+  InspectionStatus.REJECTED,
+  InspectionStatus.COMPLETED,
+];
 import {
   descargarExcelHerraEquipoCliente,
   descargarPdfHerraEquipoCliente,
@@ -92,7 +109,7 @@ function ListarInspeccionHerraEquiposComponent() {
 
   // Filtros
   const [templateNameFilter, setTemplateNameFilter] = useState("");
-  const [templateCodeFilter, setTemplateCodeFilter] = useState("");
+  const [areaFilter, setAreaFilter] = useState("");
   const [equipmentIdFilter, setEquipmentIdFilter] = useState("");
   const [startDateFilter, setStartDateFilter] = useState("");
   const [endDateFilter, setEndDateFilter] = useState("");
@@ -105,7 +122,7 @@ function ListarInspeccionHerraEquiposComponent() {
   // ── Búsqueda y Filtros de URL ─────────────────────────────────────────────
   const buscarInspecciones = async (paramsFromUrl?: {
     templateName?: string;
-    templateCode?: string;
+    area?: string;
     equipmentId?: string;
     startDate?: string;
     endDate?: string;
@@ -115,7 +132,7 @@ function ListarInspeccionHerraEquiposComponent() {
       setError(null);
 
       const templateName = paramsFromUrl ? (paramsFromUrl.templateName ?? "") : templateNameFilter;
-      const templateCode = paramsFromUrl ? (paramsFromUrl.templateCode ?? "") : templateCodeFilter;
+      const area = paramsFromUrl ? (paramsFromUrl.area ?? "") : areaFilter;
       const equipmentId = paramsFromUrl ? (paramsFromUrl.equipmentId ?? "") : equipmentIdFilter;
       const startDate = paramsFromUrl ? (paramsFromUrl.startDate ?? "") : startDateFilter;
       const endDate = paramsFromUrl ? (paramsFromUrl.endDate ?? "") : endDateFilter;
@@ -124,7 +141,7 @@ function ListarInspeccionHerraEquiposComponent() {
       if (!paramsFromUrl) {
         const queryParams = new URLSearchParams();
         if (templateName) queryParams.set("templateName", templateName);
-        if (templateCode) queryParams.set("templateCode", templateCode);
+        if (area) queryParams.set("area", area);
         if (equipmentId) queryParams.set("equipmentId", equipmentId);
         if (startDate) queryParams.set("startDate", startDate);
         if (endDate) queryParams.set("endDate", endDate);
@@ -137,7 +154,13 @@ function ListarInspeccionHerraEquiposComponent() {
         startDate?: string;
         endDate?: string;
       } = {};
-      if (templateCode) filters.templateCode = templateCode;
+      // El código ya no se pide aparte: se deduce del formulario elegido, que
+      // es el mismo dato. Sirve para que el backend filtre en la consulta en
+      // vez de traer las 2.000 inspecciones y descartarlas acá.
+      if (templateName.trim()) {
+        const conEseNombre = templates.filter((t) => t.name === templateName);
+        if (conEseNombre.length === 1) filters.templateCode = conEseNombre[0].code;
+      }
       if (startDate) filters.startDate = startDate;
       if (endDate) filters.endDate = endDate;
 
@@ -152,6 +175,9 @@ function ListarInspeccionHerraEquiposComponent() {
               ?.toLowerCase()
               .includes(templateName.toLowerCase().trim()),
           );
+        }
+        if (area.trim()) {
+          filtradas = filtradas.filter((i) => coincideArea(i, area));
         }
         if (equipmentId.trim()) {
           const searchLower = equipmentId.toLowerCase().trim();
@@ -188,21 +214,21 @@ function ListarInspeccionHerraEquiposComponent() {
   // Sincronización con los parámetros de la URL al montar o cambiar params
   useEffect(() => {
     const templateName = searchParams.get("templateName") || "";
-    const templateCode = searchParams.get("templateCode") || "";
+    const area = searchParams.get("area") || "";
     const equipmentId = searchParams.get("equipmentId") || "";
     const startDate = searchParams.get("startDate") || "";
     const endDate = searchParams.get("endDate") || "";
 
     setTemplateNameFilter(templateName);
-    setTemplateCodeFilter(templateCode);
+    setAreaFilter(area);
     setEquipmentIdFilter(equipmentId);
     setStartDateFilter(startDate);
     setEndDateFilter(endDate);
 
-    if (templateName || templateCode || equipmentId || startDate || endDate) {
+    if (templateName || area || equipmentId || startDate || endDate) {
       buscarInspecciones({
         templateName,
-        templateCode,
+        area,
         equipmentId,
         startDate,
         endDate,
@@ -229,7 +255,7 @@ function ListarInspeccionHerraEquiposComponent() {
 
   const limpiarFiltros = () => {
     setTemplateNameFilter("");
-    setTemplateCodeFilter("");
+    setAreaFilter("");
     setEquipmentIdFilter("");
     setStartDateFilter("");
     setEndDateFilter("");
@@ -405,6 +431,11 @@ function ListarInspeccionHerraEquiposComponent() {
       ),
     },
     {
+      key: "status",
+      label: "Estado",
+      render: (row) => <InspectionStatusChip status={row.status} />,
+    },
+    {
       key: "acciones",
       label: "Acciones",
       align: "center",
@@ -456,22 +487,17 @@ function ListarInspeccionHerraEquiposComponent() {
           </Grid>
 
           <Grid size={{ xs: 12, md: 2 }}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Código</InputLabel>
-              <Select
-                value={templateCodeFilter}
-                onChange={(e) => setTemplateCodeFilter(e.target.value)}
-                label="Código"
-                disabled={loadingTemplates}
-              >
-                <MenuItem value="">Todos</MenuItem>
-                {templates.map((t) => (
-                  <MenuItem key={t._id} value={t.code}>
-                    {t.code}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            {/* El área la escribe el inspector en su formulario, no sale de un
+                catálogo: por eso es un autocompletado abierto y no un select.
+                Las opciones del maestro son sugerencias y la coincidencia es
+                por «contiene» y sin tildes. */}
+            <AutocompleteCustom
+              dataSource="area"
+              label="Área"
+              placeholder="Todas"
+              value={areaFilter || null}
+              onChange={(v) => setAreaFilter(v ?? "")}
+            />
           </Grid>
 
           <Grid size={{ xs: 12, md: 3 }}>
@@ -540,37 +566,47 @@ function ListarInspeccionHerraEquiposComponent() {
         {/* ── Estadísticas ── */}
         {mostrarResultados && inspections.length > 0 && (
           <Grid container spacing={2} sx={{ mb: 3 }}>
-            {[
-              {
-                label: "Total Inspecciones",
-                value: totalItems,
-                color: "text.primary",
-              },
-              {
-                label: "Completadas",
-                value: inspections.filter((i) => i.status === "completed")
-                  .length,
-                color: "success.main",
-              },
-              {
-                label: "En Borrador",
-                value: inspections.filter((i) => i.status === "draft").length,
-                color: "warning.main",
-              },
-            ].map((stat) => (
-              <Grid key={stat.label} size={{ xs: 12, md: 4 }}>
-                <Card>
-                  <CardContent sx={{ textAlign: "center" }}>
-                    <Typography color="textSecondary" gutterBottom>
-                      {stat.label}
-                    </Typography>
-                    <Typography variant="h4" color={stat.color}>
-                      {stat.value}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
+            <Grid size={{ xs: 12, md: 3 }}>
+              <Card>
+                <CardContent sx={{ textAlign: "center" }}>
+                  <Typography color="textSecondary" gutterBottom>
+                    Total Inspecciones
+                  </Typography>
+                  <Typography variant="h4">{totalItems}</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid size={{ xs: 12, md: 9 }}>
+              <Card sx={{ height: "100%" }}>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>
+                    Por estado
+                  </Typography>
+                  {/* Antes solo se contaban `completed` y `draft`, y quedaban
+                      fuera del resumen las aprobadas, las pendientes de
+                      aprobación y las rechazadas: más de la mitad del total. */}
+                  <Box display="flex" flexWrap="wrap" gap={1.5}>
+                    {ESTADOS_INSPECCION.map((estado) => {
+                      const n = inspections.filter(
+                        (i) => i.status === estado,
+                      ).length;
+                      if (n === 0) return null;
+                      return (
+                        <Box
+                          key={estado}
+                          display="flex"
+                          alignItems="center"
+                          gap={0.75}
+                        >
+                          <InspectionStatusChip status={estado} />
+                          <Typography variant="h6">{n}</Typography>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
           </Grid>
         )}
 

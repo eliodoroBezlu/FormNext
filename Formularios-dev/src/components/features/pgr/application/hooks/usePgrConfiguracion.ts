@@ -1,7 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useForm,
+  useFieldArray,
+  useWatch,
+  type Resolver,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -16,10 +21,20 @@ import {
   obtenerPgrPorId,
 } from "../../infrastructure/adapters/pgrAdapter";
 import {
+  pgrBorradorSchema,
   pgrConfiguracionSchema,
+  pgrCreacionSchema,
   PgrConfiguracionFormData,
   programacionVacia,
 } from "../../domain/schemas/pgrConfiguracionSchema";
+import {
+  obtenerEntregablesSugeridos,
+  obtenerGruposResponsables,
+  obtenerUnidadesRecurso,
+  type EntregableSugerido,
+  type GrupoResponsable,
+  type UnidadRecurso,
+} from "../../infrastructure/adapters/pgrCatalogoAdapter";
 import { normalizarProgramacion } from "../../domain/pgrHelpers";
 import { ActividadEstado, PgrEstado } from "../../domain/models/IProps";
 
@@ -40,16 +55,9 @@ const DEFAULT_VALUES: PgrConfiguracionFormData = {
   responsable: "",
   mesCorte: 12,
   ventanaGestion: 12,
-  actividades: [
-    {
-      verificador: "",
-      descripcion: "",
-      responsable: "",
-      recurso: "",
-      entregable: "",
-      programacion: programacionVacia(),
-    },
-  ],
+  // Vacío: al crear, las actividades salen de consolidar las matrices en el
+  // paso 2. En edición este valor lo pisa el `reset()` con las del plan.
+  actividades: [],
 };
 
 /**
@@ -62,9 +70,33 @@ export function usePgrConfiguracion() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
+  const esCreacion = !editId;
+
+  /**
+   * Qué tan estricta es la validación, según el botón que se apretó.
+   *
+   * Un borrador admite actividades a medias —las consolidadas nacen sin
+   * responsable, recurso ni programación—; la completitud recién se exige al
+   * enviar a aprobación, que es el mismo corte que hace el backend. Va en una
+   * ref y no en estado porque cambia justo antes de validar y no debe
+   * provocar un render.
+   */
+  const modoValidacion = useRef<"borrador" | "aprobacion">("borrador");
+
+  const resolver = useCallback<Resolver<PgrConfiguracionFormData>>(
+    (values, context, options) => {
+      const esquema = esCreacion
+        ? pgrCreacionSchema
+        : modoValidacion.current === "aprobacion"
+          ? pgrConfiguracionSchema
+          : pgrBorradorSchema;
+      return zodResolver(esquema)(values, context, options);
+    },
+    [esCreacion],
+  );
 
   const form = useForm<PgrConfiguracionFormData>({
-    resolver: zodResolver(pgrConfiguracionSchema),
+    resolver,
     defaultValues: DEFAULT_VALUES,
     mode: "onTouched",
   });
@@ -93,6 +125,16 @@ export function usePgrConfiguracion() {
   >([]);
   const [isLoadingPlan, setIsLoadingPlan] = useState(!!editId);
   const [isPending, setIsPending] = useState(false);
+
+  // Catálogos configurables: no hay listas de unidades ni de entregables en el
+  // código, salen de la base y se administran desde el panel.
+  const [unidades, setUnidades] = useState<UnidadRecurso[]>([]);
+  const [entregablesSugeridos, setEntregablesSugeridos] = useState<
+    EntregableSugerido[]
+  >([]);
+  const [gruposResponsables, setGruposResponsables] = useState<
+    GrupoResponsable[]
+  >([]);
 
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     open: false,
@@ -138,6 +180,23 @@ export function usePgrConfiguracion() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // --- Catálogos del PGR (unidades, entregables, grupos) ---
+  const superintendencia = useWatch({ control, name: "superintendencia" });
+
+  useEffect(() => {
+    // Los adaptadores devuelven `[]` ante un error: un catálogo caído no debe
+    // impedir editar el resto del formulario.
+    void obtenerUnidadesRecurso().then(setUnidades);
+    void obtenerEntregablesSugeridos().then(setEntregablesSugeridos);
+  }, []);
+
+  useEffect(() => {
+    // Los grupos dependen de la superintendencia elegida.
+    void obtenerGruposResponsables(superintendencia || undefined).then(
+      setGruposResponsables,
+    );
+  }, [superintendencia]);
+
   // --- Carga del plan existente (modo edición) ---
   useEffect(() => {
     if (!editId) return;
@@ -167,17 +226,18 @@ export function usePgrConfiguracion() {
           superintendencia: data.superintendencia,
           gestion: data.gestion,
           areas: data.areas || [],
-          supervisor: data.supervisor || "",
-          responsable: data.responsable || "",
           mesCorte: data.mesCorte ?? 12,
           ventanaGestion: data.ventanaGestion ?? 12,
           actividades: data.actividades.map((act) => ({
             _id: act._id,
             descripcion: act.descripcion,
-            responsable: act.responsable,
             verificador: act.verificador,
-            recurso: act.recurso,
-            entregable: act.entregable,
+            // Los cuatro son listas en el modelo. Los planes anteriores a la
+            // migración pueden no traerlas; se completan vacías.
+            areas: act.areas ?? [],
+            responsables: act.responsables ?? [],
+            recursos: act.recursos ?? [],
+            entregables: act.entregables ?? [],
             historialTrazabilidad: act.historialTrazabilidad || "",
             // Los planes anteriores a la matriz solo tienen `mesesProgramados`.
             // Se completan los 12 meses para que el formulario siempre tenga
@@ -234,9 +294,12 @@ export function usePgrConfiguracion() {
     append({
       verificador: areaText ? `${areaText} - ` : "",
       descripcion: areaText ? ` - ${areaText}` : "",
-      responsable: "",
-      recurso: "",
-      entregable: "",
+      // Vacío = todas las áreas de la superintendencia. Es el caso habitual;
+      // acotar el alcance es la excepción que se marca a mano.
+      areas: [],
+      responsables: [],
+      recursos: [],
+      entregables: [],
       programacion: programacionVacia(),
     });
   }, [append, getValues]);
@@ -261,8 +324,21 @@ export function usePgrConfiguracion() {
           : await crearPgr(payload);
 
         if (result.success) {
-          showSnackbar("Plan guardado exitosamente", "success");
-          router.push("/dashboard/pgr");
+          // Recién creado: se sigue al paso 2 en vez de volver a la lista. Es
+          // donde las matrices de riesgo aprobadas de la superintendencia se
+          // vuelven actividades; el PGR tiene que existir antes porque la
+          // consolidación escribe dentro de él.
+          const nuevoId = !editId ? result.data?._id : undefined;
+          if (nuevoId) {
+            showSnackbar(
+              "PGR creado. Ahora consolidá las matrices de riesgo.",
+              "success",
+            );
+            router.push(`/dashboard/pgr/consolidacion/${nuevoId}`);
+          } else {
+            showSnackbar("Plan guardado exitosamente", "success");
+            router.push("/dashboard/pgr");
+          }
         } else {
           showSnackbar(result.error || "Error al guardar el plan", "error");
         }
@@ -274,25 +350,41 @@ export function usePgrConfiguracion() {
     [editId, router, showSnackbar],
   );
 
-  const guardarBorrador = handleSubmit(
+  const submitBorrador = handleSubmit(
     (data) => guardarPlan(data, PgrEstado.BORRADOR),
     handleInvalidSubmit,
   );
 
-  const enviarAAprobacion = handleSubmit(
+  const submitAprobacion = handleSubmit(
     (data) => guardarPlan(data, PgrEstado.EN_REVISION),
     handleInvalidSubmit,
   );
+
+  // El modo se fija antes de disparar la validación: `handleSubmit` llama al
+  // resolver de forma síncrona al invocarse.
+  const guardarBorrador = useCallback(() => {
+    modoValidacion.current = "borrador";
+    return submitBorrador();
+  }, [submitBorrador]);
+
+  const enviarAAprobacion = useCallback(() => {
+    modoValidacion.current = "aprobacion";
+    return submitAprobacion();
+  }, [submitAprobacion]);
 
   return {
     form,
     fields,
     remove,
     agregarActividad,
+    esCreacion,
     estadoPlan,
     comentariosRechazo,
     areasList,
     superintendenciasList,
+    unidades,
+    entregablesSugeridos,
+    gruposResponsables,
     isLoadingPlan,
     isPending: isPending || isSubmitting,
     isEditMode: !!editId,

@@ -322,6 +322,46 @@ export const VerificationFields = <
                       />
                     )}
                   />
+                ) : field.type === "select" && (field.options?.length ?? 0) > 0 ? (
+                  <Controller
+                    name={fieldKey}
+                    control={control}
+                    rules={{ required: field.obligatorio ? "Este campo es obligatorio" : false }}
+                    render={({ field: formField }) => (
+                      // Con `permiteOtro` se usa `freeSolo`: el inspector elige
+                      // de la lista o escribe lo suyo, y se guarda el texto
+                      // real —no la palabra «Otro»— para que el reporte sirva
+                      // luego para ampliar la lista.
+                      <Autocomplete
+                        freeSolo={field.permiteOtro}
+                        options={field.options ?? []}
+                        value={(formField.value as string) || null}
+                        onChange={(_event, newValue) => {
+                          formField.onChange(newValue ?? "");
+                        }}
+                        onInputChange={(_event, newInputValue, reason) => {
+                          if (field.permiteOtro && reason === "input") {
+                            formField.onChange(newInputValue);
+                          }
+                        }}
+                        disabled={readonly}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label={field.label}
+                            error={!!fieldError}
+                            helperText={
+                              fieldError?.message ??
+                              (field.permiteOtro
+                                ? "Puede elegir de la lista o escribir otro valor"
+                                : undefined)
+                            }
+                            required={field.obligatorio}
+                          />
+                        )}
+                      />
+                    )}
+                  />
                 ) : (
                   <Controller
                     name={fieldKey}

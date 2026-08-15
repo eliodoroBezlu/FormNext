@@ -50,13 +50,37 @@ export type CategoriaEjecucionKey =
   | "realDelMes"
   | "realMesAdelantado";
 
+/**
+ * Quién responde por una actividad: un **grupo** que se resuelve contra el
+ * roster, o un **trabajador** suelto cuando no hay grupo que lo cubra.
+ */
+export interface ResponsableActividad {
+  tipo: "grupo" | "trabajador";
+  /** `_id` del grupo, o `ci` del trabajador. */
+  referencia: string;
+  nombre: string;
+}
+
+/** Cantidad y unidad. Hoy la única unidad en uso es `HH` (horas hombre). */
+export interface RecursoActividad {
+  cantidad: number;
+  /** Código del catálogo de unidades, no una constante del código. */
+  unidad: string;
+}
+
 export interface ActividadPgr {
   _id: string;
   descripcion: string;
-  responsable: string;
+  /**
+   * Áreas de la superintendencia a las que aplica. **Vacío = todas.**
+   * Es un dato interno para acotar y filtrar; no viaja al Excel, donde el
+   * alcance se sigue leyendo del texto de la actividad.
+   */
+  areas?: string[];
+  responsables?: ResponsableActividad[];
   verificador: string;
-  recurso: string;
-  entregable: string;
+  recursos?: RecursoActividad[];
+  entregables?: string[];
 
   /** Fuente de verdad de la programación. */
   programacion?: ProgramacionMes[];
@@ -95,8 +119,6 @@ export interface Pgr {
   createdAt?: string;
   updatedAt?: string;
 
-  supervisor?: string;
-  responsable?: string;
   /** Código del documento origen (`V04-G02-...`) cuando vino de un import. */
   codigoExterno?: string;
 
@@ -124,10 +146,11 @@ export interface ProgramacionMesDto {
 export interface CreateActividadDto {
   _id?: string;
   descripcion: string;
-  responsable: string;
+  areas?: string[];
+  responsables?: ResponsableActividad[];
   verificador: string;
-  recurso: string;
-  entregable: string;
+  recursos?: RecursoActividad[];
+  entregables?: string[];
   programacion?: ProgramacionMesDto[];
   historialTrazabilidad?: string;
   evidencias?: string[];
@@ -147,8 +170,8 @@ export interface CreatePgrDto {
   gestion: string;
   estado?: PgrEstado;
   areas?: string[];
-  supervisor?: string;
-  responsable?: string;
+  // `supervisor` y `responsable` se retiraron: la responsabilidad se declara
+  // por actividad, no en la cabecera del plan.
   codigoExterno?: string;
   mesCorte?: number;
   ventanaGestion?: number;
@@ -216,4 +239,57 @@ export interface PgrFilters {
   empresa: string;
   estado: string;
   activo: string;
+}
+
+// ==========================================
+// Consolidación desde matrices de riesgo
+// ==========================================
+
+/** Riesgo de la matriz que quedó cubierto por una actividad del PGR. */
+export interface RiesgoCubierto {
+  matrizCodigo: string;
+  matrizVersion: number;
+  areaCodigo: string;
+  areaNombre: string;
+  riesgoNumero: number;
+  descripcionRiesgo: string;
+  categoria?: string;
+  nivelActual: string;
+}
+
+/** Qué le pasaría a la actividad si se consolida. */
+export type EfectoConsolidacion =
+  | "nueva"
+  | "acumula"
+  | "sube-nivel"
+  | "sin-cambios";
+
+export interface ActividadPropuesta {
+  clave: string;
+  verificador: string;
+  /** Sale de la medida de control; es editable después de consolidar. */
+  descripcion: string;
+  riesgosCubiertos: RiesgoCubierto[];
+  nivelRiesgoMaximo: string;
+  areas: string[];
+  efecto: EfectoConsolidacion;
+}
+
+export interface VistaPreviaConsolidacion {
+  superintendencia: string;
+  gestion: string;
+  pgrId?: string;
+  pgrCodigo?: string;
+  areasConMatriz: { areaCodigo: string; areaNombre: string; matriz: string }[];
+  areasYaConsolidadas: string[];
+  propuestas: ActividadPropuesta[];
+  advertencias: string[];
+}
+
+export interface ResultadoConsolidacion {
+  pgrId: string;
+  actividadesNuevas: number;
+  actividadesActualizadas: number;
+  areasConsolidadas: string[];
+  advertencias: string[];
 }

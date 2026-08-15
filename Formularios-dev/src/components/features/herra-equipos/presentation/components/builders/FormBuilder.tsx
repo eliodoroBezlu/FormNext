@@ -26,6 +26,7 @@ import { Add, Delete, Save } from "@mui/icons-material";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormBuilderDataSchema } from "../../../domain/schemas/builderSchemas";
 import { SectionBuilder } from "./SectionBuilder";
+import { OpcionesCampoVerificacion } from "./OpcionesCampoVerificacion";
 import {
   VerificationFieldType,
   FormBuilderDataHerraEquipos,
@@ -133,6 +134,12 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
     setValue(`verificationFields.${index}.type`, newType);
     if (newType !== "autocomplete")
       setValue(`verificationFields.${index}.dataSource`, undefined);
+    // La lista de opciones no significa nada fuera de «Selección»; dejarla
+    // colgada haría que reaparezca si se vuelve a ese tipo por error.
+    if (newType !== "select") {
+      setValue(`verificationFields.${index}.options`, undefined);
+      setValue(`verificationFields.${index}.permiteOtro`, undefined);
+    }
   };
 
   return (
@@ -471,6 +478,33 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
                       >
                         <Delete />
                       </IconButton>
+                    </Grid>
+                  )}
+
+                  {formData.verificationFields[index]?.type === "select" && (
+                    <Grid size={{ xs: 12 }}>
+                      <OpcionesCampoVerificacion
+                        opciones={
+                          formData.verificationFields[index]?.options ?? []
+                        }
+                        permiteOtro={
+                          formData.verificationFields[index]?.permiteOtro ??
+                          false
+                        }
+                        onChange={(opciones) =>
+                          setValue(
+                            `verificationFields.${index}.options`,
+                            opciones,
+                          )
+                        }
+                        onPermiteOtroChange={(permiteOtro) =>
+                          setValue(
+                            `verificationFields.${index}.permiteOtro`,
+                            permiteOtro,
+                          )
+                        }
+                        disabled={isReadOnly}
+                      />
                     </Grid>
                   )}
                 </Grid>
