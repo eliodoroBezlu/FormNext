@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Autocomplete,
   Box,
@@ -16,6 +16,13 @@ import {
   CardContent,
 } from "@mui/material";
 import { EquipoBackend } from "@/lib/actions/equipo-actions";
+import type { Section } from "../../../domain/models/Section";
+import {
+  elementosPresentesEn,
+  type SeleccionSpcc,
+} from "../../../domain/models/SpccElementos";
+import { SpccEquipoSelectors } from "./SpccEquipoSelectors";
+import { obtenerPrestadosAhora } from "@/lib/actions/prestamo-actions";
 
 const norm = (s: string) =>
   s
@@ -31,6 +38,14 @@ interface EquipmentSelectionStepProps {
   areas: string[];
   onSelect: (area: string, code: string, equipo?: EquipoBackend) => void;
   onSkip: () => void;
+  /**
+   * Secciones de la plantilla. Solo se usan para reconocer los formularios que
+   * inspeccionan varios elementos a la vez (SPCC); sin ellas el paso se
+   * comporta como siempre, con un único TAG.
+   */
+  sections?: Section[];
+  /** Continuar con un equipo por elemento, en vez de con un único TAG. */
+  onSelectMultiple?: (area: string, seleccion: SeleccionSpcc) => void;
 }
 
 export function EquipmentSelectionStep({
@@ -40,6 +55,8 @@ export function EquipmentSelectionStep({
   areas,
   onSelect,
   onSkip,
+  sections,
+  onSelectMultiple,
 }: EquipmentSelectionStepProps) {
   const [selectedArea, setSelectedArea] = useState<string>("");
   /**
@@ -50,6 +67,33 @@ export function EquipmentSelectionStep({
    * arneses quedaban inalcanzables porque siempre se resolvía el primero.
    */
   const [selected, setSelected] = useState<EquipoBackend | null>(null);
+
+  /**
+   * Elementos SPCC de esta plantilla, si es que los tiene.
+   *
+   * Se deduce de las secciones y no del código del formulario: dos plantillas
+   * comparten el código `1.02.P06.F19` y solo una tiene las cuatro secciones.
+   * Lista vacía en cualquier otro formulario, que es lo que conserva el TAG
+   * único de siempre.
+   */
+  const elementosSpcc = useMemo(
+    () => (sections && onSelectMultiple ? elementosPresentesEn(sections) : []),
+    [sections, onSelectMultiple],
+  );
+  const esFormularioMultiple = elementosSpcc.length > 0;
+
+  const [seleccionMultiple, setSeleccionMultiple] = useState<SeleccionSpcc>({});
+
+  /**
+   * Qué está prestado ahora, para etiquetarlo. Solo se consulta en los
+   * formularios que lo necesitan, y un fallo deja el mapa vacío sin estorbar.
+   */
+  const [prestados, setPrestados] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!esFormularioMultiple) return;
+    void obtenerPrestadosAhora().then(setPrestados);
+  }, [esFormularioMultiple]);
+  const haySeleccionMultiple = Object.values(seleccionMultiple).some(Boolean);
 
   /**
    * Equipos que se ofrecen para el área elegida.
@@ -82,6 +126,10 @@ export function EquipmentSelectionStep({
   }, [equipos, selectedArea]);
 
   const handleContinue = () => {
+    if (esFormularioMultiple) {
+      onSelectMultiple?.(selectedArea, seleccionMultiple);
+      return;
+    }
     if (!selected) return;
     onSelect(selectedArea, selected.codigo, selected);
   };
@@ -112,9 +160,23 @@ export function EquipmentSelectionStep({
           Código: {templateCode} — {templateName}
         </Typography>
 
-        <Typography variant="subtitle1" align="center" fontWeight={500} sx={{ mb: 3 }}>
-          Seleccione primero el área y el TAG para continuar
+        <Typography variant="subtitle1" align="center" fontWeight={500} sx={{ mb: 1 }}>
+          {esFormularioMultiple
+            ? "Elija el área y los elementos que lleva el trabajador"
+            : "Seleccione primero el área y el TAG para continuar"}
         </Typography>
+
+        {esFormularioMultiple && (
+          <Typography
+            variant="body2"
+            align="center"
+            color="text.secondary"
+            sx={{ mb: 3 }}
+          >
+            Marque solo los que va a inspeccionar: cada uno activa su sección y
+            llena su código. Los que deje vacíos no aparecerán.
+          </Typography>
+        )}
 
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid size={{ xs: 12, sm: 6 }}>
@@ -141,6 +203,18 @@ export function EquipmentSelectionStep({
             </FormControl>
           </Grid>
 
+          {esFormularioMultiple ? (
+            <Grid size={12}>
+              <SpccEquipoSelectors
+                elementos={elementosSpcc}
+                equipos={filteredEquipos}
+                seleccion={seleccionMultiple}
+                onChange={setSeleccionMultiple}
+                deshabilitado={!selectedArea}
+                prestados={prestados}
+              />
+            </Grid>
+          ) : (
           <Grid size={{ xs: 12, sm: 6 }}>
             <Autocomplete
               disabled={!selectedArea || filteredEquipos.length === 0}
@@ -180,6 +254,7 @@ export function EquipmentSelectionStep({
               )}
             />
           </Grid>
+          )}
         </Grid>
 
         <Box display="flex" flexDirection="column" gap={2} alignItems="center">
@@ -188,7 +263,7 @@ export function EquipmentSelectionStep({
             size="large"
             fullWidth
             onClick={handleContinue}
-            disabled={!selected}
+            disabled={esFormularioMultiple ? !haySeleccionMultiple : !selected}
             sx={{ py: 1.5, fontWeight: "bold", textTransform: "none" }}
           >
             Continuar

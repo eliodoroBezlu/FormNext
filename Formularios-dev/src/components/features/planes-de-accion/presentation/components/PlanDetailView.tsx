@@ -58,6 +58,15 @@ export function PlanDetailView({
   puedeAprobarPlan,
 }: PlanDetailViewProps) {
   const [openTareaModal, setOpenTareaModal] = useState(false);
+  /**
+   * Cambia en cada apertura para forzar el remontaje del modal (ver su `key`
+   * más abajo). Así el formulario nace con los valores de la tarea elegida sin
+   * necesidad de un efecto que lo reinicie a mano.
+   *
+   * No se usa `open` en la `key`: al cerrarse cambiaría también, y el modal se
+   * desmontaría antes de poder animar la salida.
+   */
+  const [aperturaTarea, setAperturaTarea] = useState(0);
   const [selectedTarea, setSelectedTarea] = useState<TareaObservacion | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -72,11 +81,13 @@ export function PlanDetailView({
 
   const handleOpenAddTarea = () => {
     setSelectedTarea(null);
+    setAperturaTarea((n) => n + 1);
     setOpenTareaModal(true);
   };
 
   const handleEditTarea = (tarea: TareaObservacion) => {
     setSelectedTarea(tarea);
+    setAperturaTarea((n) => n + 1);
     setOpenTareaModal(true);
   };
 
@@ -307,6 +318,7 @@ export function PlanDetailView({
       />
 
       <TareaFormModal
+        key={aperturaTarea}
         open={openTareaModal}
         isLoading={isLoading}
         tarea={selectedTarea}

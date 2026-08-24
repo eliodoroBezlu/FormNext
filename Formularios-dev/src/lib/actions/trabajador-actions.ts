@@ -1,6 +1,6 @@
 "use server";
 
-import { Trabajador } from "@/types/trabajador";
+import { Trabajador, TrabajadorResumen } from "@/types/trabajador";
 import { API_BASE_URL } from "../constants";
 import { getAuthHeaders, handleApiResponse } from "./helpers";
 
@@ -20,8 +20,16 @@ export async function obtenerTrabajadores(): Promise<Trabajador[]> {
   }
 }
 
-// Obtener todos los trabajadores completos
-export async function obtenerTrabajadoresCompletos(): Promise<Trabajador[]> {
+/**
+ * Roster reducido para autocompletar por nombre.
+ *
+ * Pese a llamarse «completos», el backend hace `.select('nomina ci puesto')`:
+ * **no trae `_id` ni `area`**. Si necesita cualquiera de los dos, use
+ * `obtenerTrabajadores()`.
+ */
+export async function obtenerTrabajadoresCompletos(): Promise<
+  TrabajadorResumen[]
+> {
   try {
     const headers = await getAuthHeaders();
     const response = await fetch(`${API_BASE_URL}/trabajadores/completos`, {
@@ -29,7 +37,7 @@ export async function obtenerTrabajadoresCompletos(): Promise<Trabajador[]> {
       headers,
       cache: "no-store",
     });
-    return await handleApiResponse<Trabajador[]>(response);
+    return await handleApiResponse<TrabajadorResumen[]>(response);
   } catch (error) {
     console.error("Error obteniendo trabajadores completos:", error);
     throw error;

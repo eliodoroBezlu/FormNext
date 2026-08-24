@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Box,
   Paper,
@@ -44,7 +44,8 @@ const IAM_PORTAL_URL =
 
 export default function GestionTrabajadores() {
   const [trabajadores, setTrabajadores] = useState<Trabajador[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Arranca en `true`: la pagina esta cargando desde el primer render.
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -62,23 +63,42 @@ export default function GestionTrabajadores() {
     null,
   );
 
-  useEffect(() => {
-    cargarTrabajadores();
+  /** Solo consulta y devuelve; no toca el estado. */
+  const consultar = useCallback(() => obtenerTrabajadores(), []);
+
+  const aplicar = useCallback(
+    (datos: Awaited<ReturnType<typeof consultar>>) => {
+      setTrabajadores(datos);
+      setError(null);
+    },
+    [],
+  );
+
+  const avisarFallo = useCallback((error: unknown) => {
+    console.error("Error al cargar trabajadores:", error);
+    setError("No se pudieron cargar los trabajadores");
   }, []);
 
-  const cargarTrabajadores = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await obtenerTrabajadores();
-      setTrabajadores(data);
-    } catch (error) {
-      console.error("Error al cargar trabajadores:", error);
-      setError("No se pudieron cargar los trabajadores");
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    // La promesa se encadena aqui: llamar a la funcion `async` haria que
+    // el analizador viera su `setLoading(true)` como setState sincrono.
+    let vigente = true;
+
+    consultar()
+      .then((datos) => {
+        if (vigente) aplicar(datos);
+      })
+      .catch((error: unknown) => {
+        if (vigente) avisarFallo(error);
+      })
+      .finally(() => {
+        if (vigente) setLoading(false);
+      });
+
+    return () => {
+      vigente = false;
+    };
+  }, [consultar, aplicar, avisarFallo]);
 
   const filtrarTrabajadores = () => {
     let filtrados = trabajadores;

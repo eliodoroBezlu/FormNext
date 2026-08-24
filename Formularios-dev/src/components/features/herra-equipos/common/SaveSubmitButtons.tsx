@@ -6,6 +6,7 @@ import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
 import { Cancel, CheckCircleOutline, PlaylistAddCheck } from "@mui/icons-material";
 import type { ReactNode } from "react";
 
+import { MOSTRAR_BOTON_BORRADOR } from "../utils/navegacion-pasos";
 interface SaveSubmitButtonsProps {
   onSaveDraft?: () => void;
   onSubmit: () => void;
@@ -169,7 +170,7 @@ export function SaveSubmitButtons({
             justifyContent: "flex-end",
           }}
         >
-          {allowDraft && onSaveDraft && (
+          {MOSTRAR_BOTON_BORRADOR && allowDraft && onSaveDraft && (
             <Button
               type="button"
               variant="outlined"
@@ -231,7 +232,7 @@ export function SaveSubmitButtons({
           justifyContent: "flex-end",
         }}
       >
-        {allowDraft && onSaveDraft && !isApprovalMode && (
+        {MOSTRAR_BOTON_BORRADOR && allowDraft && onSaveDraft && !isApprovalMode && (
           <Button
             type="button"
             variant="outlined"

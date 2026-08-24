@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import dayjs from "dayjs";
 import { uploadImageToCloudinary } from "@/lib/actions/cloudinary";
 import { usePgr } from "./usePgr";
@@ -9,6 +9,7 @@ import {
   ActividadPgr,
   CategoriaEjecucionKey,
   PendingFile,
+  Pgr,
   SeguimientoActividadState,
   SeguimientoBatchItem,
 } from "../../domain/models/IProps";
@@ -57,11 +58,24 @@ export function usePgrSeguimiento(id: string) {
     [],
   );
 
-  useEffect(() => {
-    if (!pgr?.actividades) return;
-    const initial: Record<string, SeguimientoActividadState> = {};
+  /**
+   * Vuelca las actividades del PGR en el estado editable cuando llegan —o
+   * cambian—.
+   *
+   * Se ajusta durante el render en vez de en un efecto: es el patrón que
+   * documenta React para reaccionar al cambio de una prop, y evita el segundo
+   * commit que provocaba la versión con `useEffect`.
+   *
+   * Copiar es necesario porque el usuario edita estos valores; derivarlos sin
+   * más impediría modificarlos.
+   */
+  const [pgrVolcado, setPgrVolcado] = useState<Pgr | null>(null);
+  if (pgr?.actividades && pgr !== pgrVolcado) {
+    setPgrVolcado(pgr);
+
+    const inicial: Record<string, SeguimientoActividadState> = {};
     pgr.actividades.forEach((act: ActividadPgr) => {
-      initial[act._id] = {
+      inicial[act._id] = {
         semaforoTiempo: act.semaforoTiempo || "En el Mes",
         fechaEjecucion: act.fechaEjecucion || undefined,
         observaciones: act.observaciones || "",
@@ -70,8 +84,8 @@ export function usePgrSeguimiento(id: string) {
         programacion: normalizarProgramacion(act),
       };
     });
-    setSeguimientoData(initial);
-  }, [pgr]);
+    setSeguimientoData(inicial);
+  }
 
   /**
    * Registra la cantidad ejecutada de un mes en una de las 3 categorías de

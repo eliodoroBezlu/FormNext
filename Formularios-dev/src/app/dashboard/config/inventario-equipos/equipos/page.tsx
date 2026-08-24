@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from "react"
+import React, { useCallback, useEffect, useState } from "react"
 import {
   Box,
   Paper,
@@ -49,6 +49,7 @@ import {
   EquipoBackend,
   EquipoForm
 } from "@/lib/actions/equipo-actions"
+import { FotosEquipo } from "@/components/features/herra-equipos/presentation/components/management/FotosEquipo"
 import { obtenerAreasCompletas, AreaBackend } from "@/lib/actions/area-actions"
 import { obtenerUbicaciones, UbicacionBackend } from "@/lib/actions/ubicacion-actions"
 import { obtenerClasificaciones, ClasificacionBackend } from "@/lib/actions/clasificacion-actions"
@@ -81,11 +82,13 @@ const initialFormData: EquipoForm = {
   ubicacion_id: "",
   clasificacion_id: "",
   especificaciones: {},
+  fotos: [],
 }
 
 export default function GestionEquipos() {
   const [equipos, setEquipos] = useState<EquipoBackend[]>([])
-  const [loading, setLoading] = useState(false)
+  // Arranca en `true`: la pagina esta cargando desde el primer render.
+  const [loading, setLoading] = useState(true)
   const [migrationLoading, setMigrationLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -131,23 +134,97 @@ export default function GestionEquipos() {
     severity: "info",
   })
 
-  useEffect(() => {
-    cargarDatos()
-    cargarCatalogos()
+  /** Solo consulta y devuelve; no toca el estado. */
+  const consultarEquipos = useCallback(() => obtenerEquipos(), [])
+
+  const aplicarEquipos = useCallback(
+    (data: Awaited<ReturnType<typeof consultarEquipos>>) => {
+      setEquipos(data)
+      setError(null)
+    },
+    [],
+  )
+
+  const avisarFallo = useCallback((error: unknown) => {
+    setError(error instanceof Error ? error.message : "Error al cargar equipos")
   }, [])
 
-  const cargarDatos = async () => {
+  /** Recarga a peticion, tras crear, editar o importar equipos. */
+  const cargarDatos = useCallback(async () => {
     setLoading(true)
-    setError(null)
     try {
-      const data = await obtenerEquipos()
-      setEquipos(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al cargar equipos")
+      aplicarEquipos(await consultarEquipos())
+    } catch (error) {
+      avisarFallo(error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [consultarEquipos, aplicarEquipos, avisarFallo])
+
+  /** Los catalogos alimentan los desplegables del formulario. */
+  const consultarCatalogos = useCallback(
+    () =>
+      Promise.all([
+        obtenerAreasCompletas(),
+        obtenerUbicaciones(),
+        obtenerClasificaciones(),
+        obtenerConfigFormularios(),
+        obtenerSuperintendencias(),
+        obtenerGerencias(),
+      ]),
+    [],
+  )
+
+  const aplicarCatalogos = useCallback(
+    ([areasData, ubiData, classData, configData, supData, gerData]: Awaited<
+      ReturnType<typeof consultarCatalogos>
+    >) => {
+      setAreas(areasData)
+      setUbicaciones(ubiData)
+      setClasificaciones(classData)
+      setConfigs(configData)
+      setSuperintendencias(Array.isArray(supData) ? supData : [])
+      setGerencias(gerData)
+    },
+    [],
+  )
+
+  useEffect(() => {
+    // Las promesas se encadenan aqui: llamar a las funciones `async` haria que
+    // el analizador viera sus setState como sincronos del efecto.
+    let vigente = true
+
+    consultarEquipos()
+      .then((datos) => {
+        if (vigente) aplicarEquipos(datos)
+      })
+      .catch((error: unknown) => {
+        if (vigente) avisarFallo(error)
+      })
+      .finally(() => {
+        if (vigente) setLoading(false)
+      })
+
+    consultarCatalogos()
+      .then((datos) => {
+        if (vigente) aplicarCatalogos(datos)
+      })
+      .catch((error: unknown) => {
+        // Los catalogos son secundarios: si fallan, la tabla de equipos sigue
+        // siendo util, asi que no se muestra error de pagina.
+        console.error("Error al cargar catalogos:", error)
+      })
+
+    return () => {
+      vigente = false
+    }
+  }, [
+    consultarEquipos,
+    aplicarEquipos,
+    avisarFallo,
+    consultarCatalogos,
+    aplicarCatalogos,
+  ])
 
   const cargarCatalogos = async () => {
     try {
@@ -224,6 +301,7 @@ export default function GestionEquipos() {
       ubicacion_id: equipo.ubicacion_id?._id || "",
       clasificacion_id: equipo.clasificacion_id?._id || "",
       especificaciones: equipo.especificaciones || {},
+      fotos: equipo.fotos || [],
     })
     setOpenModal(true)
   }
@@ -809,6 +887,14 @@ export default function GestionEquipos() {
                   variant="outlined"
                   value={formData.observaciones}
                   onChange={(e) => setFormData({ ...formData, observaciones: e.target.value })}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12 }}>
+                <Divider sx={{ my: 2 }} />
+                <FotosEquipo
+                  fotos={formData.fotos ?? []}
+                  onChange={(fotos) => setFormData({ ...formData, fotos })}
                 />
               </Grid>
 

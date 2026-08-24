@@ -37,6 +37,7 @@ const AutocompleteTrabajador: React.FC<AutocompleteTrabajadorProps> = ({
   const [options, setOptions] = useState<TrabajadorOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [inputValue, setInputValue] = useState("");
+  const [prevValue, setPrevValue] = useState(value);
 
   useEffect(() => {
     const loadTrabajadores = async () => {
@@ -59,16 +60,21 @@ const AutocompleteTrabajador: React.FC<AutocompleteTrabajadorProps> = ({
     loadTrabajadores();
   }, []);
 
+  if (value !== prevValue) {
+    setPrevValue(value);
+    setInputValue(value || "");
+  }
+
   // ✅ Sincronizar inputValue cuando value cambia externamente
-  useEffect(() => {
-    if (value && value !== inputValue) {
-      setInputValue(value);
-    }
-    if (!value) {
-      setInputValue("");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
+  // useEffect(() => {
+  //   if (value && value !== inputValue) {
+  //     setInputValue(value);
+  //   }
+  //   if (!value) {
+  //     setInputValue("");
+  //   }
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [value]);
 
   const handleChange = (
     _event: React.SyntheticEvent,

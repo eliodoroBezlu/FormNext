@@ -9,23 +9,39 @@ export function SessionErrorHandler() {
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
+  const [processedErrors, setProcessedErrors] = useState<Set<string>>(
+    new Set(),
+  );
+
+  const [prevSearchParams, setPrevSearchParams] = useState(searchParams);
+
+  if (searchParams !== prevSearchParams) {
+    setPrevSearchParams(searchParams);
+
     if (searchParams) {
       const errorParam = searchParams.get("error");
-      if (errorParam) {
+
+      // Solo procesamos si hay un error y no lo hemos procesado ya
+      if (errorParam && !processedErrors.has(errorParam)) {
+        setProcessedErrors((prev) => new Set(prev).add(errorParam));
         setError(errorParam);
         setOpen(true);
-
-        try {
-          const url = new URL(window.location.href);
-          url.searchParams.delete("error");
-          window.history.replaceState({}, "", url.toString());
-        } catch (e) {
-          console.error("Error limpiando URL:", e);
-        }
       }
     }
-  }, [searchParams]);
+  }
+  useEffect(() => {
+    if (error && searchParams) {
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has("error")) {
+          url.searchParams.delete("error");
+          window.history.replaceState({}, "", url.toString());
+        }
+      } catch (e) {
+        console.error("Error limpiando URL:", e);
+      }
+    }
+  }, [error, searchParams]);
 
   const handleClose = () => {
     setOpen(false);
@@ -40,11 +56,13 @@ export function SessionErrorHandler() {
     const messages: Record<string, { title: string; description: string }> = {
       session_expired: {
         title: "Sesión Expirada",
-        description: "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.",
+        description:
+          "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.",
       },
       token_expired: {
         title: "Token Expirado",
-        description: "Tu token de acceso ha expirado. Por favor, inicia sesión nuevamente.",
+        description:
+          "Tu token de acceso ha expirado. Por favor, inicia sesión nuevamente.",
       },
       no_session: {
         title: "Sin Sesión",
@@ -52,7 +70,8 @@ export function SessionErrorHandler() {
       },
       invalid_session: {
         title: "Sesión Inválida",
-        description: "Tu sesión es inválida. Por favor, inicia sesión nuevamente.",
+        description:
+          "Tu sesión es inválida. Por favor, inicia sesión nuevamente.",
       },
       unauthorized: {
         title: "Acceso Denegado",
@@ -60,7 +79,8 @@ export function SessionErrorHandler() {
       },
       default: {
         title: "Error de Autenticación",
-        description: "Ha ocurrido un error con tu sesión. Por favor, intenta nuevamente.",
+        description:
+          "Ha ocurrido un error con tu sesión. Por favor, intenta nuevamente.",
       },
     };
 

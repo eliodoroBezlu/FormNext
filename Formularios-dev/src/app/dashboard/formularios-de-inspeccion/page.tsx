@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Box,
@@ -46,12 +46,35 @@ const CUSTOM_FORM_COMPONENTS = {
   // 'InspeccionEPP': InspeccionEPP, // Futuros formularios
 } as const;
 
+/**
+ * Formularios que no vienen del backend: estan escritos aqui.
+ *
+ * Antes se "cargaban" con una funcion `async` llamada desde un efecto,
+ * pero no hay nada que esperar: son una constante. Como tal, sirven
+ * directamente de estado inicial.
+ */
+const FORMULARIOS_FIJOS: CustomForm[] = [
+      {
+        id: "CF-001",
+        title: "INSPECCIÓN DE SISTEMAS DE EMERGENCIA (MENSUAL - ÁREAS EXTERNAS)",
+        description: "Sistemas de emergencia (extintores, salidas de emergencia, etc.)",
+        category: "Seguridad",
+        createdBy: "Sistema",
+        createdAt: new Date("2024-01-15"),
+        status: "published",
+        tags: ["Mensual", "Evaluación"],
+        type: "manual",
+        component: "InspeccionSistemasEmergencia",
+      },
+    ];
+
 export default function HomePage() {
   const router = useRouter();
 
   // --- ESTADOS DE DATOS ---
   const [templates, setTemplates] = useState<FormTemplate[]>([]);
-  const [customForms, setCustomForms] = useState<CustomForm[]>([]);
+  // No es estado: nadie modifica la lista, es la constante de modulo.
+  const customForms = FORMULARIOS_FIJOS;
   
   // --- ESTADOS DE NAVEGACIÓN Y VISTA ---
   // 'list': Muestra las tarjetas
@@ -80,48 +103,47 @@ export default function HomePage() {
   const isMobile = useMediaQuery(theme.breakpoints.down("md")); 
   const isSmall = useMediaQuery(theme.breakpoints.down("sm"));
 
-  // --- EFECTOS ---
-  useEffect(() => {
-    loadTemplates();
-    loadCustomForms();
-  }, []);
-
-  // Carga de Templates del Backend (IRO ISOP)
-  const loadTemplates = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await getTemplates({ isActive: true });
+  const aplicarTemplates = useCallback(
+    (result: Awaited<ReturnType<typeof getTemplates>>) => {
       if (result.success) {
         setTemplates(result.data as FormTemplate[]);
-      } else {
-        setError(result.error || "Error al cargar los templates");
+        setError(null);
+        return;
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al cargar los templates");
-    } finally {
-      setLoading(false);
-    }
-  };
+      setError(result.error || "Error al cargar los templates");
+    },
+    [],
+  );
 
-  // Carga de Formularios Hardcoded (Sistemas Emergencia)
-  const loadCustomForms = async () => {
-    const mockCustomForms: CustomForm[] = [
-      {
-        id: "CF-001",
-        title: "INSPECCIÓN DE SISTEMAS DE EMERGENCIA (MENSUAL - ÁREAS EXTERNAS)",
-        description: "Sistemas de emergencia (extintores, salidas de emergencia, etc.)",
-        category: "Seguridad",
-        createdBy: "Sistema",
-        createdAt: new Date("2024-01-15"),
-        status: "published",
-        tags: ["Mensual", "Evaluación"],
-        type: "manual",
-        component: "InspeccionSistemasEmergencia",
-      },
-    ];
-    setCustomForms(mockCustomForms);
-  };
+  const avisarFallo = useCallback((err: unknown) => {
+    setError(
+      err instanceof Error ? err.message : "Error al cargar los templates",
+    );
+  }, []);
+
+  // --- EFECTOS ---
+  useEffect(() => {
+    // La promesa se encadena aqui: llamar a la funcion `async` haria que el
+    // analizador viera su `setLoading(true)` como setState sincrono.
+    // (`loadCustomForms` desaparecio: su lista es una constante de modulo.)
+    let vigente = true;
+
+    getTemplates({ isActive: true })
+      .then((result) => {
+        if (vigente) aplicarTemplates(result);
+      })
+      .catch((err: unknown) => {
+        if (vigente) avisarFallo(err);
+      })
+      .finally(() => {
+        if (vigente) setLoading(false);
+      });
+
+    return () => {
+      vigente = false;
+    };
+  }, [aplicarTemplates, avisarFallo]);
+
 
   // --- HANDLERS ---
 

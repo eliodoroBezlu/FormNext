@@ -11,6 +11,10 @@ export type ResponseType =
   | 'operativo_mantenimiento'
   | 'text'
   | 'textarea'
+  // Lista cerrada: las alternativas viajan en `responseConfig.options`. A
+  // diferencia de `si_no_na` y compañía, aquí no hay opciones por defecto —
+  // sin opciones declaradas la pregunta no ofrece nada que elegir.
+  | 'select'
   | 'number'
   | 'boolean'
   | 'date';

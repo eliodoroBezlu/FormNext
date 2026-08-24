@@ -83,8 +83,14 @@ const nextConfig: NextConfig = {
           // Permisos
           {
             key: "Permissions-Policy",
+            // `camera=(self)` y no `camera=()`: la lista vacía se lo prohíbe a
+            // **todo el mundo, la propia página incluida**, así que la captura
+            // de evidencia fallaba con «camera is not allowed in this
+            // document» antes de llegar a pedir permiso al usuario. Con
+            // `self` puede usarla esta app y siguen sin poder los iframes de
+            // terceros. Micrófono y ubicación se quedan cerrados: no se usan.
             value:
-              "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+              "camera=(self), microphone=(), geolocation=(), interest-cohort=()",
           },
         ],
       },

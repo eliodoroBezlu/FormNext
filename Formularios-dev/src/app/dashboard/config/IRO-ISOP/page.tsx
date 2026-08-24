@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useState, useEffect } from "react"
 import { Box, Typography, Grid, Fab, Tabs, Tab, Alert, CircularProgress, Chip, Button } from "@mui/material"
 import { Add, Edit, Delete, Description, Visibility } from "@mui/icons-material"
 import { FormInstance, FormTemplate } from "@/types/formTypes"
@@ -34,35 +34,64 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
 
-  // Cargar templates al montar el componente
-  useEffect(() => {
-    loadTemplates()
-    loadCustomForms()
-  }, [])
+  /** Solo consulta y devuelve; no toca el estado. */
+  const consultarTemplates = useCallback(
+    () => getTemplates({ isActive: true }),
+    [],
+  )
 
-  const loadTemplates = async () => {
-    setLoading(true)
-    setError(null)
-
-    try {
-      const result = await getTemplates({ isActive: true })
-
+  const aplicar = useCallback(
+    (result: Awaited<ReturnType<typeof consultarTemplates>>) => {
       if (result.success) {
         setTemplates(result.data as FormTemplate[])
-      } else {
-        setError(result.error || "Error al cargar los templates")
+        setError(null)
+        return
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al cargar los templates")
+      setError(result.error || "Error al cargar los templates")
+    },
+    [],
+  )
+
+  const avisarFallo = useCallback((error: unknown) => {
+    setError(
+      error instanceof Error ? error.message : "Error al cargar los templates",
+    )
+  }, [])
+
+  /** Recarga a peticion, tras crear o editar un template. */
+  const loadTemplates = useCallback(async () => {
+    setLoading(true)
+    try {
+      aplicar(await consultarTemplates())
+    } catch (error) {
+      avisarFallo(error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [consultarTemplates, aplicar, avisarFallo])
 
-  const loadCustomForms = async () => {
-    const mockCustomForms: CustomForm[] = []
-    setCustomForms(mockCustomForms)
-  }
+  // Cargar templates al montar el componente.
+  useEffect(() => {
+    // La promesa se encadena aqui: llamar a la funcion `async` haria que el
+    // analizador viera su `setLoading(true)` como setState sincrono.
+    // (`loadCustomForms` se elimino: asignaba [] a un estado que ya era [].)
+    let vigente = true
+
+    consultarTemplates()
+      .then((result) => {
+        if (vigente) aplicar(result)
+      })
+      .catch((error: unknown) => {
+        if (vigente) avisarFallo(error)
+      })
+      .finally(() => {
+        if (vigente) setLoading(false)
+      })
+
+    return () => {
+      vigente = false
+    }
+  }, [consultarTemplates, aplicar, avisarFallo])
 
   const handleCreateTemplate = () => {
     setSelectedTemplate(null)

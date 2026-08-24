@@ -18,6 +18,7 @@ import {
   FormDataHerraEquipos,
   FormTemplateHerraEquipos,
   InspectionStatus,
+  resolverEstadoAlEnviar,
   isEquipmentCodeField,
   isAreaField,
   autofillEquipmentFields,
@@ -49,6 +50,11 @@ import dayjs from "dayjs";
 import { EquipmentSelectionStep } from "../selectors/EquipmentSelectionStep";
 import { EquipoBackend } from "@/lib/actions/equipo-actions";
 
+import {
+  MOSTRAR_BOTON_BORRADOR,
+  subirAlInicio,
+} from "../../../utils/navegacion-pasos";
+import { autorizarSalida, salidaEstaAutorizada } from "../../../domain/models/SalidaSinAviso";
 interface VehicleInspectionFormProps {
   template: FormTemplateHerraEquipos;
   onSubmit: (data: FormDataHerraEquipos) => void;
@@ -144,6 +150,7 @@ export function VehicleInspectionForm({
   const handleStepChange = (newStep: number) => {
     setActiveStep(newStep);
     updateStepQueryParam(newStep);
+    subirAlInicio();
   };
 
   // ✅ Estado de decisión de aprobación (igual que StandardInspectionForm)
@@ -232,7 +239,7 @@ export function VehicleInspectionForm({
     if (!isDirty || readonly) return;
     const handler = (e: BeforeUnloadEvent) => {
       if (
-        (window as Window & { bypassBeforeUnload?: boolean }).bypassBeforeUnload
+        salidaEstaAutorizada()
       )
         return;
       e.preventDefault();
@@ -353,7 +360,6 @@ export function VehicleInspectionForm({
     }
 
     // ✅ Misma lógica de estado que StandardInspectionForm
-    const isNewForm = !initialData || !initialData._id;
     const requiresApproval = config.approval?.enabled === true;
 
     if (requiresApproval && !isViewMode) {
@@ -375,22 +381,28 @@ export function VehicleInspectionForm({
           approvedAt: new Date().toISOString(),
           rejectionReason: approvalDecision.comments,
         };
-      } else if (isNewForm) {
-        data.status = InspectionStatus.PENDING_APPROVAL;
-        data.requiresApproval = true;
-        data.approval = { status: "pending" };
       } else {
-        data.status = initialData?.status || InspectionStatus.COMPLETED;
-        data.requiresApproval = initialData?.requiresApproval || false;
-        data.approval = initialData?.approval;
+        // Un borrador que se envía **deja de ser borrador**. Antes esto
+        // miraba si el documento ya existía, y como el paso de firmas lo
+        // persiste antes del envío final, la inspección se quedaba en
+        // borrador y no le llegaba a ningún supervisor.
+        const resuelto = resolverEstadoAlEnviar({
+          estadoPrevio: initialData?.status,
+          requiereAprobacion: true,
+        });
+        data.status = resuelto.status;
+        data.requiresApproval = resuelto.requiresApproval;
+        data.approval =
+          resuelto.status === InspectionStatus.PENDING_APPROVAL
+            ? { status: "pending" }
+            : initialData?.approval;
       }
     } else {
       data.status = InspectionStatus.COMPLETED;
       data.requiresApproval = false;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).bypassBeforeUnload = true;
+    autorizarSalida();
     onSubmit(data);
   };
 
@@ -510,7 +522,11 @@ export function VehicleInspectionForm({
 
       <Box
         component="form"
-        onSubmit={handleSubmit(handleFormSubmit, handleInvalidSubmit)}
+        // Se difiere la llamada a `handleSubmit(...)` al momento del evento.
+        // Invocarla durante el render hacía que el analizador viera la lectura
+        // de `vehicleDamageRef.current` (dentro de `handleFormSubmit`) como un
+        // acceso a la ref en pleno render.
+        onSubmit={(e) => void handleSubmit(handleFormSubmit, handleInvalidSubmit)(e)}
         sx={{ display: "flex", flexDirection: "column", gap: 3 }}
         noValidate
       >
@@ -1041,7 +1057,7 @@ export function VehicleInspectionForm({
             onFinalSubmit={
               isApprovalReview
                 ? handleNextStep
-                : handleSubmit(handleFormSubmit, handleInvalidSubmit)
+                : () => void handleSubmit(handleFormSubmit, handleInvalidSubmit)()
             }
             isSubmitting={isSubmitting}
             inspectionId={initialData?._id}
@@ -1091,8 +1107,7 @@ export function VehicleInspectionForm({
               <Button
                 variant="outlined"
                 onClick={() => {
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  (window as any).bypassBeforeUnload = true;
+                  autorizarSalida();
                   router.push("/dashboard/form-herra-equipos");
                 }}
               >
@@ -1105,11 +1120,11 @@ export function VehicleInspectionForm({
             )}
 
             <Box sx={{ display: "flex", gap: 1.5 }}>
-              {config.allowDraft !== false && onSaveDraft && (
+              {MOSTRAR_BOTON_BORRADOR && config.allowDraft !== false && onSaveDraft && (
                 <Button
                   variant="outlined"
                   color="inherit"
-                  onClick={handleSubmit(handleSaveDraftWithImage)}
+                  onClick={() => void handleSubmit(handleSaveDraftWithImage)()}
                   disabled={isSubmitting}
                 >
                   Guardar Borrador

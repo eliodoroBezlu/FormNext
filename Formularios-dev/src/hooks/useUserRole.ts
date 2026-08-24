@@ -47,14 +47,12 @@ let cachedUser: User | null = null;
 let fetchPromise: Promise<User | null> | null = null;
 
 export const useUserRole = () => {
-  const [user, setUser] = useState<User | null>(cachedUser);
-  const [isLoading, setIsLoading] = useState(!cachedUser);
+  const [user, setUser] = useState<User | null>(() => cachedUser);
+  const [isLoading, setIsLoading] = useState<boolean>(() => !cachedUser);
 
   useEffect(() => {
     // Si ya tenemos el usuario en caché, no hacer nada
     if (cachedUser) {
-      setUser(cachedUser);
-      setIsLoading(false);
       return;
     }
 

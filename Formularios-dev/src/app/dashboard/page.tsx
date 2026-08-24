@@ -3,11 +3,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Box, LinearProgress, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { useUserRole } from "@/hooks/useUserRole";
 import Link from "next/link";
 import { getMeAction } from "../actions/auth";
 import { ActivityFeed } from "@/components/features/dashboard/presentation/components/ActivityFeed";
+import {
+  useConfigBienvenida,
+  recordarArea,
+  areaRecordada,
+} from "@/components/features/bienvenida/application/hooks/useConfigBienvenida";
+import { resolver } from "@/components/features/bienvenida/domain/models/Bienvenida";
+import { useEsperaEnPantalla } from "@/components/features/bienvenida/application/hooks/useEsperaEnPantalla";
+import { PantallaBienvenida } from "@/components/features/bienvenida/presentation/components/PantallaBienvenida";
 import {
   NuevaInspeccionIcon,
   HerramientasIcon,
@@ -18,6 +26,7 @@ import {
   ReportesPdfIcon,
   ConfiguracionIcon,
   MisInspeccionesIcon,
+  LinternasIcon,
 } from "@/components/features/dashboard/presentation/components/serviceIcons";
 
 interface User {
@@ -29,6 +38,20 @@ interface User {
   isTwoFactorEnabled: boolean;
 }
 
+/**
+ * Tarjetas de la rejilla «Servicios».
+ *
+ * **Ojo: esta es la tercera lista de «quién ve qué» del sistema.** Las otras
+ * dos son `ROUTE_PERMISSIONS` (`lib/routePermissions.ts`, que es la que de
+ * verdad bloquea) y los `requiredRoles` del menú lateral
+ * (`layout/navigation/Navigation.tsx`). Cuando se añade un rol hay que tocar
+ * las tres, y olvidar ésta no da error: simplemente deja la rejilla vacía,
+ * como le pasó al rol `inspector`.
+ *
+ * Al añadir o cambiar `roles` aquí, compruebe que la ruta de `href` concede
+ * lo mismo en `ROUTE_PERMISSIONS`: una tarjeta que lleva a una pantalla que
+ * el middleware rechaza es peor que no mostrar la tarjeta.
+ */
 const serviceItems = [
   {
     id: "inspeccion",
@@ -45,7 +68,18 @@ const serviceItems = [
     subtitle: "Equipos y Accesorios",
     href: "/dashboard/form-herra-equipos",
     color: "#06B6D4",
-    roles: ["admin", "supervisor", "tecnico", "superintendente"],
+    // `inspector` e `inspector_asignado` van aquí porque la ruta ya se los
+    // concede en ROUTE_PERMISSIONS. Faltaban solo en esta lista, así que el
+    // menú lateral les mostraba la sección y el panel les dejaba la rejilla
+    // de servicios vacía.
+    roles: [
+      "admin",
+      "supervisor",
+      "tecnico",
+      "superintendente",
+      "inspector",
+      "inspector_asignado",
+    ],
     icon: HerramientasIcon,
   },
   {
@@ -108,15 +142,65 @@ const serviceItems = [
     subtitle: "Mis inspecciones y del area tambien",
     href: "/dashboard/mis-inspecciones",
     color: "#10B981",
-    roles: ["admin", "supervisor", "superintendente", "tecnico"],
+    // Misma razón que en «Herramientas»: la ruta ya los admite.
+    roles: [
+      "admin",
+      "supervisor",
+      "superintendente",
+      "tecnico",
+      "inspector",
+      "inspector_asignado",
+    ],
     icon: MisInspeccionesIcon,
+  },
+  {
+    id: "linternas",
+    title: "Linternas",
+    subtitle: "Entrega, cambio y pérdidas",
+    href: "/dashboard/linternas",
+    color: "#F59E0B",
+    // Supervisor y superintendente entran a aprobar reposiciones por pérdida.
+    roles: ["admin", "supervisor", "superintendente"],
+    icon: LinternasIcon,
+  },
+  {
+    id: "spcc-prestamos",
+    title: "Préstamo de SPCC",
+    subtitle: "Arneses y conectores de Oficina Mantenimiento",
+    href: "/dashboard/spcc-prestamos",
+    color: "#0EA5E9",
+    // Piden supervisor y superintendente; entregar y devolver es del admin,
+    // pero los tres necesitan ver en qué anda cada préstamo.
+    roles: ["admin", "supervisor", "superintendente"],
+    icon: LinternasIcon,
   },
 ];
 
 export default function DashboardHome() {
-  const { userRole } = useUserRole();
+  const { userRole, user: usuarioSesion } = useUserRole();
+
+  /**
+   * Aquí sí se sabe de quién es la sesión, así que el mensaje puede ser el de
+   * su área. Se guarda para la próxima entrada: en `AuthGuard` la pantalla se
+   * dibuja antes de saber quién entra, y sin este recuerdo siempre vería el
+   * mensaje general.
+   */
+  const config = useConfigBienvenida();
+  const bienvenida = resolver(config, usuarioSesion?.area ?? areaRecordada());
+
+  useEffect(() => {
+    // Escribe en `localStorage`, no en el estado de React: no dispara ningún
+    // render y por eso no es una cascada.
+    if (usuarioSesion?.area) recordarArea(usuarioSesion.area);
+  }, [usuarioSesion?.area]);
+
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const espera = useEsperaEnPantalla(
+    loading,
+    bienvenida.duracionMinimaMs,
+    bienvenida.duracionMaximaMs,
+  );
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -149,6 +233,9 @@ export default function DashboardHome() {
         return "Panel de Operador — Formularios de inspección y registro en planta";
       case "superintendente":
         return "Panel de Superintendente — Supervisión general y analíticas de planta";
+      case "inspector":
+      case "inspector_asignado":
+        return "Panel de Inspector — Formularios de inspección asignados";
       default:
         return "Bienvenido al Dashboard";
     }
@@ -166,11 +253,15 @@ export default function DashboardHome() {
     return allowedRoles.includes(userRole);
   };
 
-  if (loading || !user) {
+  if (loading || !user || espera.mostrar) {
+    // Antes era una barra de progreso suelta, sin texto y distinta de la que
+    // muestra `AuthGuard`. Ahora las dos son la misma pantalla configurable.
     return (
-      <Box sx={{ width: "100%", mt: 2 }}>
-        <LinearProgress />
-      </Box>
+      <PantallaBienvenida
+        contenido={bienvenida}
+        pantallaCompleta={false}
+        tarda={espera.tarda}
+      />
     );
   }
 

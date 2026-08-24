@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Control, FieldErrors } from "react-hook-form";
+import { Control, FieldErrors, FieldPath, useWatch } from "react-hook-form";
 import {
   Box,
   Typography,
@@ -26,6 +26,11 @@ import {
 } from "@mui/icons-material";
 import { Chip as MuiChip } from "@mui/material";
 import { FormDataHerraEquipos, Section, FormFeatureConfig, SectionImage } from "../../../types/IProps";
+import {
+  esSegundoCodigoAutoretractil,
+  indiceDePreguntaTipo,
+  requiereSegundoCodigo,
+} from "../../../domain/models/SpccElementos";
 import { QuestionRenderer } from "./QuestionRenderer";
 import Image from "next/image";
 
@@ -54,6 +59,21 @@ export const SectionRenderer = <T extends FormDataHerraEquipos = FormDataHerraEq
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [openModal, setOpenModal] = useState(false);
+
+  // El autorretráctil pide dos códigos con los tipos de doble ramal (E y G) y
+  // uno solo con el simple (F). Se observa la respuesta del tipo —que vive en
+  // esta misma subsección— para decidir si el segundo campo tiene sentido.
+  // `useWatch` no admite llamadas condicionales, así que cuando la sección no
+  // tiene pregunta de tipo se observa una ruta centinela y se descarta.
+  const indiceTipo = indiceDePreguntaTipo(section.questions ?? []);
+  const valorTipoObservado = useWatch({
+    control,
+    name: (indiceTipo >= 0
+      ? `${sectionPath}.q${indiceTipo}.value`
+      : "__sin_pregunta_tipo__") as FieldPath<T>,
+  });
+  const tipoAdmiteDosCodigos =
+    indiceTipo >= 0 && requiereSegundoCodigo(valorTipoObservado);
 
   const effectiveImages = (section.images && section.images.length > 0)
     ? section.images
@@ -138,7 +158,18 @@ export const SectionRenderer = <T extends FormDataHerraEquipos = FormDataHerraEq
           <Grid size={{ xs: 12, md: showDesktopImages ? 6 : 12 }}>
             {hasQuestions && (
               <Box mb={2}>
-                {section.questions.map((question, qIdx) => (
+                {section.questions.map((question, qIdx) => {
+                  // Con un autorretráctil de ramal simple el segundo código no
+                  // existe; mostrarlo obligaría a inventar un dato o dejaría un
+                  // campo obligatorio sin llenar.
+                  if (
+                    esSegundoCodigoAutoretractil(question.text) &&
+                    !tipoAdmiteDosCodigos
+                  ) {
+                    return null;
+                  }
+
+                  return (
                   <Box key={question._id || qIdx}>
                     <QuestionRenderer
                       question={question}
@@ -160,7 +191,8 @@ export const SectionRenderer = <T extends FormDataHerraEquipos = FormDataHerraEq
                       </Button>
                     )}
                   </Box>
-                ))}
+                  );
+                })}
               </Box>
             )}
 

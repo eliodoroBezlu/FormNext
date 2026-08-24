@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import dayjs, { Dayjs } from "dayjs";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -52,25 +52,32 @@ export function usePgrAprobacion(id: string) {
     [],
   );
 
-  // Precarga "Aprobado por" con el nombre del usuario autenticado.
-  useEffect(() => {
-    if (user) {
-      setAprobadoPor(user.fullName || user.username || "");
-    }
-  }, [user]);
+  /**
+   * Precarga «Aprobado por» con el nombre del usuario autenticado.
+   *
+   * Ajuste durante el render, no efecto: el usuario puede corregir el campo
+   * después, así que hay que copiarlo una vez y dejar que diverja.
+   */
+  const [usuarioPrecargado, setUsuarioPrecargado] = useState<typeof user>(null);
+  if (user && user !== usuarioPrecargado) {
+    setUsuarioPrecargado(user);
+    setAprobadoPor(user.fullName || user.username || "");
+  }
 
-  // Inicializa las respuestas de aprobación con los datos del plan cargado.
-  useEffect(() => {
-    if (!pgr?.actividades) return;
-    const initial: Record<string, AprobacionRespuesta> = {};
+  /** Inicializa las respuestas de aprobación con los datos del plan cargado. */
+  const [pgrVolcado, setPgrVolcado] = useState<typeof pgr>(null);
+  if (pgr?.actividades && pgr !== pgrVolcado) {
+    setPgrVolcado(pgr);
+
+    const inicial: Record<string, AprobacionRespuesta> = {};
     pgr.actividades.forEach((act: ActividadPgr) => {
-      initial[act._id] = {
+      inicial[act._id] = {
         estado: act.estadoAprobacion || ActividadEstado.APROBADO,
         motivo: act.motivoRechazo || "",
       };
     });
-    setRespuestas(initial);
-  }, [pgr]);
+    setRespuestas(inicial);
+  }
 
   const handleEstadoChange = useCallback(
     (actividadId: string, value: ActividadEstado) => {

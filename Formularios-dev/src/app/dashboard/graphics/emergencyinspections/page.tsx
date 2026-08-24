@@ -37,12 +37,25 @@ const MESES_DEL_AÑO = [
   "DICIEMBRE",
 ];
 
+/**
+ * Mes en curso, en el formato de `MESES_DEL_AÑO`. Si el nombre no encaja
+ * (otra configuración regional), se cae al primero de la lista.
+ */
+const mesActualODefecto = (): string => {
+  const mesActual = new Date()
+    .toLocaleString("es-CL", { month: "long" })
+    .toUpperCase();
+  return MESES_DEL_AÑO.includes(mesActual) ? mesActual : MESES_DEL_AÑO[0];
+};
+
 const DashboardEmergencyInspections: React.FC = () => {
   const [filtroSuperintendencia, setFiltroSuperintendencia] =
     useState<string>("");
   const [filtroAreas, setFiltroAreas] = useState<string[]>([]);
   const [filtroTags, setFiltroTags] = useState<string[]>([]);
-  const [filtroMes, setFiltroMes] = useState<string>("");
+  // El mes en curso es el valor **inicial**, no algo que haya que sincronizar:
+  // se calcula en el inicializador de `useState`, no en un efecto.
+  const [filtroMes, setFiltroMes] = useState<string>(mesActualODefecto);
   const [filtroAño, setFiltroAño] = useState<string>("");
   const [areaDetalle, setAreaDetalle] = useState<string | null>(null);
 
@@ -115,20 +128,6 @@ const DashboardEmergencyInspections: React.FC = () => {
   const añosDisponibles = useMemo(() => {
     return [...new Set(inspecciones.map((ins) => ins.año.toString()))].sort();
   }, [inspecciones]);
-
-  // Initialize filtroMes with the current month (or first available)
-  React.useEffect(() => {
-    if (mesesDisponibles.length > 0 && !filtroMes) {
-      const mesActual = new Date()
-        .toLocaleString("es-CL", { month: "long" })
-        .toUpperCase();
-      if (mesesDisponibles.includes(mesActual)) {
-        setFiltroMes(mesActual);
-      } else {
-        setFiltroMes(mesesDisponibles[0]);
-      }
-    }
-  }, [mesesDisponibles, filtroMes]);
 
   // Manejadores de cambios para limpiar cascadas dependientes
   const handleSuperintendenciaChange = (val: string) => {

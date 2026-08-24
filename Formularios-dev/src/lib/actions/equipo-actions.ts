@@ -6,6 +6,14 @@ import { AreaBackend } from "./area-actions";
 import { UbicacionBackend } from "./ubicacion-actions";
 import { ClasificacionBackend } from "./clasificacion-actions";
 
+/** Una foto del equipo. La primera del array hace de portada. */
+export interface FotoEquipo {
+  url: string;
+  nombre?: string;
+  mime?: string;
+  tamano?: number;
+}
+
 export interface EquipoBackend {
   _id: string;
   codigo: string;
@@ -48,6 +56,8 @@ export interface EquipoBackend {
   ubicacion_id: UbicacionBackend;
   clasificacion_id: ClasificacionBackend;
   especificaciones: Record<string, unknown>;
+  /** Fotos del equipo, en el orden elegido; la primera es la portada. */
+  fotos?: FotoEquipo[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -78,6 +88,7 @@ export interface EquipoForm {
   ubicacion_id: string;
   clasificacion_id: string;
   especificaciones?: Record<string, unknown>;
+  fotos?: FotoEquipo[];
 }
 
 export interface MigracionResultado {
@@ -203,4 +214,30 @@ export async function migrarExcel(formData?: FormData): Promise<MigracionResulta
     console.error('Error en migración de Excel:', error);
     throw new Error(`Error en la migración de Excel: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
+}
+
+/**
+ * Sube una foto del inventario.
+ *
+ * Va a su propia carpeta (`equipos`) y no a la de evidencias: una foto del
+ * inventario identifica al equipo, no documenta un incidente, y mezclarlas
+ * complica cualquier limpieza posterior.
+ */
+export async function subirFotoEquipo(
+  formData: FormData,
+): Promise<{ url: string; filename: string; mimetype: string; size: number }> {
+  const headers = await getAuthHeaders();
+  delete headers['Content-Type']; // lo pone fetch, con el boundary correcto
+
+  const response = await fetch(`${API_BASE_URL}/upload?carpeta=equipos`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+  return handleApiResponse<{
+    url: string;
+    filename: string;
+    mimetype: string;
+    size: number;
+  }>(response);
 }

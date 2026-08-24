@@ -55,6 +55,55 @@ interface TareaFormModalProps {
   onSubmit: (data: AddTareaDTO | UpdateTareaDTO) => Promise<void>;
 }
 
+const toDateInputValue = (date: Date | string | undefined): string => {
+  if (!date) return dayjs().format("YYYY-MM-DD");
+
+  try {
+    const parsedDate = dayjs(date);
+    if (!parsedDate.isValid()) {
+      return dayjs().format("YYYY-MM-DD");
+    }
+    return parsedDate.format("YYYY-MM-DD");
+  } catch {
+    return dayjs().format("YYYY-MM-DD");
+  }
+};
+
+/** El modelo de ML necesita algo de texto para decir algo útil. */
+const LARGO_MINIMO_PARA_ML = 10;
+
+const necesitaRecomendaciones = (texto?: string | null): texto is string =>
+  !!texto && texto.trim().length >= LARGO_MINIMO_PARA_ML;
+
+/**
+ * Valores del formulario para una tarea — o los de una tarea nueva si no se
+ * pasa ninguna.
+ *
+ * Esta forma estaba escrita **tres veces**: en `defaultValues` y en las dos
+ * ramas del `reset()` que había en un efecto. Añadir un campo obligaba a
+ * acordarse de los tres sitios; olvidarse de uno hacía que el campo llegara
+ * vacío solo al editar, o solo al crear.
+ */
+const valoresDeFormulario = (
+  tarea?: TareaObservacion | null,
+): FormTareaData => ({
+  fechaHallazgo: toDateInputValue(tarea?.fechaHallazgo),
+  responsableObservacion: tarea?.responsableObservacion ?? "",
+  empresa: tarea?.empresa ?? "",
+  lugarFisico: tarea?.lugarFisico ?? "",
+  actividad: tarea?.actividad ?? "",
+  familiaPeligro: tarea?.familiaPeligro ?? "",
+  descripcionObservacion: tarea?.descripcionObservacion ?? "",
+  accionPropuesta: tarea?.accionPropuesta ?? "",
+  responsableAreaCierre: tarea?.responsableAreaCierre ?? "",
+  responsableAreaCierreUsername: tarea?.responsableAreaCierreUsername ?? "",
+  fechaCumplimientoAcordada: toDateInputValue(tarea?.fechaCumplimientoAcordada),
+  fechaCumplimientoEfectiva: tarea?.fechaCumplimientoEfectiva
+    ? toDateInputValue(tarea.fechaCumplimientoEfectiva)
+    : "",
+  estado: tarea?.estado ?? "abierto",
+});
+
 export function TareaFormModal({
   open,
   isLoading,
@@ -64,145 +113,145 @@ export function TareaFormModal({
   onSubmit,
 }: TareaFormModalProps) {
   const [mlRecommendations, setMlRecommendations] = useState<string[]>([]);
-  const [loadingML, setLoadingML] = useState(false);
+  /**
+   * Nace en `true` cuando la tarea llega con descripción suficiente, porque
+   * entonces el efecto de más abajo va a consultar nada más montar. Calcularlo
+   * aquí evita tener que activarlo con un setState síncrono dentro del efecto.
+   */
+  const [loadingML, setLoadingML] = useState(() =>
+    necesitaRecomendaciones(tarea?.descripcionObservacion),
+  );
   const [mlError, setMlError] = useState<string | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
-  const [evidencias, setEvidencias] = useState<EvidenciaDto[]>([]);
+  const [evidencias, setEvidencias] = useState<EvidenciaDto[]>(
+    Array.isArray(tarea?.evidencias) ? tarea.evidencias : [],
+  );
   const [selectedRecommendationIndex, setSelectedRecommendationIndex] =
     useState<number | null>(null);
-  const [supervisores, setSupervisores] = useState<SupervisorOption[]>([]);
-  const [loadingSupervisores, setLoadingSupervisores] = useState(false);
-
-  const toDateInputValue = (date: Date | string | undefined): string => {
-    if (!date) return dayjs().format("YYYY-MM-DD");
-
-    try {
-      const parsedDate = dayjs(date);
-      if (!parsedDate.isValid()) {
-        return dayjs().format("YYYY-MM-DD");
-      }
-      return parsedDate.format("YYYY-MM-DD");
-    } catch {
-      return dayjs().format("YYYY-MM-DD");
-    }
-  };
+  /**
+   * `null` significa «todavía no han llegado»; `[]`, «llegaron y no hay
+   * ninguno». Distinguirlos permite derivar el indicador de carga en vez de
+   * mantenerlo en un estado aparte que había que activar a mano.
+   */
+  const [supervisores, setSupervisores] = useState<SupervisorOption[] | null>(
+    null,
+  );
+  const loadingSupervisores = supervisores === null;
+  /** Para pintar: mientras cargan, la lista está vacía. */
+  const opcionesSupervisor = supervisores ?? [];
 
   const {
     control,
     handleSubmit,
-    reset,
     setValue,
     formState: { errors },
   } = useForm<FormTareaData>({
-    defaultValues: {
-      fechaHallazgo: toDateInputValue(undefined),
-      responsableObservacion: "",
-      empresa: "",
-      lugarFisico: "",
-      actividad: "",
-      familiaPeligro: "",
-      descripcionObservacion: "",
-      accionPropuesta: "",
-      responsableAreaCierre: "",
-      responsableAreaCierreUsername: "",
-      fechaCumplimientoAcordada: toDateInputValue(undefined),
-      fechaCumplimientoEfectiva: "",
-      estado: "abierto",
-    },
+    // El componente se remonta en cada apertura (ver el `key` en
+    // PlanDetailView), así que estos valores se recalculan solos y no hace
+    // falta ningún `reset()` en un efecto.
+    defaultValues: valoresDeFormulario(tarea),
   });
 
-  const fetchMLRecommendations = useCallback(async (questionText: string) => {
-    if (!questionText || questionText.trim().length < 10) {
-      setMlRecommendations([]);
-      return;
-    }
-
-    setLoadingML(true);
-    setMlError(null);
-
-    try {
-      const result = await getRecommendedActions(questionText);
-
+  /** Vuelca en el estado lo que devolvió el servicio de recomendaciones. */
+  const aplicarResultadoML = useCallback(
+    (result: Awaited<ReturnType<typeof getRecommendedActions>>) => {
       if (result.success && result.actions && result.actions.length > 0) {
         setMlRecommendations(result.actions);
         setMlError(null);
-      } else {
-        setMlRecommendations([]);
-        setMlError(result.error || "No se encontraron recomendaciones");
+        return;
       }
-    } catch (error) {
-      console.error("Error en fetchMLRecommendations:", error);
-      setMlError("Error al cargar recomendaciones");
       setMlRecommendations([]);
-    } finally {
-      setLoadingML(false);
-    }
+      setMlError(result.error || "No se encontraron recomendaciones");
+    },
+    [],
+  );
+
+  const aplicarFalloML = useCallback((error: unknown) => {
+    console.error("Error al pedir recomendaciones:", error);
+    setMlError("Error al cargar recomendaciones");
+    setMlRecommendations([]);
   }, []);
 
-  useEffect(() => {
-    if (open && tarea) {
-      reset({
-        fechaHallazgo: toDateInputValue(tarea.fechaHallazgo),
-        responsableObservacion: tarea.responsableObservacion ?? "",
-        empresa: tarea.empresa ?? "",
-        lugarFisico: tarea.lugarFisico ?? "",
-        actividad: tarea.actividad ?? "",
-        familiaPeligro: tarea.familiaPeligro ?? "",
-        descripcionObservacion: tarea.descripcionObservacion ?? "",
-        accionPropuesta: tarea.accionPropuesta ?? "",
-        responsableAreaCierre: tarea.responsableAreaCierre ?? "",
-        responsableAreaCierreUsername:
-          tarea.responsableAreaCierreUsername ?? "",
-        fechaCumplimientoAcordada: toDateInputValue(
-          tarea.fechaCumplimientoAcordada,
-        ),
-        fechaCumplimientoEfectiva: tarea.fechaCumplimientoEfectiva
-          ? toDateInputValue(tarea.fechaCumplimientoEfectiva)
-          : "",
-        estado: tarea.estado ?? "abierto",
-      });
-
-      if (tarea.evidencias && Array.isArray(tarea.evidencias)) {
-        setEvidencias(tarea.evidencias);
-      } else {
-        setEvidencias([]);
+  /**
+   * Consulta a petición (mientras el usuario escribe).
+   *
+   * Aquí sí se activa el indicador de forma síncrona, y es correcto: se invoca
+   * desde un `setTimeout`, no desde el cuerpo de un efecto.
+   */
+  const fetchMLRecommendations = useCallback(
+    async (questionText: string) => {
+      if (!necesitaRecomendaciones(questionText)) {
+        setMlRecommendations([]);
+        return;
       }
 
-      if (
-        tarea.descripcionObservacion &&
-        tarea.descripcionObservacion.trim().length >= 10
-      ) {
-        fetchMLRecommendations(tarea.descripcionObservacion);
-      }
-    } else if (open && !tarea) {
-      reset({
-        fechaHallazgo: toDateInputValue(undefined),
-        responsableObservacion: "",
-        empresa: "",
-        lugarFisico: "",
-        actividad: "",
-        familiaPeligro: "",
-        descripcionObservacion: "",
-        accionPropuesta: "",
-        responsableAreaCierre: "",
-        responsableAreaCierreUsername: "",
-        fechaCumplimientoAcordada: toDateInputValue(undefined),
-        fechaCumplimientoEfectiva: "",
-        estado: "abierto",
-      });
-      setMlRecommendations([]);
+      setLoadingML(true);
       setMlError(null);
-      setEvidencias([]);
-    }
-  }, [open, tarea, reset, fetchMLRecommendations]);
+
+      try {
+        aplicarResultadoML(await getRecommendedActions(questionText));
+      } catch (error) {
+        aplicarFalloML(error);
+      } finally {
+        setLoadingML(false);
+      }
+    },
+    [aplicarResultadoML, aplicarFalloML],
+  );
+
+  // --- RECOMENDACIONES ML AL ABRIR CON UNA TAREA EXISTENTE ---
+  useEffect(() => {
+    const descripcion = tarea?.descripcionObservacion;
+    if (!open || !necesitaRecomendaciones(descripcion)) return;
+
+    // No se llama a `fetchMLRecommendations` porque esa activa el indicador de
+    // carga de forma síncrona. Aquí el indicador ya nace activo y todos los
+    // setState ocurren dentro de los callbacks de la promesa.
+    let vigente = true;
+
+    getRecommendedActions(descripcion)
+      .then((result) => {
+        if (vigente) aplicarResultadoML(result);
+      })
+      .catch((error: unknown) => {
+        if (vigente) aplicarFalloML(error);
+      })
+      .finally(() => {
+        if (vigente) setLoadingML(false);
+      });
+
+    return () => {
+      vigente = false;
+    };
+  }, [
+    open,
+    tarea?.descripcionObservacion,
+    aplicarResultadoML,
+    aplicarFalloML,
+  ]);
 
   useEffect(() => {
     if (!open) return;
-    setLoadingSupervisores(true);
+
+    // Ningún setState síncrono aquí: todos ocurren dentro de los callbacks de
+    // la promesa, que es el uso para el que están pensados los efectos.
+    let vigente = true;
+
     obtenerSupervisoresDisponibles()
-      .then(setSupervisores)
-      .catch(() => setSupervisores([]))
-      .finally(() => setLoadingSupervisores(false));
+      .then((lista) => {
+        // Si el modal se cerró mientras la consulta estaba en vuelo, la
+        // respuesta ya no interesa.
+        if (vigente) setSupervisores(lista);
+      })
+      .catch(() => {
+        // Una lista vacía es un resultado, no un limbo: el desplegable dirá
+        // que no hay supervisores en vez de girar para siempre.
+        if (vigente) setSupervisores([]);
+      });
+
+    return () => {
+      vigente = false;
+    };
   }, [open]);
 
   const { hasRole } = useUserRole();
@@ -280,10 +329,9 @@ export function TareaFormModal({
   const diasRetraso = calcularDiasRetraso();
 
   const handleFormClose = () => {
-    reset();
-    setMlRecommendations([]);
-    setMlError(null);
-    setEvidencias([]);
+    // No hace falta limpiar nada a mano: el modal se remonta en la siguiente
+    // apertura. Limpiar aquí, además, vaciaba el formulario a la vista durante
+    // la animación de cierre.
     onClose();
   };
 
@@ -749,13 +797,13 @@ export function TareaFormModal({
             rules={{ required: "Campo requerido" }}
             render={({ field: { onBlur } }) => {
               const seleccionado =
-                supervisores.find(
+                opcionesSupervisor.find(
                   (s) => s.username === responsableUsernameActual,
                 ) ?? null;
 
               return (
                 <Autocomplete
-                  options={supervisores}
+                  options={opcionesSupervisor}
                   loading={loadingSupervisores}
                   value={seleccionado}
                   getOptionLabel={(s) => `${s.nomina} - ${s.puesto}`}

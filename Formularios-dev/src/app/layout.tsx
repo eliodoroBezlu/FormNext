@@ -5,6 +5,7 @@ import "./globals.css";
 import { ThemeContextProvider } from "@/styles/ThemeContext";
 import { LocalizationWrapper } from "@/components/layout/wrappers/LocalizationWrapper";
 import { Suspense } from "react";
+import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import { SessionErrorHandler } from "@/components/layout/wrappers/SessionErrorHandler";
 
 const inter = Inter({
@@ -30,6 +31,20 @@ export default function RootLayout({
   return (
     <html lang="es" className={inter.variable} data-scroll-behavior="smooth">
       <body className={inter.className}>
+        {/*
+          Emotion —el motor de estilos de MUI— inserta sus `<style>` allí donde
+          se usa el componente. En el servidor eso caía dentro del `<body>`,
+          justo antes del primer componente con estilos; en el cliente Emotion
+          los pone en el `<head>`. Los dos árboles no coincidían y React
+          abortaba la hidratación: el error decía esperar `<Suspense>` y
+          encontrar `<style data-emotion="css-global ...">`.
+
+          `AppRouterCacheProvider` es la integración oficial de MUI para el App
+          Router: usa `useServerInsertedHTML` para mandar esos estilos al
+          `<head>` durante el streaming, de modo que servidor y cliente pintan
+          el mismo árbol.
+        */}
+        <AppRouterCacheProvider options={{ key: "mui" }}>
           <ThemeContextProvider>
             <LocalizationWrapper>
               {/* 🔥 Manejador de errores de sesión con Suspense */}
@@ -39,6 +54,7 @@ export default function RootLayout({
               {children}
             </LocalizationWrapper>
           </ThemeContextProvider>
+        </AppRouterCacheProvider>
       </body>
     </html>
   );

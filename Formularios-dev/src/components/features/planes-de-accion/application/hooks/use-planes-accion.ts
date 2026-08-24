@@ -118,17 +118,28 @@ export function usePlanesAccion() {
     }
   }, []);
 
+  /**
+   * Se extrae el dato concreto en vez de leerlo dentro del `useMemo`.
+   *
+   * Al usar `user.superintendencia` dentro del callback, el analizador captura
+   * el objeto `user` entero como dependencia, mientras que la lista declaraba
+   * solo `user?.superintendencia`. Esa discrepancia impedía preservar la
+   * memoización. Con el valor ya extraído, el callback cierra sobre una cadena
+   * y lo inferido coincide con lo declarado.
+   */
+  const superintendenciaDelUsuario = user?.superintendencia;
+
   // Áreas que le corresponden al usuario según su rol: Admin ve todas,
   // Superintendente solo las de su propia superintendencia.
   const areasVisibles = useMemo(() => {
     const activas = areas.filter((a) => a.activo);
-    if (isSuperintendente && user?.superintendencia) {
+    if (isSuperintendente && superintendenciaDelUsuario) {
       return activas.filter(
-        (a) => a.superintendencia?.nombre === user.superintendencia,
+        (a) => a.superintendencia?.nombre === superintendenciaDelUsuario,
       );
     }
     return activas;
-  }, [areas, isSuperintendente, user?.superintendencia]);
+  }, [areas, isSuperintendente, superintendenciaDelUsuario]);
 
   const nombresAreasVisibles = useMemo(
     () => new Set(areasVisibles.map((a) => a.nombre)),

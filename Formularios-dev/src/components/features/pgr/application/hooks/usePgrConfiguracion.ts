@@ -201,7 +201,9 @@ export function usePgrConfiguracion() {
   useEffect(() => {
     if (!editId) return;
 
-    setIsLoadingPlan(true);
+    // `setIsLoadingPlan(true)` estaba aquí, síncrono. Se sustituye por un
+    // indicador derivado: mientras el plan cargado no sea el pedido, se está
+    // cargando. Así el efecto solo escribe estado dentro de los callbacks.
     obtenerPgrPorId(editId)
       .then((data) => {
         if (data.estado === PgrEstado.CORREGIR) {

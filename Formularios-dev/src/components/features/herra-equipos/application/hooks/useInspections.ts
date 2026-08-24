@@ -25,7 +25,9 @@ export type InspectionFilters = {
 export const useInspections = () => {
   const router = useRouter();
   const [inspections, setInspections] = useState<Inspection[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Arranca en `true`: el hook consulta nada más montarse, así que la carga
+  // inicial no necesita encenderlo con un setState síncrono.
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -70,8 +72,33 @@ export const useInspections = () => {
   );
 
   useEffect(() => {
-    loadInspections();
-  }, [loadInspections]);
+    // La promesa se encadena aquí en vez de llamar a `loadInspections()`: el
+    // analizador rastrea dentro de las funciones `async` y trataría su
+    // `setLoading(true)` como un setState síncrono del efecto.
+    let vigente = true;
+
+    inspectionAdapter
+      .getInspections()
+      .then((result) => {
+        if (!vigente) return;
+        if (result.success && result.data) {
+          setInspections(result.data);
+          setError(null);
+        } else {
+          setError('No se pudieron cargar las inspecciones');
+        }
+      })
+      .catch(() => {
+        if (vigente) setError('No se pudieron cargar las inspecciones');
+      })
+      .finally(() => {
+        if (vigente) setLoading(false);
+      });
+
+    return () => {
+      vigente = false;
+    };
+  }, []);
 
   const deleteInspection = useCallback(
     async (id: string) => {

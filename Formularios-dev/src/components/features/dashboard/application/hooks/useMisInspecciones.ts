@@ -25,47 +25,87 @@ export function useMisInspecciones(username: string, area?: string) {
 
   const [herraEquipos, setHerraEquipos] = useState<InspectionResponse[]>([]);
   const [herraTemplates, setHerraTemplates] = useState<TemplateHerraEquipo[]>([]);
-  const [loadingHerra, setLoadingHerra] = useState(true);
+  /**
+   * Combinación (vista · usuario · área) cuyos datos ya están pintados. De aquí
+   * se derivan los tres indicadores de carga: mientras lo pintado no coincida
+   * con lo pedido, se está cargando.
+   *
+   * Antes eran tres `useState(true)` que los efectos encendían de forma
+   * síncrona. Derivarlos evita ese render de más y elimina la posibilidad de
+   * que el indicador y los datos se desincronicen.
+   */
+  const [herraCargadoPara, setHerraCargadoPara] = useState<string | null>(null);
   const [errorHerra, setErrorHerra] = useState<string | null>(null);
 
   const [isoInstances, setIsoInstances] = useState<FormInstance[]>([]);
-  const [loadingIso, setLoadingIso] = useState(true);
+  const [isoCargadoPara, setIsoCargadoPara] = useState<string | null>(null);
   const [errorIso, setErrorIso] = useState<string | null>(null);
 
   const [emergencia, setEmergencia] = useState<InspeccionServiceExport[]>([]);
-  const [loadingEmergencia, setLoadingEmergencia] = useState(true);
+  const [emergenciaCargadaPara, setEmergenciaCargadaPara] = useState<
+    string | null
+  >(null);
   const [errorEmergencia, setErrorEmergencia] = useState<string | null>(null);
 
   // ── Herramientas y Equipos ──────────────────────────────────────────────
-  const cargarHerraEquipos = useCallback(async () => {
-    setLoadingHerra(true);
-    setErrorHerra(null);
-    try {
-      const filtros = vista === "mias" ? { submittedBy: username } : {};
-      const result = await dashboardAdapter.getHerraEquiposInspections(filtros);
-      if (!result.success || !result.data) {
-        setErrorHerra("No se pudo cargar Herramientas y Equipos.");
-        setHerraEquipos([]);
-        return;
-      }
-      const data =
-        vista === "area" && area
-          ? result.data.filter((i) => getArea(i) === area)
-          : vista === "area"
-            ? []
-            : result.data;
-      setHerraEquipos(data);
-    } catch {
-      setErrorHerra("Error al cargar Herramientas y Equipos.");
-      setHerraEquipos([]);
-    } finally {
-      setLoadingHerra(false);
+  const claveHerra = `${vista}|${username}|${area ?? ""}`;
+  const claveIso = `${vista}|${username}|${area ?? ""}`;
+  const claveEmergencia = `${vista}|${area ?? ""}`;
+
+  const loadingHerra = herraCargadoPara !== claveHerra;
+  const loadingIso = isoCargadoPara !== claveIso;
+  const loadingEmergencia = emergenciaCargadaPara !== claveEmergencia;
+
+  /**
+   * Las tres cargas siguen la misma forma: un `consultar*` que **solo consulta
+   * y devuelve** —sin tocar el estado— y un efecto que encadena su promesa.
+   *
+   * Encadenar es lo que hace la diferencia: si el efecto llamara a la función
+   * `async`, el analizador rastrearía dentro de ella y vería sus setState como
+   * una cascada de renders. Los casos que no necesitan red (una vista sin
+   * área, por ejemplo) devuelven una lista vacía en vez de escribirla a mano,
+   * así que también pasan por el mismo camino.
+   */
+  const consultarHerraEquipos = useCallback(async (): Promise<
+    InspectionResponse[]
+  > => {
+    const filtros = vista === "mias" ? { submittedBy: username } : {};
+    const result = await dashboardAdapter.getHerraEquiposInspections(filtros);
+    if (!result.success || !result.data) {
+      throw new Error("No se pudo cargar Herramientas y Equipos.");
     }
+    if (vista === "area") {
+      return area ? result.data.filter((i) => getArea(i) === area) : [];
+    }
+    return result.data;
   }, [vista, username, area]);
 
   useEffect(() => {
-    cargarHerraEquipos();
-  }, [cargarHerraEquipos]);
+    let vigente = true;
+
+    consultarHerraEquipos()
+      .then((datos) => {
+        if (!vigente) return;
+        setHerraEquipos(datos);
+        setErrorHerra(null);
+      })
+      .catch((err: unknown) => {
+        if (!vigente) return;
+        setErrorHerra(
+          err instanceof Error
+            ? err.message
+            : "Error al cargar Herramientas y Equipos.",
+        );
+        setHerraEquipos([]);
+      })
+      .finally(() => {
+        if (vigente) setHerraCargadoPara(claveHerra);
+      });
+
+    return () => {
+      vigente = false;
+    };
+  }, [consultarHerraEquipos, claveHerra]);
 
   useEffect(() => {
     dashboardAdapter.getHerraEquiposTemplates().then((res) => {
@@ -74,62 +114,81 @@ export function useMisInspecciones(username: string, area?: string) {
   }, []);
 
   // ── IRO-ISOP ─────────────────────────────────────────────────────────────
-  const cargarIso = useCallback(async () => {
-    setLoadingIso(true);
-    setErrorIso(null);
-    try {
-      const filtros =
-        vista === "mias"
-          ? { createdBy: username, limit: AREA_FETCH_LIMIT }
-          : area
-            ? { area, limit: AREA_FETCH_LIMIT }
-            : null;
-      if (!filtros) {
-        setIsoInstances([]);
-        return;
-      }
-      const result = await dashboardAdapter.getIsoInstances(filtros);
-      if (!result.success || !result.data) {
-        setErrorIso("No se pudo cargar IRO-ISOP.");
-        setIsoInstances([]);
-        return;
-      }
-      setIsoInstances(result.data.data);
-    } catch {
-      setErrorIso("Error al cargar IRO-ISOP.");
-      setIsoInstances([]);
-    } finally {
-      setLoadingIso(false);
+  const consultarIso = useCallback(async (): Promise<FormInstance[]> => {
+    const filtros =
+      vista === "mias"
+        ? { createdBy: username, limit: AREA_FETCH_LIMIT }
+        : area
+          ? { area, limit: AREA_FETCH_LIMIT }
+          : null;
+    // Sin filtros no hay nada que pedir: la lista vacía es el resultado.
+    if (!filtros) return [];
+
+    const result = await dashboardAdapter.getIsoInstances(filtros);
+    if (!result.success || !result.data) {
+      throw new Error("No se pudo cargar IRO-ISOP.");
     }
+    return result.data.data;
   }, [vista, username, area]);
 
   useEffect(() => {
-    cargarIso();
-  }, [cargarIso]);
+    let vigente = true;
+
+    consultarIso()
+      .then((datos) => {
+        if (!vigente) return;
+        setIsoInstances(datos);
+        setErrorIso(null);
+      })
+      .catch((err: unknown) => {
+        if (!vigente) return;
+        setErrorIso(
+          err instanceof Error ? err.message : "Error al cargar IRO-ISOP.",
+        );
+        setIsoInstances([]);
+      })
+      .finally(() => {
+        if (vigente) setIsoCargadoPara(claveIso);
+      });
+
+    return () => {
+      vigente = false;
+    };
+  }, [consultarIso, claveIso]);
 
   // ── Sistemas de Emergencia (solo vista "de mi área") ───────────────────
-  const cargarEmergencia = useCallback(async () => {
-    if (vista !== "area" || !area) {
-      setEmergencia([]);
-      setLoadingEmergencia(false);
-      return;
-    }
-    setLoadingEmergencia(true);
-    setErrorEmergencia(null);
-    try {
-      const data = await dashboardAdapter.getEmergenciaReport({ area });
-      setEmergencia(Array.isArray(data) ? data : []);
-    } catch {
-      setErrorEmergencia("Error al cargar Sistemas de Emergencia.");
-      setEmergencia([]);
-    } finally {
-      setLoadingEmergencia(false);
-    }
+  const consultarEmergencia = useCallback(async (): Promise<
+    InspeccionServiceExport[]
+  > => {
+    // Fuera de la vista "de mi área" esta fuente no aplica.
+    if (vista !== "area" || !area) return [];
+
+    const data = await dashboardAdapter.getEmergenciaReport({ area });
+    return Array.isArray(data) ? data : [];
   }, [vista, area]);
 
   useEffect(() => {
-    cargarEmergencia();
-  }, [cargarEmergencia]);
+    let vigente = true;
+
+    consultarEmergencia()
+      .then((datos) => {
+        if (!vigente) return;
+        setEmergencia(datos);
+        setErrorEmergencia(null);
+      })
+      .catch(() => {
+        if (!vigente) return;
+        setErrorEmergencia("Error al cargar Sistemas de Emergencia.");
+        setEmergencia([]);
+      })
+      .finally(() => {
+        if (vigente) setEmergenciaCargadaPara(claveEmergencia);
+      });
+
+    return () => {
+      vigente = false;
+    };
+  }, [consultarEmergencia, claveEmergencia]);
 
   // ── KPIs (sobre la vista activa) ────────────────────────────────────────
   const totalActivo =

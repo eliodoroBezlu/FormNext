@@ -19,6 +19,7 @@ import { getFormConfig } from "./config/form-config.helpers";
 import { VerificationFields } from "./presentation/components/renderers/VerificationsFields";
 import { SectionRenderer } from "./presentation/components/renderers/SectionRenderer";
 import { SaveSubmitButtons } from "./common/SaveSubmitButtons";
+import { salidaEstaAutorizada } from "./domain/models/SalidaSinAviso";
 
 // ============================================
 // PROPS DEL COMPONENTE
@@ -61,7 +62,7 @@ export const FormFiller: React.FC<FormFillerProps> = ({
   useEffect(() => {
     if (!isDirty || readonly) return;
     const handler = (e: BeforeUnloadEvent) => {
-      if ((window as Window & { bypassBeforeUnload?: boolean }).bypassBeforeUnload) return;
+      if (salidaEstaAutorizada()) return;
       e.preventDefault();
       e.returnValue = "";
     };

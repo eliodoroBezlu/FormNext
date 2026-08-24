@@ -146,6 +146,18 @@ export const useApprovals = () => {
     [loadInspections],
   );
 
+  /**
+   * Este efecto **sí** debe quedarse, aunque el linter avise.
+   *
+   * `loadInspections` empieza leyendo la caché de sesión, que es memoria
+   * local: cuando hay algo guardado vuelca las inspecciones y regresa sin
+   * tocar la red. Ese `setInspections` es síncrono, y por eso el analizador lo
+   * marca — pero no es una cascada de renders esperando a un servidor, es la
+   * carga instantánea que evita el parpadeo de la bandeja al volver a ella.
+   *
+   * Partirlo en `consultar`/`aplicar` como en las páginas de informes no
+   * arreglaría nada aquí: perdería justamente el camino rápido.
+   */
   useEffect(() => {
     if (!authLoading && user && isAdmin) {
       loadInspections([]);

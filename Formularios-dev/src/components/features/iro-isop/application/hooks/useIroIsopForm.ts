@@ -100,20 +100,29 @@ export const useIroIsopForm = ({
     };
   }, [isDirty, readonly]);
 
-  // --- SINCRONIZAR RESET ANTE CARGA ASÍNCRONA DE DATOS (EDICIÓN) ---
-  useEffect(() => {
-    if (initialData) {
-      reset({
-        verificationList: sanitizeVerificationListObject(initialData.verificationList),
-        inspectionTeam: initialData.inspectionTeam,
-        sections: initialData.sections || createInitialSections(template.sections),
-        aspectosPositivos: initialData.aspectosPositivos || "",
-        aspectosAdicionales: initialData.aspectosAdicionales || "",
-        personalInvolucrado: initialData.personalInvolucrado || [],
-      });
-      setMetricsTrigger((prev) => prev + 1);
-    }
-  }, [initialData, reset, template.sections]);
+  // --- SINCRONIZAR ANTE CARGA ASÍNCRONA DE DATOS (EDICIÓN) ---
+  /**
+   * Ajuste durante el render, no efecto: es el patrón que documenta React para
+   * reaccionar al cambio de una prop. React descarta el render en curso y
+   * reempieza con el estado nuevo, sin pintar nada intermedio ni provocar un
+   * segundo commit.
+   *
+   * `reset()` de React Hook Form sigue dentro porque es lo que rellena el
+   * formulario con los datos que acaban de llegar.
+   */
+  const [datosVolcados, setDatosVolcados] = useState(initialData);
+  if (initialData && initialData !== datosVolcados) {
+    setDatosVolcados(initialData);
+    reset({
+      verificationList: sanitizeVerificationListObject(initialData.verificationList),
+      inspectionTeam: initialData.inspectionTeam,
+      sections: initialData.sections || createInitialSections(template.sections),
+      aspectosPositivos: initialData.aspectosPositivos || "",
+      aspectosAdicionales: initialData.aspectosAdicionales || "",
+      personalInvolucrado: initialData.personalInvolucrado || [],
+    });
+    setMetricsTrigger((prev) => prev + 1);
+  }
 
   // --- ESCUCHAR CAMBIOS DE RESPUESTAS PARA MÉTRICAS REACTIVAS ---
   const sectionResponses = useMemo(() => {

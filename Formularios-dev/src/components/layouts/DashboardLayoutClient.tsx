@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore, useCallback } from "react";
 import {
   Box,
   CssBaseline,
@@ -35,6 +35,24 @@ import { logoutAction } from "@/app/actions/auth";
 import { useUserRole } from "@/hooks/useUserRole";
 
 const drawerWidth = 350;
+const STORAGE_KEY = "darkMode";
+
+// ✅ Lógica del almacén externo (para el tema)
+const subscribe = (callback: () => void) => {
+  window.addEventListener("storage", callback);
+  window.addEventListener("theme-change", callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener("theme-change", callback);
+  };
+};
+
+const getSnapshot = (): boolean => {
+  return localStorage.getItem(STORAGE_KEY) === "true";
+};
+
+// Valor por defecto en el servidor (evita errores de hidratación)
+const getServerSnapshot = (): boolean => false;
 
 export default function DashboardLayoutClient({
   children,
@@ -42,31 +60,29 @@ export default function DashboardLayoutClient({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [loggingOut, setLoggingOut] = useState(false);
 
+  const darkMode = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  );
+
   // ✅ Obtener datos del usuario desde el Context
   const { user, userRole } = useUserRole();
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("darkMode");
-    if (savedTheme) {
-      setDarkMode(savedTheme === "true");
-    }
-    setMounted(true);
-  }, []);
 
   const handleDrawerToggle = () => {
     setOpen(!open);
   };
 
-  const handleThemeToggle = () => {
-    const newMode = !darkMode;
-    setDarkMode(newMode);
-    localStorage.setItem("darkMode", String(newMode));
-  };
+  const handleThemeToggle = useCallback(() => {
+    const currentMode = getSnapshot();
+    const newMode = !currentMode;
+    localStorage.setItem(STORAGE_KEY, String(newMode));
+    // Disparamos evento para que useSyncExternalStore se entere del cambio
+    window.dispatchEvent(new Event("theme-change"));
+  }, []);
 
   const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -79,23 +95,19 @@ export default function DashboardLayoutClient({
   const handleLogout = async () => {
     handleUserMenuClose();
     setLoggingOut(true);
-    
+
     try {
-      console.log('🚪 [LAYOUT] Iniciando logout...');
+      console.log("🚪 [LAYOUT] Iniciando logout...");
       await logoutAction(); // Server Action
       // El redirect dentro de logoutAction() maneja la redirección
     } catch (error) {
-      console.error('💥 [LAYOUT] Error en logout:', error);
+      console.error("💥 [LAYOUT] Error en logout:", error);
       // Intentar redirección manual como fallback
-      window.location.href = '/login';
+      window.location.href = "/login";
     } finally {
       setLoggingOut(false);
     }
   };
-
-  if (!mounted) {
-    return <div style={{ visibility: "hidden" }}>{children}</div>;
-  }
 
   return (
     <ThemeProvider theme={darkMode ? darkTheme : lightTheme}>
@@ -151,24 +163,32 @@ export default function DashboardLayoutClient({
                 horizontal: "right",
               }}
               PaperProps={{
-                sx: { minWidth: 280 }
+                sx: { minWidth: 280 },
               }}
             >
               {/* Header con Avatar y Nombre */}
-              <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
-                  {user?.username?.charAt(0).toUpperCase() || 'U'}
+              <Box
+                sx={{
+                  px: 2,
+                  py: 1.5,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                }}
+              >
+                <Avatar sx={{ bgcolor: "primary.main", width: 40, height: 40 }}>
+                  {user?.username?.charAt(0).toUpperCase() || "U"}
                 </Avatar>
                 <Box sx={{ flex: 1 }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    {user?.fullName || user?.username || 'Usuario'}
+                    {user?.fullName || user?.username || "Usuario"}
                   </Typography>
                   {userRole && (
-                    <Chip 
-                      label={userRole.toUpperCase()} 
-                      size="small" 
+                    <Chip
+                      label={userRole.toUpperCase()}
+                      size="small"
                       color="primary"
-                      sx={{ height: 20, fontSize: '0.7rem' }}
+                      sx={{ height: 20, fontSize: "0.7rem" }}
                     />
                   )}
                 </Box>
@@ -177,28 +197,28 @@ export default function DashboardLayoutClient({
               <Divider />
 
               {/* Info del Usuario */}
-              <MenuItem disabled sx={{ opacity: '1 !important' }}>
+              <MenuItem disabled sx={{ opacity: "1 !important" }}>
                 <ListItemIcon>
                   <PersonIcon fontSize="small" />
                 </ListItemIcon>
-                <ListItemText 
-                  primary={user?.username || 'Usuario'} 
+                <ListItemText
+                  primary={user?.username || "Usuario"}
                   secondary="Usuario"
-                  primaryTypographyProps={{ variant: 'body2' }}
-                  secondaryTypographyProps={{ variant: 'caption' }}
+                  primaryTypographyProps={{ variant: "body2" }}
+                  secondaryTypographyProps={{ variant: "caption" }}
                 />
               </MenuItem>
 
               {user?.email && (
-                <MenuItem disabled sx={{ opacity: '1 !important' }}>
+                <MenuItem disabled sx={{ opacity: "1 !important" }}>
                   <ListItemIcon>
                     <EmailIcon fontSize="small" />
                   </ListItemIcon>
-                  <ListItemText 
-                    primary={user.email} 
+                  <ListItemText
+                    primary={user.email}
                     secondary="Email"
-                    primaryTypographyProps={{ variant: 'body2' }}
-                    secondaryTypographyProps={{ variant: 'caption' }}
+                    primaryTypographyProps={{ variant: "body2" }}
+                    secondaryTypographyProps={{ variant: "caption" }}
                   />
                 </MenuItem>
               )}
@@ -206,22 +226,22 @@ export default function DashboardLayoutClient({
               <Divider />
 
               {/* Cerrar Sesión */}
-              <MenuItem 
+              <MenuItem
                 onClick={handleLogout}
                 disabled={loggingOut}
-                sx={{ 
-                  color: 'error.main',
-                  '&:hover': {
-                    backgroundColor: 'error.light',
-                    color: 'error.dark',
-                  }
+                sx={{
+                  color: "error.main",
+                  "&:hover": {
+                    backgroundColor: "error.light",
+                    color: "error.dark",
+                  },
                 }}
               >
                 <ListItemIcon>
                   <LogoutIcon fontSize="small" color="error" />
                 </ListItemIcon>
                 <ListItemText>
-                  {loggingOut ? 'Cerrando sesión...' : 'Cerrar Sesión'}
+                  {loggingOut ? "Cerrando sesión..." : "Cerrar Sesión"}
                 </ListItemText>
               </MenuItem>
             </Menu>

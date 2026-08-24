@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { usePgr } from "./usePgr";
 import { actualizarPgr } from "../../infrastructure/adapters/pgrAdapter";
@@ -62,8 +62,21 @@ export function usePgrDetalle(id: string) {
     [],
   );
 
-  useEffect(() => {
-    if (!pgr) return;
+  /**
+   * Rellena el formulario cuando llega —o cambia— el PGR.
+   *
+   * No es un efecto: es el patrón de «ajustar estado durante el render» que
+   * documenta React para reaccionar al cambio de una prop. React descarta el
+   * render en curso y vuelve a empezar con el estado nuevo, sin pintar nada
+   * intermedio ni provocar un segundo commit, que es justo lo que hacía la
+   * versión con `useEffect`.
+   *
+   * No se puede derivar sin más porque el usuario edita estos campos: hay que
+   * copiarlos una vez y dejar que diverjan.
+   */
+  const [pgrRellenado, setPgrRellenado] = useState<Pgr | null>(null);
+  if (pgr && pgr !== pgrRellenado) {
+    setPgrRellenado(pgr);
     setFormData({
       empresa: pgr.empresa || "",
       vicepresidencia: pgr.vicepresidencia || "",
@@ -73,7 +86,7 @@ export function usePgrDetalle(id: string) {
       estado: pgr.estado || "",
       codigoAutogenerado: pgr.codigoAutogenerado || "",
     });
-  }, [pgr]);
+  }
 
   const handleChange = useCallback(
     (field: keyof PgrDetalleFormData, value: string) => {

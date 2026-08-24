@@ -138,7 +138,27 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
 
   // Formularios de medio ambiente - solo admin
   { path: "/dashboard/form-med-amb", requiredRoles: [Role.ADMIN] },
+  // Préstamo de SPCC: lo ven los tres roles. Quién puede *entregar* o
+  // *devolver* lo decide el backend con @Roles(ADMIN); esta regla solo abre
+  // la pantalla.
+  {
+    path: "/dashboard/spcc-prestamos",
+    requiredRoles: [Role.ADMIN, Role.SUPERINTENDENTE, Role.SUPERVISOR],
+  },
   { path: "/dashboard/config", requiredRoles: [Role.ADMIN] },
+  // Explícita aunque `/dashboard/config` ya la cubriría: la bitácora dice quién
+  // hizo qué en todo el sistema, y no debe abrirse por el efecto lateral de que
+  // alguien afloje el permiso del padre.
+  { path: "/dashboard/config/auditoria", requiredRoles: [Role.ADMIN] },
+  /**
+   * La pantalla de bienvenida la configuran también los superintendentes: es
+   * el sitio natural para un aviso de planta, y no da acceso a ningún dato.
+   * Va **antes** en especificidad que `/dashboard/config`, que es solo admin.
+   */
+  {
+    path: "/dashboard/config/bienvenida",
+    requiredRoles: [Role.ADMIN, Role.SUPERINTENDENTE],
+  },
   {
     path: "/dashboard/plan-accion",
     requiredRoles: [Role.ADMIN, Role.SUPERVISOR, Role.SUPERINTENDENTE],
@@ -149,6 +169,32 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
   {
     path: "/dashboard/matriz-riesgos",
     requiredRoles: [Role.ADMIN, Role.SUPERVISOR, Role.SUPERINTENDENTE],
+  },
+
+  // ── Rutas que antes no tenían regla ─────────────────────────────────────
+  // Sin regla, `puedeAccederARuta` deja pasar a cualquier rol no restringido:
+  // la tarjeta del panel las ocultaba, pero la URL escrita a mano entraba.
+  // Esto las bloquea de verdad.
+
+  // Abierta a todos los que llenan formularios. El catálogo que ve cada uno
+  // ya lo acota el backend por `rolesVisibles`, así que la puerta puede estar
+  // abierta sin que nadie vea plantillas que no le tocan.
+  { path: "/dashboard/formularios-de-inspeccion", requiredRoles: [] },
+
+  {
+    path: "/dashboard/qr-generator",
+    requiredRoles: [Role.ADMIN],
+  },
+  {
+    path: "/dashboard/graphics",
+    requiredRoles: [Role.ADMIN, Role.SUPERINTENDENTE],
+  },
+  // Regla madre del PGR. Va **después** de `/dashboard/pgr/catalogos` en
+  // intención pero el orden del array da igual: gana el prefijo más largo, así
+  // que catálogos sigue siendo solo de admin.
+  {
+    path: "/dashboard/pgr",
+    requiredRoles: [Role.ADMIN, Role.SUPERINTENDENTE, Role.SUPERVISOR],
   },
 
   // Consolidación matriz → PGR. Se lista solo esta ruta del módulo PGR: es la
@@ -165,6 +211,37 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
   {
     path: "/dashboard/pgr/catalogos",
     requiredRoles: [Role.ADMIN],
+  },
+
+  // Aprobación de reposiciones por pérdida. Va antes que `/dashboard/linternas`
+  // porque la regla más específica es la que manda, y aquí el rol es otro:
+  // quien aprueba no puede ser quien entrega, o la autorización no controla
+  // nada. El backend exige lo mismo en el endpoint.
+  {
+    path: "/dashboard/linternas/aprobaciones",
+    requiredRoles: [Role.SUPERINTENDENTE, Role.SUPERVISOR, Role.ADMIN],
+  },
+  // Los reportes son de lectura; los ve también quien supervisa sin entregar.
+  {
+    path: "/dashboard/linternas/reportes",
+    requiredRoles: [Role.SUPERINTENDENTE, Role.SUPERVISOR, Role.ADMIN],
+  },
+  /**
+   * Entrada del módulo de linternas.
+   *
+   * Admite a los tres roles y no solo a admin: el menú lateral y la tarjeta
+   * del panel llevan aquí a supervisor y superintendente —entran por las
+   * aprobaciones de pérdida—, así que con `[ADMIN]` acababan en
+   * `access-denied` nada más pulsar.
+   *
+   * Abrir la puerta no les da permiso para entregar: **registrar la entrega
+   * sigue siendo de admin**, lo impone el backend en el endpoint y la propia
+   * pantalla les oculta el formulario. Aquí solo se decide quién puede ver la
+   * sección.
+   */
+  {
+    path: "/dashboard/linternas",
+    requiredRoles: [Role.ADMIN, Role.SUPERVISOR, Role.SUPERINTENDENTE],
   },
 
   // Reportes - admin

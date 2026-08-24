@@ -51,11 +51,6 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
 }) => {
   const router = useRouter();
   const [countdown, setCountdown] = useState(Math.ceil(redirectDelay / 1000));
-  const [show, setShow] = useState(false);
-
-  useEffect(() => {
-    setShow(true);
-  }, []);
 
   useEffect(() => {
     if (autoRedirect && countdown > 0) {
@@ -97,7 +92,7 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
   return (
     <Container maxWidth="md" sx={{ py: 6 }}>
-      <Fade in={show} timeout={800}>
+      <Fade in appear timeout={800}>
         <Paper
           elevation={6}
           sx={{
@@ -131,7 +126,7 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
             />
           )}
 
-          <Zoom in={show} timeout={1000} style={{ transitionDelay: "200ms" }}>
+          <Zoom in appear timeout={1000} style={{ transitionDelay: "200ms" }}>
             <Box sx={{ position: "relative", zIndex: 1 }}>
               <Box
                 sx={{
@@ -215,8 +210,8 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
                   mt: 4,
                   "& .MuiButton-root": {
                     pointerEvents: "auto",
-                    opacity: 1
-                  }
+                    opacity: 1,
+                  },
                 }}
               >
                 {onViewDetails && (

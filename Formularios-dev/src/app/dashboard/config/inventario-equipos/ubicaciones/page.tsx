@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from "react"
+import React, { useCallback, useEffect, useState } from "react"
 import {
   Box,
   Paper,
@@ -50,7 +50,8 @@ const initialFormData: UbicacionForm = {
 
 export default function GestionUbicaciones() {
   const [items, setItems] = useState<UbicacionBackend[]>([])
-  const [loading, setLoading] = useState(false)
+  // Arranca en `true`: la pagina esta cargando desde el primer render.
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
   // Pagination
@@ -76,22 +77,55 @@ export default function GestionUbicaciones() {
     severity: "info",
   })
 
-  useEffect(() => {
-    cargarDatos()
+  /** Solo consulta y devuelve; no toca el estado. */
+  const consultar = useCallback(() => obtenerUbicaciones(), [])
+
+  const aplicar = useCallback(
+    (datos: Awaited<ReturnType<typeof consultar>>) => {
+      setItems(datos)
+      setError(null)
+    },
+    [],
+  )
+
+  const avisarFallo = useCallback((error: unknown) => {
+    setError(
+      error instanceof Error ? error.message : "Error al cargar ubicaciones",
+    )
   }, [])
 
-  const cargarDatos = async () => {
+  /** Recarga a peticion, tras crear o editar. */
+  const cargarDatos = useCallback(async () => {
     setLoading(true)
-    setError(null)
     try {
-      const data = await obtenerUbicaciones()
-      setItems(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al cargar ubicaciones")
+      aplicar(await consultar())
+    } catch (error) {
+      avisarFallo(error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [consultar, aplicar, avisarFallo])
+
+  useEffect(() => {
+    // La promesa se encadena aqui: llamar a la funcion `async` haria que
+    // el analizador viera su `setLoading(true)` como setState sincrono.
+    let vigente = true
+
+    consultar()
+      .then((datos) => {
+        if (vigente) aplicar(datos)
+      })
+      .catch((error: unknown) => {
+        if (vigente) avisarFallo(error)
+      })
+      .finally(() => {
+        if (vigente) setLoading(false)
+      })
+
+    return () => {
+      vigente = false
+    }
+  }, [consultar, aplicar, avisarFallo])
 
   const showNotification = (message: string, severity: "success" | "error" | "warning" | "info") => {
     setNotification({

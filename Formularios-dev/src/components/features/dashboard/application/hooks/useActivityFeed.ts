@@ -21,12 +21,10 @@ export function useActivityFeed() {
 
   const isSupervisorLike = hasAnyRole(SUPERVISOR_ROLES);
 
-  const loadActivity = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    setError(null);
-    try {
-      let result;
+  /** Solo consulta y devuelve; no toca el estado. */
+  const consultarActividad = useCallback(async () => {
+    if (!user) return null;
+    let result;
       if (isSupervisorLike) {
         // Supervisor/Admin: ver inspecciones del área en las últimas 8h
         result = await dashboardAdapter.getRecentActivityByArea({
@@ -42,23 +40,42 @@ export function useActivityFeed() {
           sinceHours: 24,
         });
       }
-      if (result.success && result.data) {
-        setInspections(result.data.slice(0, ACTIVITY_FEED_MAX_VISIBLE));
-      } else {
-        setError("No se pudo cargar la actividad reciente.");
-      }
-    } catch {
-      setError("Error al cargar la actividad.");
-    } finally {
-      setLoading(false);
-    }
+    return result;
   }, [user, isSupervisorLike]);
 
+  const aplicar = useCallback(
+    (result: Awaited<ReturnType<typeof consultarActividad>>) => {
+      if (result?.success && result.data) {
+        setInspections(result.data.slice(0, ACTIVITY_FEED_MAX_VISIBLE));
+        setError(null);
+        return;
+      }
+      setError("No se pudo cargar la actividad reciente.");
+    },
+    [],
+  );
+
   useEffect(() => {
-    if (!authLoading && user) {
-      loadActivity();
-    }
-  }, [authLoading, user, loadActivity]);
+    if (authLoading || !user) return;
+
+    // `loading` ya nace en `true`; los setState van en los callbacks.
+    let vigente = true;
+
+    consultarActividad()
+      .then((result) => {
+        if (vigente) aplicar(result);
+      })
+      .catch(() => {
+        if (vigente) setError("Error al cargar la actividad.");
+      })
+      .finally(() => {
+        if (vigente) setLoading(false);
+      });
+
+    return () => {
+      vigente = false;
+    };
+  }, [authLoading, user, consultarActividad, aplicar]);
 
   return {
     user,

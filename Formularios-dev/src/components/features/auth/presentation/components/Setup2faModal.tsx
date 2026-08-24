@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Box, 
@@ -47,23 +47,42 @@ export default function Setup2FAModal({ open, onClose }: Props) {
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (open) {
-      setup2FA();
-    }
-  }, [open]);
-
-  async function setup2FA() {
-    try {
-      const data = await api.setup2FA();
+  const aplicarSetup = useCallback(
+    (data: Awaited<ReturnType<typeof api.setup2FA>>) => {
       setQrCode(data.qrCode);
       setSecret(data.secret);
       setStep('qr');
-    } catch (error) {
-      setError(getErrorMessage(error) || 'Error al configurar 2FA');
-      setStep('qr');
-    }
-  }
+    },
+    [],
+  );
+
+  const aplicarFalloSetup = useCallback((error: unknown) => {
+    setError(getErrorMessage(error) || 'Error al configurar 2FA');
+    setStep('qr');
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+
+    // La promesa se encadena aqui en vez de llamar a `setup2FA()`: el
+    // analizador rastrea dentro de las funciones `async` y trata sus setState
+    // como sincronos del efecto.
+    let vigente = true;
+
+    api
+      .setup2FA()
+      .then((data) => {
+        if (vigente) aplicarSetup(data);
+      })
+      .catch((error: unknown) => {
+        if (vigente) aplicarFalloSetup(error);
+      });
+
+    return () => {
+      vigente = false;
+    };
+  }, [open, aplicarSetup, aplicarFalloSetup]);
+
 
   async function handleVerify(e: React.FormEvent) {
     e.preventDefault();

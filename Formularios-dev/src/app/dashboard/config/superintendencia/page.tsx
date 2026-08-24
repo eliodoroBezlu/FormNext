@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useCallback, useEffect, useState } from "react"
 import {
   Box,
   Paper,
@@ -54,7 +54,9 @@ const initialFormData: SuperintendenciaForm = {
 
 export default function GestionSuperintendencias() {
   const [superintendencias, setSuperintendencias] = useState<SuperintendenciaBackend[]>([])
-  const [loading, setLoading] = useState(false)
+  // Arranca en `true`: la pagina esta cargando desde el primer render, y asi
+  // la carga inicial no necesita encenderlo con un setState sincrono.
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
@@ -79,25 +81,67 @@ export default function GestionSuperintendencias() {
     severity: "info",
   })
 
-  useEffect(() => {
-    cargarSuperintendencias()
-  }, [])
+  const mostrarNotificacion = useCallback(
+    (message: string, severity: "success" | "error" | "warning" | "info") => {
+    setNotification({
+      open: true,
+      message,
+      severity,
+    })
+    },
+    [],
+  )
 
-  const cargarSuperintendencias = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const data = await obtenerSuperintendencias()
+  /** Solo consulta y devuelve; no toca el estado. */
+  const consultar = useCallback(() => obtenerSuperintendencias(), [])
+
+  const aplicar = useCallback((data: Awaited<ReturnType<typeof consultar>>) => {
       setSuperintendencias(data)
-    } catch (error) {
+      setError(null)
+    }, [])
+
+  const avisarFallo = useCallback(
+    (error: unknown) => {
       console.error("Error al cargar superintendencias:", error)
       setError("No se pudieron cargar las superintendencias")
       mostrarNotificacion("Error al cargar las superintendencias", "error")
+    },
+    [mostrarNotificacion],
+  )
+
+  /** Recarga a peticion: tras crear, editar o dar de baja. */
+  const cargarSuperintendencias = useCallback(async () => {
+    setLoading(true)
+    try {
+      aplicar(await consultar())
+    } catch (error) {
+      avisarFallo(error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [consultar, aplicar, avisarFallo])
+
+  useEffect(() => {
+    // La promesa se encadena aqui en vez de llamar a la funcion `async`:
+    // el analizador rastrea dentro de ella y trataria su `setLoading(true)`
+    // como un setState sincrono del efecto.
+    let vigente = true
+
+    consultar()
+      .then((datos) => {
+        if (vigente) aplicar(datos)
+      })
+      .catch((error: unknown) => {
+        if (vigente) avisarFallo(error)
+      })
+      .finally(() => {
+        if (vigente) setLoading(false)
+      })
+
+    return () => {
+      vigente = false
+    }
+  }, [consultar, aplicar, avisarFallo])
 
   const filtrarSuperintendencias = () => {
     let filtrados = superintendencias
@@ -241,13 +285,6 @@ export default function GestionSuperintendencias() {
     }
   }
 
-  const mostrarNotificacion = (message: string, severity: "success" | "error" | "warning" | "info") => {
-    setNotification({
-      open: true,
-      message,
-      severity,
-    })
-  }
 
   const cerrarNotificacion = () => {
     setNotification(prev => ({ ...prev, open: false }))

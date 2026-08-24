@@ -8,7 +8,8 @@ import {
   EditDocument as EditDocumentIcon,
   Domain as DomanIcon,
   Accessibility as AccessibilityIcon,
-  Build as BuildIcon
+  Build as BuildIcon,
+  History as HistoryIcon
 } from "@mui/icons-material";
 
 
@@ -92,6 +93,24 @@ const SettingsPage: React.FC = () => {
       icon: EditDocumentIcon,
       color: "#f44336",
       items: ["Crear", "editar", "eliminar"],
+    },
+    {
+      id: "auditoria",
+      title: "Auditoría",
+      description:
+        "Quién hizo qué y cuándo. Se registra todo lo que modifica el sistema; las consultas de solo lectura no",
+      icon: HistoryIcon,
+      color: "#5c6bc0",
+      items: ["Por usuario", "Por módulo", "Por fecha", "Solo fallos"],
+    },
+    {
+      id: "bienvenida",
+      title: "Pantalla de bienvenida",
+      description:
+        "Qué se ve mientras el sistema abre: mensaje, animación, consejos de seguridad y avisos por área",
+      icon: HistoryIcon,
+      color: "#26a69a",
+      items: ["Mensaje", "Animación", "Consejos", "Por área", "Mantenimiento"],
     },
     // {
     //   id: "integrations",

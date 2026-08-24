@@ -60,7 +60,18 @@ export async function handleApiResponse<T>(response: Response): Promise<T> {
     
     try {
       const errorData = await response.json();
-      errorMessage = errorData.message || errorData.error || errorMessage;
+      /**
+       * `mensaje` va primero porque es lo que emite el filtro de errores del
+       * backend (`{ statusCode, mensaje, ruta, momento, idPeticion }`).
+       * Mirando solo `message`/`error`, todo motivo explicado por el servidor
+       * —«la fecha no puede ser anterior a hoy», «ese arnés ya está en otro
+       * préstamo»— se perdía y al usuario le llegaba un «HTTP 400» pelado.
+       *
+       * `message` se conserva detrás: es lo que devuelve Nest cuando el fallo
+       * ocurre antes del filtro, como en los errores de validación del DTO.
+       */
+      errorMessage =
+        errorData.mensaje || errorData.message || errorData.error || errorMessage;
     } catch {
       errorMessage = (await response.text().catch(() => "")) || errorMessage;
     }

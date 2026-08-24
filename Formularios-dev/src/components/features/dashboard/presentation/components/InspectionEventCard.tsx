@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import type { InspectionResponse } from "../../infrastructure/adapters/dashboardAdapter";
 import { InspectionStatus } from "@/components/features/herra-equipos/types/IProps";
 
+import { codigoInspeccionado } from "@/components/features/herra-equipos/types/IProps";
 interface InspectionEventCardProps {
   inspection: InspectionResponse;
   showApproveButton?: boolean;
@@ -79,9 +80,13 @@ export function InspectionEventCard({
 
   const handleApprove = () => {
     router.push(
-      `/dashboard/form-herra-equipos/${inspection.templateCode}?${inspection._id}?mode=approval`,
+      `/dashboard/form-herra-equipos/${inspection.templateCode}/${inspection._id}?mode=approval`,
     );
   };
+
+  // Qué equipo se inspeccionó. Es lo primero que se busca al mirar una
+  // notificación: el formulario dice «de qué tipo», el código dice «cuál».
+  const codigoEquipo = codigoInspeccionado(inspection);
 
   const inspectorName =
     (inspection.inspectorSignature?.inspectorName as string) ||
@@ -172,6 +177,19 @@ export function InspectionEventCard({
                   border: "1px solid " + status.color + "30",
                 }}
               />
+              {codigoEquipo && (
+                <Chip
+                  label={codigoEquipo}
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    fontSize: "10px",
+                    height: 20,
+                    fontWeight: 700,
+                    fontFamily: "monospace",
+                  }}
+                />
+              )}
               <Typography
                 sx={{
                   fontSize: "10px",

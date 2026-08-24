@@ -175,6 +175,11 @@
   resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.27.6.tgz#ec4070a04d76bae8ddbb10770ba55714a417b7c6"
   integrity sha512-vbavdySgbTTrmFE+EsiqUTzlOr5bzlnJtUv9PynGCAKvfQqjIXbvFdumPM/GxMDfyuGMJaJAU6TO4zc1Jf1i8Q==
 
+"@babel/runtime@^7.29.7":
+  version "7.29.7"
+  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.29.7.tgz#12022450c45a4da6d8d8287b18a4ff2ddb23f768"
+  integrity sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==
+
 "@babel/template@^7.25.9":
   version "7.25.9"
   resolved "https://registry.yarnpkg.com/@babel/template/-/template-7.25.9.tgz#ecb62d81a8a6f5dc5fe8abfc3901fc52ddf15016"
@@ -676,6 +681,13 @@
   integrity sha512-Bo57PFLOqXOqPNrXjd8AhzH5s6TCsNUQbvnQ0VKZ8D+lIlteqKnrk/O1luMJUc/BXONK7BfIdTdc7qOnXYbMdw==
   dependencies:
     "@babel/runtime" "^7.27.0"
+
+"@mui/material-nextjs@^9.3.0":
+  version "9.3.0"
+  resolved "https://registry.yarnpkg.com/@mui/material-nextjs/-/material-nextjs-9.3.0.tgz#c9bd0267bfece9de2fdcb873058f7f7ebc783f75"
+  integrity sha512-wtI2u7+Sb+xsbn0aPOofYKD2kGD3BreAaLDEFTuf1gQl+IB8kqcTn+UU6OvJ+hAVbFlTXpvD2oVDkOTeCzjVmQ==
+  dependencies:
+    "@babel/runtime" "^7.29.7"
 
 "@mui/material@^7.0.2":
   version "7.0.2"

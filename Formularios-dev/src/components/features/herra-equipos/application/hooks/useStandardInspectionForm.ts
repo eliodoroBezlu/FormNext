@@ -12,6 +12,7 @@ import {
   Section,
   ResponsesData,
   InspectionStatus,
+  resolverEstadoAlEnviar,
   isEquipmentCodeField,
   isAreaField,
   rebuildVerification,
@@ -19,6 +20,10 @@ import {
   sanitizeVerificationObject,
   TEMPLATE_EQUIPMENT_MAP,
   FormFeatureConfig,
+  localizarPreguntas,
+  esPreguntaCodigo,
+  esPreguntaTipo,
+  requiereSegundoCodigo,
 } from "../../types/IProps";
 import { getFormConfig } from "../../config/form-config.helpers";
 import {
@@ -28,6 +33,8 @@ import {
 import { Role } from "@/lib/routePermissions";
 import { EquipoBackend } from "@/lib/actions/equipo-actions";
 
+import { subirAlInicio } from "../../utils/navegacion-pasos";
+import { autorizarSalida, salidaEstaAutorizada } from "../../domain/models/SalidaSinAviso";
 export interface StandardInspectionFormProps {
   template: FormTemplateHerraEquipos;
   onSubmit: (data: FormDataHerraEquipos) => void;
@@ -200,6 +207,7 @@ export function useStandardInspectionForm({
   const handleStepChange = (newStep: number) => {
     setActiveStep(newStep);
     updateStepQueryParam(newStep);
+    subirAlInicio();
   };
 
   // ✅ 1. ESTADO NUEVO: Para capturar la decisión del Checkbox de Aprobación
@@ -369,12 +377,57 @@ export function useStandardInspectionForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tipoEscaleraValor]);
 
+  // ✅ Limpiar el segundo código del autorretráctil cuando deja de aplicar
+  //
+  // El campo se oculta al elegir un tipo de ramal simple (F), pero RHF conserva
+  // el valor de un campo desmontado: sin esto, un código escrito con el tipo E
+  // se enviaría igual, invisible para quien firma la inspección.
+  const rutaSegundoCodigo = React.useMemo(() => {
+    const codigos = localizarPreguntas(
+      template.sections,
+      "AUTORETRACTIL PERSONAL",
+      esPreguntaCodigo,
+    );
+    return codigos.length > 1 ? codigos[1].ruta : null;
+  }, [template.sections]);
+
+  const rutaTipoAutoretractil = React.useMemo(() => {
+    const tipos = localizarPreguntas(
+      template.sections,
+      "AUTORETRACTIL PERSONAL",
+      esPreguntaTipo,
+    );
+    return tipos.length > 0 ? `${tipos[0].ruta}.value` : null;
+  }, [template.sections]);
+
+  const tipoAutoretractil = useWatch({
+    control,
+    name: (rutaTipoAutoretractil ??
+      "__sin_tipo_autoretractil__") as Path<FormDataHerraEquipos>,
+  });
+
+  useEffect(() => {
+    if (!rutaSegundoCodigo || !rutaTipoAutoretractil) return;
+    if (requiereSegundoCodigo(tipoAutoretractil)) return;
+
+    const rutaValor = `${rutaSegundoCodigo}.value` as Path<FormDataHerraEquipos>;
+    const actual = getValues(rutaValor);
+    if (actual === undefined || actual === "") return;
+
+    setValue(
+      rutaSegundoCodigo as Path<FormDataHerraEquipos>,
+      { value: "", description: "", observacion: "" },
+      { shouldDirty: false },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipoAutoretractil, rutaSegundoCodigo, rutaTipoAutoretractil]);
+
   // Warn before leaving with unsaved changes
   useEffect(() => {
     if (!isDirty || readonly) return;
     const handler = (e: BeforeUnloadEvent) => {
       if (
-        (window as Window & { bypassBeforeUnload?: boolean }).bypassBeforeUnload
+        salidaEstaAutorizada()
       )
         return;
       e.preventDefault();
@@ -525,7 +578,6 @@ export function useStandardInspectionForm({
 
     setHasSubmitErrors(false);
     const completeData = ensureAllBooleanFields(data, template.sections);
-    const isNewForm = !initialData || !initialData._id;
     const requiresApproval = config.approval?.enabled === true;
 
     if (requiresApproval && !isViewMode) {
@@ -547,22 +599,28 @@ export function useStandardInspectionForm({
           approvedAt: new Date().toISOString(),
           rejectionReason: approvalDecision.comments,
         };
-      } else if (isNewForm) {
-        completeData.status = InspectionStatus.PENDING_APPROVAL;
-        completeData.requiresApproval = true;
-        completeData.approval = { status: "pending" };
       } else {
-        completeData.status = initialData?.status || InspectionStatus.COMPLETED;
-        completeData.requiresApproval = initialData?.requiresApproval || false;
-        completeData.approval = initialData?.approval;
+        // Un borrador que se envía **deja de ser borrador**. Antes esto
+        // miraba si el documento ya existía, y como el paso de firmas lo
+        // persiste antes del envío final, la inspección se quedaba en
+        // borrador y no le llegaba a ningún supervisor.
+        const resuelto = resolverEstadoAlEnviar({
+          estadoPrevio: initialData?.status,
+          requiereAprobacion: true,
+        });
+        completeData.status = resuelto.status;
+        completeData.requiresApproval = resuelto.requiresApproval;
+        completeData.approval =
+          resuelto.status === InspectionStatus.PENDING_APPROVAL
+            ? { status: "pending" }
+            : initialData?.approval;
       }
     } else {
       completeData.status = InspectionStatus.COMPLETED;
       completeData.requiresApproval = false;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).bypassBeforeUnload = true;
+    autorizarSalida();
     onSubmit(completeData);
   };
 

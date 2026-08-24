@@ -40,6 +40,19 @@ export default function DashboardLayout({
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const { user } = useUserRole();
 
+  /**
+   * Este efecto **sí** debe quedarse, aunque el linter avise.
+   *
+   * `localStorage` no existe en el servidor, así que el tema elegido no se
+   * puede conocer durante el render de servidor ni en el primer render del
+   * cliente: si lo leyéramos antes, el HTML del servidor y el del cliente no
+   * coincidirían y React tiraría un error de hidratación.
+   *
+   * El patrón correcto es justamente este: pintar una vez sin tema, y en un
+   * efecto —que solo corre en el cliente, después de hidratar— leer la
+   * preferencia y marcar `mounted`. Reescribirlo para callar el aviso
+   * reintroduciría el desajuste de hidratación.
+   */
   useEffect(() => {
     const savedTheme = localStorage.getItem("darkMode");
     if (savedTheme) setDarkMode(savedTheme === "true");

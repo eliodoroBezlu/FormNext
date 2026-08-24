@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useEffect, useState, Suspense } from "react";
+import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import {
   Box,
   Paper,
@@ -88,6 +88,38 @@ const ORDEN_MESES = [
 
 const GESTIONES = ["2024", "2025", "2026", "2027", "2028", "2029", "2030"];
 
+/** Los filtros del informe, tal y como viajan en la barra de direcciones. */
+interface FiltrosSistemasEmergencia {
+  area: string;
+  superintendencia: string;
+  mes: string;
+  docCode: string;
+  gestion: string;
+}
+
+/** Lee los filtros de la URL. Puro: mismo `params`, mismo resultado. */
+const leerFiltrosDeUrl = (
+  params: Pick<URLSearchParams, "get">,
+): FiltrosSistemasEmergencia => ({
+  area: params.get("area") || "",
+  superintendencia: params.get("superintendencia") || "",
+  mes: params.get("mes") || "",
+  docCode: params.get("docCode") || "",
+  gestion: params.get("gestion") || "",
+});
+
+const hayAlgunFiltro = (f: FiltrosSistemasEmergencia): boolean =>
+  Object.values(f).some((valor) => valor !== "");
+
+/** Serializa los filtros omitiendo los vacíos, para escribirlos en la URL. */
+const aQueryString = (f: FiltrosSistemasEmergencia): string => {
+  const query = new URLSearchParams();
+  for (const [clave, valor] of Object.entries(f)) {
+    if (valor) query.set(clave, valor);
+  }
+  return query.toString();
+};
+
 function ListaInspeccionesComponent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -96,8 +128,12 @@ function ListaInspeccionesComponent() {
   const [inspecciones, setInspecciones] = useState<InspeccionServiceExport[]>(
     [],
   );
-  const [loading, setLoading] = useState(false);
-  const [loadingAreas, setLoadingAreas] = useState(false);
+  // Si la URL ya trae filtros, la página está buscando desde el primer render.
+  const [loading, setLoading] = useState(() =>
+    hayAlgunFiltro(leerFiltrosDeUrl(searchParams)),
+  );
+  // Arranca en `true`: las áreas se piden nada más montar.
+  const [loadingAreas, setLoadingAreas] = useState(true);
   const [loadingExtintores, setLoadingExtintores] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -105,11 +141,31 @@ function ListaInspeccionesComponent() {
   const [mostrarExtintores, setMostrarExtintores] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const [areaFilter, setAreaFilter] = useState("");
-  const [superintendenciaFilter, setSuperintendenciaFilter] = useState("");
-  const [mesFilter, setMesFilter] = useState("");
-  const [documentCodeFilter, setDocumentCodeFilter] = useState("");
-  const [gestionFilter, setGestionFilter] = useState("");
+  /**
+   * Los filtros nacen de la URL y a partir de ahí el usuario los edita, así
+   * que hay que copiarlos **una vez** — no derivarlos en cada render. Con el
+   * inicializador de `useState` ya están puestos en el primer pintado, sin el
+   * parpadeo de campos vacíos que había cuando los copiaba un efecto.
+   */
+  const filtrosDeLaUrl = leerFiltrosDeUrl(searchParams);
+  const [areaFilter, setAreaFilter] = useState(() => filtrosDeLaUrl.area);
+  const [superintendenciaFilter, setSuperintendenciaFilter] = useState(
+    () => filtrosDeLaUrl.superintendencia,
+  );
+  const [mesFilter, setMesFilter] = useState(() => filtrosDeLaUrl.mes);
+  const [documentCodeFilter, setDocumentCodeFilter] = useState(
+    () => filtrosDeLaUrl.docCode,
+  );
+  const [gestionFilter, setGestionFilter] = useState(
+    () => filtrosDeLaUrl.gestion,
+  );
+
+  /**
+   * Última búsqueda que ya lanzamos nosotros. Al pulsar «Filtrar» escribimos
+   * la URL, y eso despierta al efecto de abajo; sin esta marca la consulta se
+   * haría **dos veces** por cada clic.
+   */
+  const ultimaBusqueda = useRef<string | null>(null);
 
   const [extintores, setExtintores] = useState<ExtintorBackend[]>([]);
   const [areas, setAreas] = useState<string[]>([]);
@@ -118,65 +174,96 @@ function ListaInspeccionesComponent() {
   // (Migrados al sistema granular de permisos)
 
   useEffect(() => {
-    const cargarAreas = async () => {
-      try {
-        setLoadingAreas(true);
-        const areasData = await buscarAreas("");
-        setAreas(areasData);
-      } catch (err) {
+    // La promesa se encadena aquí en vez de llamar a una función `async`: el
+    // analizador rastrea dentro de ella y vería su `setLoadingAreas(true)`
+    // como un setState síncrono del efecto.
+    let vigente = true;
+
+    buscarAreas("")
+      .then((areasData) => {
+        if (vigente) setAreas(areasData);
+      })
+      .catch((err: unknown) => {
         console.error("Error al cargar áreas:", err);
-      } finally {
-        setLoadingAreas(false);
-      }
+      })
+      .finally(() => {
+        if (vigente) setLoadingAreas(false);
+      });
+
+    return () => {
+      vigente = false;
     };
-    cargarAreas();
   }, []);
 
-  // Inicializar filtros desde la URL al montar
+  // ── Búsqueda ──────────────────────────────────────────────────────────────
+
+  /**
+   * Solo consulta y devuelve; **no toca el estado**. Al estar libre de
+   * setState puede encadenarse desde el efecto sin que el analizador la vea
+   * como una cascada de renders. Antes esta misma lógica estaba escrita dos
+   * veces: una dentro del efecto de la URL y otra en `filtrarInspecciones`.
+   */
+  const consultar = useCallback(
+    async (f: FiltrosSistemasEmergencia): Promise<InspeccionServiceExport[]> => {
+      const filtros: FiltrosInspeccion = {};
+      if (f.area) filtros.area = f.area;
+      if (f.superintendencia) filtros.superintendencia = f.superintendencia;
+      if (f.mes) filtros.mesActual = f.mes;
+      if (f.docCode) filtros.documentCode = f.docCode;
+
+      const data = await obtenerSistemasEmergenciaReport(filtros);
+
+      // La gestión (año) no la filtra el backend.
+      const anio = parseInt(f.gestion, 10);
+      return isNaN(anio) ? data : data.filter((i) => i.año === anio);
+    },
+    [],
+  );
+
+  const aplicar = useCallback((datos: InspeccionServiceExport[]) => {
+    setInspecciones(datos);
+    setMostrarResultados(true);
+    setMostrarExtintores(false);
+    setError(null);
+  }, []);
+
+  const avisarFallo = useCallback((err: unknown) => {
+    console.error(err);
+    setError(
+      "No se pudieron cargar las inspecciones con los filtros seleccionados",
+    );
+  }, []);
+
+  /**
+   * Búsqueda dirigida por la URL: al entrar con un enlace ya filtrado, o al
+   * navegar con atrás/adelante. Los valores de los campos ya los recogió el
+   * inicializador de `useState`; aquí solo se lanza la consulta.
+   */
   useEffect(() => {
-    const area = searchParams.get("area") || "";
-    const superintendencia = searchParams.get("superintendencia") || "";
-    const mes = searchParams.get("mes") || "";
-    const docCode = searchParams.get("docCode") || "";
-    const gestion = searchParams.get("gestion") || "";
+    const f = leerFiltrosDeUrl(searchParams);
+    const query = aQueryString(f);
 
-    setAreaFilter(area);
-    setSuperintendenciaFilter(superintendencia);
-    setMesFilter(mes);
-    setDocumentCodeFilter(docCode);
-    setGestionFilter(gestion);
+    if (!hayAlgunFiltro(f)) return;
+    if (ultimaBusqueda.current === query) return; // ya la lanzó el botón
 
-    if (area || superintendencia || mes || docCode || gestion) {
-      const cargarFiltrados = async () => {
-        try {
-          setLoading(true);
-          setError(null);
-          const filtros: FiltrosInspeccion = {};
-          if (area) filtros.area = area;
-          if (superintendencia) filtros.superintendencia = superintendencia;
-          if (mes) filtros.mesActual = mes;
-          if (docCode) filtros.documentCode = docCode;
+    ultimaBusqueda.current = query;
+    let vigente = true;
 
-          let data = await obtenerSistemasEmergenciaReport(filtros);
-          if (gestion) {
-            const yearNum = parseInt(gestion, 10);
-            if (!isNaN(yearNum)) {
-              data = data.filter((i) => i.año === yearNum);
-            }
-          }
-          setInspecciones(data);
-          setMostrarResultados(true);
-          setMostrarExtintores(false);
-        } catch (err) {
-          console.error(err);
-          setError("No se pudieron cargar las inspecciones con los filtros seleccionados");
-        } finally {
-          setLoading(false);
-        }
-      };
-      cargarFiltrados();
-    }
-  }, [searchParams]);
+    consultar(f)
+      .then((datos) => {
+        if (vigente) aplicar(datos);
+      })
+      .catch((err: unknown) => {
+        if (vigente) avisarFallo(err);
+      })
+      .finally(() => {
+        if (vigente) setLoading(false);
+      });
+
+    return () => {
+      vigente = false;
+    };
+  }, [searchParams, consultar, aplicar, avisarFallo]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const obtenerMesesInspeccionados = (
@@ -203,54 +290,42 @@ function ListaInspeccionesComponent() {
   };
 
   // ── Acciones ──────────────────────────────────────────────────────────────
-  const filtrarInspecciones = async () => {
+  /** Búsqueda a petición: botón «Filtrar» o Enter en un campo. */
+  const filtrarInspecciones = useCallback(async () => {
+    const f: FiltrosSistemasEmergencia = {
+      area: areaFilter,
+      superintendencia: superintendenciaFilter,
+      mes: mesFilter,
+      docCode: documentCodeFilter,
+      gestion: gestionFilter,
+    };
+
+    // Se refleja la búsqueda en la URL (para poder compartirla) y se marca
+    // como ya lanzada, de modo que el efecto de arriba no la repita.
+    const query = aQueryString(f);
+    ultimaBusqueda.current = query;
+    router.push(query ? `${pathname}?${query}` : pathname);
+
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-      const filtros: FiltrosInspeccion = {};
-      
-      const params = new URLSearchParams();
-      if (areaFilter) {
-        filtros.area = areaFilter;
-        params.set("area", areaFilter);
-      }
-      if (superintendenciaFilter) {
-        filtros.superintendencia = superintendenciaFilter;
-        params.set("superintendencia", superintendenciaFilter);
-      }
-      if (mesFilter) {
-        filtros.mesActual = mesFilter;
-        params.set("mes", mesFilter);
-      }
-      if (documentCodeFilter) {
-        filtros.documentCode = documentCodeFilter;
-        params.set("docCode", documentCodeFilter);
-      }
-      if (gestionFilter) {
-        params.set("gestion", gestionFilter);
-      }
-
-      router.push(`${pathname}?${params.toString()}`);
-
-      let data = await obtenerSistemasEmergenciaReport(filtros);
-      if (gestionFilter) {
-        const yearNum = parseInt(gestionFilter, 10);
-        if (!isNaN(yearNum)) {
-          data = data.filter((i) => i.año === yearNum);
-        }
-      }
-      setInspecciones(data);
-      setMostrarResultados(true);
-      setMostrarExtintores(false);
+      aplicar(await consultar(f));
     } catch (err) {
-      console.error(err);
-      setError(
-        "No se pudieron cargar las inspecciones con los filtros seleccionados",
-      );
+      avisarFallo(err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    areaFilter,
+    superintendenciaFilter,
+    mesFilter,
+    documentCodeFilter,
+    gestionFilter,
+    router,
+    pathname,
+    consultar,
+    aplicar,
+    avisarFallo,
+  ]);
 
   const mostrarExtintoresPorArea = async () => {
     if (!areaFilter) {

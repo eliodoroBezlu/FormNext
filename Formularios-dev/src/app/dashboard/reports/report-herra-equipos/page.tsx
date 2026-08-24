@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useEffect, useState, Suspense } from "react";
+import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import {
   Box,
   Paper,
@@ -92,6 +92,77 @@ const getSuperintendenciaOGerencia = (i: InspectionResponse): string => {
   ).toString();
 };
 
+/** Los filtros del informe, tal y como viajan en la barra de direcciones. */
+interface FiltrosHerraEquipos {
+  templateName: string;
+  area: string;
+  equipmentId: string;
+  startDate: string;
+  endDate: string;
+}
+
+/** Lee los filtros de la URL. Puro: mismo `params`, mismo resultado. */
+const leerFiltrosDeUrl = (
+  params: Pick<URLSearchParams, "get">,
+): FiltrosHerraEquipos => ({
+  templateName: params.get("templateName") || "",
+  area: params.get("area") || "",
+  equipmentId: params.get("equipmentId") || "",
+  startDate: params.get("startDate") || "",
+  endDate: params.get("endDate") || "",
+});
+
+const hayAlgunFiltro = (f: FiltrosHerraEquipos): boolean =>
+  Object.values(f).some((valor) => valor !== "");
+
+/** Serializa los filtros omitiendo los vacíos, para escribirlos en la URL. */
+const aQueryString = (f: FiltrosHerraEquipos): string => {
+  const query = new URLSearchParams();
+  for (const [clave, valor] of Object.entries(f)) {
+    if (valor) query.set(clave, valor);
+  }
+  return query.toString();
+};
+
+/**
+ * Filtrado que el backend no hace: los campos de `verification` no tienen una
+ * clave estable, así que hay que mirarlos aquí. Función pura y a nivel de
+ * módulo — no toca estado ni depende del render.
+ */
+const filtrarEnCliente = (
+  datos: InspectionResponse[],
+  f: FiltrosHerraEquipos,
+): InspectionResponse[] => {
+  let resultado = datos;
+
+  if (f.templateName.trim()) {
+    const nombre = f.templateName.toLowerCase().trim();
+    resultado = resultado.filter((i) =>
+      i.templateName?.toLowerCase().includes(nombre),
+    );
+  }
+
+  if (f.area.trim()) {
+    resultado = resultado.filter((i) => coincideArea(i, f.area));
+  }
+
+  if (f.equipmentId.trim()) {
+    const searchLower = f.equipmentId.toLowerCase().trim();
+    resultado = resultado.filter((i) => {
+      const haystack = [
+        // Busca dinámicamente en TODOS los campos de verification
+        ...Object.keys(i.verification || {}),
+        ...Object.values(i.verification || {}).map((v) => String(v)),
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(searchLower);
+    });
+  }
+
+  return resultado;
+};
+
 function ListarInspeccionHerraEquiposComponent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -100,157 +171,198 @@ function ListarInspeccionHerraEquiposComponent() {
 
   const [inspections, setInspections] = useState<InspectionResponse[]>([]);
   const [templates, setTemplates] = useState<TemplateHerraEquipo[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  // Si la URL ya trae filtros, la página está buscando desde el primer render.
+  const [loading, setLoading] = useState(() =>
+    hayAlgunFiltro(leerFiltrosDeUrl(searchParams)),
+  );
+  // Arranca en `true`: los templates se piden nada mas montar.
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalItems, setTotalItems] = useState(0);
   const [mostrarResultados, setMostrarResultados] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Filtros
-  const [templateNameFilter, setTemplateNameFilter] = useState("");
-  const [areaFilter, setAreaFilter] = useState("");
-  const [equipmentIdFilter, setEquipmentIdFilter] = useState("");
-  const [startDateFilter, setStartDateFilter] = useState("");
-  const [endDateFilter, setEndDateFilter] = useState("");
+  /**
+   * Los filtros nacen de la URL y luego el usuario los edita libremente, asi
+   * que hay que copiarlos una vez —no derivarlos—. Se hace con el inicializador
+   * de `useState` en vez de un efecto: asi ya estan puestos en el primer
+   * render, sin el parpadeo de campos vacios que habia antes.
+   */
+  const [templateNameFilter, setTemplateNameFilter] = useState(
+    () => searchParams.get("templateName") || "",
+  );
+  const [areaFilter, setAreaFilter] = useState(
+    () => searchParams.get("area") || "",
+  );
+  const [equipmentIdFilter, setEquipmentIdFilter] = useState(
+    () => searchParams.get("equipmentId") || "",
+  );
+  const [startDateFilter, setStartDateFilter] = useState(
+    () => searchParams.get("startDate") || "",
+  );
+  const [endDateFilter, setEndDateFilter] = useState(
+    () => searchParams.get("endDate") || "",
+  );
+
+  // Modal de detalle
+  /**
+   * Última búsqueda que ya lanzamos nosotros. Al pulsar «Buscar» escribimos la
+   * URL, y eso despierta al efecto de más abajo; sin esta marca la consulta se
+   * haría **dos veces** por cada clic.
+   */
+  const ultimaBusqueda = useRef<string | null>(null);
 
   // Modal de detalle
   const [openDetailModal, setOpenDetailModal] = useState(false);
   const [selectedInspection, setSelectedInspection] =
     useState<InspectionResponse | null>(null);
 
-  // ── Búsqueda y Filtros de URL ─────────────────────────────────────────────
-  const buscarInspecciones = async (paramsFromUrl?: {
-    templateName?: string;
-    area?: string;
-    equipmentId?: string;
-    startDate?: string;
-    endDate?: string;
-  }) => {
-    try {
-      setLoading(true);
-      setError(null);
+  // ── Búsqueda ──────────────────────────────────────────────────────────────
 
-      const templateName = paramsFromUrl ? (paramsFromUrl.templateName ?? "") : templateNameFilter;
-      const area = paramsFromUrl ? (paramsFromUrl.area ?? "") : areaFilter;
-      const equipmentId = paramsFromUrl ? (paramsFromUrl.equipmentId ?? "") : equipmentIdFilter;
-      const startDate = paramsFromUrl ? (paramsFromUrl.startDate ?? "") : startDateFilter;
-      const endDate = paramsFromUrl ? (paramsFromUrl.endDate ?? "") : endDateFilter;
-
-      // Si no es por useEffect al montar/cambiar URL, actualizamos la URL
-      if (!paramsFromUrl) {
-        const queryParams = new URLSearchParams();
-        if (templateName) queryParams.set("templateName", templateName);
-        if (area) queryParams.set("area", area);
-        if (equipmentId) queryParams.set("equipmentId", equipmentId);
-        if (startDate) queryParams.set("startDate", startDate);
-        if (endDate) queryParams.set("endDate", endDate);
-
-        router.push(`${pathname}?${queryParams.toString()}`);
-      }
-
+  /**
+   * Solo consulta y devuelve; **no toca el estado**. Al estar libre de
+   * setState puede encadenarse desde el efecto sin que el analizador la vea
+   * como una cascada de renders.
+   *
+   * Depende de `templates` a propósito: de ahí sale el `templateCode` que
+   * permite filtrar en el backend en vez de traerse 2.000 inspecciones. Antes
+   * `templates` faltaba en las dependencias, así que la búsqueda lanzada desde
+   * la URL leía siempre la lista vacía y ese atajo nunca se aplicaba.
+   */
+  const consultar = useCallback(
+    async (f: FiltrosHerraEquipos): Promise<InspectionResponse[]> => {
       const filters: {
         templateCode?: string;
         startDate?: string;
         endDate?: string;
       } = {};
-      // El código ya no se pide aparte: se deduce del formulario elegido, que
-      // es el mismo dato. Sirve para que el backend filtre en la consulta en
-      // vez de traer las 2.000 inspecciones y descartarlas acá.
-      if (templateName.trim()) {
-        const conEseNombre = templates.filter((t) => t.name === templateName);
-        if (conEseNombre.length === 1) filters.templateCode = conEseNombre[0].code;
+
+      if (f.templateName.trim()) {
+        const conEseNombre = templates.filter((t) => t.name === f.templateName);
+        if (conEseNombre.length === 1) {
+          filters.templateCode = conEseNombre[0].code;
+        }
       }
-      if (startDate) filters.startDate = startDate;
-      if (endDate) filters.endDate = endDate;
+      if (f.startDate) filters.startDate = f.startDate;
+      if (f.endDate) filters.endDate = f.endDate;
 
       const response = await getInspectionsHerraEquipos(filters);
-
-      if (response.success && response.data) {
-        let filtradas = response.data;
-
-        if (templateName.trim()) {
-          filtradas = filtradas.filter((i) =>
-            i.templateName
-              ?.toLowerCase()
-              .includes(templateName.toLowerCase().trim()),
-          );
-        }
-        if (area.trim()) {
-          filtradas = filtradas.filter((i) => coincideArea(i, area));
-        }
-        if (equipmentId.trim()) {
-          const searchLower = equipmentId.toLowerCase().trim();
-          filtradas = filtradas.filter((i) => {
-            const haystack = [
-              // ✅ Busca dinámicamente en TODOS los campos de verification
-              ...Object.keys(i.verification || {}),
-              ...Object.values(i.verification || {}).map((v) => String(v)),
-            ]
-              .join(" ")
-              .toLowerCase();
-            return haystack.includes(searchLower);
-          });
-        }
-
-        setInspections(filtradas);
-        setTotalItems(filtradas.length);
-        setMostrarResultados(true);
-      } else {
-        setInspections([]);
-        setError(response.error || "Error desconocido");
-        setMostrarResultados(false);
+      if (!response.success || !response.data) {
+        throw new Error(response.error || "Error desconocido");
       }
+
+      return filtrarEnCliente(response.data, f);
+    },
+    [templates],
+  );
+
+  const aplicar = useCallback((datos: InspectionResponse[]) => {
+    setInspections(datos);
+    setTotalItems(datos.length);
+    setMostrarResultados(true);
+    setError(null);
+  }, []);
+
+  const avisarFallo = useCallback((err: unknown) => {
+    console.error(err);
+    setError(
+      err instanceof Error ? err.message : "No se pudieron cargar las inspecciones",
+    );
+    setInspections([]);
+    setMostrarResultados(false);
+  }, []);
+
+  /** Búsqueda a petición: botón «Buscar» o Enter en un campo. */
+  const buscarInspecciones = useCallback(async () => {
+    const f: FiltrosHerraEquipos = {
+      templateName: templateNameFilter,
+      area: areaFilter,
+      equipmentId: equipmentIdFilter,
+      startDate: startDateFilter,
+      endDate: endDateFilter,
+    };
+
+    // Se refleja la búsqueda en la URL (para poder compartirla) y se marca
+    // como ya lanzada, de modo que el efecto de abajo no la repita.
+    const query = aQueryString(f);
+    ultimaBusqueda.current = query;
+    router.push(query ? `${pathname}?${query}` : pathname);
+
+    setLoading(true);
+    try {
+      aplicar(await consultar(f));
     } catch (err) {
-      console.error(err);
-      setError("No se pudieron cargar las inspecciones");
-      setInspections([]);
-      setMostrarResultados(false);
+      avisarFallo(err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    templateNameFilter,
+    areaFilter,
+    equipmentIdFilter,
+    startDateFilter,
+    endDateFilter,
+    router,
+    pathname,
+    consultar,
+    aplicar,
+    avisarFallo,
+  ]);
 
-  // Sincronización con los parámetros de la URL al montar o cambiar params
+  /**
+   * Búsqueda dirigida por la URL: al entrar con un enlace ya filtrado, o al
+   * navegar con atrás/adelante. Los valores de los campos ya los recogió el
+   * inicializador de `useState`; aquí solo se lanza la consulta.
+   */
   useEffect(() => {
-    const templateName = searchParams.get("templateName") || "";
-    const area = searchParams.get("area") || "";
-    const equipmentId = searchParams.get("equipmentId") || "";
-    const startDate = searchParams.get("startDate") || "";
-    const endDate = searchParams.get("endDate") || "";
+    const f = leerFiltrosDeUrl(searchParams);
+    const query = aQueryString(f);
 
-    setTemplateNameFilter(templateName);
-    setAreaFilter(area);
-    setEquipmentIdFilter(equipmentId);
-    setStartDateFilter(startDate);
-    setEndDateFilter(endDate);
+    if (!hayAlgunFiltro(f)) return;
+    if (ultimaBusqueda.current === query) return; // ya la lanzó el botón
 
-    if (templateName || area || equipmentId || startDate || endDate) {
-      buscarInspecciones({
-        templateName,
-        area,
-        equipmentId,
-        startDate,
-        endDate,
+    ultimaBusqueda.current = query;
+    let vigente = true;
+
+    consultar(f)
+      .then((datos) => {
+        if (vigente) aplicar(datos);
+      })
+      .catch((err: unknown) => {
+        if (vigente) avisarFallo(err);
+      })
+      .finally(() => {
+        if (vigente) setLoading(false);
       });
-    }
-  }, [searchParams]);
+
+    return () => {
+      vigente = false;
+    };
+  }, [searchParams, consultar, aplicar, avisarFallo]);
 
   useEffect(() => {
-    const cargarTemplates = async () => {
-      try {
-        setLoadingTemplates(true);
-        const res = await getTemplatesHerraEquipos();
+    // La promesa se encadena aqui: llamar a una funcion `async` haria que el
+    // analizador viera su `setLoadingTemplates(true)` como setState sincrono.
+    let vigente = true;
+
+    getTemplatesHerraEquipos()
+      .then((res) => {
+        if (!vigente) return;
         if (res.success && res.data) {
           setTemplates(Array.isArray(res.data) ? res.data : []);
         }
-      } catch (err) {
+      })
+      .catch((err: unknown) => {
         console.error("Error al cargar templates:", err);
-      } finally {
-        setLoadingTemplates(false);
-      }
+      })
+      .finally(() => {
+        if (vigente) setLoadingTemplates(false);
+      });
+
+    return () => {
+      vigente = false;
     };
-    cargarTemplates();
   }, []);
 
   const limpiarFiltros = () => {

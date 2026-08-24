@@ -1,6 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { TextField, Autocomplete, CircularProgress } from '@mui/material';
-import { DataSourceType, fetchDataBySource } from '@/lib/actions/dataSourceService';
+import React, { useEffect, useState } from "react";
+import { TextField, Autocomplete, CircularProgress } from "@mui/material";
+import {
+  DataSourceType,
+  fetchDataBySource,
+} from "@/lib/actions/dataSourceService";
 
 interface AutocompleteCustomProps {
   dataSource?: DataSourceType;
@@ -17,7 +20,7 @@ interface AutocompleteCustomProps {
 
 const AutocompleteCustom: React.FC<AutocompleteCustomProps> = ({
   dataSource,
-  label = 'Seleccione o agregue un valor',
+  label = "Seleccione o agregue un valor",
   placeholder,
   value = null,
   onChange,
@@ -25,27 +28,36 @@ const AutocompleteCustom: React.FC<AutocompleteCustomProps> = ({
   error = false,
   helperText,
   disabled = false,
-  required = false
+  required = false,
 }) => {
-  const [options, setOptions] = useState<string[]>([]);
+  const [lodaedData, setLoadedData] = useState<string[]>([]);
+
   const [loading, setLoading] = useState(false);
+
+  const [prevDataSource, setPrevDataSource] = useState(dataSource);
+  if (dataSource !== prevDataSource) {
+    setPrevDataSource(dataSource);
+    if (!dataSource) {
+      setLoadedData([]);
+      setLoading(false);
+    }
+  }
+  const options = !dataSource ? [] : lodaedData;
 
   useEffect(() => {
     if (!dataSource) {
-      setOptions([]);
       return;
     }
 
     const loadData = async () => {
       setLoading(true);
-      console.log('Cargando datasource:', dataSource);
+      console.log("Cargando datasource:", dataSource);
       try {
         const data = await fetchDataBySource(dataSource);
-        console.log('Datos recibidos:', data);
-        setOptions(data);
+        setLoadedData(data);
       } catch (error) {
-        console.error('Error cargando datos:', error);
-        setOptions([]);
+        console.error("Error cargando datos:", error);
+        setLoadedData([]);
       } finally {
         setLoading(false);
       }
@@ -54,11 +66,17 @@ const AutocompleteCustom: React.FC<AutocompleteCustomProps> = ({
     loadData();
   }, [dataSource]);
 
-  const handleChange = (_event: React.SyntheticEvent, newValue: string | null) => {
+  const handleChange = (
+    _event: React.SyntheticEvent,
+    newValue: string | null,
+  ) => {
     onChange?.(newValue);
   };
 
-  const handleInputChange = (_event: React.SyntheticEvent, newInputValue: string) => {
+  const handleInputChange = (
+    _event: React.SyntheticEvent,
+    newInputValue: string,
+  ) => {
     onChange?.(newInputValue || null);
   };
 
@@ -84,7 +102,9 @@ const AutocompleteCustom: React.FC<AutocompleteCustomProps> = ({
             ...params.InputProps,
             endAdornment: (
               <>
-                {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                {loading ? (
+                  <CircularProgress color="inherit" size={20} />
+                ) : null}
                 {params.InputProps.endAdornment}
               </>
             ),

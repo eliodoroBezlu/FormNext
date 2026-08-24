@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from "react"
+import React, { useCallback, useEffect, useState } from "react"
 import {
   Box,
   Paper,
@@ -56,7 +56,8 @@ const campoTipos = [
 export default function ConfigFormularios() {
   const [configs, setConfigs] = useState<ConfigFormularioBackend[]>([])
   const [selectedConfig, setSelectedConfig] = useState<ConfigFormularioBackend | null>(null)
-  const [loading, setLoading] = useState(false)
+  // Arranca en `true`: la pagina esta cargando desde el primer render.
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   // Modal states for New Form Config
@@ -86,33 +87,67 @@ export default function ConfigFormularios() {
     severity: "info",
   })
 
-  useEffect(() => {
-    cargarDatos()
+  /** Solo consulta y devuelve; no toca el estado. */
+  const consultar = useCallback(() => obtenerConfigFormularios(), [])
+
+  const aplicar = useCallback(
+    (data: Awaited<ReturnType<typeof consultar>>) => {
+      setConfigs(data)
+      setError(null)
+
+      // Forma funcional a proposito: leer `selectedConfig` directamente
+      // obligaria a declararlo como dependencia, y entonces el efecto de carga
+      // se repetiria cada vez que el usuario cambia de seleccion.
+      setSelectedConfig((anterior) => {
+        if (data.length === 0) return null
+        if (!anterior) return data[0]
+        // Se conserva la seleccion si el tipo sigue existiendo tras recargar.
+        return (
+          data.find((c) => c.tipo_equipo === anterior.tipo_equipo) || data[0]
+        )
+      })
+    },
+    [],
+  )
+
+  const avisarFallo = useCallback((error: unknown) => {
+    setError(
+      error instanceof Error ? error.message : "Error al cargar configuraciones",
+    )
   }, [])
 
-  const cargarDatos = async () => {
+  /** Recarga a peticion, tras crear o editar una configuracion. */
+  const cargarDatos = useCallback(async () => {
     setLoading(true)
-    setError(null)
     try {
-      const data = await obtenerConfigFormularios()
-      setConfigs(data)
-      if (data.length > 0) {
-        // Preservar la selección si es posible
-        if (selectedConfig) {
-          const updated = data.find(c => c.tipo_equipo === selectedConfig.tipo_equipo)
-          setSelectedConfig(updated || data[0])
-        } else {
-          setSelectedConfig(data[0])
-        }
-      } else {
-        setSelectedConfig(null)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al cargar configuraciones")
+      aplicar(await consultar())
+    } catch (error) {
+      avisarFallo(error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [consultar, aplicar, avisarFallo])
+
+  useEffect(() => {
+    // La promesa se encadena aqui: llamar a la funcion `async` haria que el
+    // analizador viera su `setLoading(true)` como setState sincrono.
+    let vigente = true
+
+    consultar()
+      .then((datos) => {
+        if (vigente) aplicar(datos)
+      })
+      .catch((error: unknown) => {
+        if (vigente) avisarFallo(error)
+      })
+      .finally(() => {
+        if (vigente) setLoading(false)
+      })
+
+    return () => {
+      vigente = false
+    }
+  }, [consultar, aplicar, avisarFallo])
 
   const showNotification = (message: string, severity: "success" | "error" | "warning" | "info") => {
     setNotification({

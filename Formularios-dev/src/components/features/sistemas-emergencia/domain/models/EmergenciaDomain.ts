@@ -29,3 +29,26 @@ export const getAñoActual = (): number => new Date().getFullYear();
 
 // Helper para obtener el día del mes actual
 export const getDiaActual = (): number => new Date().getDate();
+
+/**
+ * Último día del mes en el que se admiten inspecciones nuevas.
+ *
+ * `null` = sin límite, que es el comportamiento vigente. La regla existió —la
+ * interfaz aún muestra el aviso «Las inspecciones solo están habilitadas hasta
+ * el día 10 de cada mes»— pero el código que la aplicaba tenía las dos ramas
+ * del `if` puestas a `true`, así que llevaba tiempo sin surtir efecto.
+ *
+ * Para reactivarla basta poner `10` aquí. Antes de hacerlo, conviene decidir
+ * qué pasa con quien empieza una inspección el día 10 y la termina el 11.
+ */
+export const LIMITE_DIA_INSPECCION: number | null = null;
+
+/**
+ * Si hoy se pueden crear inspecciones nuevas.
+ *
+ * Editar una ya existente nunca se bloquea: el límite es para dar de alta, no
+ * para corregir lo ya cargado.
+ */
+export const dentroDelPeriodoDeInspeccion = (
+  dia: number = getDiaActual(),
+): boolean => LIMITE_DIA_INSPECCION === null || dia <= LIMITE_DIA_INSPECCION;

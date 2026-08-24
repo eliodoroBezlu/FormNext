@@ -101,6 +101,14 @@ export const NAVIGATION: NavigationItem[] = [
     requiredRoles: [Role.ADMIN, Role.SUPERINTENDENTE],
   },
   {
+    segment: "linternas",
+    title: "Linternas",
+    icon: "layers",
+    // Supervisor y superintendente entran por las aprobaciones de pérdida,
+    // aunque no puedan registrar entregas: la ruta hija tiene su propia regla.
+    requiredRoles: [Role.ADMIN, Role.SUPERVISOR, Role.SUPERINTENDENTE],
+  },
+  {
     kind: "divider",
   },
   {

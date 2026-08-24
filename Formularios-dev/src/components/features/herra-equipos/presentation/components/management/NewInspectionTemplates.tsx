@@ -97,8 +97,17 @@ export default function NewInspectionTemplates() {
 
   if (templates.length === 0) {
     return (
+      /*
+        El texto no afirma que no existan plantillas, porque casi nunca es
+        eso: el backend filtra el catálogo por `rolesVisibles`, así que un
+        rol al que nadie le asignó ninguna ve la lista vacía aunque haya
+        veinte cargadas. Decirle «primero cree plantillas» lo manda a
+        resolver un problema que no tiene.
+      */
       <Alert severity="info">
-        No hay templates disponibles. Primero debes crear templates en la gestión de templates.
+        No hay formularios disponibles para su rol. Si deberían aparecer,
+        pida a un administrador que habilite las plantillas correspondientes
+        en «Visibilidad por rol», dentro de la gestión de plantillas.
       </Alert>
     );
   }

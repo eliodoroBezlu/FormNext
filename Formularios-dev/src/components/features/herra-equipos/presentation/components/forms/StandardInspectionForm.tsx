@@ -6,6 +6,7 @@ import {
   FormDataHerraEquipos,
   InspectionStatus,
   isAreaField,
+  construirPrecargaSpcc,
   autofillEquipmentFields,
   verificationFieldPath,
 } from "../../../types/IProps";
@@ -26,10 +27,12 @@ import { EquipmentSelectionStep } from "../selectors/EquipmentSelectionStep";
 import { FormBreadcrumbs } from "../../../common/FormBreadcrumbs";
 import { FormStepperHeader } from "../../../common/FormStepperHeader";
 import { Step5ReviewSection } from "../../../common/Step5ReviewSection";
+import { MOSTRAR_BOTON_BORRADOR } from "../../../utils/navegacion-pasos";
 import {
   useStandardInspectionForm,
   StandardInspectionFormProps,
 } from "../../../application/hooks/useStandardInspectionForm";
+import { autorizarSalida } from "../../../domain/models/SalidaSinAviso";
 
 export function StandardInspectionForm(props: StandardInspectionFormProps) {
   const {
@@ -164,6 +167,36 @@ export function StandardInspectionForm(props: StandardInspectionFormProps) {
               templateName={template.name}
               equipos={equipos || []}
               areas={areas || []}
+              sections={template.sections}
+              /**
+               * Un equipo por elemento (SPCC). Lo elegido decide a la vez qué
+               * secciones se inspeccionan y con qué código y marca arrancan;
+               * las que no se eligen quedan fuera y el inspector puede
+               * añadirlas a mano con el selector de secciones.
+               */
+              onSelectMultiple={(area, seleccion) => {
+                const { asignaciones, seccionesElegidas } =
+                  construirPrecargaSpcc(template.sections, seleccion);
+
+                const areaField = template.verificationFields.find((f) =>
+                  isAreaField(f.label),
+                );
+                if (areaField && area) {
+                  setValue(
+                    verificationFieldPath(
+                      areaField.label,
+                    ) as Path<FormDataHerraEquipos>,
+                    area,
+                  );
+                }
+
+                asignaciones.forEach(({ ruta, valor }) => {
+                  setValue(ruta as Path<FormDataHerraEquipos>, valor);
+                });
+
+                handleSelectionChange("ROOT", seccionesElegidas);
+                handleStepChange(2);
+              }}
               onSelect={(area, code, equipo) => {
                 autofillEquipmentFields(
                   setValue,
@@ -417,8 +450,7 @@ export function StandardInspectionForm(props: StandardInspectionFormProps) {
               <Button
                 variant="outlined"
                 onClick={() => {
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  (window as any).bypassBeforeUnload = true;
+                  autorizarSalida();
                   router.push("/dashboard/form-herra-equipos");
                 }}
               >
@@ -431,7 +463,7 @@ export function StandardInspectionForm(props: StandardInspectionFormProps) {
             )}
 
             <Box sx={{ display: "flex", gap: 1.5 }}>
-              {config.allowDraft !== false && onSaveDraft && (
+              {MOSTRAR_BOTON_BORRADOR && config.allowDraft !== false && onSaveDraft && (
                 <Button
                   variant="outlined"
                   color="inherit"

@@ -27,18 +27,25 @@ export function useNotificationBell() {
 
   const isSupervisorLike = hasAnyRole(SUPERVISOR_ROLES);
 
-  const fetchNotifications = useCallback(async () => {
-    if (!user) return;
+  /** Solo consulta y devuelve; no toca el estado. */
+  const consultarNotificaciones = useCallback(async () => {
+    if (!user) return null;
     try {
       const result = await dashboardAdapter.getRecentActivityByArea({
         areas: user.area ? [user.area] : undefined,
         limit: 20,
         sinceHours: 8,
       });
+      return result.success && result.data ? result.data : null;
+    } catch {
+      // Silencioso — la campana no es crítica
+      return null;
+    }
+  }, [user]);
 
-      if (!result.success || !result.data) return;
-
-      const data = result.data;
+  const aplicar = useCallback(
+    (data: InspectionResponse[] | null) => {
+      if (!data) return;
       setNotifications(data);
 
       // Contar nuevas desde la última vez que el usuario vio las notificaciones
@@ -48,22 +55,43 @@ export function useNotificationBell() {
         (insp) => new Date(insp.submittedAt) > lastSeenDate
       ).length;
       setUnreadCount(newCount);
-    } catch {
-      // Silencioso — la campana no es crítica
-    }
-  }, [user]);
+    },
+    [],
+  );
+
+  const fetchNotifications = useCallback(async () => {
+    aplicar(await consultarNotificaciones());
+  }, [consultarNotificaciones, aplicar]);
 
   useEffect(() => {
     // El efecto solo actúa si es supervisor; pero el hook siempre se llama
     if (!user || !isSupervisorLike) return;
 
-    fetchNotifications();
-    intervalRef.current = setInterval(fetchNotifications, NOTIFICATION_POLL_INTERVAL_MS);
+    // La primera consulta se encadena aquí en vez de llamar a la función
+    // `async`: el analizador rastrea dentro de ella y trataría sus setState
+    // como síncronos. El `setInterval` sí puede llamarla: es un callback.
+    let vigente = true;
+
+    void consultarNotificaciones().then((data) => {
+      if (vigente) aplicar(data);
+    });
+
+    intervalRef.current = setInterval(
+      () => void fetchNotifications(),
+      NOTIFICATION_POLL_INTERVAL_MS,
+    );
 
     return () => {
+      vigente = false;
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [user, isSupervisorLike, fetchNotifications]);
+  }, [
+    user,
+    isSupervisorLike,
+    consultarNotificaciones,
+    aplicar,
+    fetchNotifications,
+  ]);
 
   /** Se llama al abrir el panel: marca como vistas y refresca. */
   const openAndRefresh = useCallback(async () => {

@@ -11,6 +11,7 @@ import {
 import {
   Box,
   Typography,
+  MenuItem,
   TextField,
   ToggleButtonGroup,
   ToggleButton,
@@ -353,6 +354,61 @@ export const QuestionRenderer = <
                     }}
                     FormHelperTextProps={{ id: errorId }}
                   />
+                  {renderDescripcionInline(field)}
+                  {renderObservacionInline(field)}
+                </>
+              );
+            }}
+          />
+        );
+
+      // Lista cerrada de opciones. Nace del SPCC, donde el tipo de
+      // autorretráctil (E/F/G) decide cuántos códigos pide el formulario: con
+      // texto libre esa decisión dependía de cómo lo escribiera cada inspector.
+      // Es aditivo — ninguna pregunta existente usa este tipo.
+      case "select":
+        return (
+          <Controller
+            name={fieldName}
+            control={control}
+            rules={{ validate: buildValidate("select") }}
+            render={({ field }) => {
+              const current = getCurrentValue(field.value);
+              return (
+                <>
+                  <TextField
+                    select
+                    value={current.value ?? ""}
+                    onChange={(e) =>
+                      field.onChange(updateValue(field.value, e.target.value))
+                    }
+                    fullWidth
+                    size="small"
+                    error={!!error}
+                    helperText={error?.message}
+                    disabled={readonly}
+                    required={question.obligatorio}
+                    slotProps={{
+                      formHelperText: { id: errorId },
+                      htmlInput: {
+                        "aria-required": question.obligatorio ? "true" : undefined,
+                        "aria-invalid": error ? "true" : undefined,
+                        "aria-describedby": error ? errorId : undefined,
+                      },
+                    }}
+                  >
+                    <MenuItem value="">
+                      <em>Seleccione…</em>
+                    </MenuItem>
+                    {(options ?? []).map((opcion) => (
+                      <MenuItem
+                        key={String(opcion.value)}
+                        value={String(opcion.value)}
+                      >
+                        {opcion.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
                   {renderDescripcionInline(field)}
                   {renderObservacionInline(field)}
                 </>

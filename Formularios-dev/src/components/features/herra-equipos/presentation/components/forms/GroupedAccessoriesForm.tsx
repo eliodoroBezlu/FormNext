@@ -16,6 +16,7 @@ import {
   FormDataHerraEquipos,
   FormTemplateHerraEquipos,
   InspectionStatus,
+  resolverEstadoAlEnviar,
   isEquipmentCodeField,
   isAreaField,
   autofillEquipmentFields,
@@ -46,6 +47,11 @@ import dayjs from "dayjs";
 import { EquipmentSelectionStep } from "../selectors/EquipmentSelectionStep";
 import { EquipoBackend } from "@/lib/actions/equipo-actions";
 
+import {
+  MOSTRAR_BOTON_BORRADOR,
+  subirAlInicio,
+} from "../../../utils/navegacion-pasos";
+import { autorizarSalida, salidaEstaAutorizada } from "../../../domain/models/SalidaSinAviso";
 interface GroupedAccessoriesFormProps {
   template: FormTemplateHerraEquipos;
   onSubmit: (data: FormDataHerraEquipos) => void;
@@ -197,6 +203,7 @@ export function GroupedAccessoriesForm({
   const handleStepChange = (newStep: number) => {
     setActiveStep(newStep);
     updateStepQueryParam(newStep);
+    subirAlInicio();
   };
 
   const {
@@ -269,7 +276,7 @@ export function GroupedAccessoriesForm({
     if (!isDirty || readonly) return;
     const handler = (e: BeforeUnloadEvent) => {
       if (
-        (window as Window & { bypassBeforeUnload?: boolean }).bypassBeforeUnload
+        salidaEstaAutorizada()
       )
         return;
       e.preventDefault();
@@ -315,7 +322,6 @@ export function GroupedAccessoriesForm({
     );
     setHasSubmitErrors(false);
     const completeData = { ...data };
-    const isNewForm = !initialData || !initialData._id;
     const requiresApproval = config?.approval?.enabled === true;
 
     if (requiresApproval && !readonly) {
@@ -337,22 +343,28 @@ export function GroupedAccessoriesForm({
           approvedAt: new Date().toISOString(),
           rejectionReason: approvalDecision.comments,
         };
-      } else if (isNewForm) {
-        completeData.status = InspectionStatus.PENDING_APPROVAL;
-        completeData.requiresApproval = true;
-        completeData.approval = { status: "pending" };
       } else {
-        completeData.status = initialData?.status || InspectionStatus.COMPLETED;
-        completeData.requiresApproval = initialData?.requiresApproval || false;
-        completeData.approval = initialData?.approval;
+        // Un borrador que se envía **deja de ser borrador**. Antes esto
+        // miraba si el documento ya existía, y como el paso de firmas lo
+        // persiste antes del envío final, la inspección se quedaba en
+        // borrador y no le llegaba a ningún supervisor.
+        const resuelto = resolverEstadoAlEnviar({
+          estadoPrevio: initialData?.status,
+          requiereAprobacion: true,
+        });
+        completeData.status = resuelto.status;
+        completeData.requiresApproval = resuelto.requiresApproval;
+        completeData.approval =
+          resuelto.status === InspectionStatus.PENDING_APPROVAL
+            ? { status: "pending" }
+            : initialData?.approval;
       }
     } else {
       completeData.status = InspectionStatus.COMPLETED;
       completeData.requiresApproval = false;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).bypassBeforeUnload = true;
+    autorizarSalida();
     onSubmit(completeData);
   };
 
@@ -774,8 +786,7 @@ export function GroupedAccessoriesForm({
               <Button
                 variant="outlined"
                 onClick={() => {
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  (window as any).bypassBeforeUnload = true;
+                  autorizarSalida();
                   router.push("/dashboard/form-herra-equipos");
                 }}
               >
@@ -788,7 +799,7 @@ export function GroupedAccessoriesForm({
             )}
 
             <Box sx={{ display: "flex", gap: 1.5 }}>
-              {config.allowDraft !== false && onSaveDraft && (
+              {MOSTRAR_BOTON_BORRADOR && config.allowDraft !== false && onSaveDraft && (
                 <Button
                   variant="outlined"
                   color="inherit"

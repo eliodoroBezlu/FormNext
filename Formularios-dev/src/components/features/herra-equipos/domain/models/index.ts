@@ -5,3 +5,5 @@ export * from './Inspection';
 export * from './Signature';
 export * from './Config';
 export * from './EquipmentAutofill';
+export * from './SpccElementos';
+export * from './EstadoAlEnviar';

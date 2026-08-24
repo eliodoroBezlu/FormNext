@@ -40,6 +40,12 @@ export interface InspectionResponse extends FormDataHerraEquipos {
   approval?: ApprovalData;
   /** Área denormalizada extraída de verification al momento de guardar */
   area?: string;
+  /**
+   * Código del equipo, denormalizado al guardar. **Rara vez viene**: solo lo
+   * llenan las plantillas que declaran `campoCodigoEquipo`. Use
+   * `codigoInspeccionado()`, que cae en `verification` cuando falta.
+   */
+  codigoEquipo?: string;
 }
 
 

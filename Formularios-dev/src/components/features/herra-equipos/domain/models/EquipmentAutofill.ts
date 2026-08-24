@@ -8,10 +8,20 @@ export const TEMPLATE_EQUIPMENT_MAP: Record<string, string[]> = {
   '2.03.P10.F05': ['TALADRO', 'Taldro de banco'],
   '1.02.P06.F42': ['EquiposSoldar'],
   '1.02.P06.F33': ['Escalera'],
-  // SPCC — arneses, conectores, autorretráctiles y fajas. El mismo código
-  // sirve a las dos plantillas de caídas (la de arnés y conectores y la de
-  // SPCC completa) porque comparten el inventario.
-  '1.02.P06.F19': ['ArnesAuConAncl'],
+  // SPCC — los cinco tipos que conviven en la hoja `ArnesAuConAncl` del
+  // inventario. El mismo código sirve a las dos plantillas de caídas (la de
+  // arnés y conectores y la de SPCC completa) porque comparten el inventario.
+  //
+  // Van los cinco juntos porque hoy no hay una plantilla por tipo: si mañana
+  // se crea una lista de chequeo propia para, digamos, los retráctiles, basta
+  // con darle su código aquí con `['Retractil']` y dejarlo fuera de esta línea.
+  '1.02.P06.F19': [
+    'Arnes',
+    'ConectorTT',
+    'ConectorAN',
+    'Autoretractil',
+    'Retractil',
+  ],
   '3.04.P48.F03': ['Vehiculos'],
 };
 
@@ -280,4 +290,36 @@ export const rebuildVerification = (
     result[field.label] = (value as string) ?? "";
   });
   return result;
+};
+
+/**
+ * Código del equipo inspeccionado, para mostrarlo en listas y notificaciones.
+ *
+ * Se prefiere `codigoEquipo` —el campo denormalizado— pero hoy solo lo llena 1
+ * de cada 2.000 inspecciones: depende de que la plantilla declare
+ * `campoCodigoEquipo`, y casi ninguna lo hace. Por eso el camino real es leer
+ * `verification` buscando el campo que identifica al equipo (número interno o
+ * placa), que es de donde el inspector lo escribió.
+ *
+ * Devuelve `undefined` cuando el formulario no pide el código en la cabecera
+ * —el SPCC lo lleva dentro de cada sección—; es preferible no mostrar nada que
+ * inventar un identificador.
+ */
+export const codigoInspeccionado = (inspeccion: {
+  codigoEquipo?: string;
+  verification?: Record<string, unknown>;
+}): string | undefined => {
+  if (inspeccion.codigoEquipo?.trim()) return inspeccion.codigoEquipo.trim();
+
+  const entradas = Object.entries(inspeccion.verification ?? {});
+
+  // El número interno identifica al equipo; la placa es del vehículo y solo
+  // sirve de recurso si no hay número.
+  const porNumero = entradas.find(
+    ([etiqueta]) => isNumeroInternoField(etiqueta) && !isPlacaField(etiqueta),
+  );
+  const elegido = porNumero ?? entradas.find(([e]) => isEquipmentCodeField(e));
+
+  const valor = elegido?.[1];
+  return typeof valor === "string" && valor.trim() ? valor.trim() : undefined;
 };

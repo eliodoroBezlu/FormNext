@@ -99,6 +99,31 @@ const isValidDamageMarker = (damage: unknown): damage is DamageMarker => {
   );
 };
 
+/**
+ * Valor por defecto **a nivel de módulo**. Escrito como `initialDamages = []`
+ * en la firma sería un array nuevo en cada render, y cualquier comparación por
+ * identidad contra él daría siempre «cambió» — un bucle infinito.
+ */
+const SIN_DANOS: DamageMarker[] = [];
+
+/** Descarta los daños corruptos y les pone el `tempId` que necesita React. */
+const aMarcadores = (entrada: DamageMarker[]): DamageMarker[] =>
+  entrada
+    .filter((damage) => {
+      if (!isValidDamageMarker(damage)) {
+        console.warn('⚠️ [DamageSelector] Daño inválido ignorado:', damage);
+        return false;
+      }
+      return true;
+    })
+    .map((damage, index) => ({
+      type: damage.type,
+      x: damage.x,
+      y: damage.y,
+      timestamp: damage.timestamp,
+      tempId: Date.now() + index,
+    }));
+
 // ==================== COMPONENTE PRINCIPAL ====================
 const VehicleDamageSelectorInner = <TFieldValues extends FieldValues = FieldValues>({
   vehicleImageUrl = 'https://via.placeholder.com/800x600/e0e0e0/666666?text=Imagen+del+Vehiculo',
@@ -106,61 +131,44 @@ const VehicleDamageSelectorInner = <TFieldValues extends FieldValues = FieldValu
   damageFieldName = 'vehicleDamages',
   observationsFieldName = 'vehicleObservations',
   readonly = false,
-  initialDamages = [],
+  initialDamages = SIN_DANOS,
   initialImage,
 }: VehicleDamageSelectorProps<TFieldValues>, ref: React.Ref<VehicleDamageSelectorRef>) => {
   
   const [selectedTool, setSelectedTool] = useState<DamageType>('abollado');
-  const [damages, setDamages] = useState<DamageMarker[]>([]);
+  // Sembrados desde los props en el inicializador, no desde un efecto: así ya
+  // están puestos en el primer pintado.
+  const [damages, setDamages] = useState<DamageMarker[]>(() =>
+    aMarcadores(initialDamages),
+  );
   const [observations] = useState('');
   const [currentImage, setCurrentImage] = useState<string>(initialImage || vehicleImageUrl);
+
+  /**
+   * Los props pueden llegar más tarde (la inspección se carga en diferido) y
+   * a partir de ahí el usuario edita los daños, así que no se pueden derivar:
+   * hay que **reajustar** el estado cuando el prop cambia de identidad.
+   *
+   * Se hace durante el render, que es el patrón que documenta React para esto
+   * («adjusting state when props change»): React descarta el render a medias y
+   * vuelve a empezar con el valor nuevo, sin llegar a pintar el intermedio.
+   * Hacerlo en un efecto pintaba primero el valor viejo y luego el nuevo.
+   */
+  const [danosOrigen, setDanosOrigen] = useState(initialDamages);
+  if (initialDamages !== danosOrigen) {
+    setDanosOrigen(initialDamages);
+    // Igual que antes: una lista vacía no borra lo que ya hay en pantalla.
+    if (initialDamages.length > 0) setDamages(aMarcadores(initialDamages));
+  }
+
+  const [imagenOrigen, setImagenOrigen] = useState(initialImage);
+  if (initialImage !== imagenOrigen) {
+    setImagenOrigen(initialImage);
+    setCurrentImage(initialImage || vehicleImageUrl);
+  }
   const [hasModifications, setHasModifications] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
-
-  // ✅ CARGAR DAÑOS INICIALES CON VALIDACIÓN
-  useEffect(() => {
-    if (initialDamages && initialDamages.length > 0) {
-      console.log('📋 [DamageSelector] Cargando daños iniciales:', initialDamages.length);
-      
-      // ✅ Filtrar y validar daños
-      const validDamages = initialDamages.filter((damage) => {
-        if (!isValidDamageMarker(damage)) {
-          console.warn('⚠️ [DamageSelector] Daño inválido ignorado:', damage);
-          return false;
-        }
-        return true;
-      });
-
-      // Convertir daños guardados a daños con tempId para React
-      const damagesWithTempId: DamageMarker[] = validDamages.map((damage, index) => ({
-        type: damage.type,
-        x: damage.x,
-        y: damage.y,
-        timestamp: damage.timestamp,
-        tempId: Date.now() + index,
-      }));
-      
-      setDamages(damagesWithTempId);
-      
-      if (validDamages.length !== initialDamages.length) {
-        console.warn(
-          `⚠️ [DamageSelector] Se filtraron ${initialDamages.length - validDamages.length} daños inválidos`
-        );
-      }
-    }
-  }, [initialDamages]);
-
-  // ✅ CARGAR IMAGEN INICIAL
-  useEffect(() => {
-    if (initialImage) {
-      console.log('🖼️ [DamageSelector] Usando imagen guardada (base64)');
-      setCurrentImage(initialImage);
-    } else {
-      console.log('🖼️ [DamageSelector] Usando imagen limpia');
-      setCurrentImage(vehicleImageUrl);
-    }
-  }, [initialImage, vehicleImageUrl]);
 
   // Sincronizar con react-hook-form
   useEffect(() => {

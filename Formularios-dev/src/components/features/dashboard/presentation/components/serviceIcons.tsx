@@ -307,6 +307,36 @@ export const ConfiguracionIcon = (
 // Carpeta con check — distinto del documento con checklist de
 // "Nueva Inspección": esta representa un conjunto ya agrupado/completado
 // (mías + de mi área), no un formulario en blanco.
+export const LinternasIcon = (
+  <svg width="45" height="45" viewBox="0 0 64 64" fill="none">
+    {/* Cabezal */}
+    <path
+      d="M20 18h10l16-8v44l-16-8H20a4 4 0 0 1-4-4V22a4 4 0 0 1 4-4z"
+      fill="rgba(30, 62, 102, 0.04)"
+      stroke="#1e3e66"
+      strokeWidth="2.5"
+      strokeLinejoin="round"
+    />
+    {/* Haz de luz */}
+    <path
+      d="M50 22l8-5M50 32h9M50 42l8 5"
+      stroke="#06b6d4"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+    />
+    {/* Interruptor */}
+    <line
+      x1="24"
+      y1="28"
+      x2="24"
+      y2="36"
+      stroke="#1e3e66"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
 export const MisInspeccionesIcon = (
   <svg width="45" height="45" viewBox="0 0 64 64" fill="none">
     <path

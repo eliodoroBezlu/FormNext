@@ -14,6 +14,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@mui/icons-material": "^7.0.2",
     "@mui/material": "^7.0.2",
+    "@mui/material-nextjs": "^9.3.0",
     "@mui/x-date-pickers": "^8.9.0",
     "cloudinary": "^2.7.0",
     "dayjs": "^1.11.13",

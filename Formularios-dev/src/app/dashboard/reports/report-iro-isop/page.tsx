@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useEffect, useState, Suspense } from "react";
+import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import {
   Box,
   Paper,
@@ -56,6 +56,107 @@ const ESTADOS_FORMULARIO = [
   { value: "aprobado", label: "Aprobado", color: "success" as const },
 ];
 
+/** Los filtros del informe, tal y como viajan en la barra de direcciones. */
+interface FiltrosIroIsop {
+  templateId: string;
+  status: string;
+  createdBy: string;
+  dateFrom: string;
+  dateTo: string;
+  minCompliance: string;
+  maxCompliance: string;
+  area: string;
+  superintendencia: string;
+  search: string;
+}
+
+/** Lee los filtros de la URL. Puro: mismo `params`, mismo resultado. */
+const leerFiltrosDeUrl = (
+  params: Pick<URLSearchParams, "get">,
+): FiltrosIroIsop => ({
+  templateId: params.get("templateId") || "",
+  status: params.get("status") || "",
+  createdBy: params.get("createdBy") || "",
+  dateFrom: params.get("dateFrom") || "",
+  dateTo: params.get("dateTo") || "",
+  minCompliance: params.get("minCompliance") || "",
+  maxCompliance: params.get("maxCompliance") || "",
+  area: params.get("area") || "",
+  superintendencia: params.get("superintendencia") || "",
+  search: params.get("search") || "",
+});
+
+const hayAlgunFiltro = (f: FiltrosIroIsop): boolean =>
+  Object.values(f).some((valor) => valor !== "");
+
+/** Serializa los filtros omitiendo los vacíos, para escribirlos en la URL. */
+const aQueryString = (f: FiltrosIroIsop): string => {
+  const query = new URLSearchParams();
+  for (const [clave, valor] of Object.entries(f)) {
+    if (valor) query.set(clave, valor);
+  }
+  return query.toString();
+};
+
+/**
+ * Filtrado que el backend no hace: los campos de `verificationList` no tienen
+ * una clave estable, así que hay que mirarlos aquí. Función pura y a nivel de
+ * módulo — no toca estado ni depende del render.
+ */
+const filtrarEnCliente = (
+  datos: FormInstance[],
+  f: FiltrosIroIsop,
+): FormInstance[] => {
+  let resultado = datos;
+
+  if (f.area) {
+    const areaLower = f.area.toLowerCase();
+    resultado = resultado.filter((i) => {
+      const vl = i.verificationList || {};
+      const val = String(vl["Área"] || vl["area"] || vl["Area Física"] || "");
+      return val.toLowerCase() === areaLower;
+    });
+  }
+
+  if (f.superintendencia) {
+    const supLower = f.superintendencia.toLowerCase();
+    resultado = resultado.filter((i) => {
+      const vl = i.verificationList || {};
+      const val = String(vl["Superintendencia"] || vl["superintendencia"] || "");
+      return val.toLowerCase() === supLower;
+    });
+  }
+
+  const min = parseFloat(f.minCompliance);
+  if (!isNaN(min)) {
+    resultado = resultado.filter(
+      (i) => (i.overallCompliancePercentage ?? 0) >= min,
+    );
+  }
+
+  const max = parseFloat(f.maxCompliance);
+  if (!isNaN(max)) {
+    resultado = resultado.filter(
+      (i) => (i.overallCompliancePercentage ?? 0) <= max,
+    );
+  }
+
+  if (f.search.trim()) {
+    const searchLower = f.search.toLowerCase().trim();
+    resultado = resultado.filter((i) => {
+      const haystack = [
+        ...Object.keys(i.verificationList || {}),
+        ...Object.values(i.verificationList || {}).map((v) => String(v)),
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(searchLower);
+    });
+  }
+
+  return resultado;
+};
+
 function ListarInspeccionesIroIsopComponent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -63,8 +164,12 @@ function ListarInspeccionesIroIsopComponent() {
 
   const [instancias, setInstancias] = useState<FormInstance[]>([]);
   const [templates, setTemplates] = useState<FormTemplate[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  // Si la URL ya trae filtros, la página está buscando desde el primer render.
+  const [loading, setLoading] = useState(() =>
+    hayAlgunFiltro(leerFiltrosDeUrl(searchParams)),
+  );
+  // Arranca en `true`: los templates se piden nada más montar.
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mostrarResultados, setMostrarResultados] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -72,217 +177,191 @@ function ListarInspeccionesIroIsopComponent() {
   // Paginación client-side
   const [totalItems, setTotalItems] = useState(0);
 
-  // Filtros
-  const [templateIdFilter, setTemplateIdFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [createdByFilter, setCreatedByFilter] = useState("");
-  const [dateFromFilter, setDateFromFilter] = useState("");
-  const [dateToFilter, setDateToFilter] = useState("");
-  const [minComplianceFilter, setMinComplianceFilter] = useState("");
-  const [maxComplianceFilter, setMaxComplianceFilter] = useState("");
-  const [areaFilter, setAreaFilter] = useState("");
-  const [superintendenciaFilter, setSuperintendenciaFilter] = useState("");
-  const [searchFilter, setSearchFilter] = useState("");
+  /**
+   * Los filtros nacen de la URL y a partir de ahí el usuario los edita, así
+   * que hay que copiarlos **una vez** — no derivarlos en cada render. Se hace
+   * con el inicializador de `useState`, no con un efecto: así ya están puestos
+   * en el primer pintado, sin el parpadeo de campos vacíos que había antes.
+   */
+  const filtrosDeLaUrl = leerFiltrosDeUrl(searchParams);
+  const [templateIdFilter, setTemplateIdFilter] = useState(
+    () => filtrosDeLaUrl.templateId,
+  );
+  const [statusFilter, setStatusFilter] = useState(() => filtrosDeLaUrl.status);
+  const [createdByFilter, setCreatedByFilter] = useState(
+    () => filtrosDeLaUrl.createdBy,
+  );
+  const [dateFromFilter, setDateFromFilter] = useState(
+    () => filtrosDeLaUrl.dateFrom,
+  );
+  const [dateToFilter, setDateToFilter] = useState(() => filtrosDeLaUrl.dateTo);
+  const [minComplianceFilter, setMinComplianceFilter] = useState(
+    () => filtrosDeLaUrl.minCompliance,
+  );
+  const [maxComplianceFilter, setMaxComplianceFilter] = useState(
+    () => filtrosDeLaUrl.maxCompliance,
+  );
+  const [areaFilter, setAreaFilter] = useState(() => filtrosDeLaUrl.area);
+  const [superintendenciaFilter, setSuperintendenciaFilter] = useState(
+    () => filtrosDeLaUrl.superintendencia,
+  );
+  const [searchFilter, setSearchFilter] = useState(() => filtrosDeLaUrl.search);
 
-  // ── Permisos ──────────────────────────────────────────────────────────────
-  // (Migrados al sistema granular de permisos)
+  /**
+   * Última búsqueda que ya lanzamos nosotros. Al pulsar «Buscar» escribimos la
+   * URL, y eso despierta al efecto de abajo; sin esta marca la consulta se
+   * haría **dos veces** por cada clic.
+   */
+  const ultimaBusqueda = useRef<string | null>(null);
 
   useEffect(() => {
-    const cargarTemplates = async () => {
-      try {
-        setLoadingTemplates(true);
-        const res = await getTemplates();
+    // La promesa se encadena aquí en vez de llamar a una función `async`: el
+    // analizador rastrea dentro de ella y vería su `setLoadingTemplates(true)`
+    // como un setState síncrono del efecto.
+    let vigente = true;
+
+    getTemplates()
+      .then((res) => {
+        if (!vigente) return;
         if (res.success && res.data) {
           setTemplates(Array.isArray(res.data) ? res.data : []);
         }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoadingTemplates(false);
-      }
+      })
+      .catch((err: unknown) => {
+        console.error("Error al cargar templates:", err);
+      })
+      .finally(() => {
+        if (vigente) setLoadingTemplates(false);
+      });
+
+    return () => {
+      vigente = false;
     };
-    cargarTemplates();
   }, []);
 
-  // ── Búsqueda y Filtros de URL ─────────────────────────────────────────────
-  const buscarInstancias = async (paramsFromUrl?: {
-    templateId?: string;
-    status?: string;
-    createdBy?: string;
-    dateFrom?: string;
-    dateTo?: string;
-    minCompliance?: string;
-    maxCompliance?: string;
-    area?: string;
-    superintendencia?: string;
-    search?: string;
-  }) => {
-    try {
-      setLoading(true);
-      setError(null);
+  // ── Búsqueda ──────────────────────────────────────────────────────────────
 
-      // 1. Usar parámetros de la URL o el estado actual
-      const tId = paramsFromUrl ? (paramsFromUrl.templateId ?? "") : templateIdFilter;
-      const status = paramsFromUrl ? (paramsFromUrl.status ?? "") : statusFilter;
-      const createdBy = paramsFromUrl ? (paramsFromUrl.createdBy ?? "") : createdByFilter;
-      const dateFrom = paramsFromUrl ? (paramsFromUrl.dateFrom ?? "") : dateFromFilter;
-      const dateTo = paramsFromUrl ? (paramsFromUrl.dateTo ?? "") : dateToFilter;
-      const minComp = paramsFromUrl ? (paramsFromUrl.minCompliance ?? "") : minComplianceFilter;
-      const maxComp = paramsFromUrl ? (paramsFromUrl.maxCompliance ?? "") : maxComplianceFilter;
-      const area = paramsFromUrl ? (paramsFromUrl.area ?? "") : areaFilter;
-      const sup = paramsFromUrl ? (paramsFromUrl.superintendencia ?? "") : superintendenciaFilter;
-      const search = paramsFromUrl ? (paramsFromUrl.search ?? "") : searchFilter;
-
-      // 2. Si no es invocación desde useEffect de la URL, actualizar los query params de la barra
-      if (!paramsFromUrl) {
-        const queryParams = new URLSearchParams();
-        if (tId) queryParams.set("templateId", tId);
-        if (status) queryParams.set("status", status);
-        if (createdBy) queryParams.set("createdBy", createdBy);
-        if (dateFrom) queryParams.set("dateFrom", dateFrom);
-        if (dateTo) queryParams.set("dateTo", dateTo);
-        if (minComp) queryParams.set("minCompliance", minComp);
-        if (maxComp) queryParams.set("maxCompliance", maxComp);
-        if (area) queryParams.set("area", area);
-        if (sup) queryParams.set("superintendencia", sup);
-        if (search) queryParams.set("search", search);
-
-        router.push(`${pathname}?${queryParams.toString()}`);
-      }
-
-      // 3. Preparar filtros estables para el backend (con un límite alto)
+  /**
+   * Solo consulta y devuelve; **no toca el estado**. Al estar libre de
+   * setState puede encadenarse desde el efecto sin que el analizador la vea
+   * como una cascada de renders.
+   */
+  const consultar = useCallback(
+    async (f: FiltrosIroIsop): Promise<FormInstance[]> => {
       const filters: GetInstancesFilters = { limit: 10000 };
-      if (tId) filters.templateId = tId;
-      if (status) filters.status = status;
-      if (createdBy) filters.createdBy = createdBy;
-      if (dateFrom) filters.dateFrom = new Date(dateFrom);
-      if (dateTo) filters.dateTo = new Date(dateTo);
+      if (f.templateId) filters.templateId = f.templateId;
+      if (f.status) filters.status = f.status;
+      if (f.createdBy) filters.createdBy = f.createdBy;
+      if (f.dateFrom) filters.dateFrom = new Date(f.dateFrom);
+      if (f.dateTo) filters.dateTo = new Date(f.dateTo);
 
       const response = await getInstances(filters);
-
-      if (response.success && response.data) {
-        let fetchedData = Array.isArray(response.data.data)
-          ? response.data.data
-          : Array.isArray(response.data)
-            ? response.data
-            : [];
-
-        // 4. Filtrado en el cliente para resolver discrepancias de claves
-        // Área
-        if (area) {
-          const areaLower = area.toLowerCase();
-          fetchedData = fetchedData.filter((i) => {
-            const vl = i.verificationList || {};
-            const val = String(vl["Área"] || vl["area"] || vl["Area Física"] || "");
-            return val.toLowerCase() === areaLower;
-          });
-        }
-
-        // Superintendencia
-        if (sup) {
-          const supLower = sup.toLowerCase();
-          fetchedData = fetchedData.filter((i) => {
-            const vl = i.verificationList || {};
-            const val = String(vl["Superintendencia"] || vl["superintendencia"] || "");
-            return val.toLowerCase() === supLower;
-          });
-        }
-
-        // Cumplimiento
-        if (minComp) {
-          const min = parseFloat(minComp);
-          if (!isNaN(min)) {
-            fetchedData = fetchedData.filter((i) => (i.overallCompliancePercentage ?? 0) >= min);
-          }
-        }
-        if (maxComp) {
-          const max = parseFloat(maxComp);
-          if (!isNaN(max)) {
-            fetchedData = fetchedData.filter((i) => (i.overallCompliancePercentage ?? 0) <= max);
-          }
-        }
-
-        // Búsqueda por texto (en todos los campos de verificationList)
-        if (search.trim()) {
-          const searchLower = search.toLowerCase().trim();
-          fetchedData = fetchedData.filter((i) => {
-            const haystack = [
-              ...Object.keys(i.verificationList || {}),
-              ...Object.values(i.verificationList || {}).map((v) => String(v)),
-            ]
-              .join(" ")
-              .toLowerCase();
-            return haystack.includes(searchLower);
-          });
-        }
-
-        setInstancias(fetchedData);
-        setTotalItems(fetchedData.length);
-        setMostrarResultados(true);
-      } else {
-        setInstancias([]);
-        setError(response.error || "Error al obtener datos");
-        setMostrarResultados(false);
+      if (!response.success || !response.data) {
+        throw new Error(response.error || "Error al obtener datos");
       }
+
+      const recibidas = Array.isArray(response.data.data)
+        ? response.data.data
+        : Array.isArray(response.data)
+          ? response.data
+          : [];
+
+      return filtrarEnCliente(recibidas, f);
+    },
+    [],
+  );
+
+  const aplicar = useCallback((datos: FormInstance[]) => {
+    setInstancias(datos);
+    setTotalItems(datos.length);
+    setMostrarResultados(true);
+    setError(null);
+  }, []);
+
+  const avisarFallo = useCallback((err: unknown) => {
+    console.error(err);
+    setError("No se pudieron cargar las instancias. Intente nuevamente.");
+    setInstancias([]);
+    setMostrarResultados(false);
+  }, []);
+
+  /** Búsqueda a petición: botón «Buscar» o Enter en un campo. */
+  const buscarInstancias = useCallback(async () => {
+    const f: FiltrosIroIsop = {
+      templateId: templateIdFilter,
+      status: statusFilter,
+      createdBy: createdByFilter,
+      dateFrom: dateFromFilter,
+      dateTo: dateToFilter,
+      minCompliance: minComplianceFilter,
+      maxCompliance: maxComplianceFilter,
+      area: areaFilter,
+      superintendencia: superintendenciaFilter,
+      search: searchFilter,
+    };
+
+    // Se refleja la búsqueda en la URL (para poder compartirla) y se marca
+    // como ya lanzada, de modo que el efecto de abajo no la repita.
+    const query = aQueryString(f);
+    ultimaBusqueda.current = query;
+    router.push(query ? `${pathname}?${query}` : pathname);
+
+    setLoading(true);
+    try {
+      aplicar(await consultar(f));
     } catch (err) {
-      console.error(err);
-      setError("No se pudieron cargar las instancias. Intente nuevamente.");
-      setInstancias([]);
+      avisarFallo(err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    templateIdFilter,
+    statusFilter,
+    createdByFilter,
+    dateFromFilter,
+    dateToFilter,
+    minComplianceFilter,
+    maxComplianceFilter,
+    areaFilter,
+    superintendenciaFilter,
+    searchFilter,
+    router,
+    pathname,
+    consultar,
+    aplicar,
+    avisarFallo,
+  ]);
 
-  // Inicializar filtros desde la URL al montar o cambiar params
+  /**
+   * Búsqueda dirigida por la URL: al entrar con un enlace ya filtrado, o al
+   * navegar con atrás/adelante. Los valores de los campos ya los recogió el
+   * inicializador de `useState`; aquí solo se lanza la consulta.
+   */
   useEffect(() => {
-    const templateId = searchParams.get("templateId") || "";
-    const status = searchParams.get("status") || "";
-    const createdBy = searchParams.get("createdBy") || "";
-    const dateFrom = searchParams.get("dateFrom") || "";
-    const dateTo = searchParams.get("dateTo") || "";
-    const minCompliance = searchParams.get("minCompliance") || "";
-    const maxCompliance = searchParams.get("maxCompliance") || "";
-    const area = searchParams.get("area") || "";
-    const superintendencia = searchParams.get("superintendencia") || "";
-    const search = searchParams.get("search") || "";
+    const f = leerFiltrosDeUrl(searchParams);
+    const query = aQueryString(f);
 
-    setTemplateIdFilter(templateId);
-    setStatusFilter(status);
-    setCreatedByFilter(createdBy);
-    setDateFromFilter(dateFrom);
-    setDateToFilter(dateTo);
-    setMinComplianceFilter(minCompliance);
-    setMaxComplianceFilter(maxCompliance);
-    setAreaFilter(area);
-    setSuperintendenciaFilter(superintendencia);
-    setSearchFilter(search);
+    if (!hayAlgunFiltro(f)) return;
+    if (ultimaBusqueda.current === query) return; // ya la lanzó el botón
 
-    if (
-      templateId ||
-      status ||
-      createdBy ||
-      dateFrom ||
-      dateTo ||
-      minCompliance ||
-      maxCompliance ||
-      area ||
-      superintendencia ||
-      search
-    ) {
-      buscarInstancias({
-        templateId,
-        status,
-        createdBy,
-        dateFrom,
-        dateTo,
-        minCompliance,
-        maxCompliance,
-        area,
-        superintendencia,
-        search,
+    ultimaBusqueda.current = query;
+    let vigente = true;
+
+    consultar(f)
+      .then((datos) => {
+        if (vigente) aplicar(datos);
+      })
+      .catch((err: unknown) => {
+        if (vigente) avisarFallo(err);
+      })
+      .finally(() => {
+        if (vigente) setLoading(false);
       });
-    }
-  }, [searchParams]);
+
+    return () => {
+      vigente = false;
+    };
+  }, [searchParams, consultar, aplicar, avisarFallo]);
 
   const limpiarFiltros = () => {
     setTemplateIdFilter("");

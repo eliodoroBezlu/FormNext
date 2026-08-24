@@ -63,25 +63,56 @@ export function usePgrCatalogos() {
     [],
   );
 
+  /** Solo consulta y devuelve; no toca el estado. */
+  const consultar = useCallback(
+    () =>
+      // Se piden en paralelo: son independientes entre sí.
+      Promise.all([
+        // `true` incluye las inactivas: acá se administran, así que hay que
+        // poder ver y reactivar lo que se dio de baja.
+        obtenerUnidadesRecurso(),
+        obtenerEntregablesSugeridos(),
+        obtenerGruposResponsables(),
+      ]),
+    [],
+  );
+
+  const aplicar = useCallback(
+    ([u, e, g]: Awaited<ReturnType<typeof consultar>>) => {
+      setUnidades(u);
+      setEntregables(e);
+      setGrupos(g);
+    },
+    [],
+  );
+
+  /** Recarga a petición: enciende el indicador y vuelve a consultar. */
   const recargar = useCallback(async () => {
     setCargando(true);
-    // Se piden en paralelo: son independientes entre sí.
-    const [u, e, g] = await Promise.all([
-      // `true` incluye las inactivas: acá se administran, así que hay que
-      // poder ver y reactivar lo que se dio de baja.
-      obtenerUnidadesRecurso(),
-      obtenerEntregablesSugeridos(),
-      obtenerGruposResponsables(),
-    ]);
-    setUnidades(u);
-    setEntregables(e);
-    setGrupos(g);
-    setCargando(false);
-  }, []);
+    try {
+      aplicar(await consultar());
+    } finally {
+      setCargando(false);
+    }
+  }, [consultar, aplicar]);
 
   useEffect(() => {
-    void recargar();
-  }, [recargar]);
+    // `cargando` ya nace en `true`, así que aquí no hace falta encenderlo, y
+    // todos los setState ocurren dentro de los callbacks de la promesa.
+    let vigente = true;
+
+    consultar()
+      .then((datos) => {
+        if (vigente) aplicar(datos);
+      })
+      .finally(() => {
+        if (vigente) setCargando(false);
+      });
+
+    return () => {
+      vigente = false;
+    };
+  }, [consultar, aplicar]);
 
   /** Envuelve una escritura: avisa, recarga y devuelve si salió bien. */
   const ejecutar = useCallback(

@@ -10,7 +10,7 @@
 
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useCallback, useEffect, useState } from "react"
 import {
   Box,
   Paper,
@@ -79,7 +79,8 @@ const initialFormData: ExtintorForm = {
 
 export default function GestionExtintores() {
   const [extintores, setExtintores] = useState<ExtintorBackend[]>([])
-  const [loading, setLoading] = useState(false)
+  // Arranca en `true`: la pagina esta cargando desde el primer render.
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
@@ -107,29 +108,73 @@ export default function GestionExtintores() {
     severity: "info",
   })
 
-  useEffect(() => {
-    cargarExtintores()
-  }, [])
 
   
 
 
-   const cargarExtintores = async () => {
-  try {
+  const mostrarNotificacion = useCallback(
+    (message: string, severity: "success" | "error" | "warning" | "info") => {
+    setNotification({
+      open: true,
+      message,
+      severity,
+    })
+    },
+    [],
+  )
+
+  /** Solo consulta y devuelve; no toca el estado. */
+  const consultar = useCallback(() => obtenerExtintores(), [])
+
+  const aplicar = useCallback(
+    (data: Awaited<ReturnType<typeof consultar>>) => {
+      setExtintores(data)
+      setError(null)
+    },
+    [],
+  )
+
+  const avisarFallo = useCallback(
+    (error: unknown) => {
+      console.error("Error al cargar extintores:", error)
+      setError("No se pudieron cargar los extintores")
+      mostrarNotificacion("Error al cargar los extintores", "error")
+    },
+    [mostrarNotificacion],
+  )
+
+  /** Recarga a peticion, tras crear, editar o dar de baja un extintor. */
+  const cargarExtintores = useCallback(async () => {
     setLoading(true)
-    setError(null)
-    
-    // Siempre obtener todos los extintores
-    const data = await obtenerExtintores()
-    setExtintores(data)
-  } catch (error) {
-    console.error("Error al cargar extintores:", error)
-    setError("No se pudieron cargar los extintores")
-    mostrarNotificacion("Error al cargar los extintores", "error")
-  } finally {
-    setLoading(false)
-  }
-}
+    try {
+      aplicar(await consultar())
+    } catch (error) {
+      avisarFallo(error)
+    } finally {
+      setLoading(false)
+    }
+  }, [consultar, aplicar, avisarFallo])
+
+  useEffect(() => {
+    // La promesa se encadena aqui: llamar a la funcion `async` haria que el
+    // analizador viera su `setLoading(true)` como setState sincrono.
+    let vigente = true
+
+    consultar()
+      .then((datos) => {
+        if (vigente) aplicar(datos)
+      })
+      .catch((error: unknown) => {
+        if (vigente) avisarFallo(error)
+      })
+      .finally(() => {
+        if (vigente) setLoading(false)
+      })
+
+    return () => {
+      vigente = false
+    }
+  }, [consultar, aplicar, avisarFallo])
 
   const aplicarFiltros = async () => {
     setPage(0) // Reset página
@@ -314,13 +359,6 @@ export default function GestionExtintores() {
     }
   }
 
-  const mostrarNotificacion = (message: string, severity: "success" | "error" | "warning" | "info") => {
-    setNotification({
-      open: true,
-      message,
-      severity,
-    })
-  }
 
   const cerrarNotificacion = () => {
     setNotification(prev => ({ ...prev, open: false }))

@@ -1,5 +1,3 @@
-// src/components/form-sistemas-emergencia/presentation/components/selectors/ExtintoresChecklist.tsx
-
 import React, { useEffect, useState, useMemo } from "react";
 import {
   Box,
@@ -29,9 +27,8 @@ export const ExtintoresChecklist = ({
   extintores,
   onExtintoresSeleccionados,
 }: ExtintoresChecklistProps) => {
-  const [extintoresSeleccionados, setExtintoresSeleccionados] = useState<
-    ExtintoresSeleccionadosState
-  >({});
+  const [extintoresSeleccionados, setExtintoresSeleccionados] =
+    useState<ExtintoresSeleccionadosState>({});
 
   const extintoresArray = useMemo(() => {
     if (!extintores) {
@@ -53,36 +50,59 @@ export const ExtintoresChecklist = ({
     return [];
   }, [extintores]);
 
-  const requiereSeleccion = TAGS_CON_SELECCION_EXTINTORES.some(t => t.toLowerCase() === tag.toLowerCase());
+  const requiereSeleccion = TAGS_CON_SELECCION_EXTINTORES.some(
+    (t) => t.toLowerCase() === tag.toLowerCase(),
+  );
 
-  useEffect(() => {
+  const [prevExtintoresArray, setPrevExtintoresArray] =
+    useState(extintoresArray);
+  const [prevRequiereSeleccion, setPrevRequiereSeleccion] =
+    useState(requiereSeleccion);
+
+  if (
+    extintoresArray !== prevExtintoresArray ||
+    requiereSeleccion !== prevRequiereSeleccion
+  ) {
+    setPrevExtintoresArray(extintoresArray);
+    setPrevRequiereSeleccion(requiereSeleccion);
+
     if (!requiereSeleccion) {
       setExtintoresSeleccionados({});
+    } else {
+      const initialState: ExtintoresSeleccionadosState = {};
+      extintoresArray.forEach((extintor: ExtintorBackend) => {
+        initialState[extintor._id || extintor.CodigoExtintor] = false;
+      });
+      setExtintoresSeleccionados(initialState);
+    }
+  }
+  useEffect(() => {
+    if (!requiereSeleccion) {
       onExtintoresSeleccionados([]);
       return;
     }
 
-    const initialState: ExtintoresSeleccionadosState = {};
-    extintoresArray.forEach((extintor: ExtintorBackend) => {
-      initialState[extintor._id || extintor.CodigoExtintor] = false;
-    });
-    setExtintoresSeleccionados(initialState);
-  }, [extintoresArray, tag, requiereSeleccion, onExtintoresSeleccionados]);
+    const seleccionados = extintoresArray.filter(
+      (extintor) =>
+        extintoresSeleccionados[extintor._id || extintor.CodigoExtintor],
+    );
+    onExtintoresSeleccionados(seleccionados);
+  }, [
+    extintoresSeleccionados,
+    extintoresArray,
+    requiereSeleccion,
+    onExtintoresSeleccionados,
+  ]);
 
   const handleCheckboxChange = (
     event: React.ChangeEvent<HTMLInputElement>,
-    extintorId: string
+    extintorId: string,
   ) => {
     const newSeleccionados = {
       ...extintoresSeleccionados,
       [extintorId]: event.target.checked,
     };
     setExtintoresSeleccionados(newSeleccionados);
-
-    const seleccionados = extintoresArray.filter(
-      (extintor) => newSeleccionados[extintor._id || extintor.CodigoExtintor]
-    );
-    onExtintoresSeleccionados(seleccionados);
   };
 
   const seleccionarTodos = () => {
@@ -91,7 +111,6 @@ export const ExtintoresChecklist = ({
       newSeleccionados[extintor._id || extintor.CodigoExtintor] = true;
     });
     setExtintoresSeleccionados(newSeleccionados);
-    onExtintoresSeleccionados([...extintoresArray]);
   };
 
   const deseleccionarTodos = () => {
@@ -100,7 +119,6 @@ export const ExtintoresChecklist = ({
       newSeleccionados[extintor._id || extintor.CodigoExtintor] = false;
     });
     setExtintoresSeleccionados(newSeleccionados);
-    onExtintoresSeleccionados([]);
   };
 
   return (
@@ -112,11 +130,21 @@ export const ExtintoresChecklist = ({
               Extintores en {tag}:
             </Typography>
 
-            <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-              <Button size="small" variant="outlined" onClick={seleccionarTodos}>
+            <Box
+              sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
+            >
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={seleccionarTodos}
+              >
                 Seleccionar todos
               </Button>
-              <Button size="small" variant="outlined" onClick={deseleccionarTodos}>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={deseleccionarTodos}
+              >
                 Deseleccionar todos
               </Button>
             </Box>

@@ -8,6 +8,7 @@ import {
   FormDataHerraEquipos,
   FormTemplateHerraEquipos,
   InspectionStatus,
+  resolverEstadoAlEnviar,
   isEquipmentCodeField,
   isAreaField,
   autofillEquipmentFields,
@@ -40,6 +41,11 @@ import dayjs from "dayjs";
 import { EquipmentSelectionStep } from "../selectors/EquipmentSelectionStep";
 import { EquipoBackend } from "@/lib/actions/equipo-actions";
 
+import {
+  MOSTRAR_BOTON_BORRADOR,
+  subirAlInicio,
+} from "../../../utils/navegacion-pasos";
+import { autorizarSalida, salidaEstaAutorizada } from "../../../domain/models/SalidaSinAviso";
 interface ScaffoldInspectionFormProps {
   template: FormTemplateHerraEquipos;
   onSubmit: (data: FormDataHerraEquipos) => void;
@@ -139,14 +145,19 @@ export function ScaffoldInspectionForm({
   const handleStepChange = (newStep: number) => {
     setActiveStep(newStep);
     updateStepQueryParam(newStep);
+    subirAlInicio();
   };
 
   const isNewInspection = !initialData || !initialData.status;
 
-  const [isInProgress, setIsInProgress] = useState(
-    initialData?.status === InspectionStatus.IN_PROGRESS,
-  );
-  const [fieldsReadonly, setFieldsReadonly] = useState(isInProgress);
+  /**
+   * No son estado: se **derivan** de `initialData`. Nadie los cambia por su
+   * cuenta —los dos únicos setState que existían solo los volvían a poner al
+   * valor del prop desde un efecto—, así que guardarlos en `useState` era
+   * mantener a mano una copia que ya se podía calcular en cada render.
+   */
+  const isInProgress = initialData?.status === InspectionStatus.IN_PROGRESS;
+  const fieldsReadonly = isInProgress;
 
   // ✅ Estado de decisión de aprobación
   const [approvalDecision, setApprovalDecision] = useState<{
@@ -236,17 +247,16 @@ export function ScaffoldInspectionForm({
           ...initialData.supervisorSignature,
         },
       });
-      const isProgressing = initialData.status === InspectionStatus.IN_PROGRESS;
-      setIsInProgress(isProgressing);
-      setFieldsReadonly(isProgressing);
     }
+    // `reset` habla con react-hook-form, que es un sistema externo: eso sí es
+    // trabajo legítimo de un efecto.
   }, [initialData, reset]);
 
   useEffect(() => {
     if (!isDirty || fieldsReadonly || readonly) return;
     const handler = (e: BeforeUnloadEvent) => {
       if (
-        (window as Window & { bypassBeforeUnload?: boolean }).bypassBeforeUnload
+        salidaEstaAutorizada()
       )
         return;
       e.preventDefault();
@@ -375,10 +385,20 @@ export function ScaffoldInspectionForm({
         result.requiresApproval = true;
         result.approval = { status: "pending" };
       } else {
-        // En progreso o ya finalizado
-        result.status = initialData?.status || InspectionStatus.IN_PROGRESS;
-        result.requiresApproval = initialData?.requiresApproval ?? false;
-        result.approval = initialData?.approval;
+        // Un borrador que se envía deja de ser borrador. `in_progress` **no**
+        // entra aquí: en un andamio significa «ya aprobado, acumulando
+        // rutinarias», y promoverlo lo devolvería a aprobación cada día.
+        const resuelto = resolverEstadoAlEnviar({
+          estadoPrevio: initialData?.status,
+          requiereAprobacion: true,
+          estadosEnCurso: [InspectionStatus.DRAFT],
+        });
+        result.status = resuelto.status;
+        result.requiresApproval = resuelto.requiresApproval;
+        result.approval =
+          resuelto.status === InspectionStatus.PENDING_APPROVAL
+            ? { status: "pending" }
+            : initialData?.approval;
       }
     } else {
       // Sin flujo de aprobación (va directo a IN_PROGRESS si es scaffold, para permitir diario)
@@ -399,8 +419,7 @@ export function ScaffoldInspectionForm({
     );
     setHasSubmitErrors(false);
     const resolvedData = applyApprovalLogic(data, InspectionStatus.IN_PROGRESS);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).bypassBeforeUnload = true;
+    autorizarSalida();
     onSubmit(resolvedData);
   };
 
@@ -414,8 +433,7 @@ export function ScaffoldInspectionForm({
         data,
         InspectionStatus.IN_PROGRESS,
       );
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).bypassBeforeUnload = true;
+      autorizarSalida();
       onSaveProgress(resolvedData);
     }
   };
@@ -428,8 +446,7 @@ export function ScaffoldInspectionForm({
     if (onFinalize) {
       const resolvedData = applyApprovalLogic(data, InspectionStatus.COMPLETED);
       resolvedData.status = InspectionStatus.COMPLETED;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).bypassBeforeUnload = true;
+      autorizarSalida();
       onFinalize(resolvedData);
     }
   };
@@ -935,8 +952,7 @@ export function ScaffoldInspectionForm({
               <Button
                 variant="outlined"
                 onClick={() => {
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  (window as any).bypassBeforeUnload = true;
+                  autorizarSalida();
                   router.push("/dashboard/form-herra-equipos");
                 }}
               >
@@ -949,7 +965,7 @@ export function ScaffoldInspectionForm({
             )}
 
             <Box sx={{ display: "flex", gap: 1.5 }}>
-              {config.allowDraft !== false && onSaveDraft && (
+              {MOSTRAR_BOTON_BORRADOR && config.allowDraft !== false && onSaveDraft && (
                 <Button
                   variant="outlined"
                   color="inherit"

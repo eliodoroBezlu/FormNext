@@ -30,6 +30,21 @@ export interface Trabajador {
   updatedAt?: string;
 }
 
+/**
+ * Lo que devuelve **de verdad** `GET /trabajadores/completos`: el backend hace
+ * `.select('nomina ci puesto')`, así que no trae `_id`, ni `area`, ni nada más.
+ *
+ * Está tipado aparte a propósito. Cuando esa acción decía devolver `Trabajador[]`,
+ * el compilador dejaba pasar `t._id` y el `undefined` solo aparecía en ejecución,
+ * como un 500 al seleccionar a alguien. Si necesita el id o el área, use
+ * `obtenerTrabajadores()`.
+ */
+export interface TrabajadorResumen {
+  nomina: string;
+  ci: string;
+  puesto: string;
+}
+
 export interface TrabajadorForm {
   ci: string;
   nomina: string;

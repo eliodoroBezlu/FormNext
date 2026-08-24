@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useUserRole } from "@/hooks/useUserRole";
 import {
@@ -36,11 +36,14 @@ export default function FormHerraEquiposLayout({
   const [inProgressCount, setInProgressCount] = useState(0);
   const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
 
+  /**
+   * `hasRole` es una función nueva en cada render, así que no sirve como
+   * dependencia. Lo que sí sirve son estos dos booleanos: son primitivos y
+   * solo cambian cuando cambian los roles de verdad.
+   */
+  const isAdmin = hasRole(Role.ADMIN) || hasRole(Role.SUPERINTENDENTE);
   // Roles permitidos para aprobar
-  const canViewApprovals =
-    hasRole(Role.SUPERVISOR) ||
-    hasRole(Role.ADMIN) ||
-    hasRole(Role.SUPERINTENDENTE);
+  const canViewApprovals = hasRole(Role.SUPERVISOR) || isAdmin;
 
   // Determinar si es una de las pestañas principales de la gestión
   const isTabRoute =
@@ -56,21 +59,26 @@ export default function FormHerraEquiposLayout({
     activeTab = 2;
   }
 
-  const refreshCounts = async () => {
-    if (!user) return;
+  /** Solo consulta y devuelve; **no toca el estado**. */
+  const consultar = useCallback(() => {
+    if (!user) return Promise.resolve(null);
 
-    try {
-      const isAdmin = hasRole(Role.ADMIN) || hasRole(Role.SUPERINTENDENTE);
-      const [inProgressResult, pendingResult] = await Promise.all([
-        getInProgressInspections({ templateCode: SCAFFOLD_FORM }),
-        canViewApprovals
-          ? getPendingApprovals(
-              user.username,
-              isAdmin ? undefined : user.area ? [user.area] : [],
-              isAdmin,
-            )
-          : Promise.resolve({ success: true, data: [] }),
-      ]);
+    return Promise.all([
+      getInProgressInspections({ templateCode: SCAFFOLD_FORM }),
+      canViewApprovals
+        ? getPendingApprovals(
+            user.username,
+            isAdmin ? undefined : user.area ? [user.area] : [],
+            isAdmin,
+          )
+        : Promise.resolve({ success: true, data: [] }),
+    ]);
+  }, [user, canViewApprovals, isAdmin]);
+
+  const aplicar = useCallback(
+    (resultados: Awaited<ReturnType<typeof consultar>>) => {
+      if (!resultados) return;
+      const [inProgressResult, pendingResult] = resultados;
 
       if (inProgressResult.success) {
         setInProgressCount(inProgressResult.data?.length || 0);
@@ -78,16 +86,47 @@ export default function FormHerraEquiposLayout({
       if (pendingResult.success) {
         setPendingApprovalCount(pendingResult.data?.length || 0);
       }
+    },
+    [],
+  );
+
+  /** Recarga a petición: la usan las pestañas tras guardar o aprobar. */
+  const refreshCounts = useCallback(async () => {
+    try {
+      aplicar(await consultar());
     } catch (err) {
       console.error("Error al refrescar contadores:", err);
     }
-  };
+  }, [consultar, aplicar]);
 
   useEffect(() => {
-    if (!authLoading && user && isTabRoute) {
-      refreshCounts();
-    }
-  }, [authLoading, user, pathname, isTabRoute]);
+    if (authLoading || !user || !isTabRoute) return;
+
+    // La promesa se encadena aquí en vez de llamar a `refreshCounts()`: el
+    // analizador rastrea dentro de la función `async` y vería sus setState
+    // como una cascada de renders lanzada desde el efecto.
+    let vigente = true;
+
+    consultar()
+      .then((resultados) => {
+        if (vigente) aplicar(resultados);
+      })
+      .catch((err: unknown) => {
+        console.error("Error al refrescar contadores:", err);
+      });
+
+    return () => {
+      vigente = false;
+    };
+    // `pathname` está aquí a propósito aunque no se lea en el cuerpo: los
+    // contadores deben refrescarse al cambiar de pestaña, no solo al montar.
+  }, [authLoading, user, isTabRoute, pathname, consultar, aplicar]);
+
+  /**
+   * El valor del contexto se memoiza: sin esto sería un objeto nuevo en cada
+   * render y obligaría a repintar a todos los consumidores.
+   */
+  const contextValue = useMemo(() => ({ refreshCounts }), [refreshCounts]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     const base = "/dashboard/form-herra-equipos";
@@ -130,7 +169,7 @@ export default function FormHerraEquiposLayout({
   }
 
   return (
-    <FormCountsContext.Provider value={{ refreshCounts }}>
+    <FormCountsContext.Provider value={contextValue}>
       <Box p={3}>
         {process.env.NODE_ENV === "development" && (
           <Alert severity="info" sx={{ mb: 2 }}>

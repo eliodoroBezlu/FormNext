@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Box, CircularProgress, Alert, Button, Snackbar
@@ -42,52 +42,78 @@ export default function EditarInspeccionPage() {
     severity: 'success'
   });
 
-  useEffect(() => {
-    loadInspectionAndTemplate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  /** Lo que necesita la página para pintarse: la inspección y su plantilla. */
+  interface DatosDeLaInspeccion {
+    inspection: InspectionResponse;
+    template: FormTemplateHerraEquipos;
+  }
+
+  /**
+   * Solo consulta y devuelve; **no toca el estado**. Al no haber setState
+   * dentro, el efecto puede encadenar la promesa sin que el analizador lo vea
+   * como una cascada de renders.
+   */
+  const consultar = useCallback(async (): Promise<DatosDeLaInspeccion> => {
+    const inspectionResult = await getInspectionById(inspectionId);
+    if (!inspectionResult.success || !inspectionResult.data) {
+      throw new Error(inspectionResult.error || 'Inspección no encontrada');
+    }
+    const inspection = inspectionResult.data;
+
+    const templatesResult = await getTemplatesHerraEquipos();
+    if (!templatesResult.success) {
+      throw new Error(templatesResult.error || 'Error al cargar templates');
+    }
+
+    const foundTemplate = templatesResult.data.find(
+      (t) => t.code === inspection.templateCode
+    );
+    if (!foundTemplate) {
+      throw new Error(`Template con código ${inspection.templateCode} no encontrado`);
+    }
+
+    return {
+      inspection,
+      template: {
+        ...foundTemplate,
+        createdAt: new Date(foundTemplate.createdAt),
+        updatedAt: new Date(foundTemplate.updatedAt),
+      },
+    };
   }, [inspectionId]);
 
-  const loadInspectionAndTemplate = async () => {
-    setLoading(true);
+  const aplicar = useCallback((datos: DatosDeLaInspeccion) => {
+    setInspectionData(datos.inspection);
+    setTemplate(datos.template);
     setError(null);
+  }, []);
 
-    try {
-      // 1. Cargar la inspección existente
-      const inspectionResult = await getInspectionById(inspectionId);
+  const avisarFallo = useCallback((err: unknown) => {
+    setError(err instanceof Error ? err.message : 'Error al cargar la inspección');
+  }, []);
 
-      if (!inspectionResult.success || !inspectionResult.data) {
-        throw new Error(inspectionResult.error || 'Inspección no encontrada');
-      }
+  useEffect(() => {
+    // `loading` ya nace en `true` y solo se apaga al terminar, así que la carga
+    // inicial no necesita encenderlo. La promesa se encadena aquí en vez de
+    // llamar a una función `async`: el analizador rastrea dentro de ella.
+    let vigente = true;
 
-      const inspection = inspectionResult.data;
-      setInspectionData(inspection);
+    consultar()
+      .then((datos) => {
+        if (vigente) aplicar(datos);
+      })
+      .catch((err: unknown) => {
+        if (vigente) avisarFallo(err);
+      })
+      .finally(() => {
+        if (vigente) setLoading(false);
+      });
 
-      // 2. Cargar el template correspondiente
-      const templatesResult = await getTemplatesHerraEquipos();
+    return () => {
+      vigente = false;
+    };
+  }, [consultar, aplicar, avisarFallo]);
 
-      if (templatesResult.success) {
-        const foundTemplate = templatesResult.data.find(
-          (t) => t.code === inspection.templateCode
-        );
-
-        if (foundTemplate) {
-          setTemplate({
-            ...foundTemplate,
-            createdAt: new Date(foundTemplate.createdAt),
-            updatedAt: new Date(foundTemplate.updatedAt),
-          });
-        } else {
-          throw new Error(`Template con código ${inspection.templateCode} no encontrado`);
-        }
-      } else {
-        throw new Error(templatesResult.error || 'Error al cargar templates');
-      }
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Error al cargar la inspección');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // ✅ Handler para actualizar (similar a guardar borrador)
   const handleUpdate = async (data: FormDataHerraEquipos) => {

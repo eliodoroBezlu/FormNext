@@ -96,6 +96,17 @@ export function Step5ReviewSection({
   isViewMode = false,
 }: Step5ReviewSectionProps) {
   const theme = useTheme();
+
+  /**
+   * Si el formulario exige aprobación, según su **configuración**.
+   *
+   * No se mira `formData.requiresApproval`: ese campo solo se rellena en el
+   * momento de enviar, así que mientras el inspector revisa el paso 5 está
+   * vacío y el panel decía «no requiere aprobación» justo debajo del aviso que
+   * dice lo contrario. La configuración sí lo sabe desde el principio.
+   */
+  const requiereAprobacion =
+    getFormConfig(template.code)?.approval?.enabled === true;
   const isDark = theme.palette.mode === "dark";
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
@@ -1159,7 +1170,7 @@ export function Step5ReviewSection({
                         sx={{ fontWeight: "bold" }}
                       />
                     </Box>
-                  ) : formData.requiresApproval || formData.approval?.status ? (
+                  ) : requiereAprobacion || formData.approval?.status ? (
                     <Box sx={{ mt: 2 }}>
                       <Chip
                         label={
@@ -1167,7 +1178,9 @@ export function Step5ReviewSection({
                             ? "APROBADO POR SUPERVISOR"
                             : formData.approval?.status === "rejected"
                               ? "RECHAZADO POR SUPERVISOR"
-                              : "PENDIENTE DE APROBACIÓN"
+                              : formData.approval?.status === "pending"
+                              ? "PENDIENTE DE APROBACIÓN"
+                              : "REQUIERE APROBACIÓN AL ENVIAR"
                         }
                         color={
                           formData.approval?.status === "approved"
@@ -1194,7 +1207,8 @@ export function Step5ReviewSection({
                         color="text.secondary"
                         sx={{ fontStyle: "italic" }}
                       >
-                        Esta inspección no requiere aprobación del supervisor
+                        Este formulario no requiere aprobación del
+                        supervisor
                       </Typography>
                     </Box>
                   )}

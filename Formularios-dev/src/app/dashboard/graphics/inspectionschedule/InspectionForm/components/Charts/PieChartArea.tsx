@@ -24,6 +24,11 @@ interface PieDataItem {
 }
 
 interface CustomTooltipProps {
+  /**
+   * Se recibe por prop en vez de capturarlo del componente padre: eso es lo
+   * que permite declarar el tooltip fuera del render (ver abajo).
+   */
+  totalInstancias: number;
   active?: boolean;
   payload?: Array<{
     payload: PieDataItem;
@@ -33,6 +38,52 @@ interface CustomTooltipProps {
     color: string;
   }>;
 }
+
+/**
+ * Se declara FUERA del componente a proposito.
+ *
+ * Definirlo dentro creaba un componente nuevo en cada render: React lo trataba
+ * como un tipo distinto, desmontaba el anterior y perdia su estado. Para poder
+ * sacarlo, `totalInstancias` pasa a ser una prop en vez de una variable
+ * capturada del padre.
+ */
+const CustomTooltip = ({
+  totalInstancias,
+  active,
+  payload,
+}: CustomTooltipProps) => {
+  if (active && payload && payload.length > 0) {
+    const data = payload[0].payload;
+    const porcentaje = ((data.value / totalInstancias) * 100).toFixed(1);
+
+    return (
+      <Box
+        sx={{
+          backgroundColor: "background.paper",
+          padding: 0.5,
+          border: 1,
+          borderColor: "divider",
+          borderRadius: 0.5,
+          fontSize: "0.7rem",
+        }}
+      >
+        <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
+          {data.name}
+        </Typography>
+        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          {data.value} inst. ({porcentaje}%)
+        </Typography>
+        <Typography
+          variant="body2"
+          sx={{ color: "text.secondary", fontSize: "0.6rem" }}
+        >
+          Ene-Jun: {data.primerSemestre} | Jul-Dic: {data.segundoSemestre}
+        </Typography>
+      </Box>
+    );
+  }
+  return null;
+};
 
 export const PieChartInstancias = ({ formulario }: PieChartInstanciasProps) => {
   if (!formulario) {
@@ -133,39 +184,6 @@ export const PieChartInstancias = ({ formulario }: PieChartInstanciasProps) => {
 
   const totalInstancias = datosTorta.reduce((sum, item) => sum + item.value, 0);
 
-  const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
-    if (active && payload && payload.length > 0) {
-      const data = payload[0].payload;
-      const porcentaje = ((data.value / totalInstancias) * 100).toFixed(1);
-
-      return (
-        <Box
-          sx={{
-            backgroundColor: "background.paper",
-            padding: 0.5,
-            border: 1,
-            borderColor: "divider",
-            borderRadius: 0.5,
-            fontSize: "0.7rem",
-          }}
-        >
-          <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
-            {data.name}
-          </Typography>
-          <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            {data.value} inst. ({porcentaje}%)
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ color: "text.secondary", fontSize: "0.6rem" }}
-          >
-            Ene-Jun: {data.primerSemestre} | Jul-Dic: {data.segundoSemestre}
-          </Typography>
-        </Box>
-      );
-    }
-    return null;
-  };
 
   return (
     <Box
@@ -215,7 +233,7 @@ export const PieChartInstancias = ({ formulario }: PieChartInstanciasProps) => {
                 />
               ))}
             </Pie>
-            <RechartsTooltip content={<CustomTooltip />} />
+            <RechartsTooltip content={<CustomTooltip totalInstancias={totalInstancias} />} />
             {datosTorta.length <= 3 && (
               <Legend
                 wrapperStyle={{

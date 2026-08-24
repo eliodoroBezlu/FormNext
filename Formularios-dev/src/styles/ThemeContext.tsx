@@ -1,9 +1,33 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { ThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import { lightTheme, darkTheme } from './theme';
+import React, {
+  createContext,
+  useContext,
+  useSyncExternalStore,
+  useCallback,
+} from "react";
+import { ThemeProvider } from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
+import { lightTheme, darkTheme } from "./theme";
+
+const STORAGE_KEY = "darkMode";
+
+const subscribe = (callback: () => void) => {
+  window.addEventListener("storage", callback); // Escucha cambios desde otras pestañas
+  window.addEventListener("theme-change", callback); // Escucha cambios en la misma pestaña
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener("theme-change", callback);
+  };
+};
+
+const getSnapshot = (): boolean => {
+  return localStorage.getItem(STORAGE_KEY) === "true";
+};
+
+const getServerSnapshot = (): boolean => {
+  return false; // Asumimos tema claro (false) por defecto en el servidor
+};
 
 // Crear contexto para el tema
 type ThemeContextType = {
@@ -17,37 +41,36 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (!context) {
-    throw new Error('useTheme debe ser usado dentro de un ThemeContextProvider');
+    throw new Error(
+      "useTheme debe ser usado dentro de un ThemeContextProvider",
+    );
   }
   return context;
 };
 
 // Proveedor de contexto del tema
-export function ThemeContextProvider({ children }: { children: React.ReactNode }) {
-  // Inicializa con null para evitar inconsistencias de hidratación
-  const [mounted, setMounted] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+export function ThemeContextProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const darkMode = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  );
 
-  // Efecto para cargar la preferencia de tema guardada
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('darkMode');
-    if (savedTheme) {
-      setDarkMode(savedTheme === 'true');
-    }
-    setMounted(true);
+  const toggleDarkMode = useCallback(() => {
+    const currentMode = getSnapshot();
+    const newMode = !currentMode;
+
+    localStorage.setItem(STORAGE_KEY, String(newMode));
+
+    window.dispatchEvent(new Event("theme-change"));
   }, []);
-
-  const toggleDarkMode = () => {
-    const newMode = !darkMode;
-    setDarkMode(newMode);
-    localStorage.setItem('darkMode', String(newMode));
-  };
 
   // Devuelve un div vacío hasta que el componente esté montado
   // Esto evita inconsistencias durante la hidratación
-  if (!mounted) {
-    return <div style={{ visibility: 'hidden' }}>{children}</div>;
-  }
 
   return (
     <ThemeContext.Provider value={{ darkMode, toggleDarkMode }}>
