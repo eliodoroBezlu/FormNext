@@ -346,6 +346,7 @@ function ListarInspeccionesIroIsopComponent() {
 
     ultimaBusqueda.current = query;
     let vigente = true;
+    let terminada = false;
 
     consultar(f)
       .then((datos) => {
@@ -355,11 +356,21 @@ function ListarInspeccionesIroIsopComponent() {
         if (vigente) avisarFallo(err);
       })
       .finally(() => {
-        if (vigente) setLoading(false);
+        terminada = true;
+        // `loading` NO se apaga bajo `vigente`: los datos se descartan si esta
+        // ejecución quedó obsoleta, pero el interruptor de «cargando» es de la
+        // pantalla, no de la ejecución. El guardia correcto es si la pantalla
+        // sigue esperando **esta** búsqueda.
+        if (ultimaBusqueda.current === query) setLoading(false);
       });
 
     return () => {
       vigente = false;
+      // Si no llegó a terminar, se borra la marca para que la siguiente
+      // ejecución no la dé por hecha y salga por el guardia sin buscar.
+      // `reactStrictMode` monta, limpia y vuelve a montar en desarrollo, así
+      // que esto ocurre en cada carga con filtros en la URL.
+      if (!terminada) ultimaBusqueda.current = null;
     };
   }, [searchParams, consultar, aplicar, avisarFallo]);
 

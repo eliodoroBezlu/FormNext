@@ -273,6 +273,33 @@ function ListarInspeccionHerraEquiposComponent() {
     setMostrarResultados(false);
   }, []);
 
+  /**
+   * Las tres funciones se leen desde una ref para que **su identidad no
+   * dispare** el efecto de búsqueda por URL, que solo debe reaccionar a la URL.
+   *
+   * `consultar` depende de `templates`, y los templates llegan por red unos
+   * milisegundos después del montaje. Teniéndolo en las dependencias, ese
+   * cambio de identidad reejecutaba el efecto con estas consecuencias:
+   *
+   *   1. la limpieza de la ejecución anterior ponía `vigente = false`, así que
+   *      la búsqueda que ya venía en camino —y era válida— se descartaba al
+   *      llegar;
+   *   2. la nueva ejecución salía por el guardia `ultimaBusqueda`, sin llegar
+   *      nunca al `finally` que apaga `loading`.
+   *
+   * Resultado: la petición se hacía, respondía 200, los datos se tiraban y la
+   * pantalla se quedaba en «Buscando…» para siempre. Se veía al entrar por un
+   * enlace ya filtrado y después de borrar una inspección, porque ambas cosas
+   * reejecutan el efecto mientras hay una búsqueda viva.
+   */
+  const acciones = useRef({ consultar, aplicar, avisarFallo });
+  useEffect(() => {
+    acciones.current = { consultar, aplicar, avisarFallo };
+  }, [consultar, aplicar, avisarFallo]);
+
+  /** La URL como cadena: estable mientras la URL no cambie de verdad. */
+  const queryDeUrl = searchParams.toString();
+
   /** Búsqueda a petición: botón «Buscar» o Enter en un campo. */
   const buscarInspecciones = useCallback(async () => {
     const f: FiltrosHerraEquipos = {
@@ -316,7 +343,7 @@ function ListarInspeccionHerraEquiposComponent() {
    * inicializador de `useState`; aquí solo se lanza la consulta.
    */
   useEffect(() => {
-    const f = leerFiltrosDeUrl(searchParams);
+    const f = leerFiltrosDeUrl(new URLSearchParams(queryDeUrl));
     const query = aQueryString(f);
 
     if (!hayAlgunFiltro(f)) return;
@@ -324,22 +351,50 @@ function ListarInspeccionHerraEquiposComponent() {
 
     ultimaBusqueda.current = query;
     let vigente = true;
+    let terminada = false;
 
-    consultar(f)
+    const {
+      consultar: consultarActual,
+      aplicar: aplicarActual,
+      avisarFallo: avisarFalloActual,
+    } = acciones.current;
+
+    consultarActual(f)
       .then((datos) => {
-        if (vigente) aplicar(datos);
+        if (vigente) aplicarActual(datos);
       })
       .catch((err: unknown) => {
-        if (vigente) avisarFallo(err);
+        if (vigente) avisarFalloActual(err);
       })
       .finally(() => {
-        if (vigente) setLoading(false);
+        terminada = true;
+        // `loading` NO se apaga bajo `vigente`. Los datos sí se descartan si
+        // esta ejecución quedó obsoleta, pero el interruptor de «cargando» es
+        // de la pantalla, no de la ejecución: dejarlo encendido porque el
+        // efecto se reejecutó es justo lo que dejaba «Buscando…» para siempre.
+        //
+        // El guardia correcto es si la pantalla sigue esperando **esta**
+        // búsqueda; si ya lanzó otra, apagarlo es cosa de la nueva.
+        if (ultimaBusqueda.current === query) setLoading(false);
       });
 
     return () => {
       vigente = false;
+      // Si la búsqueda no llegó a terminar, se borra la marca.
+      //
+      // Sin esto, la siguiente ejecución del efecto la da por hecha y sale por
+      // el guardia de arriba sin buscar nada. Pasa siempre en desarrollo:
+      // `reactStrictMode` monta, limpia y vuelve a montar, así que la segunda
+      // pasada encontraba la marca que había puesto la primera —cuyo resultado
+      // acababa de quedar descartado por esta misma limpieza—.
+      if (!terminada) ultimaBusqueda.current = null;
     };
-  }, [searchParams, consultar, aplicar, avisarFallo]);
+    // Una sola dependencia, y **de tipo cadena a propósito**: se compara por
+    // valor. `searchParams` es un objeto nuevo en cada render del router —y el
+    // router re-renderiza por su cuenta, por ejemplo cada vez que el aviso de
+    // actividad reciente consulta al servidor—, así que tenerlo aquí
+    // reejecutaba el efecto sin que la URL hubiera cambiado.
+  }, [queryDeUrl]);
 
   useEffect(() => {
     // La promesa se encadena aqui: llamar a una funcion `async` haria que el

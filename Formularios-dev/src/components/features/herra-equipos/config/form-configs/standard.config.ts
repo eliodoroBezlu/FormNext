@@ -597,28 +597,6 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
       label: "Conclusión:",
       responseType: "AP-MAN-RECH", // Solo SI/NO
       required: true,
-
-      fields: {
-        showDate: true,
-        dateLabel: "Fecha",
-        dateRequired: true,
-
-        showTag: true,
-        tagLabel: "TAG",
-        tagRequired: true,
-
-        showInspector: true,
-        inspectorLabel: "Persona que Inspecciona",
-        inspectorRequired: true,
-
-        showCapacidad: true,
-        capacidadLabel: "Capacidad Nominal",
-        capacidadRequired: true,
-
-        showTipo: true,
-        tipoLabel: "tipo",
-        tipoRequired: true,
-      },
     },
     generalObservations: {
       enabled: true,
