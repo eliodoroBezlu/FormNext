@@ -1,23 +1,72 @@
 import { InspectionResponse } from "@/lib/actions/inspection-herra-equipos";
 
 /**
- * El área de una inspección de herra-equipos no es un campo propio — vive
- * dentro de `verification` con distintas claves según la plantilla, ya que
- * cada formulario define sus propios campos. No hay filtro de área
- * server-side para este módulo por esta razón.
+ * Campos que llevan «área» en la etiqueta y sin embargo guardan **una
+ * persona**: `SUPERVISOR DE ÁREA` contiene un nombre propio, no un lugar.
+ */
+const ES_DE_PERSONA =
+  /SUPERVISOR|RESPONSABLE|INSPECTOR|PERSONA|TRABAJADOR|JEFE|FIRMA/;
+
+/**
+ * El área de una inspección.
+ *
+ * Se busca en dos sitios y en este orden:
+ *
+ * 1. **El campo `area` del documento**, que el backend extrae al crear la
+ *    inspección. Es el bueno: ya está resuelto y es el que consultan los
+ *    informes del servidor.
+ * 2. **`verification`**, para los documentos anteriores a ese campo o creados
+ *    cuando el extractor todavía no reconocía su etiqueta.
+ *
+ * ── Por qué no vale una lista de grafías ─────────────────────────────────
+ *
+ * Aquí había una lista fija (`ÁREA`, `Área`, `Area`, `AREA`…) y cada plantilla
+ * nombra el campo a su manera, así que se quedaban fuera:
+ *
+ * ```
+ * ÁREA/SECCIÓN                             F19   ← 443 inspecciones
+ * UBICACIÓN FÍSICA EL EQUIPO               F39, F40, F42   ← nótese «EL»
+ * ÁREA FÍSICA DEL MONTAJE DEL ANDAMIO      F30
+ * ```
+ *
+ * Devolvían `N/A`, y como el filtro por área compara contra esto, **ninguna
+ * aparecía al buscar por su área** ni salía su carpeta en «Mis Inspecciones».
+ * No daba error: simplemente no estaban.
+ *
+ * El criterio es el mismo que usa el backend en `extractAreaFromVerification`.
+ * Si uno cambia, hay que cambiar el otro o las dos vistas dejarán de coincidir.
  */
 export function getArea(i: InspectionResponse): string {
+  const denormalizada = i.area?.trim();
+  if (denormalizada) return denormalizada;
+
   if (!i.verification) return "N/A";
-  const v = i.verification;
+
+  const claves = Object.keys(i.verification).filter(
+    (k) => !ES_DE_PERSONA.test(normalizar(k)),
+  );
+
+  const primeraConValor = (
+    cumple: (claveNormalizada: string) => boolean,
+  ): string | undefined => {
+    for (const clave of claves) {
+      if (!cumple(normalizar(clave))) continue;
+      const valor = i.verification![clave];
+      const texto = valor === null || valor === undefined ? "" : String(valor).trim();
+      if (texto) return texto;
+    }
+    return undefined;
+  };
+
+  // El orden importa: `2.03.P10.F05` pide AREA y UBICACIÓN a la vez. Un área
+  // es dónde trabaja la cuadrilla; una ubicación puede ser «Caja soldadura
+  // 320», un sitio dentro del área. Gana la primera.
   return (
-    v["ÁREA"] ||
-    v["Área"] ||
-    v["Area"] ||
-    v["AREA"] ||
-    v["AREA FÍSICA DE UBICACIÓN DE LA ESCALERA"] ||
-    v["UBICACIÓN FÍSICA DEL EQUIPO"] ||
+    primeraConValor((k) => k === "AREA" || k === "AREA/SECCION") ??
+    primeraConValor((k) => k.includes("AREA") || k.includes("SECCION")) ??
+    primeraConValor((k) => k.includes("UBICAC")) ??
     "N/A"
-  ).toString();
+  );
 }
 
 /** Mayúsculas, sin tildes y sin espacios de más, para comparar textos libres. */
