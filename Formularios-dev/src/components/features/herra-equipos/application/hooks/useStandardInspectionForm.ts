@@ -12,6 +12,7 @@ import {
   Section,
   ResponsesData,
   InspectionStatus,
+  estadoAlTerminarDeLlenar,
   resolverEstadoAlEnviar,
   isEquipmentCodeField,
   isAreaField,
@@ -735,6 +736,22 @@ export function useStandardInspectionForm({
             template.verificationFields,
           );
           const completeData = ensureAllBooleanFields(data, template.sections);
+
+          // Firmar cierra el llenado: se guarda con su estado definitivo, no
+          // como borrador. Antes esto dejaba 328 inspecciones firmadas sin
+          // llegar a ningún supervisor porque el envío estaba un paso más
+          // allá, detrás de un botón que se podía no pulsar.
+          const resuelto = estadoAlTerminarDeLlenar({
+            estadoPrevio: initialData?.status,
+            requiereAprobacion: config.approval?.enabled === true,
+          });
+          completeData.status = resuelto.status;
+          completeData.requiresApproval = resuelto.requiresApproval;
+          if (resuelto.status === InspectionStatus.PENDING_APPROVAL) {
+            completeData.approval = { status: "pending" };
+          }
+
+          autorizarSalida();
           await onSaveDraft(completeData);
           if (initialData?._id) {
             handleStepChange(5);

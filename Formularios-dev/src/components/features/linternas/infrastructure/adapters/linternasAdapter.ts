@@ -16,6 +16,11 @@ import {
   resolverPerdida,
   subirArchivoLinterna,
 } from "@/lib/actions/linterna-actions";
+import {
+  enMegas,
+  reducirImagen,
+  TAMANO_MAXIMO_SUBIDA,
+} from "@/components/ui/camera/reducirImagen";
 import type {
   ArchivoAdjunto,
   EntregaLinterna,
@@ -227,12 +232,35 @@ export const linternasAdapter = {
   },
 
   async subirArchivo(archivo: File): Promise<ArchivoAdjunto> {
+    // Se encoge aquí, en el único punto por el que pasan todas las subidas del
+    // módulo, y no en cada pantalla que ofrece un selector de archivos: así no
+    // hay forma de añadir una nueva y olvidarse. Los PDF pasan intactos.
+    const aSubir = await reducirImagen(archivo);
+
+    // Se comprueba **después** de encoger, porque lo que importa es lo que se
+    // va a mandar, no lo que se eligió. Y se comprueba aquí, en el navegador,
+    // porque pasarse del tope de las Server Actions no produce un error con
+    // explicación: produce un «An error occurred in the Server Components
+    // render» que no menciona el tamaño y manda a buscar donde no es.
+    if (aSubir.size > TAMANO_MAXIMO_SUBIDA) {
+      const esImagen = aSubir.type.startsWith("image/");
+      throw new Error(
+        `El archivo pesa ${enMegas(aSubir.size)} y el máximo son ` +
+          `${enMegas(TAMANO_MAXIMO_SUBIDA)}.` +
+          (esImagen
+            ? " Haz la foto con menos resolución o recórtala antes de subirla."
+            : " Comprímelo o divídelo antes de subirlo."),
+      );
+    }
+
     const formData = new FormData();
-    formData.append("file", archivo);
+    formData.append("file", aSubir);
     try {
       const subido = await subirArchivoLinterna(formData);
       return {
         url: subido.url,
+        // El nombre que se muestra es el que eligió la persona, aunque el
+        // archivo haya cambiado de extensión al recomprimirse.
         nombre: archivo.name,
         mime: subido.mimetype,
         tamano: subido.size,

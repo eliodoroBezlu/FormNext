@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Box, CircularProgress, Alert, Button, Snackbar
@@ -189,8 +189,30 @@ export default function EditarInspeccionPage() {
     }
   };
 
-  // Transformar datos de la inspección al formato del formulario
-  const getInitialFormData = (): FormDataHerraEquipos | undefined => {
+  /**
+   * Datos de la inspección en el formato del formulario.
+   *
+   * **Va memorizado, y no es una optimización.** El formulario se re-inicializa
+   * con `reset()` cada vez que cambia la *identidad* de este objeto, no su
+   * contenido:
+   *
+   * ```ts
+   * // useStandardInspectionForm.ts
+   * useEffect(() => { if (initialData) reset({ ...initialData, … }); },
+   *           [initialData, reset, initialSelections]);
+   * ```
+   *
+   * Antes esto era una función que se llamaba en el JSX (`getInitialFormData()`),
+   * así que devolvía un objeto **nuevo en cada render**. Al escribir en un campo
+   * el formulario se re-renderizaba, el efecto veía una `initialData` distinta y
+   * hacía `reset` con los datos del servidor: lo tecleado desaparecía al
+   * instante. Se notaba sobre todo en los campos de verificación, que es lo
+   * primero que se toca al editar.
+   *
+   * La otra ruta de edición —`form-herra-equipos/[code]/[inspectionId]`— nunca
+   * tuvo el fallo porque pasa un valor de estado, cuya identidad ya es estable.
+   */
+  const initialFormData = useMemo((): FormDataHerraEquipos | undefined => {
     if (!inspectionData) return undefined;
 
     return {
@@ -206,7 +228,7 @@ export default function EditarInspeccionPage() {
       selectedSubsections: inspectionData.selectedSubsections,
       selectedItems: inspectionData.selectedItems,
     };
-  };
+  }, [inspectionData]);
 
   // ============================================
   // RENDERIZADO CONDICIONAL
@@ -314,7 +336,7 @@ export default function EditarInspeccionPage() {
         template={template}
         onSubmit={handleFinalSubmit}
         onSaveDraft={handleUpdate}
-        initialData={getInitialFormData()}
+        initialData={initialFormData}
       />
     </Box>
   );

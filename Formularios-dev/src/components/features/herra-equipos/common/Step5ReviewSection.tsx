@@ -29,6 +29,7 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import {
   FormTemplateHerraEquipos,
   FormDataHerraEquipos,
+  InspectionStatus,
   QuestionResponse,
   RoutineInspectionEntry,
   Section,
@@ -107,6 +108,22 @@ export function Step5ReviewSection({
    */
   const requiereAprobacion =
     getFormConfig(template.code)?.approval?.enabled === true;
+
+  /**
+   * La inspección ya salió del llenado.
+   *
+   * Desde que firmar es lo que fija el estado, al llegar aquí la inspección ya
+   * está enviada. Seguir diciendo «verifique antes de enviar» mandaría a buscar
+   * un botón de envío que ya no hace falta —y que en `pending_approval` ni
+   * siquiera está, porque el formulario pasa a solo lectura—.
+   */
+  const yaEnviada = ([
+    InspectionStatus.PENDING_APPROVAL,
+    InspectionStatus.COMPLETED,
+    InspectionStatus.APPROVED,
+    InspectionStatus.REJECTED,
+    InspectionStatus.IN_PROGRESS,
+  ] as string[]).includes(formData.status ?? "");
   const isDark = theme.palette.mode === "dark";
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
@@ -320,10 +337,14 @@ export function Step5ReviewSection({
       >
         <Box>
           <Typography variant="h5" fontWeight={700}>
-            Paso 5 — Revisión Final
+            {yaEnviada ? "Paso 5 — Inspección registrada" : "Paso 5 — Revisión Final"}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Verifique la información registrada antes de enviar el formulario.
+            {yaEnviada
+              ? requiereAprobacion
+                ? "Quedó enviada al firmar y ya espera aprobación. Aquí puede revisarla y descargar el PDF."
+                : "Quedó registrada al firmar. Aquí puede revisarla y descargar el PDF."
+              : "Verifique la información registrada antes de enviar el formulario."}
           </Typography>
         </Box>
 

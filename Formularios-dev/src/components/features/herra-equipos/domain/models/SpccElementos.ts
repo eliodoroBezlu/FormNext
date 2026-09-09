@@ -29,6 +29,20 @@ export interface ElementoSpcc {
   prefijoSeccion: string;
   /** Tipos de `equipos.tipo_equipo` que alimentan este elemento. */
   tiposEquipo: string[];
+  /**
+   * Campo del bloque «Fuera de Servicio» del paso final donde va **el mismo
+   * código** que en la sección.
+   *
+   * El formulario pide el código dos veces: una al inspeccionar el elemento y
+   * otra en el resumen final. Es el mismo dato, así que teclearlo dos veces
+   * solo añade ocasiones de equivocarse; se rellena en el mismo momento que el
+   * de la sección.
+   *
+   * Los nombres salen de `standard.config.ts` y **no siguen las claves de aquí**
+   * —`conectorTT` es `codConector` y `conectorAN` es `codConectorAnclaje`—, que
+   * es justo la razón de escribirlos una sola vez en esta tabla.
+   */
+  campoCodigoFueraDeServicio: string;
 }
 
 export const ELEMENTOS_SPCC: readonly ElementoSpcc[] = [
@@ -37,6 +51,7 @@ export const ELEMENTOS_SPCC: readonly ElementoSpcc[] = [
     etiqueta: "Arnés de cuerpo entero",
     prefijoSeccion: "ARNÉS DE CUERPO ENTERO",
     tiposEquipo: ["Arnes"],
+    campoCodigoFueraDeServicio: "codArnes",
   },
   {
     clave: "autoretractil",
@@ -44,18 +59,21 @@ export const ELEMENTOS_SPCC: readonly ElementoSpcc[] = [
     prefijoSeccion: "AUTORETRACTIL PERSONAL",
     // Las dos familias del inventario se inspeccionan con la misma sección.
     tiposEquipo: ["Autoretractil", "Retractil"],
+    campoCodigoFueraDeServicio: "codAutoRetractil",
   },
   {
     clave: "conectorTT",
     etiqueta: "Conector de tejido trenzado / cable de acero",
     prefijoSeccion: "CONECTORES DE TEJIDO TRENZADO",
     tiposEquipo: ["ConectorTT"],
+    campoCodigoFueraDeServicio: "codConector",
   },
   {
     clave: "conectorAN",
     etiqueta: "Conector de anclaje",
     prefijoSeccion: "CONECTORES DE ANCLAJE",
     tiposEquipo: ["ConectorAN"],
+    campoCodigoFueraDeServicio: "codConectorAnclaje",
   },
 ] as const;
 
@@ -226,9 +244,14 @@ export interface EquipoSeleccionado {
 
 /** Una respuesta lista para `setValue`. */
 export interface AsignacionSpcc {
-  /** Ruta RHF completa, `responses.section_0.sub0.q2`. */
+  /** Ruta RHF completa, `responses.section_0.sub0.q2` o `outOfService.codArnes`. */
   ruta: string;
-  valor: { value: string; description: string; observacion: string };
+  /**
+   * Las preguntas de sección llevan el objeto de respuesta completo; los campos
+   * del bloque «Fuera de Servicio» son cadenas sueltas. Son dos formas porque
+   * son dos sitios distintos del formulario, no por descuido.
+   */
+  valor: { value: string; description: string; observacion: string } | string;
 }
 
 export interface PrecargaSpcc {
@@ -285,6 +308,15 @@ export const construirPrecargaSpcc = (
         valor: respuesta(equipo.codigo),
       });
     }
+
+    // El mismo código, otra vez, en el resumen «Fuera de Servicio» del paso
+    // final. El formulario lo pide dos veces y es el mismo dato: hacer que el
+    // inspector lo teclee de nuevo solo abre la puerta a que las dos copias no
+    // coincidan, que es peor que no tenerlo.
+    asignaciones.push({
+      ruta: `outOfService.${elemento.campoCodigoFueraDeServicio}`,
+      valor: equipo.codigo,
+    });
 
     if (!equipo.marca) continue;
     const marcas = localizarPreguntas(

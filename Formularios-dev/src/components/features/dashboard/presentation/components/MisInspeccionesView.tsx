@@ -16,6 +16,7 @@ import {
   Alert,
 } from "@mui/material";
 import { ExpandMore, Assignment } from "@mui/icons-material";
+import AutocompleteCustom from "@/components/ui/autocomplete/AutocompleteCustom";
 import { useRouter } from "next/navigation";
 
 import { FormInstance, InspeccionServiceExport } from "@/types/formTypes";
@@ -138,6 +139,23 @@ function ModuloSection({
 
 export function MisInspeccionesView({ username, area }: MisInspeccionesViewProps) {
   const router = useRouter();
+
+  /**
+   * Área que se está mirando. Arranca en la de la persona, pero se puede
+   * cambiar.
+   *
+   * Antes esta vista dependía en exclusiva del área del perfil: sin ella, la
+   * pestaña salía deshabilitada y el aviso decía «no se puede mostrar esta
+   * vista», que es un callejón sin salida. Y con un área mal asignada —o
+   * escrita de otra forma que en las inspecciones— la pestaña se veía
+   * habilitada pero salía vacía, que es peor porque parece que no hay trabajo
+   * registrado.
+   *
+   * Elegir el área lo resuelve por los dos lados y además permite mirar otras,
+   * que es lo que hace falta cuando alguien cubre más de un taller.
+   */
+  const [areaElegida, setAreaElegida] = useState<string | null>(area ?? null);
+
   const {
     vista,
     setVista,
@@ -157,7 +175,7 @@ export function MisInspeccionesView({ username, area }: MisInspeccionesViewProps
     downloadHerraEquipoPdf,
     downloadIroIsopPdf,
     downloadEmergenciaPdf,
-  } = useMisInspecciones(username, area);
+  } = useMisInspecciones(username, areaElegida ?? undefined);
 
   const columnasHerra: ReportColumn<InspectionResponse>[] = [
     {
@@ -270,13 +288,36 @@ export function MisInspeccionesView({ username, area }: MisInspeccionesViewProps
         sx={{ mb: 3, borderBottom: "1px solid rgba(0,0,0,0.08)" }}
       >
         <Tab value="mias" label="Realizadas por mí" />
-        <Tab value="area" label="De mi área" disabled={!area} />
+        {/*
+          Ya no se deshabilita por no tener área en el perfil: el área se elige
+          abajo. Deshabilitarla dejaba sin salida a quien la tuviera mal puesta.
+        */}
+        <Tab value="area" label="Por área" />
       </Tabs>
 
-      {vista === "area" && !area && (
-        <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
-          No tenés un área asignada — no se puede mostrar esta vista.
-        </Alert>
+      {vista === "area" && (
+        <Box sx={{ mb: 3, maxWidth: 420 }}>
+          <AutocompleteCustom
+            dataSource="area"
+            label="Área que se muestra"
+            placeholder="Elegí un área"
+            value={areaElegida}
+            onChange={setAreaElegida}
+          />
+          {!areaElegida && (
+            <Alert severity="info" sx={{ mt: 1.5, borderRadius: 2 }}>
+              {area
+                ? "Elegí un área para ver sus inspecciones."
+                : "Tu perfil no tiene un área asignada. Elegí una para ver sus inspecciones."}
+            </Alert>
+          )}
+          {areaElegida && area && areaElegida !== area && (
+            <Alert severity="warning" sx={{ mt: 1.5, borderRadius: 2 }}>
+              Estás viendo <strong>{areaElegida}</strong>, que no es tu área
+              ({area}).
+            </Alert>
+          )}
+        </Box>
       )}
 
       {/* Herramientas y Equipos */}
@@ -339,8 +380,11 @@ export function MisInspeccionesView({ username, area }: MisInspeccionesViewProps
         }
       />
 
-      {/* Sistemas de Emergencia — solo "de mi área", sin carpetas */}
-      {vista === "area" && area && (
+      {/* Sistemas de Emergencia — solo en la vista por área, sin carpetas.
+          Se mira `areaElegida` y no el área del perfil: si no, al elegir otra
+          área este bloque seguiría mostrando —o escondiendo— según un dato que
+          ya no es el que se está viendo. */}
+      {vista === "area" && areaElegida && (
         <ModuloSection
           titulo="Sistemas de Emergencia"
           loading={loadingEmergencia}

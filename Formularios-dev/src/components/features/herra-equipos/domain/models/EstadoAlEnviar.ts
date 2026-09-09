@@ -71,3 +71,34 @@ export const resolverEstadoAlEnviar = ({
     requiresApproval: true,
   };
 };
+
+/**
+ * Los tres campos de estado que hay que escribir **al terminar de llenar**, es
+ * decir al salir del paso de firmas.
+ *
+ * ── Por qué existe ────────────────────────────────────────────────────────
+ *
+ * Firmar es el final del trabajo. El paso siguiente —«Revisión Final»— solo
+ * enseña lo registrado y ofrece el PDF; ahí ya no se inspecciona nada.
+ *
+ * Hasta ahora, salir del paso de firmas guardaba **siempre un borrador** y
+ * llevaba a esa pantalla de revisión. Quien descargaba su PDF y pulsaba
+ * «Volver a la lista» dejaba la inspección en borrador para siempre, sin que
+ * llegara a ningún supervisor. No era un caso raro:
+ *
+ * ```
+ * borradores                          397
+ * borradores CON firma de inspector   328   ← el 83 %
+ * ```
+ *
+ * 328 inspecciones hechas y firmadas que nadie revisó nunca. Por eso el estado
+ * se fija al firmar y no al pulsar un botón que se puede no pulsar.
+ *
+ * **Consecuencia buscada:** una inspección que requiere aprobación pasa a
+ * `pending_approval` y, con ello, a solo lectura. Corregir después de firmar
+ * deja de ser posible; para eso está el rechazo del supervisor, que la
+ * devuelve editable. Es el mismo criterio que en papel: lo firmado se entrega.
+ */
+export const estadoAlTerminarDeLlenar = (
+  contexto: ContextoEnvio,
+): EstadoResuelto => resolverEstadoAlEnviar(contexto);

@@ -18,6 +18,7 @@ import {
   FormDataHerraEquipos,
   FormTemplateHerraEquipos,
   InspectionStatus,
+  estadoAlTerminarDeLlenar,
   resolverEstadoAlEnviar,
   isEquipmentCodeField,
   isAreaField,
@@ -497,6 +498,20 @@ export function VehicleInspectionForm({
               data.vehicle.damageImageBase64 = damageImage || undefined;
             }
           }
+          // Firmar cierra el llenado: se guarda con su estado definitivo, no
+          // como borrador. El envío del paso 5 se puede no pulsar, y entonces
+          // la inspección firmada no llega a ningún supervisor.
+          const resuelto = estadoAlTerminarDeLlenar({
+            estadoPrevio: initialData?.status,
+            requiereAprobacion: config.approval?.enabled === true,
+          });
+          data.status = resuelto.status;
+          data.requiresApproval = resuelto.requiresApproval;
+          if (resuelto.status === InspectionStatus.PENDING_APPROVAL) {
+            data.approval = { status: "pending" };
+          }
+
+          autorizarSalida();
           await onSaveDraft(data);
           if (initialData?._id) {
             handleStepChange(5);

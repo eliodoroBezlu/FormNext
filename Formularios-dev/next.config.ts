@@ -17,6 +17,26 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
 
+  experimental: {
+    /**
+     * Las subidas van por Server Actions, y el límite de Next por omisión es
+     * **1 MB**. Una foto de tablet o de móvil pesa entre 3 y 6 MB, así que la
+     * subida moría antes de salir del navegador con un «An error occurred in
+     * the Server Components render» —un mensaje que no menciona el tamaño por
+     * ningún lado y manda a buscar el fallo donde no está—.
+     *
+     * Se pone en 10 MB para que coincida con el tope que ya tenía Express en
+     * el backend (`main.ts`). Tenerlos distintos significaba que quien
+     * configuró uno creía haber configurado los dos.
+     *
+     * Las imágenes además se encogen en el cliente antes de subirlas
+     * (`reducirImagen`), así que esto es el techo, no lo normal.
+     */
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
+  },
+
   // openid-client (CommonJS) — no empaquetar; cargar como módulo de Node
   serverExternalPackages: ['openid-client'],
 

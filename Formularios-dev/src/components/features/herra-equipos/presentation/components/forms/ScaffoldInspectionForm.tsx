@@ -592,7 +592,16 @@ export function ScaffoldInspectionForm({
             getValues,
             template.verificationFields,
           );
-          const resolvedData = applyApprovalLogic(data, InspectionStatus.DRAFT);
+          // Antes iba `DRAFT`, y esa rama de `applyApprovalLogic` sale sin
+          // pasar por la lógica de aprobación: el andamio quedaba en borrador
+          // y no le llegaba a ningún supervisor si nadie pulsaba el envío del
+          // paso 5. Se pasa el mismo estado que el envío final para que
+          // resuelva igual — firmar es terminar.
+          const resolvedData = applyApprovalLogic(
+            data,
+            InspectionStatus.IN_PROGRESS,
+          );
+          autorizarSalida();
           await onSaveDraft(resolvedData);
           if (initialData?._id) {
             handleStepChange(5);
