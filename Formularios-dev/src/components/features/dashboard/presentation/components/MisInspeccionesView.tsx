@@ -20,7 +20,7 @@ import AutocompleteCustom from "@/components/ui/autocomplete/AutocompleteCustom"
 import { useRouter } from "next/navigation";
 
 import { FormInstance, InspeccionServiceExport } from "@/types/formTypes";
-import { getArea, getEquipmentId } from "@/lib/utils/herra-equipos-fields";
+import { getArea, getEquipmentIds } from "@/lib/utils/herra-equipos-fields";
 
 import {
   ReportTable,
@@ -37,6 +37,25 @@ import {
 } from "../../domain/models/dashboardModels";
 
 const VIEW_ONLY_ACTIONS = { view: true, pdf: true, edit: false, excel: false, duplicate: false, delete: false };
+
+/**
+ * Los identificadores del equipo, uno por etiqueta.
+ *
+ * Sin códigos se pinta `N/A` en vez de una celda vacía: una celda en blanco se
+ * lee como «no cargó», y esto es «no se registró».
+ */
+function ChipsDeCodigo({ codigos }: { codigos: string[] }) {
+  if (codigos.length === 0) {
+    return <Chip label="N/A" size="small" variant="outlined" />;
+  }
+  return (
+    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+      {codigos.map((codigo) => (
+        <Chip key={codigo} label={codigo} size="small" variant="outlined" />
+      ))}
+    </Box>
+  );
+}
 
 function KpiCard({ value, label, color }: { value: number; label: string; color: string }) {
   return (
@@ -187,9 +206,10 @@ export function MisInspeccionesView({ username, area }: MisInspeccionesViewProps
     {
       key: "equipmentId",
       label: "TAG/Placa/Código",
-      render: (row) => (
-        <Chip label={getEquipmentId(row)} size="small" variant="outlined" />
-      ),
+      // Un chip por código: una inspección de SPCC cubre hasta cuatro
+      // elementos y cada uno tiene el suyo. `flexWrap` los baja de línea en
+      // vez de ensanchar la columna.
+      render: (row) => <ChipsDeCodigo codigos={getEquipmentIds(row)} />,
     },
     {
       key: "acciones",

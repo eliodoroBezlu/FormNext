@@ -94,28 +94,134 @@ export function coincideArea(i: InspectionResponse, filtro: string): boolean {
 }
 
 /**
- * Campo de `verification` que identifica al equipo/elemento inspeccionado
- * (TAG, placa, código interno, etc.) — varía por plantilla, cada formulario
- * usa su propio nombre de campo para esto.
+ * Campos de `verification` que identifican al equipo inspeccionado.
+ *
+ * Cada plantilla nombra el suyo a su manera, así que no hay forma de deducirlo:
+ * hay que declararlo. La lista se revisó plantilla por plantilla contra las
+ * 2806 inspecciones de producción y todas las entradas dan cobertura ≥92 %; lo
+ * que falta son campos que el inspector dejó en blanco.
+ *
+ * **Varias etiquetas por plantilla** porque `3.04.P48.F03` usa indistintamente
+ * `NÚMERO INTERNO` o `PLACA` según quién la llenara. Se toma la primera con
+ * valor.
+ *
+ * ⚠️ Dos entradas se corrigieron: `1.02.P06.F40` apuntaba a `UBICACIÓN FÍSICA
+ * EL EQUIPO` y `1.02.P06.F20` a `Lugar exacto del trabajo/depósito`. Las dos
+ * son **dónde está**, no **qué equipo es**; la columna de identificación
+ * mostraba una ubicación. Si alguien vuelve a poner ahí un campo de lugar,
+ * está repitiendo ese error.
  */
-const VERIFICATION_FIELD_NAMES: Record<string, string> = {
-  "3.04.P48.F03": "PLACA",
-  "1.02.P06.F37": "PLACA/N° INTERNO",
-  "3.04.P37.F24": "TAG",
-  "3.04.P37.F25": "TAG",
-  "3.04.P04.F23": "TAG del Puente Grúa",
-  "3.04.P04.F35": "Tag del puente grúa",
-  "1.02.P06.F33": "CÓDIGO DE LA ESCALERA",
-  "1.02.P06.F39": "IDENTIFICACIÓN INTERNA DEL EQUIPO",
-  "1.02.P06.F40": "UBICACIÓN FÍSICA EL EQUIPO",
-  "1.02.P06.F42": "IDENTIFICACIÓN INTERNA DEL EQUIPO",
-  "2.03.P10.F05": "CÓDIGO TALADRO",
-  "1.02.P06.F20": "Lugar exacto del trabajo/depósito (lugar físico)",
-  "1.02.P06.F30": "PROYECTO/Nº DE ORDEN DE TRABAJO",
+const CAMPOS_CODIGO: Record<string, string[]> = {
+  "3.04.P48.F03": ["NÚMERO INTERNO", "PLACA"],
+  "1.02.P06.F37": ["PLACA/N° INTERNO"],
+  "1.02.P06.F33": ["CÓDIGO DE LA ESCALERA"],
+  "3.04.P37.F24": ["TAG"],
+  "3.04.P37.F25": ["TAG"],
+  "3.04.P04.F35": ["Tag del puente grúa"],
+  "3.04.P04.F23": ["TAG del Puente Grúa"],
+  "2.03.P10.F05": ["CÓDIGO TALADRO"],
+  "1.02.P06.F39": ["IDENTIFICACIÓN INTERNA DEL EQUIPO"],
+  "1.02.P06.F40": ["IDENTIFICACIÓN INTERNA DEL EQUIPO"],
+  "1.02.P06.F42": ["IDENTIFICACIÓN INTERNA DEL EQUIPO"],
+  "1.02.P06.F20": ["Descripción del trabajo"],
+  "1.02.P06.F30": ["PROYECTO/Nº DE ORDEN DE TRABAJO"],
 };
 
+/**
+ * SPCC: los códigos viven en el bloque «Fuera de Servicio», uno por elemento.
+ *
+ * Una inspección cubre de uno a cuatro elementos —el trabajador lleva lo que
+ * lleva— así que aquí no hay «un código», hay los que haya. En producción: 374
+ * inspecciones con uno, 82 con dos, 18 con tres y 172 con los cuatro.
+ *
+ * El orden es el del formulario, no alfabético: es el que espera quien lo
+ * llenó.
+ */
+const CODIGOS_SPCC = [
+  "codArnes",
+  "codAutoRetractil",
+  "codConectorAnclaje",
+  "codConector",
+] as const;
+
+/** Nombres legibles de los accesorios de izaje; la clave es la del formulario. */
+const ETIQUETAS_ACCESORIOS: Record<string, string> = {
+  eslinga_sintetica: "Eslinga sintética",
+  eslinga_cable: "Eslinga de cable",
+  grillete: "Grillete",
+  gancho: "Gancho",
+};
+
+const textoDe = (valor: unknown): string =>
+  valor === null || valor === undefined ? "" : String(valor).trim();
+
+/**
+ * «No aplica» escrito a mano, en sus muchas formas.
+ *
+ * En el SPCC el formulario pide los cuatro códigos aunque el trabajador lleve
+ * uno solo, y quien lo llena escribe `NA`, `N/A` o `No aplica` en los que le
+ * sobran. Son 60 de los 1280 valores registrados. Pintarlos como si fueran
+ * códigos llena la columna de ruido.
+ *
+ * Filtrarlos es seguro: **ninguna** de las 646 inspecciones se queda sin
+ * código al hacerlo.
+ */
+const ES_NO_APLICA = /^(NA|N\/A|N\.A\.?|NO APLICA|NINGUNO|-+|0)$/i;
+
+/**
+ * Todos los identificadores del equipo inspeccionado, en el orden del
+ * formulario. Lista vacía si no hay ninguno.
+ *
+ * Tres formas distintas, porque el dato vive en tres sitios según la
+ * plantilla:
+ *
+ * 1. **`verification`** — el caso normal, un código por inspección.
+ * 2. **`outOfService`** (SPCC) — hasta cuatro, uno por elemento.
+ * 3. **`accesoriosConfig`** (izaje) — no son códigos sino cantidades por tipo
+ *    de accesorio, así que se devuelve «Etiqueta cantidad».
+ *
+ * Antes solo existía el primer caso y los otros dos devolvían `N/A`: eran 660
+ * inspecciones —el 24 % del total— sin nada en la columna que las identifica.
+ */
+export function getEquipmentIds(i: InspectionResponse): string[] {
+  if (i.templateCode === "1.02.P06.F19") {
+    const bloque = i.outOfService ?? {};
+    return CODIGOS_SPCC.map((clave) => textoDe(bloque[clave])).filter(
+      (codigo) => codigo && !ES_NO_APLICA.test(codigo),
+    );
+  }
+
+  if (i.templateCode === "3.04.P37.F19") {
+    return (
+      Object.entries(i.accesoriosConfig ?? {})
+        // Cantidad cero significa «de este accesorio no había», y el formulario
+        // guarda los cuatro tipos siempre. Sin este filtro casi la mitad de los
+        // chips —24 de 56 en producción— dirían «Gancho 0».
+        .filter(([, dato]) => Number(textoDe(dato?.cantidad)) > 0)
+        .map(([clave, dato]) => {
+          const etiqueta =
+            ETIQUETAS_ACCESORIOS[clave] ?? clave.replace(/_/g, " ");
+          return `${etiqueta} ${textoDe(dato.cantidad)}`;
+        })
+    );
+  }
+
+  const campos = CAMPOS_CODIGO[i.templateCode];
+  if (!campos || !i.verification) return [];
+
+  for (const campo of campos) {
+    const valor = textoDe(i.verification[campo]);
+    if (valor) return [valor];
+  }
+  return [];
+}
+
+/**
+ * El identificador principal, como texto.
+ *
+ * Se conserva porque hay vistas que solo pueden mostrar una línea. Donde quepan
+ * varios —las tablas— conviene `getEquipmentIds`, que no esconde los demás.
+ */
 export function getEquipmentId(i: InspectionResponse): string {
-  const field = VERIFICATION_FIELD_NAMES[i.templateCode];
-  if (!field || !i.verification) return "N/A";
-  return i.verification[field]?.toString() || "N/A";
+  return getEquipmentIds(i)[0] ?? "N/A";
 }

@@ -38,7 +38,7 @@ import { getTemplatesHerraEquipos, TemplateHerraEquipo } from "@/lib/actions/tem
 import {
   coincideArea,
   getArea,
-  getEquipmentId,
+  getEquipmentIds,
 } from "@/lib/utils/herra-equipos-fields";
 import AutocompleteCustom from "@/components/ui/autocomplete/AutocompleteCustom";
 import { InspectionStatusChip } from "@/components/features/herra-equipos/common/InspectionStatusChip";
@@ -588,14 +588,32 @@ function ListarInspeccionHerraEquiposComponent() {
     {
       key: "equipmentId",
       label: "TAG/Placa/Código",
-      render: (row) => (
-        <Chip
-          label={getEquipmentId(row)}
-          size="small"
-          color="primary"
-          variant="outlined"
-        />
-      ),
+      // Un chip por código: una inspección de SPCC cubre hasta cuatro
+      // elementos y cada uno tiene el suyo. `flexWrap` los baja de línea en
+      // vez de ensanchar la columna.
+      render: (row) => {
+        const codigos = getEquipmentIds(row);
+        if (codigos.length === 0) {
+          // `N/A` y no una celda vacía: en blanco se lee como «no cargó», y
+          // esto es «no se registró».
+          return (
+            <Chip label="N/A" size="small" color="primary" variant="outlined" />
+          );
+        }
+        return (
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+            {codigos.map((codigo) => (
+              <Chip
+                key={codigo}
+                label={codigo}
+                size="small"
+                color="primary"
+                variant="outlined"
+              />
+            ))}
+          </Box>
+        );
+      },
     },
     {
       key: "status",
