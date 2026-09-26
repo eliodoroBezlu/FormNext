@@ -28,66 +28,6 @@ const VICEPRESIDENCIAS = [
   "VICEPRESIDENCIA DE OPERACIONES"
 ];
 
-const GERENCIAS = [
-  "GERENCIA CORPORATIVA",
-  "GERENCIA DE COMERCIALIZACIÓN Y SERVICIOS",
-  "GERENCIA DE MEDIO AMBIENTE",
-  "GERENCIA DE RECURSOS HUMANOS Y SERVICIOS DE PERSONAL",
-  "GERENCIA DE RELACIONES COMUNITARIAS",
-  "GERENCIA DE SEGURIDAD INDUSTRIAL",
-  "GERENCIA DE SERVICIOS DE TRANSPORTE Y AVIACIÓN",
-  "GERENCIA DE PROYECTOS",
-  "GERENCIA DE FINANZAS",
-  "GERENCIA DE TI Y DESARROLLO DEL NEGOCIO",
-  "GERENCIA DE MANTENIMIENTO MINA",
-  "GERENCIA DE MANTENIMIENTO PLANTA",
-  "GERENCIA DE OPERACIONES MINA",
-  "GERENCIA DE OPERACIONES PLANTA"
-];
-
-const SUPERINTENDENCIAS = [
-  "SUPERINTENDENCIA DE ADQUISICIONES",
-  "SUPERINTENDENCIA DE RELACIONES INSTITUCIONALES",
-  "SUPERINTENDENCIA DE RELACIONES PÚBLICAS",
-  "GERENCIA CORPORATIVA",
-  "SUPERINTENDENCIA DE ALMACENES Y CONTROL DE INVENTARIOS",
-  "SUPERINTENDENCIA DE EXPORTACIONES",
-  "SUPERINTENDENCIA DE GESTION COMERCIAL",
-  "SUPERINTENDENCIA DE LOGÍSTICA",
-  "SUPERINTENDENCIA DE MANEJO DE MATERIALES",
-  "SUPERINTENDENCIA DE MEDIO AMBIENTE",
-  "SUPERINTENDENCIA DE CAMPAMENTO",
-  "SUPERINTENDENCIA DE RECURSOS HUMANOS",
-  "SUPERINTENDENCIA SÉNIOR DE SALUD",
-  "SUPERVISIÓN SENIOR DE SEGURIDAD FÍSICA",
-  "SUPERINTENDENCIA DE DESARROLLO SOSTENIBLE Y RELACIONES COMUNITARIAS",
-  "SUPERINTENDENCIA DE SEGURIDAD INDUSTRIAL",
-  "SUPERINTENDENCIA DE SERVICIOS DE AVIACIÓN",
-  "SUPERINTENDENCIA DE SERVICIOS DE TRANSPORTE DE PERSONAL",
-  "SUPERINTENDENCIA ADMINISTRATIVO DE OPERACIONES",
-  "SUPERINTENDENCIA DE INGENIERÍA PLANTA",
-  "SUPERINTENDENCIA DE CONTABILIDAD",
-  "SUPERINTENDENCIA DE IMPUESTOS",
-  "SUPERINTENDENCIA DE PLANIFICACIÓN FINANCIERA (FP&A)",
-  "SUPERINTENDENCIA DE DESARROLLO DEL NEGOCIO",
-  "SUPERINTENDENCIA DE TI",
-  "SUPERINTENDENCIA DE TO",
-  "SUPERVISIÓN DE SEGURIDAD DE LA INFORMACIÓN (CISO)",
-  "SUPERINTENDENCIA SÉNIOR DE MANTENIMIENTO MINA",
-  "SUPERINTENDENCIA DE MANTENIMIENTO - ELÉCTRICO E INSTRUMENTACIÓN PLANTA",
-  "SUPERINTENDENCIA DE MANTENIMIENTO - INGENIERÍA DE CONFIABILIDAD",
-  "SUPERINTENDENCIA DE MANTENIMIENTO - MEC. PLTA. CHANCADO, MOLIENDA Y LUBRICACIÓN",
-  "SUPERINTENDENCIA DE MANTENIMIENTO - MEC. PLTA. FLOT., FILTROS, TALLER GRAL. Y RH",
-  "SUPERINTENDENCIA DE MANTENIMIENTO - PLANIFICACIÓN",
-  "SUPERINTENDENCIA DE INGENIERÍA MINA",
-  "SUPERINTENDENCIA DE OPERACIONES MINA",
-  "SUPERINTENDENCIA DE SERVICIOS DE EXPLORACIÓN",
-  "SUPERVISIÓN DE ENTRENAMIENTO MINA",
-  "SUPERINTENDENCIA DE GESTIÓN DE RELAVES Y SERVICIOS AUXILIARES",
-  "SUPERINTENDENCIA DE OPERACIONES PLANTA",
-  "SUPERINTENDENCIA DE SERVICIOS TÉCNICOS",
-  "GERENCIA DE OPERACIONES PLANTA"
-];
 
 const SUPERVISORES = [
   "ACHÁ RUIZ MARCOS ROBERTO - ESPECIALISTA DE COMEDOR Y ALIMENTOS",
@@ -334,14 +274,14 @@ export const fetchDataBySource = async (dataSource: DataSourceType): Promise<str
   if (dataSource === 'vicepresidencia') {
     return VICEPRESIDENCIAS;
   }
-  
-  if (dataSource === 'gerencia') {
-    return GERENCIAS;
-  }
 
-  if (dataSource === 'superintendencia') {
-    return SUPERINTENDENCIAS;
-  }
+  // Superintendencia y gerencia salen del maestro, no de las listas de este
+  // archivo. Antes se servían de aquí, y eso creaba dos verdades: el maestro
+  // decía a qué superintendencia pertenece cada área, y el desplegable ofrecía
+  // una lista escrita aparte que no tenía por qué coincidir. Con el
+  // autorrellenado desde el área, el valor deducido tiene que existir en la
+  // lista o el desplegable lo rechaza — así que la lista tiene que ser la
+  // misma que alimenta la deducción.
 
   if (dataSource === 'supervisor') {
     return SUPERVISORES;
@@ -367,17 +307,8 @@ export const searchDataBySource = async (
     );
   }
 
-  if (dataSource === 'gerencia') {
-    return GERENCIAS.filter(item => 
-      item.toLowerCase().includes(query.toLowerCase())
-    );
-  }
-
-  if (dataSource === 'superintendencia') {
-    return SUPERINTENDENCIAS.filter(item => 
-      item.toLowerCase().includes(query.toLowerCase())
-    );
-  }
+  // Superintendencia y gerencia se buscan contra el maestro, igual que el
+  // área: ver la nota en `fetchDataBySource`.
 
   if (dataSource === 'supervisor') {
     return SUPERVISORES.filter(item => 
@@ -385,8 +316,19 @@ export const searchDataBySource = async (
     );
   }
 
+  // Los tres tienen endpoint de búsqueda propio. Sin esto se llamaría al
+  // listado con un `?query=` que ignora, devolviendo el catálogo entero en
+  // cada pulsación.
   if (dataSource === 'area') {
     return await searchFromBackend('/area/buscar', query);
+  }
+
+  if (dataSource === 'superintendencia') {
+    return await searchFromBackend('/superintendencia/buscar', query);
+  }
+
+  if (dataSource === 'gerencia') {
+    return await searchFromBackend('/gerencias/buscar', query);
   }
   
   if (dataSource === 'trabajador') {

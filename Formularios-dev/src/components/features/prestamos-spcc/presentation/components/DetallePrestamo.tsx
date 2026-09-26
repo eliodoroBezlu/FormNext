@@ -21,6 +21,7 @@ import {
 import { Inventory2 } from "@mui/icons-material";
 import { prestamosAdapter } from "../../infrastructure/adapters/prestamosAdapter";
 import { SeleccionEntrega } from "./SeleccionEntrega";
+import { CorregirSolicitanteDialog } from "./CorregirSolicitanteDialog";
 import {
   ETIQUETA_DEVOLUCION,
   ETIQUETA_ESTADO,
@@ -28,6 +29,7 @@ import {
   diasDeAtraso,
   estaVencida,
   resumirSolicitado,
+  type CorregirSolicitantePayload,
   type DevolverItemPayload,
   type EntregarPayload,
   type EquipoPrestable,
@@ -48,6 +50,15 @@ interface DetallePrestamoProps {
   onDevolver: (id: string, items: DevolverItemPayload[]) => Promise<boolean>;
   onEntregar: (id: string, payload: EntregarPayload) => Promise<boolean>;
   onCancelar: (id: string) => Promise<boolean>;
+  /**
+   * Corregir a nombre de quién está. **Ausente = no se ofrece**: es de admin.
+   * Va aparte de `esAdmin` porque no depende del estado de la solicitud —las
+   * que hay que arreglar son las viejas, ya entregadas y firmadas—.
+   */
+  onCorregirSolicitante?: (
+    id: string,
+    payload: CorregirSolicitantePayload,
+  ) => Promise<boolean>;
 }
 
 /** Lo que el admin va marcando antes de confirmar la devolución. */
@@ -65,6 +76,7 @@ export function DetallePrestamo({
   onDevolver,
   onEntregar,
   onCancelar,
+  onCorregirSolicitante,
 }: DetallePrestamoProps) {
   const [solicitud, setSolicitud] = useState<SolicitudPrestamo | null>(null);
   const [items, setItems] = useState<LineaPrestamo[]>([]);
@@ -72,6 +84,15 @@ export function DetallePrestamo({
   /** Equipos que el almacén va eligiendo para esta entrega. */
   const [aEntregar, setAEntregar] = useState<EquipoPrestable[]>([]);
   const [ocupado, setOcupado] = useState(false);
+  const [corrigiendo, setCorrigiendo] = useState(false);
+  /**
+   * Fuerza a releer el detalle.
+   *
+   * El hook refresca la **lista** tras cada acción, pero este diálogo tiene su
+   * propia copia: sin esto, al corregir el solicitante la pantalla seguiría
+   * mostrando el nombre anterior hasta cerrarla y volver a abrirla.
+   */
+  const [recarga, setRecarga] = useState(0);
 
   useEffect(() => {
     if (!solicitudId) return;
@@ -86,7 +107,7 @@ export function DetallePrestamo({
     return () => {
       vigente = false;
     };
-  }, [solicitudId]);
+  }, [solicitudId, recarga]);
 
   if (!solicitudId || !solicitud) return null;
 
@@ -167,6 +188,16 @@ export function DetallePrestamo({
             <strong>Solicitó:</strong>{" "}
             {solicitud.solicitanteNombre ?? solicitud.solicitanteUsername}
           </Typography>
+          {/*
+            Quién tecleó se muestra solo cuando **no** es quien pidió: en el
+            caso normal repetir el mismo nombre dos veces solo estorba.
+          */}
+          {solicitud.registradoPor &&
+            solicitud.registradoPor !== solicitud.solicitanteUsername && (
+              <Typography variant="body2" color="text.secondary">
+                <strong>Registró:</strong> {solicitud.registradoPor}
+              </Typography>
+            )}
           <Typography variant="body2">
             <strong>Motivo:</strong> {solicitud.motivo}
           </Typography>
@@ -188,6 +219,27 @@ export function DetallePrestamo({
             </Typography>
           )}
         </Stack>
+
+        {/*
+          Lo corregido se enseña aquí y no solo en el acta: quien tenga en la
+          mano una copia impresa vieja necesita poder explicar por qué no
+          coincide, y el hash de la firma no lo detecta porque sella la imagen,
+          no el contenido.
+        */}
+        {solicitud.correcciones && solicitud.correcciones.length > 0 && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Typography variant="body2" fontWeight={600}>
+              Correcciones posteriores
+            </Typography>
+            {solicitud.correcciones.map((c, i) => (
+              <Typography key={`${c.fecha}-${i}`} variant="caption" display="block">
+                {c.campo}: «{c.valorAnterior ?? "—"}» → «{c.valorNuevo ?? "—"}»
+                {" · "}
+                {c.corregidoPor} el {fecha(c.fecha)}: {c.motivo}
+              </Typography>
+            ))}
+          </Alert>
+        )}
 
         <Divider sx={{ mb: 2 }} />
 
@@ -327,6 +379,20 @@ export function DetallePrestamo({
           Cerrar
         </Button>
 
+        {/*
+          Sin condición de estado a propósito: las solicitudes mal atribuidas
+          que hay que arreglar son las viejas, ya entregadas y firmadas.
+        */}
+        {onCorregirSolicitante && (
+          <Button
+            type="button"
+            onClick={() => setCorrigiendo(true)}
+            disabled={ocupado}
+          >
+            Corregir solicitante
+          </Button>
+        )}
+
         {esAdmin && solicitud.estado === "solicitada" && (
           <>
             <Button
@@ -368,6 +434,20 @@ export function DetallePrestamo({
           </Button>
         )}
       </DialogActions>
+
+      {corrigiendo && onCorregirSolicitante && (
+        <CorregirSolicitanteDialog
+          solicitud={solicitud}
+          onCerrar={() => setCorrigiendo(false)}
+          onCorregir={async (id, payload) => {
+            const bien = await onCorregirSolicitante(id, payload);
+            // Releer el detalle: el nombre que se muestra arriba lo tiene este
+            // diálogo en su propio estado, no la lista.
+            if (bien) setRecarga((n) => n + 1);
+            return bien;
+          }}
+        />
+      )}
     </Dialog>
   );
 }

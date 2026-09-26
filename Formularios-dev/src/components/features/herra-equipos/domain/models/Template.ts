@@ -8,6 +8,11 @@ export interface VerificationField {
   /** Con `type: select`, admite un valor fuera de la lista. */
   permiteOtro?: boolean;
   dataSource?: string;
+  /**
+   * Valor con el que aparece el campo la primera vez. Solo se aplica si está
+   * vacío, y queda editable.
+   */
+  valorPorDefecto?: string;
   obligatorio?: boolean;
 }
 

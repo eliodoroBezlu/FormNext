@@ -75,6 +75,16 @@ export const VerificationFieldSchema = z.object({
   // Con `type: select`, admite un valor fuera de la lista.
   permiteOtro: z.boolean().optional(),
   dataSource: z.string().optional(),
+  /**
+   * Valor con el que aparece el campo la primera vez.
+   *
+   * ⚠️ Tiene que estar declarado aquí. `z.object` **descarta en silencio** lo
+   * que no conoce, así que un campo ausente de este esquema se pierde entre el
+   * formulario y el servidor sin error ni aviso: el constructor lo guarda, el
+   * resolver lo borra, y al reabrir aparece vacío. Es la misma trampa que el
+   * `whitelist: true` del DTO en el backend — hay que declararlo en los dos.
+   */
+  valorPorDefecto: z.string().optional(),
   obligatorio: z.boolean().optional()
 })
 

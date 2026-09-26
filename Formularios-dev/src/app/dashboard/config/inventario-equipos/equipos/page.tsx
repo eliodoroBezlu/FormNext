@@ -37,6 +37,7 @@ import {
   Add as AddIcon,
   Clear as ClearIcon,
   UploadFile as UploadFileIcon,
+  Download as DownloadIcon,
   Info as InfoIcon,
 } from "@mui/icons-material"
 
@@ -49,6 +50,7 @@ import {
   EquipoBackend,
   EquipoForm
 } from "@/lib/actions/equipo-actions"
+import { exportarInventarioEquiposExcelCliente } from "@/lib/actions/client"
 import { FotosEquipo } from "@/components/features/herra-equipos/presentation/components/management/FotosEquipo"
 import { obtenerAreasCompletas, AreaBackend } from "@/lib/actions/area-actions"
 import { obtenerUbicaciones, UbicacionBackend } from "@/lib/actions/ubicacion-actions"
@@ -90,6 +92,7 @@ export default function GestionEquipos() {
   // Arranca en `true`: la pagina esta cargando desde el primer render.
   const [loading, setLoading] = useState(true)
   const [migrationLoading, setMigrationLoading] = useState(false)
+  const [exportLoading, setExportLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Catálogos
@@ -396,6 +399,39 @@ export default function GestionEquipos() {
     }
   }
 
+  // --- Exportar Excel ---
+  // Si hay un tipo de equipo filtrado, el archivo sale con una sola hoja.
+  // Si no, se agrupa por tipo_equipo y cada tipo va a su propia hoja dentro
+  // del mismo archivo — nunca se mezclan columnas de tipos distintos en una
+  // sola hoja (cada tipo tiene su propio set de especificaciones dinámicas,
+  // definido en config-formulario). Ver
+  // mds/implementation_planExportarInventarioEquipos.md.
+  const LIMITE_FOTOS_EXPORT = 150 // debe coincidir con EquiposExcelService.LIMITE_FOTOS en el backend
+
+  const handleExportarExcel = async () => {
+    if (filteredEquipos.length === 0) {
+      showNotification("No hay equipos para exportar con los filtros actuales", "warning")
+      return
+    }
+    if (filteredEquipos.length > LIMITE_FOTOS_EXPORT) {
+      const continuar = window.confirm(
+        `Vas a exportar ${filteredEquipos.length} equipos. Por encima de ${LIMITE_FOTOS_EXPORT}, el Excel se genera sin fotos incrustadas para no volverlo lento y pesado. ¿Continuar?`
+      )
+      if (!continuar) return
+    }
+
+    setExportLoading(true)
+    try {
+      const ids = filteredEquipos.map((item) => item._id)
+      await exportarInventarioEquiposExcelCliente(ids)
+      showNotification("Excel generado con éxito", "success")
+    } catch (err) {
+      showNotification(err instanceof Error ? err.message : "Error al exportar el inventario", "error")
+    } finally {
+      setExportLoading(false)
+    }
+  }
+
   // --- Filtros ---
   const filteredEquipos = equipos.filter((item) => {
     const matchSearch =
@@ -457,6 +493,15 @@ export default function GestionEquipos() {
           </Button>
 
           <Button
+            variant="outlined"
+            startIcon={<DownloadIcon />}
+            onClick={handleExportarExcel}
+            disabled={migrationLoading || exportLoading}
+          >
+            Exportar Excel
+          </Button>
+
+          <Button
             variant="contained"
             color="primary"
             startIcon={<AddIcon />}
@@ -467,6 +512,12 @@ export default function GestionEquipos() {
           </Button>
         </Box>
       </Box>
+
+      {exportLoading && (
+        <Alert severity="info" sx={{ mb: 3 }} icon={<CircularProgress size={18} />}>
+          Generando el Excel del inventario... Por favor espere.
+        </Alert>
+      )}
 
       {migrationLoading && (
         <Alert severity="info" sx={{ mb: 3 }} icon={<CircularProgress size={18} />}>

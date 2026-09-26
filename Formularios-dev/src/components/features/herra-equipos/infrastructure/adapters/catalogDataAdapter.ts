@@ -1,12 +1,21 @@
 import { fetchDataBySource, DataSourceType } from "@/lib/actions/dataSourceService";
 import { obtenerEquipos, EquipoBackend } from "@/lib/actions/equipo-actions";
-import { obtenerAreas } from "@/lib/actions/area-actions";
+import {
+  obtenerAreas,
+  obtenerCadenaDeAreas,
+  CadenaOrganizativa,
+} from "@/lib/actions/area-actions";
 import {
   obtenerDisponibilidadEquipos,
   DisponibilidadEquipo,
 } from "@/lib/actions/equipment-tracking";
 
-export type { DataSourceType, EquipoBackend, DisponibilidadEquipo };
+export type {
+  DataSourceType,
+  EquipoBackend,
+  DisponibilidadEquipo,
+  CadenaOrganizativa,
+};
 
 /**
  * Obtiene los valores disponibles para un origen de datos genérico
@@ -33,6 +42,16 @@ export const obtenerEquiposAdapter = async (): Promise<EquipoBackend[]> => {
  */
 export const obtenerAreasAdapter = async (): Promise<string[]> => {
   return obtenerAreas();
+};
+
+/**
+ * Obtiene la cadena Gerencia → Superintendencia → Área del maestro, para
+ * deducir esos dos campos del área que elige el inspector.
+ */
+export const obtenerCadenaDeAreasAdapter = async (): Promise<
+  CadenaOrganizativa[]
+> => {
+  return obtenerCadenaDeAreas();
 };
 
 /**

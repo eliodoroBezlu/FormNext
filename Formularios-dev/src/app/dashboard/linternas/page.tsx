@@ -33,6 +33,9 @@ export default function LinternasPage() {
     seleccionarTrabajador,
     limpiarSeleccion,
     registrar,
+    reclasificar,
+    anular,
+    corregir,
   } = useLinternas();
 
   /**
@@ -42,8 +45,34 @@ export default function LinternasPage() {
    * backend rechazaría el envío. Mejor no ofrecérselo que dejar que lo
    * rellenen para fallar al final.
    */
-  const { hasRole } = useUserRole();
+  const { user, hasRole } = useUserRole();
   const puedeEntregar = hasRole(Role.ADMIN);
+
+  /**
+   * Los permisos de corrección se leen del array de roles **literal**, no de
+   * la jerarquía: `RolesGuard` del backend hace `roles.includes(...)`, así que
+   * usar `hasRole` aquí pintaría botones que el servidor va a rechazar con un
+   * 403 después de haber rellenado el formulario.
+   *
+   * Reparto: reclasificar y corregir van a admin y superintendente; **anular
+   * solo a admin**, porque dejar un registro sin efecto es más grave que
+   * corregirlo. Espeja los `@Roles` de `linternas.controller.ts`.
+   */
+  const roles = user?.roles ?? [];
+  const esAdmin = roles.includes(Role.ADMIN);
+  const puedeReclasificar = esAdmin || roles.includes(Role.SUPERINTENDENTE);
+
+  // `puedeReclasificar` ya incluye a admin, así que basta con él para decidir
+  // si el menú aparece.
+  const acciones = puedeReclasificar
+    ? {
+        puedeReclasificar,
+        puedeAnular: esAdmin,
+        onReclasificar: reclasificar,
+        onAnular: anular,
+        onCorregir: corregir,
+      }
+    : undefined;
 
   const [aviso, setAviso] = useState<string | null>(null);
 
@@ -124,7 +153,11 @@ export default function LinternasPage() {
 
           {estado && (
             <Box sx={{ mt: 2 }}>
-              <EstadoTrabajadorPanel estado={estado} historial={historial} />
+              <EstadoTrabajadorPanel
+                estado={estado}
+                historial={historial}
+                acciones={acciones}
+              />
             </Box>
           )}
         </Grid>

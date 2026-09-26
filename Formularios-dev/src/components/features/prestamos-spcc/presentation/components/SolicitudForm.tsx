@@ -19,6 +19,8 @@ import {
   Typography,
 } from "@mui/material";
 import { Add, Inventory2, Remove } from "@mui/icons-material";
+import type { Trabajador } from "@/types/trabajador";
+import { SelectorSolicitante } from "./SelectorSolicitante";
 import {
   TIPOS_SPCC,
   disponiblesDelTipo,
@@ -33,6 +35,14 @@ interface SolicitudFormProps {
   disponibles: EquipoPrestable[];
   areas: string[];
   areaPorDefecto?: string;
+  /**
+   * Si se puede poner la solicitud a nombre de otra persona.
+   *
+   * Solo admin y superintendente, igual que el backend. Para el resto el campo
+   * ni aparece: el servidor lo ignoraría y la solicitud quedaría a nombre de
+   * quien teclea, que es lo que se espera.
+   */
+  puedeElegirSolicitante?: boolean;
   onCerrar: () => void;
   onGuardar: (payload: CrearSolicitudPayload) => Promise<boolean>;
 }
@@ -55,11 +65,14 @@ export function SolicitudForm({
   disponibles,
   areas,
   areaPorDefecto,
+  puedeElegirSolicitante = false,
   onCerrar,
   onGuardar,
 }: SolicitudFormProps) {
   const [area, setArea] = useState(areaPorDefecto ?? "");
   const [motivo, setMotivo] = useState("");
+  /** `null` = a nombre de quien teclea, que es el comportamiento de siempre. */
+  const [solicitante, setSolicitante] = useState<Trabajador | null>(null);
   const [desde, setDesde] = useState(hoy);
   const [hasta, setHasta] = useState(enUnaSemana);
   const [cantidades, setCantidades] = useState<Cantidades>(SIN_CANTIDADES);
@@ -96,6 +109,7 @@ export function SolicitudForm({
     setGuardando(true);
     const bien = await onGuardar({
       areaSolicitante: area.trim(),
+      solicitanteId: solicitante?._id,
       motivo: motivo.trim(),
       fechaInicioPrevista: desde,
       fechaDevolucionPrevista: hasta,
@@ -107,6 +121,9 @@ export function SolicitudForm({
     if (bien) {
       setMotivo("");
       setCantidades(SIN_CANTIDADES);
+      // Se limpia también el solicitante: la siguiente solicitud del mostrador
+      // es de otra persona, y arrastrarlo la atribuiría mal en silencio.
+      setSolicitante(null);
       onCerrar();
     }
   };
@@ -165,6 +182,17 @@ export function SolicitudForm({
               }
             />
           </Grid>
+          {puedeElegirSolicitante && (
+            <Grid size={12}>
+              <SelectorSolicitante
+                value={solicitante}
+                onChange={setSolicitante}
+                label="Solicita (opcional)"
+                helperText="Déjelo vacío si la solicitud es suya. Úselo cuando alguien pide los equipos de palabra y usted los registra."
+              />
+            </Grid>
+          )}
+
           <Grid size={12}>
             <TextField
               fullWidth

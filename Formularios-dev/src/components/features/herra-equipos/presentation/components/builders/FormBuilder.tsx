@@ -140,6 +140,12 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
       setValue(`verificationFields.${index}.options`, undefined);
       setValue(`verificationFields.${index}.permiteOtro`, undefined);
     }
+    // En «Selección» el valor sale de la lista, así que el campo del valor por
+    // defecto se oculta. Se limpia por el mismo motivo que las opciones: un
+    // valor invisible que sigue aplicándose es peor que no tenerlo.
+    if (newType === "select") {
+      setValue(`verificationFields.${index}.valorPorDefecto`, undefined);
+    }
   };
 
   return (
@@ -467,6 +473,34 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
                           ))}
                         </Select>
                       </FormControl>
+                    </Grid>
+                  )}
+                  {/*
+                    Para los campos que siempre llevan lo mismo —«EMPRESA» es
+                    el caso que lo motivó—: se escribe aquí y el inspector se
+                    lo encuentra puesto, en vez de teclearlo en cada parte.
+                    En «Selección» no se ofrece: ahí el valor sale de la lista.
+                  */}
+                  {formData.verificationFields[index]?.type !== "select" && (
+                    <Grid size={{ xs: 12, sm: 3 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Valor por defecto"
+                        placeholder="Opcional"
+                        disabled={isReadOnly}
+                        value={
+                          formData.verificationFields[index]?.valorPorDefecto ??
+                          ""
+                        }
+                        onChange={(e) =>
+                          setValue(
+                            `verificationFields.${index}.valorPorDefecto`,
+                            e.target.value || undefined,
+                          )
+                        }
+                        helperText="Se rellena solo si el campo está vacío; el inspector puede cambiarlo"
+                      />
                     </Grid>
                   )}
                   {!isReadOnly && (

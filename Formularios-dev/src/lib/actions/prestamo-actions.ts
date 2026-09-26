@@ -3,6 +3,7 @@
 import { API_BASE_URL } from "../constants";
 import { getAuthHeaders, handleApiResponse } from "./helpers";
 import type {
+  CorregirSolicitantePayload,
   CrearSolicitudPayload,
   DevolverItemPayload,
   EquipoPrestable,
@@ -98,6 +99,24 @@ export async function cancelarSolicitud(
     method: "PATCH",
     headers: await getAuthHeaders(),
     body: JSON.stringify({ motivo }),
+  });
+  return handleApiResponse<SolicitudPrestamo>(res);
+}
+
+/**
+ * Corrige a nombre de quién está una solicitud ya registrada.
+ *
+ * Solo admin. El valor anterior no se pisa: el servidor lo guarda en
+ * `correcciones[]` y el acta lo muestra al pie.
+ */
+export async function corregirSolicitante(
+  id: string,
+  payload: CorregirSolicitantePayload,
+): Promise<SolicitudPrestamo> {
+  const res = await fetch(`${API_BASE_URL}/prestamos-spcc/${id}/solicitante`, {
+    method: "PATCH",
+    headers: await getAuthHeaders(),
+    body: JSON.stringify(payload),
   });
   return handleApiResponse<SolicitudPrestamo>(res);
 }

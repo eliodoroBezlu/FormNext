@@ -49,6 +49,23 @@ export interface LineaSolicitada {
   cantidad: number;
 }
 
+/**
+ * Una corrección hecha sobre una solicitud ya registrada.
+ *
+ * Guarda **lo que decía antes**, porque es lo único que permite entender una
+ * copia impresa del acta que ya no coincide con el sistema: el sello de la
+ * firma es un hash sobre la imagen, no sobre el contenido, así que cambiar el
+ * nombre del solicitante no rompe nada y no se notaría.
+ */
+export interface Correccion {
+  campo: string;
+  valorAnterior?: string;
+  valorNuevo?: string;
+  corregidoPor: string;
+  fecha: string;
+  motivo: string;
+}
+
 export interface SolicitudPrestamo {
   _id: string;
   numero: string;
@@ -56,6 +73,13 @@ export interface SolicitudPrestamo {
   superintendenciaSolicitante?: string;
   solicitanteUsername: string;
   solicitanteNombre?: string;
+  /**
+   * Quién tecleó la solicitud, que puede no ser quien la pidió. Ausente en las
+   * anteriores a que se pudiera distinguir una cosa de la otra.
+   */
+  registradoPor?: string;
+  /** Vacío o ausente en las que nunca se corrigieron. */
+  correcciones?: Correccion[];
   motivo: string;
   /** Lo pedido por tipo. Ausente en las solicitudes anteriores al cambio. */
   solicitado?: LineaSolicitada[];
@@ -73,10 +97,29 @@ export interface CrearSolicitudPayload {
   areaSolicitante: string;
   areaSolicitanteId?: string;
   superintendenciaSolicitante?: string;
+  /**
+   * A nombre de quién queda, cuando no es quien teclea.
+   *
+   * Es el caso del mostrador: alguien pide un arnés de palabra y lo registra
+   * el de almacén. **Solo lo aceptan admin y superintendente**; para el resto
+   * el servidor lo ignora y el solicitante sigue siendo el de la sesión.
+   */
+  solicitanteId?: string;
   motivo: string;
   fechaInicioPrevista: string;
   fechaDevolucionPrevista: string;
   solicitado: LineaSolicitada[];
+}
+
+/**
+ * Corrige a nombre de quién está una solicitud **ya registrada**.
+ *
+ * Sin límite de estado a propósito: las mal atribuidas son justamente las
+ * viejas, ya entregadas y firmadas.
+ */
+export interface CorregirSolicitantePayload {
+  solicitanteId: string;
+  motivo: string;
 }
 
 /** Lo que el almacén manda al entregar: los equipos que salen de verdad. */

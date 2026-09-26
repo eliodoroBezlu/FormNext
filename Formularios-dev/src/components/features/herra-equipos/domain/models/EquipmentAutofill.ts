@@ -123,6 +123,20 @@ export const isSuperintendenciaField = (label: string): boolean => {
   return norm.includes("SUPERINTENDENCIA");
 };
 
+/**
+ * Campo de gerencia.
+ *
+ * ⚠️ Se comprueba **después** de la superintendencia allí donde se recorren
+ * los campos, porque varias superintendencias del maestro se llaman
+ * «GERENCIA …» —«GERENCIA CORPORATIVA» figura en las dos listas— y una
+ * etiqueta como «SUPERINTENDENCIA/GERENCIA» debe resolverse como
+ * superintendencia, que es el escalón que el área determina sin ambigüedad.
+ */
+export const isGerenciaField = (label: string): boolean => {
+  const norm = normalizeLabel(label);
+  return norm.includes("GERENCIA");
+};
+
 // Campos "Tipo de equipo/herramienta" — excluye "TIPO VEHICULO", que pertenece
 // a otro dominio (formularios de vehículos) y no debe recibir tipo_equipo.
 export const isTipoField = (label: string): boolean => {
@@ -248,6 +262,67 @@ export const resolveAutofillValue = (
     );
   }
   return getTechnicalSpecValue(equipo, label) || undefined;
+};
+
+/** Un área con los dos escalones que tiene por encima en el maestro. */
+export interface CadenaOrganizativa {
+  area: string;
+  superintendencia: string | null;
+  gerencia: string | null;
+}
+
+/** Clave de búsqueda de un área: sin tildes, en mayúsculas y sin espacios de más. */
+const claveDeArea = (nombre: string): string =>
+  normalizeLabel(nombre).replace(/\s+/g, " ");
+
+/** Índice por área para resolver la cadena sin recorrer la lista cada vez. */
+export const indexarCadenas = (
+  cadenas: CadenaOrganizativa[],
+): Map<string, CadenaOrganizativa> =>
+  new Map(cadenas.map((c) => [claveDeArea(c.area), c]));
+
+/**
+ * Rellena superintendencia y gerencia a partir del área elegida.
+ *
+ * El área ya determina las dos en el maestro —la relación es obligatoria hacia
+ * arriba—, así que preguntárselas al inspector solo abre la puerta a que el
+ * mismo parte diga que un área de Mantenimiento Planta pertenece a otra
+ * superintendencia. Se rellenan, pero se dejan editables: el maestro puede ir
+ * por detrás de una reorganización y el inspector tiene que poder decir la
+ * verdad mientras eso se corrige.
+ *
+ * Lo que **no** hace es borrar: si la cadena no conoce el área, o la
+ * superintendencia no tiene gerencia asignada —que es lo normal, porque el
+ * catálogo del IAM no expone gerencias—, se deja lo que hubiera escrito.
+ * Vaciar un campo que el inspector acaba de rellenar es peor que no ayudarle.
+ */
+export const autofillCadenaOrganizativa = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  setValue: any,
+  templateFields: { label: string }[],
+  area: string,
+  porArea: Map<string, CadenaOrganizativa>,
+): void => {
+  const cadena = porArea.get(claveDeArea(area));
+  if (!cadena) return;
+
+  templateFields.forEach((field) => {
+    // La superintendencia se comprueba primero a propósito: varias del maestro
+    // se llaman «GERENCIA …», y una etiqueta que nombre las dos debe resolverse
+    // como superintendencia, que es la que el área fija sin ambigüedad.
+    const valor = isSuperintendenciaField(field.label)
+      ? cadena.superintendencia
+      : isGerenciaField(field.label)
+        ? cadena.gerencia
+        : undefined;
+
+    if (!valor) return;
+
+    setValue(verificationFieldPath(field.label), valor, {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+  });
 };
 
 export const autofillEquipmentFields = (

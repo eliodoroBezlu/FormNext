@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box,
@@ -38,15 +38,22 @@ export function PendingApprovalsList() {
     loading,
     error,
     loadedAreas,
-    setLoadedAreas,
+    carpetaAbierta,
+    setCarpetaAbierta,
+    areaAbierta,
+    setAreaAbierta,
+    reiniciarSeleccion,
     loadInspections,
     refreshInspections,
     groupedByTemplate,
     groupedByArea,
   } = useApprovals();
 
-  const [expandedArea, setExpandedArea] = useState<string | false>(false);
-  const [expandedTemplate, setExpandedTemplate] = useState<string | false>(false);
+  // El área y la carpeta abiertas viven en el hook, no aquí: tienen que
+  // sobrevivir a que este componente se desmonte, que es lo que pasa cada vez
+  // que el supervisor entra a una inspección y vuelve de aprobarla.
+  const expandedArea = areaAbierta ?? false;
+  const expandedTemplate = carpetaAbierta ?? false;
 
   const handleView = (insp: InspectionResponse) =>
     router.push(`/dashboard/form-herra-equipos/${insp.templateCode}/${insp._id}`);
@@ -113,7 +120,7 @@ export function PendingApprovalsList() {
       </Box>
       <Stack direction="row" spacing={1}>
         {!isAdmin && (
-          <Button size="small" variant="outlined" startIcon={<FilterAlt />} onClick={() => setLoadedAreas(null)}>
+          <Button size="small" variant="outlined" startIcon={<FilterAlt />} onClick={reiniciarSeleccion}>
             Cambiar áreas
           </Button>
         )}
@@ -157,7 +164,7 @@ export function PendingApprovalsList() {
               templateName={group.templateName}
               items={group.items}
               expanded={expandedTemplate === code}
-              onToggle={() => setExpandedTemplate(expandedTemplate === code ? false : code)}
+              onToggle={() => setCarpetaAbierta(expandedTemplate === code ? null : code)}
               onView={handleView}
             />
           ))}
@@ -180,7 +187,7 @@ export function PendingApprovalsList() {
             <Accordion
               key={area}
               expanded={isAreaOpen}
-              onChange={() => setExpandedArea(isAreaOpen ? false : area)}
+              onChange={() => setAreaAbierta(isAreaOpen ? null : area)}
               elevation={3}
               TransitionProps={{ unmountOnExit: true }}
               sx={{
@@ -233,7 +240,9 @@ export function PendingApprovalsList() {
                             items={group.items}
                             expanded={expandedTemplate === tplKey}
                             onToggle={() =>
-                              setExpandedTemplate(expandedTemplate === tplKey ? false : tplKey)
+                              setCarpetaAbierta(
+                                expandedTemplate === tplKey ? null : tplKey,
+                              )
                             }
                             onView={handleView}
                             indent

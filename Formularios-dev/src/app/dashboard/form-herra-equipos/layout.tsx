@@ -51,11 +51,22 @@ export default function FormHerraEquiposLayout({
     pathname === "/dashboard/form-herra-equipos/in-progress" ||
     pathname === "/dashboard/form-herra-equipos/pending-approval";
 
-  // Mapear pathname al índice de la pestaña activa
+  /**
+   * Mapear pathname al índice de la pestaña activa.
+   *
+   * La tercera pestaña **solo se renderiza** si el usuario puede aprobar, así
+   * que el índice 2 no puede salir de aquí cuando no existe: MUI avisa de que
+   * ninguna pestaña coincide con el valor y deja la barra sin selección. Le
+   * pasaba a un técnico que llegaba a `/pending-approval`, que además es una
+   * pantalla que no le corresponde —ver `ROUTE_PERMISSIONS`—.
+   */
   let activeTab = 0;
   if (pathname === "/dashboard/form-herra-equipos/in-progress") {
     activeTab = 1;
-  } else if (pathname === "/dashboard/form-herra-equipos/pending-approval") {
+  } else if (
+    pathname === "/dashboard/form-herra-equipos/pending-approval" &&
+    canViewApprovals
+  ) {
     activeTab = 2;
   }
 

@@ -70,6 +70,19 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
       Role.INSPECTOR_ASIGNADO,
     ],
   },
+  /**
+   * La cola de aprobaciones es más estrecha que el resto del módulo.
+   *
+   * Gana el prefijo más largo, así que esta regla acota solo esta pantalla y
+   * el catálogo sigue abierto a quien llena formularios. Sin ella, un técnico
+   * entraba escribiendo la URL —o lo llevaba la redirección posterior a
+   * guardar— a una lista que no le corresponde, y que además su barra de
+   * pestañas no puede seleccionar porque esa pestaña no se le pinta.
+   */
+  {
+    path: "/dashboard/form-herra-equipos/pending-approval",
+    requiredRoles: [Role.ADMIN, Role.SUPERVISOR, Role.SUPERINTENDENTE],
+  },
 
   // Formularios de inspección de seguridad - solo supervisor
   {

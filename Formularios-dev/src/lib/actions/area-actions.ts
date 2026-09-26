@@ -57,13 +57,57 @@ export async function obtenerAreasCompletas(): Promise<AreaBackend[]> {
   return handleApiResponse<AreaBackend[]>(response);
 }
 
-// Obtener solo nombres de áreas activas (para selects simples)
+/**
+ * Un área con los dos escalones que tiene por encima en el maestro.
+ *
+ * `gerencia` viene vacía a menudo, y no es un fallo: la gerencia de una
+ * superintendencia es opcional —el catálogo del IAM no las expone y se asignan
+ * a mano desde el panel—, así que hay que contar con el hueco.
+ */
+export interface CadenaOrganizativa {
+  area: string;
+  superintendencia: string | null;
+  gerencia: string | null;
+}
+
+/**
+ * La cadena **Gerencia → Superintendencia → Área** de todas las áreas activas.
+ *
+ * La usan los formularios para deducir superintendencia y gerencia del área
+ * que elige el inspector, en vez de preguntárselas. Se pide una sola vez al
+ * abrir el formulario: son tres cadenas por área y no cambia durante el rato
+ * que dura rellenarlo.
+ */
+export async function obtenerCadenaDeAreas(): Promise<CadenaOrganizativa[]> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/area/cadena`, {
+    headers,
+    cache: "no-store",
+  });
+
+  return handleApiResponse<CadenaOrganizativa[]>(response);
+}
+
+/**
+ * Nombres de las áreas activas, sin repetidos y ordenados.
+ *
+ * El maestro puede tener dos documentos con el mismo nombre —hoy hay dos
+ * «Generacion»—, y eso rompía las listas de React, que usan el nombre como
+ * clave: *«Encountered two children with the same key»*, con el riesgo de que
+ * una de las dos opciones se pinte mal o desaparezca.
+ *
+ * Quitarlos aquí, y no en cada pantalla, es lo que evita que el siguiente
+ * desplegable vuelva a tropezar con lo mismo. **No arregla el dato**: siguen
+ * siendo dos áreas distintas en la base, y mientras lo sean, las inspecciones
+ * se reparten entre las dos sin que nadie lo note.
+ */
 export async function obtenerAreas(): Promise<string[]> {
   const areas = await obtenerAreasCompletas();
-  return areas
+  const nombres = areas
     .filter(area => area.activo)
-    .map(area => area.nombre)
-    .sort();
+    .map(area => area.nombre);
+
+  return Array.from(new Set(nombres)).sort();
 }
 
 // Obtener área por ID

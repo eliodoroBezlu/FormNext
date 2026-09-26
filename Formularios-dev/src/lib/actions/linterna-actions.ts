@@ -3,10 +3,13 @@
 import { API_BASE_URL } from "../constants";
 import { getAuthHeaders, handleApiResponse } from "./helpers";
 import type {
+  AnularEntregaPayload,
+  CorregirEntregaPayload,
   EntregaLinterna,
   EstadoTrabajador,
   FilaPorArea,
   FilaPorTrabajador,
+  ReclasificarEntregaPayload,
   RegistrarEntregaPayload,
   ResumenLinternas,
   StockLinternas,
@@ -159,6 +162,51 @@ export async function resolverPerdida(
   },
 ): Promise<EntregaLinterna> {
   const res = await fetch(`${API_BASE_URL}/linternas/${id}/resolver`, {
+    method: "PATCH",
+    headers: await getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  return handleApiResponse<EntregaLinterna>(res);
+}
+
+/**
+ * Cambia el tipo de una entrega ya registrada.
+ *
+ * Manda la entrega completa y no solo el tipo: el servidor vuelve a aplicar
+ * las reglas del tipo nuevo —qué bloques exige y cuáles prohíbe— y ajusta
+ * estado y stock en consecuencia.
+ */
+export async function reclasificarEntrega(
+  id: string,
+  payload: ReclasificarEntregaPayload,
+): Promise<EntregaLinterna> {
+  const res = await fetch(`${API_BASE_URL}/linternas/${id}/reclasificar`, {
+    method: "PATCH",
+    headers: await getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  return handleApiResponse<EntregaLinterna>(res);
+}
+
+/** Saca de los recuentos una entrega que no debía registrarse. */
+export async function anularEntrega(
+  id: string,
+  payload: AnularEntregaPayload,
+): Promise<EntregaLinterna> {
+  const res = await fetch(`${API_BASE_URL}/linternas/${id}/anular`, {
+    method: "PATCH",
+    headers: await getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  return handleApiResponse<EntregaLinterna>(res);
+}
+
+/** Corrige lo que no cambia la naturaleza del acto: hoy, la observación. */
+export async function corregirEntrega(
+  id: string,
+  payload: CorregirEntregaPayload,
+): Promise<EntregaLinterna> {
+  const res = await fetch(`${API_BASE_URL}/linternas/${id}`, {
     method: "PATCH",
     headers: await getAuthHeaders(),
     body: JSON.stringify(payload),

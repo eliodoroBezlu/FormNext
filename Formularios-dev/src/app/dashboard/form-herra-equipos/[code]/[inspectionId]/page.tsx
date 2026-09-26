@@ -21,6 +21,8 @@ import {
   updateInspection,
 } from "@/lib/actions/inspection-herra-equipos";
 import { TagVerificationModal } from "@/components/features/herra-equipos/common/TagVerificationModal";
+import { useUserRole } from "@/hooks/useUserRole";
+import { Role } from "@/lib/routePermissions";
 
 /**
  * Igual que en la página de creación: la UI especializada se decide por la
@@ -34,6 +36,7 @@ const FORMS_REQUIRING_TAG_VERIFICATION = ["3.04.P37.F24", "3.04.P37.F25"];
 export default function FormularioDinamicoPage() {
   const params = useParams();
   const router = useRouter();
+  const { hasRole } = useUserRole();
 
   const inspectionId = params.inspectionId as string | undefined;
   const code = decodeURIComponent(
@@ -70,14 +73,32 @@ export default function FormularioDinamicoPage() {
   // ── Detección de modo aprobación ──
   const isPendingApproval = existingInspection?.status === "pending_approval";
 
+  /**
+   * Quién trabaja en la cola de aprobaciones. Mismo criterio que la barra de
+   * pestañas (`layout.tsx`): si aquí fuera más ancho, mandaríamos gente a una
+   * pantalla que su barra de pestañas no sabe representar.
+   */
+  const puedeAprobar = hasRole(Role.SUPERVISOR) || hasRole(Role.ADMIN);
+
+  const LISTA_FORMULARIOS = "/dashboard/form-herra-equipos";
+
+  /**
+   * A dónde se vuelve al salir de la inspección.
+   *
+   * La cola de aprobaciones es el puesto de trabajo de quien aprueba, no de
+   * quien inspecciona. Antes se decidía **solo** por el estado de la
+   * inspección, así que un técnico que abría una que ya había enviado acababa
+   * en `/pending-approval`: una pantalla que no le toca y que su barra de
+   * pestañas no puede seleccionar.
+   */
   const getRedirectUrl = () => {
-    if (existingInspection?.status === "pending_approval") {
-      return "/dashboard/form-herra-equipos/pending-approval";
+    if (existingInspection?.status === "pending_approval" && puedeAprobar) {
+      return `${LISTA_FORMULARIOS}/pending-approval`;
     }
     if (existingInspection?.status === "in_progress") {
-      return "/dashboard/form-herra-equipos/in-progress";
+      return `${LISTA_FORMULARIOS}/in-progress`;
     }
-    return "/dashboard/form-herra-equipos";
+    return LISTA_FORMULARIOS;
   };
 
   useEffect(() => {
@@ -318,7 +339,11 @@ export default function FormularioDinamicoPage() {
           severity: "success",
         });
         setTimeout(() => {
-          router.push(getRedirectUrl());
+          // Terminar una inspección devuelve al catálogo de formularios, no a
+          // la lista de donde se venía: la inspección acaba de salir de esa
+          // lista —ya no está en progreso— y quien la terminó lo normal es que
+          // vaya a por la siguiente.
+          router.push(LISTA_FORMULARIOS);
         }, 2000);
       }
     } catch (err) {
@@ -369,7 +394,15 @@ export default function FormularioDinamicoPage() {
           severity: "success",
         });
         setTimeout(() => {
-          router.push(getRedirectUrl());
+          // Quien acaba de **aprobar** vuelve a su cola, que es donde tiene el
+          // resto del trabajo —y donde la selección de áreas y la carpeta
+          // abierta se restauran—. Quien acaba de **enviar** su inspección va
+          // al catálogo: la cola de aprobaciones no es su pantalla.
+          router.push(
+            isPendingApproval && puedeAprobar
+              ? `${LISTA_FORMULARIOS}/pending-approval`
+              : LISTA_FORMULARIOS,
+          );
         }, 2000);
       } else {
         throw new Error(result.error || "Error al enviar formulario");

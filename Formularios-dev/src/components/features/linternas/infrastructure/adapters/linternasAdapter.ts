@@ -1,4 +1,6 @@
 import {
+  anularEntrega,
+  corregirEntrega,
   descargarActa,
   firmarRecibo,
   obtenerEntregas,
@@ -11,6 +13,7 @@ import {
   obtenerPendientes,
   obtenerSinDotacion,
   obtenerStock,
+  reclasificarEntrega,
   registrarEntrega,
   registrarIngresoStock,
   resolverPerdida,
@@ -22,11 +25,14 @@ import {
   TAMANO_MAXIMO_SUBIDA,
 } from "@/components/ui/camera/reducirImagen";
 import type {
+  AnularEntregaPayload,
   ArchivoAdjunto,
+  CorregirEntregaPayload,
   EntregaLinterna,
   EstadoTrabajador,
   FilaPorArea,
   FilaPorTrabajador,
+  ReclasificarEntregaPayload,
   RegistrarEntregaPayload,
   ResumenLinternas,
   StockLinternas,
@@ -147,6 +153,48 @@ export const linternasAdapter = {
       throw new Error(
         mensajeDeError(error, "No se pudo resolver la solicitud."),
       );
+    }
+  },
+
+  /**
+   * Cambia el tipo de una entrega mal registrada.
+   *
+   * Los conflictos que devuelve el servidor —«ya está firmada», «una pérdida
+   * no lleva devolución»— son exactamente lo que hay que leer antes de
+   * reintentar, así que se dejan pasar tal cual.
+   */
+  async reclasificar(
+    id: string,
+    payload: ReclasificarEntregaPayload,
+  ): Promise<EntregaLinterna> {
+    try {
+      return await reclasificarEntrega(exigirId(id, "de la entrega"), payload);
+    } catch (error) {
+      throw new Error(
+        mensajeDeError(error, "No se pudo reclasificar la entrega."),
+      );
+    }
+  },
+
+  async anular(
+    id: string,
+    payload: AnularEntregaPayload,
+  ): Promise<EntregaLinterna> {
+    try {
+      return await anularEntrega(exigirId(id, "de la entrega"), payload);
+    } catch (error) {
+      throw new Error(mensajeDeError(error, "No se pudo anular la entrega."));
+    }
+  },
+
+  async corregir(
+    id: string,
+    payload: CorregirEntregaPayload,
+  ): Promise<EntregaLinterna> {
+    try {
+      return await corregirEntrega(exigirId(id, "de la entrega"), payload);
+    } catch (error) {
+      throw new Error(mensajeDeError(error, "No se pudo corregir la entrega."));
     }
   },
 

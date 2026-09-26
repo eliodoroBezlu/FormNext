@@ -1,5 +1,6 @@
 import {
   cancelarSolicitud,
+  corregirSolicitante,
   crearSolicitud,
   devolverItems,
   entregarSolicitud,
@@ -7,7 +8,10 @@ import {
   obtenerDisponibles,
   obtenerSolicitudes,
 } from "@/lib/actions/prestamo-actions";
+import { obtenerTrabajadores } from "@/lib/actions/trabajador-actions";
+import type { Trabajador } from "@/types/trabajador";
 import type {
+  CorregirSolicitantePayload,
   CrearSolicitudPayload,
   DevolverItemPayload,
   EntregarPayload,
@@ -84,6 +88,35 @@ export const prestamosAdapter = {
       return await devolverItems(id, items);
     } catch (error) {
       throw new Error(mensaje(error, "No se pudo registrar la devolución."));
+    }
+  },
+
+  /**
+   * El roster del que se elige a quién pide.
+   *
+   * Se pide aquí, en el adaptador, y **no** en el diálogo: los componentes de
+   * presentación no llaman a Server Actions. Es el mismo roster que sincroniza
+   * el IAM; los dados de baja no piden equipos.
+   */
+  async trabajadores(): Promise<Trabajador[]> {
+    try {
+      const todos = await obtenerTrabajadores();
+      return todos.filter((t) => t.activo !== false);
+    } catch {
+      return [];
+    }
+  },
+
+  async corregirSolicitante(
+    id: string,
+    payload: CorregirSolicitantePayload,
+  ): Promise<SolicitudPrestamo> {
+    try {
+      return await corregirSolicitante(id, payload);
+    } catch (error) {
+      throw new Error(
+        mensaje(error, "No se pudo corregir el solicitante."),
+      );
     }
   },
 

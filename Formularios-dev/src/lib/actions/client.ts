@@ -223,3 +223,41 @@ export async function descargarZipInspeccionesEmergenciaCliente(
     "Inspecciones.zip",
   );
 }
+
+// ============= EXPORTAR INVENTARIO DE EQUIPOS (EXCEL) =============
+
+/**
+ * Exporta a Excel los equipos ya filtrados en pantalla (mismo criterio que
+ * el resto de descargas masivas: el backend recibe los ids exactos, no
+ * reconstruye los filtros). El backend exige que todos compartan el mismo
+ * `tipo_equipo` — si no, responde 400 y acá se propaga como error normal.
+ */
+export async function exportarInventarioEquiposExcelCliente(
+  ids: string[],
+): Promise<void> {
+  const path = new URL(`${API_BASE_URL}/equipos/exportar-excel`).pathname;
+  const proxyUrl = `/api/download${path}`;
+
+  const response = await fetch(proxyUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ids }),
+    cache: "no-store",
+  });
+
+  if (response.status === 401) {
+    window.location.href = "/login";
+    throw new Error("Sesión expirada.");
+  }
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Error ${response.status}: ${errorText}`);
+  }
+
+  const blob = await response.blob();
+  const nombreDesdeHeader = extraerFilenameDeHeader(
+    response.headers.get("content-disposition"),
+  );
+  descargarArchivo(blob, nombreDesdeHeader || "inventario.xlsx");
+}

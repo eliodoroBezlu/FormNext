@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { prestamosAdapter } from "../../infrastructure/adapters/prestamosAdapter";
 import type {
+  CorregirSolicitantePayload,
   CrearSolicitudPayload,
   DevolverItemPayload,
   EntregarPayload,
@@ -123,5 +124,7 @@ export function usePrestamos() {
       ejecutar(() => prestamosAdapter.devolver(id, items)),
     cancelar: (id: string, motivo?: string) =>
       ejecutar(() => prestamosAdapter.cancelar(id, motivo)),
+    corregirSolicitante: (id: string, payload: CorregirSolicitantePayload) =>
+      ejecutar(() => prestamosAdapter.corregirSolicitante(id, payload)),
   };
 }

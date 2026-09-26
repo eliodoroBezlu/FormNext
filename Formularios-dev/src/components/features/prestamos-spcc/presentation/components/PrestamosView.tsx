@@ -47,10 +47,19 @@ export function PrestamosView() {
     entregar,
     devolver,
     cancelar,
+    corregirSolicitante,
   } = usePrestamos();
 
   const { user } = useUserRole();
-  const esAdmin = (user?.roles ?? []).includes("admin");
+  /**
+   * Roles literales, no jerarquía: `RolesGuard` del backend hace
+   * `roles.includes(...)`, así que mirar la jerarquía aquí pintaría botones
+   * que el servidor rechaza con un 403.
+   */
+  const roles = user?.roles ?? [];
+  const esAdmin = roles.includes("admin");
+  /** Atribuir una solicitud a otro: admin y superintendente. */
+  const puedeElegirSolicitante = esAdmin || roles.includes("superintendente");
 
   const [abrirForm, setAbrirForm] = useState(false);
   const [detalle, setDetalle] = useState<string | null>(null);
@@ -219,6 +228,7 @@ export function PrestamosView() {
         disponibles={disponibles}
         areas={areas}
         areaPorDefecto={user?.area}
+        puedeElegirSolicitante={puedeElegirSolicitante}
         onCerrar={() => setAbrirForm(false)}
         onGuardar={crear}
       />
@@ -231,6 +241,7 @@ export function PrestamosView() {
         onDevolver={devolver}
         onEntregar={entregar}
         onCancelar={cancelar}
+        onCorregirSolicitante={esAdmin ? corregirSolicitante : undefined}
       />
 
       <Snackbar

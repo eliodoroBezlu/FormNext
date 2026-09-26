@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { linternasAdapter } from "../../infrastructure/adapters/linternasAdapter";
 import type {
+  AnularEntregaPayload,
+  CorregirEntregaPayload,
   EntregaLinterna,
   EstadoTrabajador,
+  ReclasificarEntregaPayload,
   RegistrarEntregaPayload,
   StockLinternas,
 } from "../../domain/models/Linterna";
@@ -93,6 +96,66 @@ export function useLinternas() {
     [refrescarStock, seleccionarTrabajador],
   );
 
+  /**
+   * Las tres correcciones comparten el mismo cierre: llamar, refrescar y
+   * dejar el error donde la vista lo lee.
+   *
+   * Se refresca **estado, historial y stock** aunque la acción parezca no
+   * tocarlos: reclasificar mueve el almacén y el estado de la persona, y
+   * anular la saca de la dotación. Con la pantalla sin refrescar, el panel
+   * seguiría ofreciendo la acción que ya no corresponde.
+   */
+  const corregirEntrega = useCallback(
+    async <T,>(accion: () => Promise<T>, siFalla: string): Promise<T> => {
+      setCargando(true);
+      setError(null);
+      try {
+        const resultado = await accion();
+        if (estado) {
+          await Promise.all([
+            seleccionarTrabajador(estado.trabajador),
+            refrescarStock(),
+          ]);
+        }
+        return resultado;
+      } catch (err) {
+        const mensaje = err instanceof Error ? err.message : siFalla;
+        setError(mensaje);
+        throw new Error(mensaje);
+      } finally {
+        setCargando(false);
+      }
+    },
+    [estado, refrescarStock, seleccionarTrabajador],
+  );
+
+  const reclasificar = useCallback(
+    (id: string, payload: ReclasificarEntregaPayload) =>
+      corregirEntrega(
+        () => linternasAdapter.reclasificar(id, payload),
+        "No se pudo reclasificar la entrega.",
+      ),
+    [corregirEntrega],
+  );
+
+  const anular = useCallback(
+    (id: string, payload: AnularEntregaPayload) =>
+      corregirEntrega(
+        () => linternasAdapter.anular(id, payload),
+        "No se pudo anular la entrega.",
+      ),
+    [corregirEntrega],
+  );
+
+  const corregir = useCallback(
+    (id: string, payload: CorregirEntregaPayload) =>
+      corregirEntrega(
+        () => linternasAdapter.corregir(id, payload),
+        "No se pudo corregir la entrega.",
+      ),
+    [corregirEntrega],
+  );
+
   const ingresarStock = useCallback(
     async (cantidad: number, observacion?: string) => {
       setError(null);
@@ -119,6 +182,9 @@ export function useLinternas() {
     seleccionarTrabajador,
     limpiarSeleccion,
     registrar,
+    reclasificar,
+    anular,
+    corregir,
     ingresarStock,
     refrescarStock,
   };

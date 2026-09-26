@@ -14,6 +14,10 @@ import {
 import { PictureAsPdf } from "@mui/icons-material";
 import { linternasAdapter } from "../../infrastructure/adapters/linternasAdapter";
 import {
+  AccionesEntrega,
+  type AccionesEntregaProps,
+} from "./AccionesEntrega";
+import {
   ETIQUETA_ESTADO,
   ETIQUETA_TIPO,
   EstadoEntrega,
@@ -30,6 +34,9 @@ const COLOR_ESTADO: Record<
   [EstadoEntrega.APROBADA]: "success",
   [EstadoEntrega.PENDIENTE_APROBACION]: "warning",
   [EstadoEntrega.RECHAZADA]: "error",
+  // Gris a propósito: una entrega anulada no es un fallo, es un asiento que
+  // se queda pero ya no cuenta.
+  [EstadoEntrega.ANULADA]: "default",
 };
 
 const fecha = (iso?: string) =>
@@ -38,9 +45,19 @@ const fecha = (iso?: string) =>
 interface Props {
   estado: EstadoTrabajador;
   historial: EntregaLinterna[];
+  /**
+   * Corregir el historial. **Ausente = solo lectura**: quien no puede
+   * reclasificar ni anular no ve el menú, en vez de verlo y chocar con un 403.
+   * El gate por rol vive en la página, que es quien conoce al usuario.
+   */
+  acciones?: Omit<AccionesEntregaProps, "entrega">;
 }
 
-export function EstadoTrabajadorPanel({ estado, historial }: Props) {
+export function EstadoTrabajadorPanel({
+  estado,
+  historial,
+  acciones,
+}: Props) {
   const [descargando, setDescargando] = useState<string | null>(null);
   const [errorActa, setErrorActa] = useState<string | null>(null);
 
@@ -100,8 +117,8 @@ export function EstadoTrabajadorPanel({ estado, historial }: Props) {
           </Typography>
           <Stack gap={0.75} sx={{ mt: 0.5 }}>
             {historial.map((h) => (
+              <Box key={h._id}>
               <Box
-                key={h._id}
                 sx={{
                   display: "flex",
                   alignItems: "center",
@@ -149,6 +166,40 @@ export function EstadoTrabajadorPanel({ estado, historial }: Props) {
                     </IconButton>
                   </span>
                 </Tooltip>
+
+                {acciones && <AccionesEntrega entrega={h} {...acciones} />}
+              </Box>
+
+              {/*
+                El rastro de lo corregido va **debajo de la fila**, no escondido
+                en un detalle: si el almacén cuadró de una forma rara, esto es
+                lo único que lo explica.
+              */}
+              {h.reclasificaciones?.map((r) => (
+                <Typography
+                  key={`${r.fecha}-${r.tipoNuevo}`}
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                  sx={{ pl: 1, fontStyle: "italic" }}
+                >
+                  Era {ETIQUETA_TIPO[r.tipoAnterior]} · reclasificada por{" "}
+                  {r.reclasificadaPor} el {fecha(r.fecha)}: {r.motivo}
+                </Typography>
+              ))}
+
+              {h.estado === EstadoEntrega.ANULADA && (
+                <Typography
+                  variant="caption"
+                  color="error.main"
+                  display="block"
+                  sx={{ pl: 1, fontStyle: "italic" }}
+                >
+                  Anulada por {h.anuladaPor ?? "—"} el{" "}
+                  {fecha(h.fechaAnulacion)}
+                  {h.motivoAnulacion ? `: ${h.motivoAnulacion}` : ""}
+                </Typography>
+              )}
               </Box>
             ))}
           </Stack>

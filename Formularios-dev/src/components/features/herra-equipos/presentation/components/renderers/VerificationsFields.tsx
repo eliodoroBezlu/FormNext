@@ -1,7 +1,7 @@
 // components/form-filler/VerificationFields.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Controller, Control, FieldErrors, FieldPath, UseFormSetValue, PathValue, useWatch } from "react-hook-form";
 import { Typography, Card, CardContent, TextField, Grid, Autocomplete, CircularProgress } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -9,11 +9,19 @@ import { TimePicker } from "@mui/x-date-pickers/TimePicker";
 import dayjs, { Dayjs } from "dayjs";
 import AutocompleteCustom from "@/components/ui/autocomplete/AutocompleteCustom";
 import {
+  CadenaOrganizativa,
   DataSourceType,
   EquipoBackend,
   fetchDataBySourceAdapter,
+  obtenerCadenaDeAreasAdapter,
   obtenerEquiposAdapter,
 } from "../../../infrastructure/adapters/catalogDataAdapter";
+import {
+  autofillCadenaOrganizativa,
+  indexarCadenas,
+  isGerenciaField,
+  isSuperintendenciaField,
+} from "../../../domain/models/EquipmentAutofill";
 import {
   VerificationField,
   FormDataHerraEquipos,
@@ -120,6 +128,63 @@ export const VerificationFields = <
     }
   }, [user, areaField, isEditMode, setValue]);
 
+  //
+  // ── Superintendencia y gerencia deducidas del área ────────────────────
+  //
+  // El área ya determina las dos en el maestro, así que preguntárselas al
+  // inspector solo abre la puerta a que el mismo parte se contradiga. Se
+  // rellenan y se dejan editables: el maestro puede ir por detrás de una
+  // reorganización.
+  //
+  const necesitaCadena = fields.some(
+    (f) => isSuperintendenciaField(f.label) || isGerenciaField(f.label),
+  );
+
+  const [cadenas, setCadenas] = useState<Map<string, CadenaOrganizativa>>(
+    () => new Map(),
+  );
+
+  useEffect(() => {
+    if (!necesitaCadena) return;
+
+    let vigente = true;
+    obtenerCadenaDeAreasAdapter()
+      .then((datos) => {
+        if (vigente) setCadenas(indexarCadenas(datos));
+      })
+      .catch((err: unknown) => {
+        // Sin la cadena el formulario sigue siendo usable: los campos quedan
+        // como estaban y el inspector los escribe. No se bloquea por esto.
+        console.error("Error al cargar la cadena de áreas:", err);
+      });
+
+    return () => {
+      vigente = false;
+    };
+  }, [necesitaCadena]);
+
+  /**
+   * Última área que se resolvió, para no repetir trabajo ni pisar ediciones.
+   *
+   * En modo edición la primera pasada trae el área **ya guardada**, y ahí no
+   * se toca nada: lo que el inspector declaró aquel día es el registro. A
+   * partir de ahí, si cambia el área, la cadena vuelve a resolverse.
+   */
+  const areaResuelta = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!watchedArea || cadenas.size === 0) return;
+
+    if (areaResuelta.current === null && isEditMode) {
+      areaResuelta.current = watchedArea;
+      return;
+    }
+    if (areaResuelta.current === watchedArea) return;
+
+    areaResuelta.current = watchedArea;
+    autofillCadenaOrganizativa(setValue, fields, watchedArea, cadenas);
+  }, [watchedArea, cadenas, fields, setValue, isEditMode]);
+
   // Filtrar equipos sugeridos según el área seleccionada
   const filteredEquipos = React.useMemo(() => {
     if (!watchedArea) return equipos;
@@ -143,6 +208,16 @@ export const VerificationFields = <
           setValue(fieldKey, getCurrentDate() as PathValue<T, FieldPath<T>>);
         } else if (field.type === "time") {
           setValue(fieldKey, getCurrentTime() as PathValue<T, FieldPath<T>>);
+        } else if (field.valorPorDefecto) {
+          // El valor por defecto que trae la plantilla, para los campos que
+          // siempre llevan lo mismo —«EMPRESA» es el caso—. Va aquí, con la
+          // fecha y la hora, porque comparte la premisa: en una inspección
+          // nueva el campo está vacío. En edición no se toca nada, que lo
+          // guardado es el registro.
+          setValue(
+            fieldKey,
+            field.valorPorDefecto as PathValue<T, FieldPath<T>>,
+          );
         }
       });
     }

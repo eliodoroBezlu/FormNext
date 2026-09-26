@@ -74,6 +74,14 @@ export interface VerificationFieldHerraEquipos {
    */
   permiteOtro?: boolean
   dataSource?: string
+  /**
+   * Valor con el que aparece el campo la primera vez.
+   *
+   * Pensado para los que siempre llevan lo mismo —`EMPRESA` es el caso— y que
+   * preguntárselos al inspector en cada parte es trabajo sin información. Se
+   * aplica solo sobre un campo vacío y el inspector puede cambiarlo.
+   */
+  valorPorDefecto?: string
   obligatorio?: boolean
 }
 
