@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Box, CircularProgress, Alert, Button, Snackbar } from "@mui/material";
 import { ArrowBack, Lock } from "@mui/icons-material";
 import { getTemplatesHerraEquipos } from "@/lib/actions/template-herra-equipos";
+import { plantillaDeInspeccion } from "@/components/features/herra-equipos/infrastructure/adapters/plantillaDeInspeccion";
 import { FormFiller } from "@/components/features/herra-equipos/FormRenderer";
 import {
   FormTemplateHerraEquipos,
@@ -109,14 +110,28 @@ export default function FormularioDinamicoPage() {
       try {
         //console.log(`🔍 [PAGE] Cargando - Code: ${code}, InspectionId: ${inspectionId || 'nuevo'}`);
 
-        // 1. CARGAR TEMPLATE
-        const templatesResult = await getTemplatesHerraEquipos();
-        if (!templatesResult.success) {
-          setError(templatesResult.error || "Error al cargar templates");
-          return;
+        // 1. CARGAR INSPECCIÓN EXISTENTE (SI HAY ID) — antes que la
+        // plantilla: una inspección ya hecha se abre con la revisión con la
+        // que se hizo (por `templateId`), no con la vigente de su código.
+        let inspeccionExistente: Awaited<ReturnType<typeof getInspectionById>> | null = null;
+        if (inspectionId) {
+          inspeccionExistente = await getInspectionById(inspectionId);
+          if (!inspeccionExistente.success)
+            throw new Error(inspeccionExistente.error);
         }
 
-        const foundTemplate = templatesResult.data.find((t) => t.code === code);
+        // 2. CARGAR TEMPLATE
+        let foundTemplate;
+        if (inspeccionExistente?.success && inspeccionExistente.data) {
+          foundTemplate = await plantillaDeInspeccion(inspeccionExistente.data);
+        } else {
+          const templatesResult = await getTemplatesHerraEquipos();
+          if (!templatesResult.success) {
+            setError(templatesResult.error || "Error al cargar templates");
+            return;
+          }
+          foundTemplate = templatesResult.data.find((t) => t.code === code);
+        }
         if (!foundTemplate) {
           setError(`No se encontró el template con código: ${code}`);
           return;
@@ -128,9 +143,9 @@ export default function FormularioDinamicoPage() {
           updatedAt: new Date(foundTemplate.updatedAt),
         });
 
-        // 2. CARGAR INSPECCIÓN EXISTENTE (SI HAY ID)
-        if (inspectionId) {
-          const inspectionResult = await getInspectionById(inspectionId);
+        // 3. APLICAR INSPECCIÓN EXISTENTE
+        if (inspectionId && inspeccionExistente) {
+          const inspectionResult = inspeccionExistente;
           if (!inspectionResult.success)
             throw new Error(inspectionResult.error);
 
@@ -151,7 +166,7 @@ export default function FormularioDinamicoPage() {
             });
           }
         }
-        // 3. NUEVA INSPECCIÓN
+        // 4. NUEVA INSPECCIÓN
         else {
           const requiresVerification =
             FORMS_REQUIRING_TAG_VERIFICATION.includes(foundTemplate.code);

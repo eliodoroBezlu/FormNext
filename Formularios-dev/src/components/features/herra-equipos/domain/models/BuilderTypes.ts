@@ -1,3 +1,5 @@
+import type { CamposVersionado } from "@/types/versionado"
+
 export type ResponseType =
   | "si_no_na"
   | "text"
@@ -117,7 +119,9 @@ export interface FormBuilderDataHerraEquipos {
   rolesVisibles?: string[]
 }
 
-export interface FormTemplateHerraEquipos extends FormBuilderDataHerraEquipos {
+export interface FormTemplateHerraEquipos
+  extends FormBuilderDataHerraEquipos,
+    CamposVersionado {
   _id: string
   createdAt: Date
   updatedAt: Date

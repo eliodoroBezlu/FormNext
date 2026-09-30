@@ -1,59 +1,30 @@
 "use client";
 
 import type React from "react";
-import { useEffect } from "react";
-import { useForm, useFieldArray, useWatch, Controller } from "react-hook-form";
+import { useCallback, useEffect } from "react";
+import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { ROLES_ASIGNABLES_A_PLANTILLA } from "@/lib/routePermissions";
 import {
-  Box,
-  Typography,
-  Grid,
   Alert,
+  Box,
   Button as MuiButton,
   Card,
   CardContent,
-  TextField,
   FormControl,
-  FormControlLabel,
-  Checkbox,
+  Grid,
   InputLabel,
-  Select,
   MenuItem,
-  IconButton,
-  Switch,
+  Select,
+  TextField,
+  Typography,
 } from "@mui/material";
-import { Add, Delete, Save } from "@mui/icons-material";
+import { Add, Save } from "@mui/icons-material";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormBuilderDataSchema } from "../../../domain/schemas/builderSchemas";
 import { SectionBuilder } from "./SectionBuilder";
-import { OpcionesCampoVerificacion } from "./OpcionesCampoVerificacion";
-import {
-  VerificationFieldType,
-  FormBuilderDataHerraEquipos,
-  FormTemplateHerraEquipos,
-  UnidadFrecuencia,
-} from "../../../domain/models/BuilderTypes";
-
-const UNIDADES_FRECUENCIA: Array<{ value: UnidadFrecuencia; label: string }> = [
-  { value: "diaria", label: "Diaria" },
-  { value: "semanal", label: "Semanal" },
-  { value: "mensual", label: "Mensual" },
-  { value: "trimestral", label: "Trimestral" },
-  { value: "semestral", label: "Semestral" },
-  { value: "anual", label: "Anual" },
-  { value: "personalizada", label: "Personalizada (días)" },
-];
-
-const DATA_SOURCES: Array<{ value: string; label: string }> = [
-  { value: "area", label: "Área" },
-  { value: "superintendencia", label: "Superintendencia" },
-  { value: "trabajador", label: "Trabajador" },
-  { value: "gerencia", label: "Gerencia" },
-  { value: "cargo", label: "Cargo" },
-  { value: "equipo", label: "Equipo" },
-  { value: "vicepresidencia", label: "Vicepresidencia" },
-  { value: "supervisor", label: "Supervisor" },
-];
+import { CamposVerificacionBuilder } from "./CamposVerificacionBuilder";
+import { FrecuenciaInspeccionCard } from "./FrecuenciaInspeccionCard";
+import type { FormBuilderDataHerraEquipos, FormTemplateHerraEquipos } from "../../../domain/models/BuilderTypes";
 
 interface FormBuilderProps {
   template: FormTemplateHerraEquipos | null;
@@ -62,33 +33,43 @@ interface FormBuilderProps {
   mode?: "create" | "edit" | "view";
 }
 
-export const FormBuilder: React.FC<FormBuilderProps> = ({
-  template,
-  onSave,
-  onCancel,
-  mode = "create",
-}) => {
+const VALORES_NUEVA: FormBuilderDataHerraEquipos = {
+  name: "",
+  code: "",
+  revision: "Rev. 1",
+  type: "interna",
+  verificationFields: [
+    { label: "Gerencia", type: "text" },
+    { label: "Supervisor", type: "text" },
+  ],
+  sections: [],
+};
+
+/**
+ * Constructor de plantillas de herramientas y equipos.
+ *
+ * **Rendimiento:** esta raíz no vigila los datos. Antes hacía
+ * `useWatch({ control })` + `getValues()` y le pasaba a cada sección y
+ * pregunta su objeto: cada tecla redibujaba el constructor entero, y la
+ * lentitud crecía con el número de preguntas. Ahora cada pieza (campos de
+ * verificación, frecuencia, secciones, preguntas) vigila solo lo suyo.
+ * Ver mds/implementation_planConstructoresFormularios.md.
+ */
+export const FormBuilder: React.FC<FormBuilderProps> = ({ template, onSave, onCancel, mode = "create" }) => {
   const isReadOnly = mode === "view";
+  // En un borrador el código queda fijo (une a todas las revisiones); el
+  // número de revisión sí se puede elegir, siempre mayor que los anteriores.
+  const esBorrador = template?.estadoRevision === "borrador";
   const {
     control,
     handleSubmit,
     setValue,
-    getValues,
     reset,
     formState: { errors },
   } = useForm<FormBuilderDataHerraEquipos>({
     resolver: zodResolver(FormBuilderDataSchema),
-    defaultValues: template || {
-      name: "",
-      code: "",
-      revision: "Rev. 1",
-      type: "interna",
-      verificationFields: [
-        { label: "Gerencia", type: "text" },
-        { label: "Supervisor", type: "text" },
-      ],
-      sections: [],
-    },
+    mode: "onTouched",
+    defaultValues: template || VALORES_NUEVA,
   });
 
   // Cuando se abre en modo edición o vista, carga los datos del template
@@ -98,24 +79,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
     }
   }, [template, mode, reset]);
 
-  const {
-    fields: verificationFields,
-    append: appendVerificationField,
-    remove: removeVerificationField,
-  } = useFieldArray({ control, name: "verificationFields" });
-  const {
-    fields: sections,
-    append,
-    remove,
-  } = useFieldArray({ control, name: "sections" });
-  // `useWatch` provee la suscripción (re-render al cambiar cualquier campo) y
-  // `getValues` el snapshot completo: sin `name`, `useWatch` devuelve
-  // `DeepPartial<T>` y aquí se necesita el tipo completo.
-  useWatch({ control });
-  const formData = getValues();
-
-  const addVerificationField = () =>
-    appendVerificationField({ label: "", type: "text" });
+  const { fields: sections, append, remove } = useFieldArray({ control, name: "sections" });
 
   const addSection = (isParent: boolean) =>
     append({
@@ -127,38 +91,17 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
       subsections: isParent ? [] : undefined,
     });
 
-  const handleVerificationFieldTypeChange = (
-    index: number,
-    newType: VerificationFieldType,
-  ) => {
-    setValue(`verificationFields.${index}.type`, newType);
-    if (newType !== "autocomplete")
-      setValue(`verificationFields.${index}.dataSource`, undefined);
-    // La lista de opciones no significa nada fuera de «Selección»; dejarla
-    // colgada haría que reaparezca si se vuelve a ese tipo por error.
-    if (newType !== "select") {
-      setValue(`verificationFields.${index}.options`, undefined);
-      setValue(`verificationFields.${index}.permiteOtro`, undefined);
-    }
-    // En «Selección» el valor sale de la lista, así que el campo del valor por
-    // defecto se oculta. Se limpia por el mismo motivo que las opciones: un
-    // valor invisible que sigue aplicándose es peor que no tenerlo.
-    if (newType === "select") {
-      setValue(`verificationFields.${index}.valorPorDefecto`, undefined);
-    }
-  };
+  const removeSection = useCallback((i: number) => remove(i), [remove]);
 
   return (
     <Box sx={{ maxWidth: 1400, mx: "auto" }}>
       {Object.keys(errors || {}).length > 0 && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          Existen errores de validación. Revisa que el formulario tenga nombre,
-          código, y al menos una sección con preguntas.
+          Existen errores de validación. Revisa que el formulario tenga nombre, código, y al menos una sección con
+          preguntas.
         </Alert>
       )}
-      <form
-        onSubmit={handleSubmit(onSave)}
-      >
+      <Box component="form" noValidate onSubmit={handleSubmit(onSave)}>
         <Card sx={{ mb: 3 }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
@@ -166,59 +109,69 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
             </Typography>
             <Grid container spacing={3}>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  fullWidth
-                  label="Nombre del Formulario"
-                  value={formData.name}
-                  onChange={(e) => setValue("name", e.target.value)}
-                  disabled={isReadOnly}
-                  required
+                <Controller
+                  name="name"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField {...field} fullWidth label="Nombre del Formulario" disabled={isReadOnly} required />
+                  )}
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  fullWidth
-                  label="Código"
-                  value={formData.code}
-                  onChange={(e) => setValue("code", e.target.value)}
-                  disabled={isReadOnly}
-                  required
+                <Controller
+                  name="code"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField {...field} fullWidth label="Código" disabled={isReadOnly || esBorrador} required />
+                  )}
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  fullWidth
-                  label="Número de Revisión"
-                  value={formData.revision}
-                  onChange={(e) => setValue("revision", e.target.value)}
-                  disabled={isReadOnly}
-                  required
+                <Controller
+                  name="revision"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label="Número de Revisión"
+                      disabled={isReadOnly}
+                      required
+                      helperText={esBorrador ? "Tiene que ser mayor que el de las revisiones anteriores" : undefined}
+                    />
+                  )}
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <FormControl fullWidth disabled={isReadOnly}>
-                  <InputLabel>Tipo de Inspección</InputLabel>
-                  <Select
-                    value={formData.type}
-                    onChange={(e) =>
-                      setValue("type", e.target.value as "interna" | "externa")
-                    }
-                    label="Tipo de Inspección"
-                  >
-                    <MenuItem value="interna">Interna</MenuItem>
-                    <MenuItem value="externa">Externa</MenuItem>
-                  </Select>
-                </FormControl>
+                <Controller
+                  name="type"
+                  control={control}
+                  render={({ field }) => (
+                    <FormControl fullWidth disabled={isReadOnly}>
+                      <InputLabel>Tipo de Inspección</InputLabel>
+                      <Select {...field} label="Tipo de Inspección">
+                        <MenuItem value="interna">Interna</MenuItem>
+                        <MenuItem value="externa">Externa</MenuItem>
+                      </Select>
+                    </FormControl>
+                  )}
+                />
               </Grid>
               <Grid size={{ xs: 12 }}>
-                <TextField
-                  fullWidth
-                  label="Descripción"
-                  value={formData.descripcion || ""}
-                  onChange={(e) => setValue("descripcion", e.target.value)}
-                  disabled={isReadOnly}
-                  multiline
-                  minRows={2}
+                <Controller
+                  name="descripcion"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      value={field.value ?? ""}
+                      fullWidth
+                      label="Descripción"
+                      disabled={isReadOnly}
+                      multiline
+                      minRows={2}
+                    />
+                  )}
                 />
               </Grid>
             </Grid>
@@ -231,11 +184,9 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
               Visibilidad por Rol
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Deje el campo vacío para que la plantilla sea visible para todos.
-              Si selecciona roles, solo esos roles —y los de visibilidad total
-              (admin, superintendente, supervisor)— podrán verla y llenarla.
+              Deje el campo vacío para que la plantilla sea visible para todos. Si selecciona roles, solo esos roles
+              —y los de visibilidad total (admin, superintendente, supervisor)— podrán verla y llenarla.
             </Typography>
-
             <Controller
               name="rolesVisibles"
               control={control}
@@ -249,9 +200,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
                     label="Roles que ven esta plantilla"
                     disabled={isReadOnly}
                     renderValue={(sel) =>
-                      (sel as string[]).length === 0
-                        ? "Todos los roles"
-                        : (sel as string[]).join(", ")
+                      (sel as string[]).length === 0 ? "Todos los roles" : (sel as string[]).join(", ")
                     }
                   >
                     {ROLES_ASIGNABLES_A_PLANTILLA.map((r) => (
@@ -266,316 +215,16 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
           </CardContent>
         </Card>
 
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Frecuencia de Inspección
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Si se activa, un código de equipo ya inspeccionado con este tipo
-              de plantilla dejará de estar disponible hasta que se cumpla la
-              frecuencia configurada.
-            </Typography>
-            <Grid container spacing={3} alignItems="center">
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={formData.frecuencia?.activa ?? false}
-                      onChange={(e) =>
-                        setValue("frecuencia", e.target.checked
-                          ? {
-                              unidad: formData.frecuencia?.unidad || "mensual",
-                              valorPersonalizado:
-                                formData.frecuencia?.valorPersonalizado,
-                              activa: true,
-                            }
-                          : { ...formData.frecuencia, unidad: formData.frecuencia?.unidad || "mensual", activa: false })
-                      }
-                      disabled={isReadOnly}
-                    />
-                  }
-                  label="Activar control de frecuencia"
-                />
-              </Grid>
-              {formData.frecuencia?.activa && (
-                <>
-                  <Grid size={{ xs: 12, sm: 4 }}>
-                    <FormControl fullWidth size="small" disabled={isReadOnly}>
-                      <InputLabel>Frecuencia</InputLabel>
-                      <Select
-                        value={formData.frecuencia?.unidad || "mensual"}
-                        label="Frecuencia"
-                        onChange={(e) =>
-                          setValue(
-                            "frecuencia.unidad",
-                            e.target.value as UnidadFrecuencia,
-                          )
-                        }
-                      >
-                        {UNIDADES_FRECUENCIA.map((u) => (
-                          <MenuItem key={u.value} value={u.value}>
-                            {u.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  {formData.frecuencia?.unidad === "personalizada" && (
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        type="number"
-                        label="Días"
-                        value={formData.frecuencia?.valorPersonalizado ?? ""}
-                        onChange={(e) =>
-                          setValue(
-                            "frecuencia.valorPersonalizado",
-                            Number(e.target.value),
-                          )
-                        }
-                        disabled={isReadOnly}
-                      />
-                    </Grid>
-                  )}
-                  <Grid size={{ xs: 12, sm: 4 }}>
-                    <FormControl fullWidth size="small" disabled={isReadOnly}>
-                      <InputLabel>Campo de código de equipo</InputLabel>
-                      <Select
-                        value={formData.campoCodigoEquipo || ""}
-                        label="Campo de código de equipo"
-                        onChange={(e) =>
-                          setValue("campoCodigoEquipo", e.target.value)
-                        }
-                      >
-                        {formData.verificationFields.map((f, idx) => (
-                          <MenuItem key={idx} value={f.label} disabled={!f.label}>
-                            {f.label || "(sin etiqueta)"}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                </>
-              )}
-            </Grid>
-          </CardContent>
-        </Card>
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Box
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-              mb={2}
-            >
-              <Typography variant="h6">
-                Campos de Lista de Verificación ({verificationFields.length})
-              </Typography>
-              {!isReadOnly && (
-                <MuiButton
-                  variant="outlined"
-                  startIcon={<Add />}
-                  onClick={addVerificationField}
-                  size="small"
-                >
-                  Agregar Campo
-                </MuiButton>
-              )}
-            </Box>
-            {verificationFields.map((field, index: number) => (
-              <Box key={field.id} mb={2}>
-                <Grid container spacing={2} alignItems="center">
-                  <Grid size={{ xs: 12, sm: 4 }}>
-                    <TextField
-                      fullWidth
-                      label="Etiqueta del Campo"
-                      value={formData.verificationFields[index]?.label || ""}
-                      size="small"
-                      onChange={(e) =>
-                        setValue(
-                          `verificationFields.${index}.label`,
-                          e.target.value,
-                        )
-                      }
-                      disabled={isReadOnly}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 3 }}>
-                    <FormControl fullWidth size="small" disabled={isReadOnly}>
-                      <InputLabel>Tipo</InputLabel>
-                      <Select
-                        value={
-                          formData.verificationFields[index]?.type || "text"
-                        }
-                        onChange={(e) =>
-                          handleVerificationFieldTypeChange(
-                            index,
-                            e.target.value as VerificationFieldType,
-                          )
-                        }
-                        label="Tipo"
-                      >
-                        <MenuItem value="text">Texto</MenuItem>
-                        <MenuItem value="date">Fecha</MenuItem>
-                        <MenuItem value="number">Número</MenuItem>
-                        <MenuItem value="select">Selección</MenuItem>
-                        <MenuItem value="autocomplete">Autocompletar</MenuItem>
-                        <MenuItem value="time">Hora</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid size={{ xs: 6, sm: 2 }}>
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={
-                            formData.verificationFields[index]?.obligatorio ??
-                            false
-                          }
-                          onChange={(e) =>
-                            setValue(
-                              `verificationFields.${index}.obligatorio`,
-                              e.target.checked,
-                            )
-                          }
-                          disabled={isReadOnly}
-                          size="small"
-                        />
-                      }
-                      label={
-                        <Typography variant="body2">Obligatorio</Typography>
-                      }
-                    />
-                  </Grid>
-                  {formData.verificationFields[index]?.type ===
-                    "autocomplete" && (
-                    <Grid size={{ xs: 12, sm: 2 }}>
-                      <FormControl fullWidth size="small" disabled={isReadOnly}>
-                        <InputLabel>Origen de Datos</InputLabel>
-                        <Select
-                          value={
-                            formData.verificationFields[index]?.dataSource || ""
-                          }
-                          onChange={(e) =>
-                            setValue(
-                              `verificationFields.${index}.dataSource`,
-                              e.target.value,
-                            )
-                          }
-                          label="Origen de Datos"
-                        >
-                          {DATA_SOURCES.map((source) => (
-                            <MenuItem key={source.value} value={source.value}>
-                              {source.label}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                  )}
-                  {/*
-                    Para los campos que siempre llevan lo mismo —«EMPRESA» es
-                    el caso que lo motivó—: se escribe aquí y el inspector se
-                    lo encuentra puesto, en vez de teclearlo en cada parte.
-                    En «Selección» no se ofrece: ahí el valor sale de la lista.
-                  */}
-                  {formData.verificationFields[index]?.type !== "select" && (
-                    <Grid size={{ xs: 12, sm: 3 }}>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        label="Valor por defecto"
-                        placeholder="Opcional"
-                        disabled={isReadOnly}
-                        value={
-                          formData.verificationFields[index]?.valorPorDefecto ??
-                          ""
-                        }
-                        onChange={(e) =>
-                          setValue(
-                            `verificationFields.${index}.valorPorDefecto`,
-                            e.target.value || undefined,
-                          )
-                        }
-                        helperText="Se rellena solo si el campo está vacío; el inspector puede cambiarlo"
-                      />
-                    </Grid>
-                  )}
-                  {!isReadOnly && (
-                    <Grid size={{ xs: "auto" }}>
-                      <IconButton
-                        color="error"
-                        onClick={() => removeVerificationField(index)}
-                        size="small"
-                      >
-                        <Delete />
-                      </IconButton>
-                    </Grid>
-                  )}
+        <FrecuenciaInspeccionCard control={control} setValue={setValue} disabled={isReadOnly} />
 
-                  {formData.verificationFields[index]?.type === "select" && (
-                    <Grid size={{ xs: 12 }}>
-                      <OpcionesCampoVerificacion
-                        opciones={
-                          formData.verificationFields[index]?.options ?? []
-                        }
-                        permiteOtro={
-                          formData.verificationFields[index]?.permiteOtro ??
-                          false
-                        }
-                        onChange={(opciones) =>
-                          setValue(
-                            `verificationFields.${index}.options`,
-                            opciones,
-                          )
-                        }
-                        onPermiteOtroChange={(permiteOtro) =>
-                          setValue(
-                            `verificationFields.${index}.permiteOtro`,
-                            permiteOtro,
-                          )
-                        }
-                        disabled={isReadOnly}
-                      />
-                    </Grid>
-                  )}
-                </Grid>
-              </Box>
-            ))}
-            {verificationFields.length === 0 && (
-              <Box
-                p={3}
-                textAlign="center"
-                sx={{
-                  border: theme => `2px dashed ${theme.palette.mode === 'dark' ? '#334155' : '#ddd'}`,
-                  borderRadius: 2,
-                  backgroundColor: theme => theme.palette.mode === 'dark' ? 'background.default' : '#fafafa',
-                }}
-              >
-                <Typography color="text.secondary">
-                  No hay campos de verificación.
-                </Typography>
-              </Box>
-            )}
-          </CardContent>
-        </Card>
+        <CamposVerificacionBuilder control={control} setValue={setValue} disabled={isReadOnly} />
 
         {!isReadOnly && (
           <Box display="flex" gap={2} mb={3}>
-            <MuiButton
-              variant="contained"
-              startIcon={<Add />}
-              onClick={() => addSection(false)}
-            >
+            <MuiButton type="button" variant="contained" startIcon={<Add />} onClick={() => addSection(false)}>
               Sección Simple
             </MuiButton>
-            <MuiButton
-              variant="outlined"
-              startIcon={<Add />}
-              onClick={() => addSection(true)}
-            >
+            <MuiButton type="button" variant="outlined" startIcon={<Add />} onClick={() => addSection(true)}>
               Sección con Subsecciones
             </MuiButton>
           </Box>
@@ -588,22 +237,18 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
                   No hay secciones
                 </Typography>
                 <Typography color="text.secondary">
-                  {isReadOnly
-                    ? "Este template no tiene secciones definidas"
-                    : "Comienza agregando una sección"}
+                  {isReadOnly ? "Este template no tiene secciones definidas" : "Comienza agregando una sección"}
                 </Typography>
               </CardContent>
             </Card>
           ) : (
-            sections.map((section, index: number) => (
+            sections.map((section, index) => (
               <SectionBuilder
-                key={section._id || index}
+                key={section.id}
                 sectionIndex={index}
-                section={formData.sections[index]}
                 control={control}
                 setValue={setValue}
-                getValues={getValues}
-                onRemove={() => remove(index)}
+                onRemove={removeSection}
                 disabled={isReadOnly}
               />
             ))
@@ -611,7 +256,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
         </Box>
         {!isReadOnly && (
           <Box display="flex" justifyContent="flex-end" gap={2} mt={3}>
-            <MuiButton variant="outlined" onClick={onCancel}>
+            <MuiButton type="button" variant="outlined" onClick={onCancel}>
               Cancelar
             </MuiButton>
             <MuiButton type="submit" variant="contained" startIcon={<Save />}>
@@ -619,7 +264,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
             </MuiButton>
           </Box>
         )}
-      </form>
+      </Box>
     </Box>
   );
 };

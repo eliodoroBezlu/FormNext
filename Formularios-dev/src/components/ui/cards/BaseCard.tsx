@@ -13,6 +13,7 @@ export interface BaseCardAction {
   color?: 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'
   size?: 'small' | 'medium' | 'large'
   fullWidth?: boolean
+  disabled?: boolean
 }
 
 export interface BaseCardProps {
@@ -39,6 +40,7 @@ export const BaseCard: React.FC<BaseCardProps> = ({
           fullWidth={action.fullWidth}
           startIcon={action.icon}
           onClick={action.onClick}
+          disabled={action.disabled}
         >
           {action.label}
         </Button>
@@ -46,7 +48,7 @@ export const BaseCard: React.FC<BaseCardProps> = ({
     }
 
     return (
-      <Box display="flex" gap={1}>
+      <Box display="flex" gap={1} flexWrap="wrap">
         {actions.map((action, index) => (
           <Button
             key={index}
@@ -55,6 +57,7 @@ export const BaseCard: React.FC<BaseCardProps> = ({
             size={action.size || 'small'}
             startIcon={action.icon}
             onClick={action.onClick}
+            disabled={action.disabled}
           >
             {action.label}
           </Button>

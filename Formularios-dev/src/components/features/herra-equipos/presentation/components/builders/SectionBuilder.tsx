@@ -1,32 +1,34 @@
 "use client";
 
-import type React from "react";
+import { memo, useCallback } from "react";
 import {
   useFieldArray,
+  useWatch,
   type Control,
   type UseFormSetValue,
-  type UseFormGetValues,
 } from "react-hook-form";
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Box,
-  Typography,
-  Grid,
   Button as MuiButton,
   Chip,
-  IconButton,
   Divider,
+  Grid,
+  IconButton,
   TextField,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
+  Typography,
 } from "@mui/material";
 import { Add, Delete, ExpandMore } from "@mui/icons-material";
 import { ImageManager } from "./ImageManager";
 import { QuestionBuilder } from "./QuestionEditor";
-import {
-  SectionHerraEquipos,
-  QuestionHerraEquipos,
+import { ListaOrdenable } from "@/components/ui/sortable/ListaOrdenable";
+import type {
   FormBuilderDataHerraEquipos,
+  QuestionHerraEquipos,
+  SectionHerraEquipos,
+  SectionImageHerraEquipos,
 } from "../../../domain/models/BuilderTypes";
 
 const DEFAULT_SI_NO_NA_OPTIONS = [
@@ -37,99 +39,134 @@ const DEFAULT_SI_NO_NA_OPTIONS = [
 
 export interface SectionBuilderProps {
   sectionIndex: number;
-  section: SectionHerraEquipos;
   control: Control<FormBuilderDataHerraEquipos>;
   setValue: UseFormSetValue<FormBuilderDataHerraEquipos>;
-  getValues: UseFormGetValues<FormBuilderDataHerraEquipos>;
-  onRemove: () => void;
+  onRemove: (index: number) => void;
   disabled?: boolean;
-  isNested?: boolean;
+  /** Ruta de la sección padre, si esta es una subsección. */
   parentPath?: string;
 }
 
-export const SectionBuilder: React.FC<SectionBuilderProps> = ({
+/** Lee un valor del formulario por ruta dinámica (secciones anidadas). */
+function useValor<T>(
+  control: Control<FormBuilderDataHerraEquipos>,
+  ruta: string,
+): T {
+  return useWatch({ control, name: ruta as never }) as T;
+}
+
+const cajaVacia = {
+  border: "2px dashed #ddd",
+  borderRadius: 2,
+  backgroundColor: "#fafafa",
+};
+
+/**
+ * Una sección del constructor de herramientas, recursiva para subsecciones.
+ *
+ * No recibe la sección como objeto: lee de a un campo lo que muestra y deja
+ * cada pregunta a su propio componente memoizado. Preguntas y subsecciones se
+ * agregan con los métodos del field array (antes se reescribía el array
+ * entero con `setValue`), y las keys son `field.id`, estables al reordenar.
+ */
+export const SectionBuilder = memo(function SectionBuilder({
   sectionIndex,
-  section,
   control,
   setValue,
-  getValues,
   onRemove,
   disabled = false,
   parentPath,
-}) => {
+}: SectionBuilderProps) {
   const basePath = parentPath
     ? `${parentPath}.subsections.${sectionIndex}`
     : `sections.${sectionIndex}`;
 
-  const questionsPath = `${basePath}.questions` as "sections";
-  const { fields: questions, remove } = useFieldArray({
+  const titulo = useValor<string | undefined>(control, `${basePath}.title`);
+  const descripcion = useValor<string | undefined>(
     control,
-    name: questionsPath,
-  });
+    `${basePath}.description`,
+  );
+  const esPadre =
+    useValor<boolean | undefined>(control, `${basePath}.isParent`) === true;
+  const idSeccion = useValor<string | undefined>(control, `${basePath}._id`);
+  const imagenes = useValor<SectionImageHerraEquipos[] | undefined>(
+    control,
+    `${basePath}.images`,
+  );
+
+  const {
+    fields: preguntas,
+    append: agregarPregunta,
+    remove: quitarPregunta,
+    move: moverPregunta,
+  } = useFieldArray({ control, name: `${basePath}.questions` as never });
+
+  const {
+    fields: subsecciones,
+    append: agregarSubseccion,
+    remove: quitarSubseccion,
+  } = useFieldArray({ control, name: `${basePath}.subsections` as never });
 
   const setField = (path: string, value: unknown) =>
     setValue(path as keyof FormBuilderDataHerraEquipos, value as never);
 
   const addQuestion = () => {
-    const newQuestion: QuestionHerraEquipos = {
+    const nueva: QuestionHerraEquipos = {
       text: "",
       obligatorio: true,
       responseConfig: { type: "si_no_na", options: DEFAULT_SI_NO_NA_OPTIONS },
     };
-    setField(`${basePath}.questions`, [
-      ...(section.questions || []),
-      newQuestion,
-    ]);
+    agregarPregunta(nueva as never);
   };
 
-  const handleAddSubsection = (isParent: boolean) => {
-    const newSub: SectionHerraEquipos = {
-      title: isParent ? "Nueva Subsección Padre" : "Nueva Subsección",
-      isParent,
-      parentId: section._id || null,
+  const addSubsection = (padre: boolean) => {
+    const nueva: SectionHerraEquipos = {
+      title: padre ? "Nueva Subsección Padre" : "Nueva Subsección",
+      isParent: padre,
+      parentId: idSeccion || null,
       questions: [],
       images: [],
-      subsections: isParent ? [] : undefined,
+      subsections: padre ? [] : undefined,
     };
-    setField(`${basePath}.subsections`, [
-      ...(section.subsections || []),
-      newSub,
-    ]);
+    agregarSubseccion(nueva as never);
   };
 
-  const handleRemoveSubsection = (subIndex: number) => {
-    const updated = [...(section.subsections || [])];
-    updated.splice(subIndex, 1);
-    setField(`${basePath}.subsections`, updated);
-  };
+  const removeQuestion = useCallback(
+    (i: number) => quitarPregunta(i),
+    [quitarPregunta],
+  );
+  const removeSubsection = useCallback(
+    (i: number) => quitarSubseccion(i),
+    [quitarSubseccion],
+  );
 
   return (
-    <Accordion defaultExpanded={!section.isParent} sx={{ mb: 2 }}>
+    <Accordion defaultExpanded={!esPadre} sx={{ mb: 2 }}>
       <Box display="flex" alignItems="flex-start">
         <AccordionSummary expandIcon={<ExpandMore />} sx={{ flexGrow: 1 }}>
           <Box>
             <Typography variant="h6" fontWeight="medium">
-              {section.isParent ? "📁" : "📄"} {section.title || "Sin título"}
+              {esPadre ? "📁" : "📄"} {titulo || "Sin título"}
             </Typography>
-            {section.description && (
+            {descripcion && (
               <Typography variant="caption" color="text.secondary">
-                {section.description}
+                {descripcion}
               </Typography>
             )}
             <Box mt={0.5}>
-              <Chip label={`${questions.length} preguntas`} size="small" />
-              {section.subsections && section.subsections.length > 0 && (
+              <Chip label={`${preguntas.length} preguntas`} size="small" />
+              {subsecciones.length > 0 && (
                 <Chip
-                  label={`${section.subsections.length} subsecciones`}
+                  label={`${subsecciones.length} subsecciones`}
                   size="small"
                   color="primary"
                   variant="outlined"
                   sx={{ ml: 1 }}
                 />
               )}
-              {section.images && section.images.length > 0 && (
+              {(imagenes?.length ?? 0) > 0 && (
                 <Chip
-                  label={`${section.images.length} imágenes`}
+                  label={`${imagenes?.length} imágenes`}
                   size="small"
                   color="secondary"
                   variant="outlined"
@@ -143,9 +180,10 @@ export const SectionBuilder: React.FC<SectionBuilderProps> = ({
           <Box display="flex" alignItems="center" p={1}>
             <IconButton
               color="error"
-              onClick={onRemove}
+              onClick={() => onRemove(sectionIndex)}
               size="small"
               title="Eliminar sección"
+              aria-label="Eliminar sección"
             >
               <Delete />
             </IconButton>
@@ -155,17 +193,16 @@ export const SectionBuilder: React.FC<SectionBuilderProps> = ({
 
       <AccordionDetails>
         <Box>
-          {/* Campos de título y descripción */}
           <Grid container spacing={2} mb={3}>
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label={
-                  section.isParent
+                  esPadre
                     ? "Título de la Sección Padre"
                     : "Título de la Sección"
                 }
-                value={section.title}
+                value={titulo ?? ""}
                 onChange={(e) => setField(`${basePath}.title`, e.target.value)}
                 size="small"
                 disabled={disabled}
@@ -175,7 +212,7 @@ export const SectionBuilder: React.FC<SectionBuilderProps> = ({
               <TextField
                 fullWidth
                 label="Descripción (opcional)"
-                value={section.description || ""}
+                value={descripcion ?? ""}
                 onChange={(e) =>
                   setField(`${basePath}.description`, e.target.value)
                 }
@@ -191,13 +228,12 @@ export const SectionBuilder: React.FC<SectionBuilderProps> = ({
 
           <ImageManager
             sectionPath={basePath}
-            images={section.images || []}
+            control={control}
             setValue={setValue}
             disabled={disabled}
           />
 
-          {/* Preguntas (solo en secciones no-padre) */}
-          {!section.isParent && (
+          {!esPadre && (
             <>
               <Divider sx={{ my: 2 }} />
               <Box
@@ -207,10 +243,11 @@ export const SectionBuilder: React.FC<SectionBuilderProps> = ({
                 mb={2}
               >
                 <Typography variant="subtitle1" fontWeight="medium">
-                  Preguntas ({questions.length})
+                  Preguntas ({preguntas.length})
                 </Typography>
                 {!disabled && (
                   <MuiButton
+                    type="button"
                     variant="contained"
                     size="small"
                     startIcon={<Add />}
@@ -220,39 +257,37 @@ export const SectionBuilder: React.FC<SectionBuilderProps> = ({
                   </MuiButton>
                 )}
               </Box>
-              {questions.length === 0 ? (
-                <Box
-                  p={3}
-                  textAlign="center"
-                  sx={{
-                    border: "2px dashed #ddd",
-                    borderRadius: 2,
-                    backgroundColor: "#fafafa",
-                  }}
-                >
+              {preguntas.length === 0 ? (
+                <Box p={3} textAlign="center" sx={cajaVacia}>
                   <Typography color="text.secondary">
-                    No hay preguntas. Haz clic en &ldquo;Agregar Pregunta&ldquo;
+                    No hay preguntas. Haz clic en &ldquo;Agregar Pregunta&rdquo;
                     para comenzar.
                   </Typography>
                 </Box>
               ) : (
-                questions.map((question, qIndex) => (
-                  <QuestionBuilder
-                    key={section.questions[qIndex]?._id || qIndex}
-                    sectionPath={basePath}
-                    questionIndex={qIndex}
-                    question={section.questions[qIndex]}
-                    setValue={setValue}
-                    onRemove={() => remove(qIndex)}
-                    disabled={disabled}
-                  />
-                ))
+                <ListaOrdenable
+                  ids={preguntas.map((p) => p.id)}
+                  onMover={moverPregunta}
+                  deshabilitada={disabled}
+                >
+                  {preguntas.map((pregunta, i) => (
+                    <QuestionBuilder
+                      key={pregunta.id}
+                      id={pregunta.id}
+                      sectionPath={basePath}
+                      questionIndex={i}
+                      control={control}
+                      setValue={setValue}
+                      onRemove={removeQuestion}
+                      disabled={disabled}
+                    />
+                  ))}
+                </ListaOrdenable>
               )}
             </>
           )}
 
-          {/* Subsecciones (solo en secciones padre) */}
-          {section.isParent === true && (
+          {esPadre && (
             <Box mt={3}>
               <Box
                 display="flex"
@@ -261,24 +296,26 @@ export const SectionBuilder: React.FC<SectionBuilderProps> = ({
                 mb={2}
               >
                 <Typography variant="subtitle1" fontWeight="medium">
-                  Subsecciones ({section.subsections?.length || 0})
+                  Subsecciones ({subsecciones.length})
                 </Typography>
                 {!disabled && (
                   <Box display="flex" gap={1}>
                     <MuiButton
+                      type="button"
                       variant="contained"
                       size="small"
                       startIcon={<Add />}
-                      onClick={() => handleAddSubsection(false)}
+                      onClick={() => addSubsection(false)}
                       color="primary"
                     >
                       Subsección Simple
                     </MuiButton>
                     <MuiButton
+                      type="button"
                       variant="outlined"
                       size="small"
                       startIcon={<Add />}
-                      onClick={() => handleAddSubsection(true)}
+                      onClick={() => addSubsection(true)}
                       color="secondary"
                     >
                       Subsección Padre
@@ -287,37 +324,22 @@ export const SectionBuilder: React.FC<SectionBuilderProps> = ({
                 )}
               </Box>
 
-              {!section.subsections || section.subsections.length === 0 ? (
-                <Box
-                  p={3}
-                  textAlign="center"
-                  sx={{
-                    border: "2px dashed #ddd",
-                    borderRadius: 2,
-                    backgroundColor: "#fafafa",
-                  }}
-                >
+              {subsecciones.length === 0 ? (
+                <Box p={3} textAlign="center" sx={cajaVacia}>
                   <Typography color="text.secondary">
                     No hay subsecciones. Haz clic en los botones de arriba para
                     comenzar.
                   </Typography>
                 </Box>
               ) : (
-                section.subsections.map((subsection, subIndex) => (
-                  <Box
-                    key={subsection._id || `subsection-${subIndex}`}
-                    ml={2}
-                    mb={2}
-                  >
+                subsecciones.map((sub, i) => (
+                  <Box key={sub.id} ml={2} mb={2}>
                     <SectionBuilder
-                      sectionIndex={subIndex}
-                      section={subsection}
+                      sectionIndex={i}
                       control={control}
                       setValue={setValue}
-                      getValues={getValues}
-                      onRemove={() => handleRemoveSubsection(subIndex)}
+                      onRemove={removeSubsection}
                       disabled={disabled}
-                      isNested={true}
                       parentPath={basePath}
                     />
                   </Box>
@@ -329,4 +351,4 @@ export const SectionBuilder: React.FC<SectionBuilderProps> = ({
       </AccordionDetails>
     </Accordion>
   );
-};
+});

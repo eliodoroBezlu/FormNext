@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { memo, useState } from "react"
 import {
   Box,
   Typography,
@@ -26,14 +26,12 @@ import {
 } from "@mui/material"
 import {
   Delete,
-  DragIndicator,
   Image as ImageIcon,
   Close,
 } from "@mui/icons-material"
-import {
-  type UseFormSetValue,
-} from "react-hook-form"
+import { useWatch, type Control, type UseFormSetValue } from "react-hook-form"
 import { useImageUpload } from "../../../application/hooks/useImageUpload"
+import { AsaArrastre, useOrdenable } from "@/components/ui/sortable/ListaOrdenable"
 import {
   ResponseType,
   QuestionHerraEquipos,
@@ -89,37 +87,57 @@ const RESPONSE_TYPES: Array<{ value: ResponseType; label: string }> = [
 // ─── Interfaces ────────────────────────────────────────────────────────────
 
 export interface QuestionBuilderProps {
+  /** `field.id` del field array: identidad estable para arrastrar. */
+  id: string
   sectionPath: string
   questionIndex: number
-  question: QuestionHerraEquipos
+  control: Control<FormBuilderDataHerraEquipos>
   setValue: UseFormSetValue<FormBuilderDataHerraEquipos>
-  onRemove: () => void
+  onRemove: (index: number) => void
   disabled?: boolean
+}
+
+const PREGUNTA_VACIA: QuestionHerraEquipos = {
+  text: "",
+  obligatorio: false,
+  responseConfig: { type: "si_no_na" },
 }
 
 // ─── Componente ────────────────────────────────────────────────────────────
 
-export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
+/**
+ * Una pregunta del constructor de herramientas.
+ *
+ * Memoizada y leyendo **solo su propia pregunta** (`useWatch` por ruta): al
+ * escribir aquí no se redibuja ninguna otra. Antes la raíz vigilaba el
+ * formulario entero y le pasaba a cada pregunta su objeto, así que cada tecla
+ * redibujaba todas, con sus selects y su vista previa.
+ */
+export const QuestionBuilder = memo(function QuestionBuilder({
+  id,
   sectionPath,
   questionIndex,
-  question,
+  control,
   setValue,
   onRemove,
   disabled = false,
-}) => {
-  const [responseType, setResponseType] = useState<ResponseType>(question.responseConfig.type)
+}: QuestionBuilderProps) {
+  const question =
+    (useWatch({ control, name: `${sectionPath}.questions.${questionIndex}` as never }) as QuestionHerraEquipos | undefined) ??
+    PREGUNTA_VACIA
+  const responseType: ResponseType = question.responseConfig?.type ?? "si_no_na"
   const [showImageDialog, setShowImageDialog] = useState(false)
   const [imageUrl, setImageUrl] = useState("")
   const [uploadedFile, setUploadedFile] = useState<string | null>(null)
   const [imageCaption, setImageCaption] = useState("")
   const [imageError, setImageError] = useState<string | null>(null)
   const { upload } = useImageUpload()
+  const { nodoRef, estilo, arrastrando, asa } = useOrdenable(id, disabled)
 
   const setField = (path: string, value: unknown) =>
     setValue(path as keyof FormBuilderDataHerraEquipos, value as never)
 
   const handleTypeChange = (newType: ResponseType) => {
-    setResponseType(newType)
     setField(`${sectionPath}.questions.${questionIndex}.responseConfig.type`, newType)
     const defaultOptions = getDefaultOptions(newType)
     if (defaultOptions) {
@@ -168,9 +186,16 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
   }
 
   return (
-    <Paper elevation={1} sx={{ p: 2, mb: 2, backgroundColor: theme => theme.palette.mode === 'dark' ? 'background.paper' : '#fafafa' }}>
+    <Paper
+      ref={nodoRef}
+      style={estilo}
+      elevation={arrastrando ? 6 : 1}
+      sx={{ p: 2, mb: 2, backgroundColor: theme => theme.palette.mode === 'dark' ? 'background.paper' : '#fafafa' }}
+    >
       <Box display="flex" alignItems="flex-start" gap={2}>
-        <DragIndicator sx={{ color: "text.secondary", mt: 1 }} />
+        <Box mt={0.5}>
+          <AsaArrastre asa={asa} arrastrando={arrastrando} deshabilitado={disabled} />
+        </Box>
         <Box flex={1}>
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -221,7 +246,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                     <ImageIcon />
                   </IconButton>
                 )}
-                <IconButton color="error" onClick={onRemove} size="small" disabled={disabled}>
+                <IconButton color="error" onClick={() => onRemove(questionIndex)} size="small" disabled={disabled} aria-label="Eliminar pregunta">
                   <Delete />
                 </IconButton>
               </Box>
@@ -329,4 +354,4 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
       </Dialog>
     </Paper>
   )
-}
+})

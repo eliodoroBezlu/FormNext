@@ -1,33 +1,20 @@
+"use client";
+
 import type React from "react";
-import { useForm, useFieldArray, useWatch } from "react-hook-form";
-import {
-  Box,
-  Typography,
-  Grid,
-  IconButton,
-  Paper,
-  Alert,
-  CircularProgress,
-  Chip,
-  Collapse,
-  LinearProgress,
-} from "@mui/material";
-import {
-  Add,
-  Delete,
-  ArrowBack,
-  Save,
-  Expand,
-  Image as ImageIcon,
-  FolderOpen,
-} from "@mui/icons-material";
+import { useCallback, useEffect, useState } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
+import { Alert, Box, Chip, CircularProgress, Grid, Paper, Typography } from "@mui/material";
+import { Add, ArrowBack, FolderOpen, Image as ImageIcon, Save, UnfoldLess, UnfoldMore } from "@mui/icons-material";
 import { Button } from "@/components/ui/buttons/Button";
 import { FormField } from "@/components/ui/inputs/FormField";
-import { FormBuilderData, FormTemplate } from "@/types/formTypes";
-import { useCallback, useEffect, useState } from "react";
+import type { FormBuilderData, FormTemplate } from "@/types/formTypes";
 import { useFormBuilderSubmit } from "@/components/features/form-builder/application/hooks/useFormBuilderSubmit";
+import { useEstadisticasImagenes } from "../../application/hooks/useEstadisticasPlantilla";
+import { normalizarSecciones } from "../../domain/models/estadisticasPlantilla";
 import { SectionBuilder } from "./SectionBuilder";
 import { ImageSectionBuilder } from "./SectionBuilderView";
+import { CamposVerificacion } from "./CamposVerificacion";
+import { AvisoImagenesProcesando, ResumenImagenes, ResumenPlantilla } from "./ResumenPlantilla";
 
 export interface FormBuilderProps {
   template: FormTemplate | null;
@@ -36,340 +23,201 @@ export interface FormBuilderProps {
   mode?: "create" | "edit" | "view";
 }
 
-const DATA_SOURCES = [
-  { value: "area", label: "Área" },
-  { value: "superintendencia", label: "Superintendencia" },
-  { value: "trabajador", label: "Trabajador" },
-  { value: "gerencia", label: "Gerencia" },
-  { value: "cargo", label: "Cargo" },
-  { value: "equipo", label: "Equipo" },
-  { value: "vicepresidencia", label: "Vicepresidencia" },
-  { value: "supervisor", label: "Supervisor" },
-];
+const VALORES_NUEVA: FormBuilderData = {
+  name: "",
+  code: "",
+  revision: "Rev. 1",
+  type: "interna",
+  verificationFields: [
+    { label: "Gerencia", type: "text", dataSource: "", required: false },
+    { label: "Supervisor", type: "text", dataSource: "", required: false },
+    { label: "Inspección N°", type: "text", dataSource: "", required: false },
+    { label: "Superintendencia", type: "text", dataSource: "", required: false },
+    { label: "Lugar", type: "text", dataSource: "", required: false },
+    { label: "Fecha Inspección", type: "date", dataSource: "", required: false },
+    { label: "Área", type: "text", dataSource: "", required: false },
+  ],
+  sections: [],
+  simpleSections: [],
+};
 
-export const FormBuilder: React.FC<FormBuilderProps> = ({
-  template,
-  onSave,
-  onCancel,
-  mode = "create",
-}) => {
-  const [expandedSections, setExpandedSections] = useState<Set<number>>(
-    new Set([0])
-  );
-  const [expandedImageSections, setExpandedImageSections] = useState<
-    Set<number>
-  >(new Set([0]));
+const aValoresDelFormulario = (template: FormTemplate): FormBuilderData => ({
+  name: template.name || "",
+  code: template.code || "",
+  revision: template.revision || "Rev. 1",
+  type: template.type || "interna",
+  verificationFields: (template.verificationFields || []).map((field) => ({
+    label: field.label || "",
+    type: field.type || "text",
+    dataSource: field.dataSource || "",
+    required: Boolean(field.required),
+  })),
+  sections: normalizarSecciones(template.sections || []),
+  simpleSections: template.simpleSections || [],
+});
+
+/** Alterna un índice dentro de un Set (secciones expandidas). */
+const alternar = (prev: Set<number>, i: number) => {
+  const siguiente = new Set(prev);
+  if (siguiente.has(i)) siguiente.delete(i);
+  else siguiente.add(i);
+  return siguiente;
+};
+
+/**
+ * Constructor de plantillas IRO/ISOP.
+ *
+ * **Rendimiento:** esta raíz no vigila los datos del formulario. Cada campo
+ * se suscribe a su propio valor y las secciones/preguntas están memoizadas;
+ * los contadores que sí necesitan todo (`ResumenPlantilla`, `ResumenImagenes`,
+ * `BotonGuardar`) son componentes chicos y aislados. Antes, un `useWatch` de
+ * todas las secciones aquí arriba hacía que cada tecla redibujara todas las
+ * preguntas, y la lentitud crecía con el tamaño del formulario.
+ * Ver mds/implementation_planConstructoresFormularios.md.
+ */
+export const FormBuilder: React.FC<FormBuilderProps> = ({ template, onSave, onCancel, mode = "create" }) => {
+  const [expandedSections, setExpandedSections] = useState<Set<number>>(() => new Set([0]));
+  const [expandedImageSections, setExpandedImageSections] = useState<Set<number>>(() => new Set([0]));
 
   const isReadOnly = mode === "view";
   const isEditing = mode === "edit" && template;
+  // En un borrador el código queda fijo: une a todas las revisiones. El
+  // número de revisión sí se puede cambiar (p. ej. saltar de la 7 a la 9); el
+  // backend exige que sea mayor que el de las revisiones anteriores.
+  const esBorrador = template?.estadoRevision === "borrador";
 
-  const { onSubmit, isPending, error, setError, success, setSuccess } =
-    useFormBuilderSubmit({
-      template,
-      isEditing: Boolean(isEditing),
-      onSave,
-    });
+  const { onSubmit, isPending, error, setError, success, setSuccess } = useFormBuilderSubmit({
+    template,
+    isEditing: Boolean(isEditing),
+    onSave,
+  });
 
   const {
     control,
     handleSubmit,
     reset,
     setValue,
-    formState: { errors, isValid },
+    getValues,
+    formState: { errors },
   } = useForm<FormBuilderData>({
-    mode: "onChange",
-    defaultValues: template || {
-      name: "",
-      code: "",
-      revision: "Rev. 1",
-      type: "interna",
-      verificationFields: [
-        { label: "Gerencia", type: "text", dataSource: "", required: false }, 
-        { label: "Supervisor", type: "text", dataSource: "", required: false },
-        { label: "Inspección N°", type: "text", dataSource: "", required: false },
-        { label: "Superintendencia", type: "text", dataSource: "", required: false },
-        { label: "Lugar", type: "text", dataSource: "", required: false },
-        { label: "Fecha Inspección", type: "date", dataSource: "", required: false },
-        { label: "Área", type: "text", dataSource: "", required: false },
-      ],
-      sections: [],
-      simpleSections: [],
-    },
+    mode: "onTouched",
+    defaultValues: template ? aValoresDelFormulario(template) : VALORES_NUEVA,
   });
 
   useEffect(() => {
-    if (template) {
-      reset({
-        name: template.name || "",
-        code: template.code || "",
-        revision: template.revision || "Rev. 1",
-        type: template.type || "interna",
-        verificationFields: (template.verificationFields || []).map(
-          (field) => ({
-            label: field.label || "",
-            type: field.type || "text",
-            dataSource: field.dataSource || "", 
-            required: Boolean(field.required),
-          })
-        ),
-        sections: template.sections || [],
-        simpleSections: template.simpleSections || [],
-      });
-    }
+    if (template) reset(aValoresDelFormulario(template));
   }, [template, reset]);
 
-  const {
-    fields: verificationFields,
-    append: appendVerificationField,
-    remove: removeVerificationField,
-  } = useFieldArray({
-    control,
-    name: "verificationFields",
-  });
+  // Las URL `blob:` temporales se liberan al salir del constructor. Antes esto
+  // era la limpieza de un efecto que dependía de las secciones con imágenes,
+  // así que corría en cada cambio y podía revocar una imagen a medio procesar.
+  useEffect(
+    () => () => {
+      for (const seccion of getValues("simpleSections") ?? []) {
+        for (const pregunta of seccion.questions ?? []) {
+          if (pregunta.image?.startsWith("blob:")) URL.revokeObjectURL(pregunta.image);
+        }
+      }
+    },
+    [getValues],
+  );
 
-  const {
-    fields: sections,
-    append: appendSection,
-    remove: removeSection,
-  } = useFieldArray({
+  const { fields: sections, append: appendSection, remove: removeSection } = useFieldArray({
     control,
     name: "sections",
   });
-
-  const {
-    fields: simpleSections,
-    append: appendSimpleSection,
-    remove: removeSimpleSection,
-  } = useFieldArray({
+  const { fields: simpleSections, append: appendSimpleSection, remove: removeSimpleSection } = useFieldArray({
     control,
     name: "simpleSections",
   });
 
-  const watchedSections = useWatch({ control, name: "sections" });
-  const watchedSimpleSections = useWatch({ control, name: "simpleSections" });
-  const watchedVerificationFields = useWatch({
-    control,
-    name: "verificationFields",
-  });
+  const totalSecciones = sections.length + simpleSections.length;
+  const puedeEliminarSeccion = !isReadOnly && totalSecciones > 1;
 
-  const addVerificationField = useCallback(() => {
-    appendVerificationField({
-      label: "",
-      type: "text",
-      dataSource: "",
-      required: false,
+  const addSection = (isParent: boolean) => {
+    const newIndex = sections.length;
+    appendSection({
+      title: isParent ? "Nueva Sección Padre" : "Nueva Sección",
+      description: "",
+      maxPoints: 0,
+      questions: [],
+      isParent,
+      parentId: null,
+      subsections: isParent ? [] : undefined,
+      order: newIndex,
     });
-  }, [appendVerificationField]);
-
-  const addSection = (isParent: boolean = false) => {
-  const newIndex = sections.length;
-
-  const newSection = {
-    title: isParent ? "Nueva Sección Padre" : "Nueva Sección",
-    description: "",
-    maxPoints: isParent ? 0 : 0, 
-    questions: [],
-    isParent: isParent, 
-    parentId: null,
-    subsections: isParent ? [] : undefined,
-    order: newIndex,
+    setExpandedSections((prev) => new Set([...prev, newIndex]));
   };
-
-  appendSection(newSection);
-  setExpandedSections((prev) => new Set([...prev, newIndex]));
-};
 
   const addImageSection = () => {
     const newIndex = simpleSections.length;
-    appendSimpleSection({
-      title: "",
-      questions: [{ text: "", image: undefined }],
-    });
-
+    appendSimpleSection({ title: "", questions: [{ text: "", image: undefined }] });
     setExpandedImageSections((prev) => new Set([...prev, newIndex]));
   };
 
-  const toggleImageSectionExpansion = (index: number) => {
-    setExpandedImageSections((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(index)) {
-        newSet.delete(index);
-      } else {
-        newSet.add(index);
-      }
-      return newSet;
-    });
-  };
-
-  const toggleSectionExpansion = (index: number) => {
-    setExpandedSections((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(index)) {
-        newSet.delete(index);
-      } else {
-        newSet.add(index);
-      }
-      return newSet;
-    });
-  };
+  // Callbacks estables: las secciones están memoizadas y reciben el índice.
+  const toggleSection = useCallback((i: number) => setExpandedSections((prev) => alternar(prev, i)), []);
+  const toggleImageSection = useCallback((i: number) => setExpandedImageSections((prev) => alternar(prev, i)), []);
+  const handleRemoveSection = useCallback((i: number) => removeSection(i), [removeSection]);
+  const handleRemoveImageSection = useCallback((i: number) => removeSimpleSection(i), [removeSimpleSection]);
 
   const expandAllSections = () => {
-    setExpandedSections(new Set(sections.map((_, index) => index)));
-    setExpandedImageSections(new Set(simpleSections.map((_, index) => index)));
+    setExpandedSections(new Set(sections.map((_, i) => i)));
+    setExpandedImageSections(new Set(simpleSections.map((_, i) => i)));
   };
-
   const collapseAllSections = () => {
     setExpandedSections(new Set());
     setExpandedImageSections(new Set());
   };
 
-  const getTotalQuestions = () => {
-    const regularQuestions = watchedSections.reduce((total, section) => {
-      return total + (section.questions?.length || 0);
-    }, 0);
-
-    const imageQuestions = (watchedSimpleSections || []).reduce(
-      (total, section) => {
-        return total + (section.questions?.length || 0);
-      },
-      0
-    );
-
-    return regularQuestions + imageQuestions;
-  };
-
-  const getTotalMaxPoints = () => {
-    return watchedSections.reduce((total, section) => {
-      return total + (Number(section.maxPoints) || 0);
-    }, 0);
-  };
-
-  const getTotalSections = () => {
-    return sections.length + simpleSections.length;
-  };
-
-  const getAutocompleteFields = () => {
-    return watchedVerificationFields.filter((f) => f.type === "autocomplete")
-      .length;
-  };
-
-  const getImageStats = () => {
-    const stats = {
-      total: 0,
-      base64: 0,
-      processing: 0,
-      totalSizeKB: 0,
-    };
-
-    (watchedSimpleSections || []).forEach((section) => {
-      (section.questions || []).forEach((question) => {
-        if (question.image) {
-          stats.total++;
-          if (question.image.startsWith("data:image/")) {
-            stats.base64++;
-            const sizeInBytes = (question.image.length * 3) / 4;
-            stats.totalSizeKB += Math.round(sizeInBytes / 1024);
-          } else if (question.image.startsWith("blob:")) {
-            stats.processing++;
-          }
+  /** Patrón 2 del CLAUDE.md: al guardar con errores, ir al primero. */
+  const handleInvalidSubmit = () => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = document.querySelector<HTMLElement>('[data-question-error="true"], [aria-invalid="true"]');
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          el.focus?.();
         }
       });
     });
-
-    return stats;
   };
 
-  const hasProcessingImages = () => {
-    return (watchedSimpleSections || []).some((section) =>
-      (section.questions || []).some(
-        (question) => question.image && question.image.startsWith("blob:")
-      )
-    );
-  };
-
-  useEffect(() => {
-    return () => {
-      watchedSimpleSections?.forEach((section) => {
-        section.questions?.forEach((question) => {
-          if (question.image && question.image.startsWith("blob:")) {
-            URL.revokeObjectURL(question.image);
-          }
-        });
-      });
-    };
-  }, [watchedSimpleSections]);
-
-  const imageStats = getImageStats();
-  const isProcessingImages = hasProcessingImages();
+  const botonesSeccion = (
+    <Box display="flex" gap={1}>
+      <Button type="button" variant="outlined" startIcon={<Add />} onClick={() => addSection(false)} size="small">
+        Sección Simple
+      </Button>
+      <Button
+        type="button"
+        variant="outlined"
+        startIcon={<FolderOpen />}
+        onClick={() => addSection(true)}
+        size="small"
+        color="secondary"
+      >
+        Sección Padre
+      </Button>
+      <Button type="button" variant="outlined" startIcon={<ImageIcon />} onClick={addImageSection} size="small" color="info">
+        Sección con Imágenes
+      </Button>
+    </Box>
+  );
 
   return (
     <Box p={3}>
-      <Box
-        display="flex"
-        alignItems="center"
-        justifyContent="space-between"
-        mb={3}
-      >
+      <Box display="flex" alignItems="center" justifyContent="space-between" mb={3} gap={2} flexWrap="wrap">
         <Box display="flex" alignItems="center" gap={2}>
-          <Button
-            variant="outlined"
-            startIcon={<ArrowBack />}
-            onClick={onCancel}
-          >
+          <Button type="button" variant="outlined" startIcon={<ArrowBack />} onClick={onCancel}>
             Volver
           </Button>
           <Typography variant="h4">
-            {mode === "view" ? "Ver" : isEditing ? "Editar" : "Crear"} Plantilla
-            de Formulario
+            {mode === "view" ? "Ver" : isEditing ? "Editar" : "Crear"} Plantilla de Formulario
           </Typography>
-          {isEditing && (
-            <Chip
-              label={`Editando: ${template?.name}`}
-              color="primary"
-              variant="outlined"
-              size="small"
-            />
-          )}
+          {isEditing && <Chip label={`Editando: ${template?.name}`} color="primary" variant="outlined" size="small" />}
+          {esBorrador && <Chip label={`Borrador · ${template?.revision}`} color="warning" size="small" />}
         </Box>
-
-        <Box display="flex" gap={1}>
-          <Chip
-            label={`${getTotalSections()} secciones`}
-            color="primary"
-            variant="outlined"
-            size="small"
-          />
-          <Chip
-            label={`${getTotalQuestions()} preguntas`}
-            color="secondary"
-            variant="outlined"
-            size="small"
-          />
-          <Chip
-            label={`${getTotalMaxPoints()} pts máx`}
-            color="success"
-            variant="outlined"
-            size="small"
-          />
-          {imageStats.total > 0 && (
-            <Chip
-              label={`${imageStats.base64}/${imageStats.total} img (${imageStats.totalSizeKB}KB)`}
-              color={imageStats.processing > 0 ? "warning" : "info"}
-              variant="outlined"
-              size="small"
-              icon={<ImageIcon />}
-            />
-          )}
-
-          {getAutocompleteFields() > 0 && (
-            <Chip
-              label={`${getAutocompleteFields()} autocomplete`}
-              color="info"
-              variant="outlined"
-              size="small"
-            />
-          )}
-        </Box>
+        <ResumenPlantilla control={control} totalSecciones={totalSecciones} />
       </Box>
 
       {error && (
@@ -378,49 +226,23 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
         </Alert>
       )}
       {success && (
-        <Alert
-          severity="success"
-          sx={{ mb: 2 }}
-          onClose={() => setSuccess(null)}
-        >
+        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
           {success}
         </Alert>
       )}
+      <AvisoImagenesProcesando control={control} />
 
-      {isProcessingImages && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          <Box display="flex" alignItems="center" gap={2}>
-            <CircularProgress size={20} />
-            <Typography variant="body2">
-              Procesando imágenes... Por favor espera antes de guardar.
-            </Typography>
-          </Box>
-        </Alert>
-      )}
-
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <Box component="form" noValidate onSubmit={handleSubmit(onSubmit, handleInvalidSubmit)}>
         <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
           <Typography variant="h6" gutterBottom>
             Información General
           </Typography>
           <Grid container spacing={3}>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <FormField
-                name="name"
-                control={control}
-                label="Nombre del Formulario"
-                rules={{ required: "Nombre es requerido" }}
-                disabled={isReadOnly}
-              />
+              <FormField name="name" control={control} label="Nombre del Formulario" rules={{ required: "Nombre es requerido" }} disabled={isReadOnly} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <FormField
-                name="code"
-                control={control}
-                label="Código"
-                rules={{ required: "Código es requerido" }}
-                disabled={isReadOnly}
-              />
+              <FormField name="code" control={control} label="Código" rules={{ required: "Código es requerido" }} disabled={isReadOnly || esBorrador} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormField
@@ -448,217 +270,31 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
           </Grid>
         </Paper>
 
-        <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            mb={2}
-          >
-            <Typography variant="h6">
-              Campos de Lista de Verificación ({verificationFields.length})
-            </Typography>
-            {!isReadOnly && (
-              <Button
-                variant="outlined"
-                startIcon={<Add />}
-                onClick={addVerificationField}
-              >
-                Agregar Campo
-              </Button>
-            )}
-          </Box>
-
-          {verificationFields.map((field, index) => (
-            <Box key={field.id} mb={2}>
-              <Grid container spacing={2} alignItems="center">
-                <Grid
-                  size={{
-                    xs: 12,
-                    sm:
-                      watchedVerificationFields[index]?.type === "autocomplete"
-                        ? 3
-                        : 4,
-                  }}
-                >
-                  <FormField
-                    name={`verificationFields.${index}.label`}
-                    control={control}
-                    label="Etiqueta del Campo"
-                    rules={{ required: "Etiqueta es requerida" }}
-                    disabled={isReadOnly}
-                  />
-                </Grid>
-                <Grid
-                  size={{
-                    xs: 12,
-                    sm:
-                      watchedVerificationFields[index]?.type === "autocomplete"
-                        ? 3
-                        : 5,
-                  }}
-                >
-                  <FormField
-                    name={`verificationFields.${index}.type`}
-                    control={control}
-                    type="select"
-                    label="Tipo"
-                    options={[
-                      { value: "text", label: "Texto" },
-                      { value: "date", label: "Fecha" },
-                      { value: "number", label: "Número" },
-                      { value: "select", label: "Selección" },
-                      { value: "autocomplete", label: "Autocompletar" },
-                    ]}
-                    rules={{ required: "Tipo es requerido" }}
-                    disabled={isReadOnly}
-                  />
-                </Grid>
-
-                {watchedVerificationFields[index]?.type === "autocomplete" && (
-                  <Grid size={{ xs: 12, sm: 3 }}>
-                    <FormField
-                      name={`verificationFields.${index}.dataSource`}
-                      control={control}
-                      type="select"
-                      label="Origen de Datos"
-                      options={[
-                        { value: "", label: "Seleccionar..." },
-                        ...DATA_SOURCES.map((source) => ({
-                          value: source.value,
-                          label: source.label,
-                        })),
-                      ]}
-                      disabled={isReadOnly}
-                      rules={{ required: "Origen de datos es requerido" }}
-                    />
-                  </Grid>
-                )}
-
-                <Grid
-                  size={{
-                    xs: 6,
-                    sm: 2,
-                  }}
-                  sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
-                >
-                  <FormField
-                    name={`verificationFields.${index}.required`}
-                    control={control}
-                    type="checkbox"
-                    label="Requerido"
-                    disabled={isReadOnly}
-                  />
-                </Grid>
-
-                {!isReadOnly && (
-                  <Grid size={{ xs: 6, sm: 1 }} sx={{ display: "flex", justifyContent: "center" }}>
-                    <IconButton
-                      color="error"
-                      onClick={() => removeVerificationField(index)}
-                    >
-                      <Delete />
-                    </IconButton>
-                  </Grid>
-                )}
-
-                {watchedVerificationFields[index]?.type === "autocomplete" &&
-                  watchedVerificationFields[index]?.dataSource && (
-                    <Box mt={1} ml={2}>
-                      <Chip
-                        size="small"
-                        label={`Fuente: ${
-                          DATA_SOURCES.find(
-                            (s) =>
-                              s.value ===
-                              watchedVerificationFields[index]?.dataSource
-                          )?.label
-                        }`}
-                        color="info"
-                        variant="outlined"
-                      />
-                    </Box>
-                  )}
-              </Grid>
-            </Box>
-          ))}
-        </Paper>
+        <CamposVerificacion control={control} disabled={isReadOnly} />
 
         <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            mb={2}
-          >
-            <Typography variant="h6">
-              Secciones ({getTotalSections()})
-            </Typography>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <Typography variant="h6">Secciones ({totalSecciones})</Typography>
             <Box display="flex" gap={1}>
-              {getTotalSections() > 1 && (
+              {totalSecciones > 1 && (
                 <>
-                  <Button
-                    variant="text"
-                    size="small"
-                    startIcon={<Expand />}
-                    onClick={expandAllSections}
-                  >
+                  <Button type="button" variant="text" size="small" startIcon={<UnfoldMore />} onClick={expandAllSections}>
                     Expandir Todo
                   </Button>
-                  <Button
-                    variant="text"
-                    size="small"
-                    startIcon={<Collapse />}
-                    onClick={collapseAllSections}
-                  >
+                  <Button type="button" variant="text" size="small" startIcon={<UnfoldLess />} onClick={collapseAllSections}>
                     Colapsar Todo
                   </Button>
                 </>
               )}
-              {!isReadOnly && (
-                <Box display="flex" gap={1}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Add />}
-                    onClick={() => addSection(false)}
-                    size="small"
-                  >
-                    Sección Simple
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<FolderOpen />}
-                    onClick={() => addSection(true)}
-                    size="small"
-                    color="secondary"
-                  >
-                    Sección Padre
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<ImageIcon />}
-                    onClick={addImageSection}
-                    size="small"
-                    color="info"
-                  >
-                    Sección con Imágenes
-                  </Button>
-                </Box>
-              )}
+              {!isReadOnly && botonesSeccion}
             </Box>
           </Box>
 
-          {getTotalSections() === 0 ? (
+          {totalSecciones === 0 ? (
             <Box
               p={4}
               textAlign="center"
-              sx={{
-                border: 2,
-                borderColor: "primary.main",
-                borderStyle: "dashed",
-                borderRadius: 2,
-                backgroundColor: "primary.50",
-              }}
+              sx={{ border: 2, borderColor: "primary.main", borderStyle: "dashed", borderRadius: 2, backgroundColor: "primary.50" }}
             >
               <Typography variant="h6" color="primary.main" gutterBottom>
                 No hay secciones
@@ -666,160 +302,81 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
               <Typography variant="body2" color="text.secondary" mb={2}>
                 Las secciones organizan las preguntas de tu formulario
               </Typography>
-              {!isReadOnly && (
-                <Box display="flex" gap={1}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Add />}
-                    onClick={() => addSection(false)}
-                    size="small"
-                  >
-                    Sección Simple
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<FolderOpen />}
-                    onClick={() => addSection(true)}
-                    size="small"
-                    color="secondary"
-                  >
-                    Sección Padre
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<ImageIcon />}
-                    onClick={addImageSection}
-                    size="small"
-                    color="info"
-                  >
-                    Sección con Imágenes
-                  </Button>
-                </Box>
-              )}
+              {!isReadOnly && botonesSeccion}
             </Box>
           ) : (
             <>
-              {sections.map((section, sectionIndex) => (
-                <Box key={section.id} position="relative">
-                  <SectionBuilder
-                    sectionIndex={sectionIndex}
-                    section={watchedSections[sectionIndex]}
-                    control={control}
-                    setValue={setValue}
-                    onRemove={() => removeSection(sectionIndex)}
-                    expanded={expandedSections.has(sectionIndex)}
-                    onToggleExpanded={() =>
-                      toggleSectionExpansion(sectionIndex)
-                    }
-                    disabled={isReadOnly}
-                    showRemoveButton={!isReadOnly && getTotalSections() > 1}
-                  />
-                </Box>
+              {sections.map((section, i) => (
+                <SectionBuilder
+                  key={section.id}
+                  sectionIndex={i}
+                  control={control}
+                  onRemove={handleRemoveSection}
+                  expanded={expandedSections.has(i)}
+                  onToggleExpanded={toggleSection}
+                  disabled={isReadOnly}
+                  showRemoveButton={puedeEliminarSeccion}
+                />
               ))}
-
-              {/* Secciones con imágenes */}
-              {simpleSections.map((section, sectionIndex) => (
-                <Box key={section.id} position="relative">
-                  <ImageSectionBuilder
-                    sectionIndex={sectionIndex}
-                    section={watchedSimpleSections?.[sectionIndex] || section}
-                    control={control}
-                    setValue={setValue}
-                    onRemove={() => removeSimpleSection(sectionIndex)}
-                    expanded={expandedImageSections.has(sectionIndex)}
-                    onToggleExpanded={() =>
-                      toggleImageSectionExpansion(sectionIndex)
-                    }
-                    disabled={isReadOnly}
-                    showRemoveButton={!isReadOnly && getTotalSections() > 1}
-                  />
-                </Box>
+              {simpleSections.map((section, i) => (
+                <ImageSectionBuilder
+                  key={section.id}
+                  sectionIndex={i}
+                  control={control}
+                  setValue={setValue}
+                  onRemove={handleRemoveImageSection}
+                  expanded={expandedImageSections.has(i)}
+                  onToggleExpanded={toggleImageSection}
+                  disabled={isReadOnly}
+                  showRemoveButton={puedeEliminarSeccion}
+                />
               ))}
             </>
           )}
         </Paper>
 
-        {imageStats.total > 0 && (
-          <Paper elevation={1} sx={{ p: 2, mb: 3, backgroundColor: "info.50" }}>
-            <Typography variant="subtitle2" color="info.dark" gutterBottom>
-              📊 Resumen de Imágenes
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 6, sm: 3 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Total: {imageStats.total}
-                </Typography>
-              </Grid>
-              <Grid size={{ xs: 6, sm: 3 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Listas: {imageStats.base64}
-                </Typography>
-              </Grid>
-              <Grid size={{ xs: 6, sm: 3 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Procesando: {imageStats.processing}
-                </Typography>
-              </Grid>
-              <Grid size={{ xs: 6, sm: 3 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Tamaño: {imageStats.totalSizeKB}KB
-                </Typography>
-              </Grid>
-            </Grid>
+        <ResumenImagenes control={control} />
 
-            {imageStats.processing > 0 && (
-              <Box mt={1}>
-                <LinearProgress color="warning" />
-                <Typography variant="caption" color="warning.dark">
-                  Esperando que terminen de procesarse las imágenes...
-                </Typography>
-              </Box>
-            )}
-          </Paper>
-        )}
-
-        {!isReadOnly && (
-          <Box display="flex" justifyContent="flex-end" gap={2}>
-            <Button variant="outlined" onClick={onCancel} disabled={isPending}>
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              startIcon={isPending ? <CircularProgress size={20} /> : <Save />}
-              disabled={isPending || !isValid || isProcessingImages}
-            >
-              {isPending ? "Guardando..." : "Guardar Plantilla"}
-            </Button>
-          </Box>
-        )}
-      </form>
+        {!isReadOnly && <BotonesGuardar control={control} isPending={isPending} onCancel={onCancel} />}
+      </Box>
 
       {Object.keys(errors).length > 0 && (
         <Alert severity="warning" sx={{ mt: 2 }}>
-          Por favor, corrige los errores en el formulario antes de continuar.
-          <Box component="ul" sx={{ mt: 1, mb: 0 }}>
-            {Object.entries(errors).map(([field, error]) => (
-              <Box component="li" key={field}>
-                {field}: {error?.message || "Campo requerido"}
-              </Box>
-            ))}
-          </Box>
-        </Alert>
-      )}
-
-      {process.env.NODE_ENV === "development" && imageStats.total > 0 && (
-        <Alert severity="info" sx={{ mt: 2 }}>
-          <Typography variant="caption">
-            🚧 Modo desarrollo: {imageStats.base64} imágenes convertidas a
-            Base64 (listas para BD).
-            {imageStats.processing > 0 &&
-              `${imageStats.processing} aún procesándose.`}
-            {imageStats.totalSizeKB > 1000 &&
-              ` ⚠️ Tamaño total: ${imageStats.totalSizeKB}KB`}
-          </Typography>
+          Hay campos con errores (marcados en rojo). Corrígelos antes de guardar.
         </Alert>
       )}
     </Box>
   );
 };
+
+/**
+ * Guardar / Cancelar. Vigila solo las imágenes (para no guardar con una a
+ * medio procesar); el resto de la validación la hace el submit y lleva al
+ * primer error, en vez de deshabilitar el botón revalidando en cada tecla.
+ */
+function BotonesGuardar({
+  control,
+  isPending,
+  onCancel,
+}: {
+  control: Parameters<typeof useEstadisticasImagenes>[0];
+  isPending: boolean;
+  onCancel: () => void;
+}) {
+  const { procesando } = useEstadisticasImagenes(control);
+  return (
+    <Box display="flex" justifyContent="flex-end" gap={2}>
+      <Button type="button" variant="outlined" onClick={onCancel} disabled={isPending}>
+        Cancelar
+      </Button>
+      <Button
+        type="submit"
+        variant="contained"
+        startIcon={isPending ? <CircularProgress size={20} /> : <Save />}
+        disabled={isPending || procesando > 0}
+      >
+        {isPending ? "Guardando..." : "Guardar Plantilla"}
+      </Button>
+    </Box>
+  );
+}

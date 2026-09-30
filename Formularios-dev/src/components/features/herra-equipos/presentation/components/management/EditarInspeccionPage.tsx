@@ -6,7 +6,7 @@ import {
   Box, CircularProgress, Alert, Button, Snackbar
 } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
-import { getTemplatesHerraEquipos } from '@/lib/actions/template-herra-equipos';
+import { plantillaDeInspeccion } from '../../../infrastructure/adapters/plantillaDeInspeccion';
 import { FormTemplateHerraEquipos, FormDataHerraEquipos, InspectionStatus } from '@/components/features/herra-equipos/types/IProps';
 import { UnifiedFormRouter } from '@/components/features/herra-equipos/presentation/components/forms/UnifiedFormRouter';
 import { getFormConfig } from '@/components/features/herra-equipos/config/form-config.helpers';
@@ -60,17 +60,8 @@ export default function EditarInspeccionPage() {
     }
     const inspection = inspectionResult.data;
 
-    const templatesResult = await getTemplatesHerraEquipos();
-    if (!templatesResult.success) {
-      throw new Error(templatesResult.error || 'Error al cargar templates');
-    }
-
-    const foundTemplate = templatesResult.data.find(
-      (t) => t.code === inspection.templateCode
-    );
-    if (!foundTemplate) {
-      throw new Error(`Template con código ${inspection.templateCode} no encontrado`);
-    }
+    // La revisión con la que se hizo la inspección, no la vigente de su código.
+    const foundTemplate = await plantillaDeInspeccion(inspection);
 
     return {
       inspection,

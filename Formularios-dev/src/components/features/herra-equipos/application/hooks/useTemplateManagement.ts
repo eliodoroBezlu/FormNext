@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   createTemplateHerraEquipo,
   deleteTemplateHerraEquipo,
@@ -28,12 +28,17 @@ export function useTemplateManagement() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Se incrementa para recargar el listado sin cambiar de vista (después de
+  // crear o publicar una revisión).
+  const [recarga, setRecarga] = useState(0);
+  const recargar = useCallback(() => setRecarga((n) => n + 1), []);
 
   useEffect(() => {
     const loadTemplates = async () => {
       setLoading(true);
       setErrorMessage(null);
-      const result = await getTemplatesHerraEquipos();
+      // Vigentes y borradores: esta es la pantalla de administración.
+      const result = await getTemplatesHerraEquipos({ incluirBorradores: true });
       if (result.success) {
         const templatesWithDates = result.data.map((template) => ({
           ...template,
@@ -50,7 +55,7 @@ export function useTemplateManagement() {
     if (currentView === "list") {
       loadTemplates();
     }
-  }, [currentView]);
+  }, [currentView, recarga]);
 
   const handleCreate = () => {
     setSelectedTemplate(null);
@@ -147,5 +152,6 @@ export function useTemplateManagement() {
     handleDeleteConfirm,
     handleDeleteCancel,
     handleCancel,
+    recargar,
   };
 }

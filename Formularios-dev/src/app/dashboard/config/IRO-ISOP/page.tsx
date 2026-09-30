@@ -1,14 +1,22 @@
 "use client"
 
 import { useCallback, useState, useEffect } from "react"
-import { Box, Typography, Grid, Fab, Tabs, Tab, Alert, CircularProgress, Chip, Button } from "@mui/material"
-import { Add, Edit, Delete, Description, Visibility } from "@mui/icons-material"
+import { Box, Typography, Grid, Fab, Tabs, Tab, Alert, CircularProgress, Chip, Button, Snackbar } from "@mui/material"
+import { Add, Edit, Delete, Description, Visibility, ContentCopy, Publish, History } from "@mui/icons-material"
 import { FormInstance, FormTemplate } from "@/types/formTypes"
 import { deleteTemplate, getTemplates, getTemplateById } from "@/lib/actions/template-actions"
 import { FormBuilder } from "@/components/features/form-builder/presentation/components/FormBuilder"
 import { InspectionFormIroIsop } from "@/components/features/iro-isop/InspectionFormIroIsop"
 import { TemplateCard } from "@/components/ui/cards/TemplateCard"
 import { BaseCard } from "@/components/ui/cards/BaseCard"
+import { versionadoTemplatesAdapter } from "@/components/features/form-builder/infrastructure/adapters/templateAdapter"
+import { useVersionadoPlantilla } from "@/hooks/useVersionadoPlantilla"
+import {
+  DialogoHistorialRevisiones,
+  DialogoPublicarRevision,
+  DialogoRevisionBloqueada,
+} from "@/components/ui/versionado/DialogosVersionado"
+import { estadoDeRevision } from "@/types/versionado"
 
 interface CustomForm {
   id: string
@@ -35,8 +43,10 @@ export default function HomePage() {
   const [loadingDetail, setLoadingDetail] = useState(false)
 
   /** Solo consulta y devuelve; no toca el estado. */
+  // Vigentes y borradores: la pestaña de administración muestra los dos; la
+  // de crear formularios filtra solo las vigentes (ver `plantillasVisibles`).
   const consultarTemplates = useCallback(
-    () => getTemplates({ isActive: true }),
+    () => getTemplates({ isActive: true, incluirBorradores: true }),
     [],
   )
 
@@ -92,6 +102,24 @@ export default function HomePage() {
       vigente = false
     }
   }, [consultarTemplates, aplicar, avisarFallo])
+
+  const versionado = useVersionadoPlantilla({
+    adaptador: versionadoTemplatesAdapter,
+    alCambiar: loadTemplates,
+  })
+
+  /**
+   * Pestaña «Crear Formularios»: solo la revisión vigente, que es la que se
+   * usa para inspeccionar. En «Gestionar Plantillas», vigente y borrador de
+   * cada código, uno al lado del otro.
+   */
+  const plantillasVisibles = (tabValue === 1
+    ? templates.filter((t) => estadoDeRevision(t) === "vigente")
+    : [...templates]
+  ).sort((a, b) => a.code.localeCompare(b.code) || (estadoDeRevision(a) === "vigente" ? -1 : 1))
+
+  const tieneBorrador = (code: string) =>
+    templates.some((t) => t.code === code && estadoDeRevision(t) === "borrador")
 
   const handleCreateTemplate = () => {
     setSelectedTemplate(null)
@@ -204,10 +232,17 @@ export default function HomePage() {
     setSelectedCustomForm(null)
   }
 
+  /** Crea la revisión siguiente y la abre directamente en el editor. */
+  const crearYEditarRevision = async (template: FormTemplate) => {
+    const borrador = await versionado.crearRevision(template)
+    if (borrador) await handleEditTemplate(borrador as FormTemplate)
+  }
+
   // Función para generar las acciones de templates según el contexto
   const getTemplateActions = (template: FormTemplate) => {
     if (tabValue === 0) {
       // Tab de "Gestionar Plantillas" - acciones de administración
+      const estado = estadoDeRevision(template)
       return [
         {
           label: "Ver",
@@ -217,14 +252,43 @@ export default function HomePage() {
           size: "small" as const
         },
         {
+          // Una vigente ya usada no se edita: el hook pregunta al backend y,
+          // si no se puede, ofrece crear una revisión nueva.
           label: "Editar",
           icon: <Edit />,
-          onClick: () => handleEditTemplate(template),
+          onClick: () => versionado.pedirEdicion(template, () => handleEditTemplate(template)),
+          variant: "outlined" as const,
+          size: "small" as const
+        },
+        ...(estado === "vigente" && !tieneBorrador(template.code)
+          ? [{
+              label: "Nueva revisión",
+              icon: <ContentCopy />,
+              onClick: () => crearYEditarRevision(template),
+              variant: "outlined" as const,
+              size: "small" as const,
+              disabled: versionado.trabajando,
+            }]
+          : []),
+        ...(estado === "borrador"
+          ? [{
+              label: "Publicar",
+              icon: <Publish />,
+              onClick: () => versionado.pedirPublicacion(template),
+              variant: "contained" as const,
+              color: "success" as const,
+              size: "small" as const
+            }]
+          : []),
+        {
+          label: "Historial",
+          icon: <History />,
+          onClick: () => versionado.verHistorial(template),
           variant: "outlined" as const,
           size: "small" as const
         },
         {
-          label: "Eliminar",
+          label: estado === "borrador" ? "Descartar" : "Eliminar",
           icon: <Delete />,
           onClick: () => handleDeleteTemplate(template._id),
           variant: "outlined" as const,
@@ -467,7 +531,7 @@ export default function HomePage() {
         <>
           <Grid container spacing={3}>
             {/* Templates existentes */}
-            {templates.map((template) => (
+            {plantillasVisibles.map((template) => (
               <Grid key={template._id} size={{ xs: 12, sm: 6, md: 4 }}>
                 <TemplateCard
                   template={template}
@@ -492,7 +556,7 @@ export default function HomePage() {
           </Grid>
 
           {/* Mensaje cuando no hay contenido */}
-          {templates.length === 0 && customForms.length === 0 && (
+          {plantillasVisibles.length === 0 && customForms.length === 0 && (
             <Box textAlign="center" py={8}>
               <Typography variant="h6" color="text.secondary" gutterBottom>
                 No hay contenido disponible
@@ -505,6 +569,37 @@ export default function HomePage() {
               </Typography>
             </Box>
           )}
+
+          <DialogoRevisionBloqueada
+            bloqueo={versionado.bloqueo}
+            trabajando={versionado.trabajando}
+            onCerrar={versionado.cerrarBloqueo}
+            onCrearRevision={(p) => crearYEditarRevision(p as FormTemplate)}
+            onVer={(p) => {
+              versionado.cerrarBloqueo()
+              handleViewTemplate(p as FormTemplate)
+            }}
+          />
+          <DialogoPublicarRevision
+            key={versionado.publicando?._id ?? "cerrado"}
+            plantilla={versionado.publicando}
+            trabajando={versionado.trabajando}
+            onCancelar={versionado.cancelarPublicacion}
+            onConfirmar={versionado.confirmarPublicacion}
+          />
+          <DialogoHistorialRevisiones
+            historial={versionado.historial}
+            onCerrar={versionado.cerrarHistorial}
+            onVer={(id) => {
+              versionado.cerrarHistorial()
+              handleViewTemplate({ _id: id } as FormTemplate)
+            }}
+          />
+          <Snackbar open={!!versionado.aviso} autoHideDuration={7000} onClose={versionado.cerrarAviso}>
+            <Alert onClose={versionado.cerrarAviso} severity={versionado.aviso?.severidad ?? "info"} sx={{ width: "100%" }}>
+              {versionado.aviso?.mensaje}
+            </Alert>
+          </Snackbar>
 
           {tabValue === 0 && (
             <Fab

@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { UseFormSetValue } from "react-hook-form"
+import { useWatch, type Control, type UseFormSetValue } from "react-hook-form"
 import {
   Box,
   Typography,
@@ -21,12 +21,18 @@ import { FormBuilderDataHerraEquipos, SectionImageHerraEquipos } from "../../../
 
 interface ImageManagerProps {
   sectionPath: string
-  images: SectionImageHerraEquipos[]
+  control: Control<FormBuilderDataHerraEquipos>
   setValue: UseFormSetValue<FormBuilderDataHerraEquipos>
   disabled?: boolean
 }
 
-export const ImageManager: React.FC<ImageManagerProps> = ({ sectionPath, images, setValue, disabled = false }) => {
+const SIN_IMAGENES: SectionImageHerraEquipos[] = []
+
+/** Imágenes de una sección. Lee las suyas por ruta: escribir una pregunta no lo redibuja. */
+export const ImageManager: React.FC<ImageManagerProps> = ({ sectionPath, control, setValue, disabled = false }) => {
+  const images =
+    (useWatch({ control, name: `${sectionPath}.images` as never }) as SectionImageHerraEquipos[] | undefined) ??
+    SIN_IMAGENES
   const [imageDialogOpen, setImageDialogOpen] = useState(false)
   const [newImageUrl, setNewImageUrl] = useState("")
   const [newImageCaption, setNewImageCaption] = useState("")

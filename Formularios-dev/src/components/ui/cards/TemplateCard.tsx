@@ -4,6 +4,8 @@ import type React from "react"
 import { Box, Typography, Chip } from "@mui/material"
 import { FormTemplate } from "@/types/formTypes"
 import { BaseCard, BaseCardAction } from "./BaseCard"
+import { ChipEstadoRevision } from "../versionado/DialogosVersionado"
+import { estadoDeRevision } from "@/types/versionado"
 
 export interface TemplateCardProps {
   template: FormTemplate
@@ -60,7 +62,8 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
         <Typography variant="body2" color="text.secondary" gutterBottom>
           <strong>Total Preguntas:</strong> {totalQuestions}
         </Typography>
-        <Box mt={1}>
+        <Box mt={1} display="flex" flexWrap="wrap" gap={1} alignItems="center">
+          <ChipEstadoRevision estado={estadoDeRevision(template)} />
           <Chip 
             label={template.revision} 
             size="small" 

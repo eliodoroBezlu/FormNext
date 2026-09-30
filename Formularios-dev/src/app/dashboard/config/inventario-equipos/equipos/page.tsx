@@ -54,6 +54,8 @@ import { exportarInventarioEquiposExcelCliente } from "@/lib/actions/client"
 import { FotosEquipo } from "@/components/features/herra-equipos/presentation/components/management/FotosEquipo"
 import { obtenerAreasCompletas, AreaBackend } from "@/lib/actions/area-actions"
 import { obtenerUbicaciones, UbicacionBackend } from "@/lib/actions/ubicacion-actions"
+import { SelectorUbicacion } from "@/components/features/ubicaciones/presentation/components/SelectorUbicacion"
+import { perteneceA } from "@/components/features/ubicaciones/domain/models/arbolUbicaciones"
 import { obtenerClasificaciones, ClasificacionBackend } from "@/lib/actions/clasificacion-actions"
 import { obtenerSuperintendencias, SuperintendenciaBackend } from "@/lib/actions/superintendecia-actions"
 import { obtenerGerencias, GerenciaBackend } from "@/lib/actions/gerencia-actions"
@@ -441,7 +443,8 @@ export default function GestionEquipos() {
       (item.modelo && item.modelo.toLowerCase().includes(searchFilter.toLowerCase()))
 
     const matchArea = areaFilter === "" || item.area_id?._id === areaFilter
-    const matchUbicacion = ubicacionFilter === "" || item.ubicacion_id?._id === ubicacionFilter
+    // Filtrar por «Taller de flotación» incluye lo que está en sus bodegas y estantes.
+    const matchUbicacion = ubicacionFilter === "" || perteneceA(item.ubicacion_id, ubicacionFilter)
     const matchTipo = tipoFilter === "" || item.tipo_equipo === tipoFilter
 
     return matchSearch && matchArea && matchUbicacion && matchTipo
@@ -567,19 +570,14 @@ export default function GestionEquipos() {
             </FormControl>
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Ubicación</InputLabel>
-              <Select
-                value={ubicacionFilter}
-                label="Ubicación"
-                onChange={(e) => setUbicacionFilter(e.target.value)}
-              >
-                <MenuItem value=""><em>Todas</em></MenuItem>
-                {ubicaciones.map((u) => (
-                  <MenuItem key={u._id} value={u._id}>{u.nombre}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <SelectorUbicacion
+              opciones={ubicaciones}
+              valor={ubicacionFilter || null}
+              onChange={(id) => setUbicacionFilter(id ?? "")}
+              label="Ubicación"
+              placeholder="Todas"
+              size="small"
+            />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <FormControl fullWidth size="small">
@@ -640,7 +638,7 @@ export default function GestionEquipos() {
                         <TableCell><Chip label={item.tipo_equipo} size="small" variant="outlined" /></TableCell>
                         <TableCell>{item.marca || "-"} / {item.modelo || "-"}</TableCell>
                         <TableCell>{item.area_id?.nombre || "-"}</TableCell>
-                        <TableCell>{item.ubicacion_id?.nombre || "-"}</TableCell>
+                        <TableCell>{item.ubicacion_id?.ruta || item.ubicacion_id?.nombre || "-"}</TableCell>
                         <TableCell>{item.clasificacion_id?.nombre || "-"}</TableCell>
                         <TableCell align="center">{item.cantidad}</TableCell>
                         <TableCell align="center">
@@ -867,18 +865,13 @@ export default function GestionEquipos() {
                 )}
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
-                <FormControl fullWidth required>
-                  <InputLabel>Ubicación</InputLabel>
-                  <Select
-                    value={formData.ubicacion_id}
-                    label="Ubicación"
-                    onChange={(e) => setFormData({ ...formData, ubicacion_id: e.target.value })}
-                  >
-                    {ubicaciones.map((u) => (
-                      <MenuItem key={u._id} value={u._id}>{u.nombre}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <SelectorUbicacion
+                  opciones={ubicaciones}
+                  valor={formData.ubicacion_id || null}
+                  onChange={(id) => setFormData({ ...formData, ubicacion_id: id ?? "" })}
+                  label="Ubicación"
+                  required
+                />
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <FormControl fullWidth required>

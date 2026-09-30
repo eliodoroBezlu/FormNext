@@ -11,7 +11,9 @@ import {
   Divider,
   IconButton,
 } from "@mui/material";
-import { Visibility, Edit, Delete } from "@mui/icons-material";
+import { Visibility, Edit, Delete, ContentCopy, Publish, History } from "@mui/icons-material";
+import { ChipEstadoRevision } from "@/components/ui/versionado/DialogosVersionado";
+import { estadoDeRevision } from "@/types/versionado";
 import {
   SectionHerraEquipos,
   FormTemplateHerraEquipos,
@@ -22,6 +24,11 @@ interface TemplateCardProps {
   onEdit: () => void;
   onDelete: () => void;
   onView: () => void;
+  /** Solo en la vigente, si no hay ya un borrador de su código. */
+  onNuevaRevision?: () => void;
+  /** Solo en un borrador. */
+  onPublicar?: () => void;
+  onHistorial: () => void;
 }
 
 export const TemplateCard: React.FC<TemplateCardProps> = ({
@@ -29,7 +36,11 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
   onEdit,
   onDelete,
   onView,
+  onNuevaRevision,
+  onPublicar,
+  onHistorial,
 }) => {
+  const estado = estadoDeRevision(template);
   const formatDate = (date: Date) =>
     new Intl.DateTimeFormat("es-ES", {
       year: "numeric",
@@ -64,11 +75,14 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
           <Typography variant="h6" gutterBottom>
             {template.name}
           </Typography>
-          <Chip
-            label={template.type === "interna" ? "Interna" : "Externa"}
-            size="small"
-            color={template.type === "interna" ? "primary" : "secondary"}
-          />
+          <Box display="flex" gap={0.5} flexWrap="wrap" justifyContent="flex-end">
+            <ChipEstadoRevision estado={estado} />
+            <Chip
+              label={template.type === "interna" ? "Interna" : "Externa"}
+              size="small"
+              color={template.type === "interna" ? "primary" : "secondary"}
+            />
+          </Box>
         </Box>
         <Typography variant="body2" color="text.secondary" gutterBottom>
           <strong>Código:</strong> {template.code}
@@ -115,14 +129,28 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
         <IconButton size="small" onClick={onView} title="Ver">
           <Visibility />
         </IconButton>
-        <IconButton size="small" onClick={onEdit} title="Editar">
+        <IconButton size="small" onClick={onEdit} title="Editar" aria-label="Editar">
           <Edit />
+        </IconButton>
+        {onNuevaRevision && (
+          <IconButton size="small" onClick={onNuevaRevision} title="Nueva revisión" aria-label="Nueva revisión">
+            <ContentCopy />
+          </IconButton>
+        )}
+        {onPublicar && (
+          <IconButton size="small" color="success" onClick={onPublicar} title="Publicar revisión" aria-label="Publicar revisión">
+            <Publish />
+          </IconButton>
+        )}
+        <IconButton size="small" onClick={onHistorial} title="Historial de revisiones" aria-label="Historial de revisiones">
+          <History />
         </IconButton>
         <IconButton
           size="small"
           color="error"
           onClick={onDelete}
-          title="Eliminar"
+          title={estado === "borrador" ? "Descartar borrador" : "Eliminar"}
+          aria-label={estado === "borrador" ? "Descartar borrador" : "Eliminar"}
         >
           <Delete />
         </IconButton>

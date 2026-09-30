@@ -98,6 +98,8 @@ export async function getTemplates(filters?: {
   type?: string
   isActive?: boolean
   search?: string
+  /** Sin esto, solo las revisiones vigentes. Para la pantalla de administración. */
+  incluirBorradores?: boolean
 }) {
   try {
     const headers = await getAuthHeaders();
@@ -107,6 +109,7 @@ export async function getTemplates(filters?: {
     if (filters?.type) searchParams.append("type", filters.type);
     if (filters?.isActive !== undefined) searchParams.append("isActive", filters.isActive.toString());
     if (filters?.search) searchParams.append("search", filters.search);
+    if (filters?.incluirBorradores) searchParams.append("incluirBorradores", "true");
     
     
     const response = await fetch(`${API_BASE_URL}/templates?${searchParams.toString()}`, {

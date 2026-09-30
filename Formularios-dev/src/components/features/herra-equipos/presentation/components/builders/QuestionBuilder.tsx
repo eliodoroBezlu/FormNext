@@ -12,11 +12,32 @@ import {
   DialogContent,
   DialogActions,
   Button as MuiButton,
+  Snackbar,
 } from "@mui/material";
 import { Add } from "@mui/icons-material";
 import { useTemplateManagement } from "../../../application/hooks/useTemplateManagement";
 import { TemplateEditorView } from "./TemplateEditorView";
 import { TemplateCard } from "./TemplateCard";
+import { versionadoHerraAdapter } from "../../../infrastructure/adapters/versionadoAdapter";
+import { useVersionadoPlantilla } from "@/hooks/useVersionadoPlantilla";
+import {
+  DialogoHistorialRevisiones,
+  DialogoPublicarRevision,
+  DialogoRevisionBloqueada,
+} from "@/components/ui/versionado/DialogosVersionado";
+import { estadoDeRevision } from "@/types/versionado";
+import { getFormConfig } from "../../../config/form-config.helpers";
+import type { FormTemplateHerraEquipos } from "../../../domain/models/BuilderTypes";
+
+/**
+ * Opción A del plan de constructores: los formularios con pantalla (y Excel)
+ * hechos a mano para su código no se ajustan solos a una revisión nueva.
+ * No se bloquea nada: se avisa al publicar.
+ */
+const advertenciaUiFija = (code: string) =>
+  getFormConfig(code)
+    ? `El formulario ${code} tiene pantalla y Excel armados a mano para este código. Si en esta revisión se agregaron, quitaron o reordenaron preguntas, esos cambios no se reflejan ahí hasta que se ajusten en el código del sistema.`
+    : undefined;
 
 const TemplateManagementApp: React.FC = () => {
   const {
@@ -37,7 +58,27 @@ const TemplateManagementApp: React.FC = () => {
     handleDeleteConfirm,
     handleDeleteCancel,
     handleCancel,
+    recargar,
   } = useTemplateManagement();
+
+  const versionado = useVersionadoPlantilla({
+    adaptador: versionadoHerraAdapter,
+    alCambiar: recargar,
+  });
+
+  /** Crea la revisión siguiente y la abre directamente en el editor. */
+  const crearYEditarRevision = async (template: FormTemplateHerraEquipos) => {
+    const borrador = await versionado.crearRevision(template);
+    if (borrador) handleEdit(borrador as unknown as FormTemplateHerraEquipos);
+  };
+
+  const tieneBorrador = (code: string) =>
+    templates.some((t) => t.code === code && estadoDeRevision(t) === "borrador");
+
+  // Vigente y borrador de cada código, uno al lado del otro.
+  const ordenadas = [...templates].sort(
+    (a, b) => a.code.localeCompare(b.code) || (estadoDeRevision(a) === "vigente" ? -1 : 1),
+  );
 
   if (currentView !== "list") {
     return (
@@ -88,16 +129,27 @@ const TemplateManagementApp: React.FC = () => {
         </Box>
       ) : (
         <Grid container spacing={3}>
-          {templates.map((template) => (
-            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={template._id}>
-              <TemplateCard
-                template={template}
-                onView={() => handleView(template)}
-                onEdit={() => handleEdit(template)}
-                onDelete={() => handleDeleteClick(template._id)}
-              />
-            </Grid>
-          ))}
+          {ordenadas.map((template) => {
+            const estado = estadoDeRevision(template);
+            return (
+              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={template._id}>
+                <TemplateCard
+                  template={template}
+                  onView={() => handleView(template)}
+                  // Una vigente ya usada no se edita: se ofrece crear revisión.
+                  onEdit={() => versionado.pedirEdicion(template, () => handleEdit(template))}
+                  onDelete={() => handleDeleteClick(template._id)}
+                  onNuevaRevision={
+                    estado === "vigente" && !tieneBorrador(template.code)
+                      ? () => crearYEditarRevision(template)
+                      : undefined
+                  }
+                  onPublicar={estado === "borrador" ? () => versionado.pedirPublicacion(template) : undefined}
+                  onHistorial={() => versionado.verHistorial(template)}
+                />
+              </Grid>
+            );
+          })}
         </Grid>
       )}
 
@@ -120,6 +172,31 @@ const TemplateManagementApp: React.FC = () => {
       >
         <Add />
       </Fab>
+
+      <DialogoRevisionBloqueada
+        bloqueo={versionado.bloqueo}
+        trabajando={versionado.trabajando}
+        onCerrar={versionado.cerrarBloqueo}
+        onCrearRevision={(p) => crearYEditarRevision(p as unknown as FormTemplateHerraEquipos)}
+        onVer={(p) => {
+          versionado.cerrarBloqueo();
+          handleView(p as unknown as FormTemplateHerraEquipos);
+        }}
+      />
+      <DialogoPublicarRevision
+        key={versionado.publicando?._id ?? "cerrado"}
+        plantilla={versionado.publicando}
+        advertencia={versionado.publicando ? advertenciaUiFija(versionado.publicando.code) : undefined}
+        trabajando={versionado.trabajando}
+        onCancelar={versionado.cancelarPublicacion}
+        onConfirmar={versionado.confirmarPublicacion}
+      />
+      <DialogoHistorialRevisiones historial={versionado.historial} onCerrar={versionado.cerrarHistorial} />
+      <Snackbar open={!!versionado.aviso} autoHideDuration={7000} onClose={versionado.cerrarAviso}>
+        <Alert onClose={versionado.cerrarAviso} severity={versionado.aviso?.severidad ?? "info"} sx={{ width: "100%" }}>
+          {versionado.aviso?.mensaje}
+        </Alert>
+      </Snackbar>
 
       <Dialog open={deleteDialog.open} onClose={handleDeleteCancel}>
         <DialogTitle>Confirmar Eliminación</DialogTitle>

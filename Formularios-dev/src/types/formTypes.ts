@@ -1,3 +1,4 @@
+import type { CamposVersionado } from "./versionado";
 export type CheckboxOption = "si" | "no" | "na"
 export type OperativoOption = "SI" | "NO"
 
@@ -386,7 +387,7 @@ export interface FormBuilderData {
   simpleSections?: SimpleSection[]
 }
 
-export interface FormTemplate {
+export interface FormTemplate extends CamposVersionado {
   _id: string
   name: string // Ej: "AISLAMIENTO", "TRABAJO EN ALTURA"
   code: string

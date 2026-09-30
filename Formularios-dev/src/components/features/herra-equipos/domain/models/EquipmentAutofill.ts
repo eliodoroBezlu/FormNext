@@ -236,7 +236,9 @@ export const resolveAutofillValue = (
     return area || undefined;
   }
   if (isUbicacionField(label)) {
-    return equipo?.ubicacion_id?.nombre || undefined;
+    // La ruta completa («Taller › Bodega 1 › Estante A»): con varios niveles,
+    // el nombre suelto del estante no dice dónde está.
+    return equipo?.ubicacion_id?.ruta || equipo?.ubicacion_id?.nombre || undefined;
   }
   if (isMarcaModeloField(label)) {
     const marca = equipo?.marca || "";

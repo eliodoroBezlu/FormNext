@@ -4,9 +4,10 @@ import { API_BASE_URL } from "@/lib/constants";
 import {  getAuthHeaders, handleApiResponse } from "./helpers";
 import { FormBuilderDataHerraEquipos } from "@/components/features/herra-equipos/domain/models/BuilderTypes";
 import { revalidatePath } from "next/cache";
+import type { CamposVersionado } from "@/types/versionado";
 
 // Tipos de respuesta
-export type TemplateHerraEquipo = FormBuilderDataHerraEquipos & {
+export type TemplateHerraEquipo = FormBuilderDataHerraEquipos & CamposVersionado & {
   _id: string;
   createdAt: string;
   updatedAt: string;
@@ -44,7 +45,11 @@ export async function createTemplateHerraEquipo(
 // READ (list)
 // ========================
 export async function getTemplatesHerraEquipos(
-  filters?: { type?: string }
+  /**
+   * Sin filtros, solo las revisiones **vigentes** (lo que se ofrece para
+   * inspeccionar). `incluirBorradores` es para la pantalla de administración.
+   */
+  filters?: { type?: string; incluirBorradores?: boolean }
 ): Promise<{ success: true; data: TemplateHerraEquipo[] } | { success: false; error: string }> {
   try {
     const headers = await getAuthHeaders();
@@ -53,6 +58,9 @@ export async function getTemplatesHerraEquipos(
     
     if (filters?.type) {
       queryParams.append("type", filters.type);
+    }
+    if (filters?.incluirBorradores) {
+      queryParams.append("incluirBorradores", "true");
     }
 
     const url = `${API_BASE_URL}/template-herra-equipos${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
