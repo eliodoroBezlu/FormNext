@@ -1,39 +1,62 @@
-"use client"
+"use client";
 
-import { FormControl, InputLabel, Select, MenuItem, Typography, Paper, Box, FormHelperText, Chip } from "@mui/material"
-import type { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from "react-hook-form"
-import { ColorCodeConfig, FormDataHerraEquipos } from "../types/IProps"
+import {
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Typography,
+  Paper,
+  Box,
+  FormHelperText,
+  Chip,
+} from "@mui/material";
+import type {
+  UseFormRegister,
+  UseFormSetValue,
+  UseFormWatch,
+  FieldErrors,
+} from "react-hook-form";
+import { ColorCodeConfig, FormDataHerraEquipos } from "../types/IProps";
 
 interface ColorCodeSectionProps {
-  config: ColorCodeConfig
-  register: UseFormRegister<FormDataHerraEquipos>
-  setValue: UseFormSetValue<FormDataHerraEquipos>
-  watch: UseFormWatch<FormDataHerraEquipos>
-  errors: FieldErrors<FormDataHerraEquipos>
-  readonly?: boolean
+  config: ColorCodeConfig;
+  register: UseFormRegister<FormDataHerraEquipos>;
+  setValue: UseFormSetValue<FormDataHerraEquipos>;
+  watch: UseFormWatch<FormDataHerraEquipos>;
+  errors: FieldErrors<FormDataHerraEquipos>;
+  readonly?: boolean;
 }
 
 const COLOR_OPTIONS = [
-  { value: "rojo", label: "Rojo", color: "#ef4444" },
-  { value: "amarillo", label: "Amarillo", color: "#eab308" },
+  { value: "azul", label: "Azul", color: "#1f19ddff" },
   { value: "verde", label: "Verde", color: "#22c55e" },
-  { value: "azul", label: "Azul", color: "#3b82f6" },
-]
+  { value: "amarillo", label: "Amarillo", color: "#ecee4cff" },
+  { value: "blanco", label: "Blanco", color: "#ffffffff" },
+  { value: "rojo", label: "Rojo", color: "#ef4444" },
+];
 
 const TRIMESTRE_OPTIONS = [
   { value: "1", label: "Primer Trimestre (Ene-Mar)" },
   { value: "2", label: "Segundo Trimestre (Abr-Jun)" },
   { value: "3", label: "Tercer Trimestre (Jul-Sep)" },
   { value: "4", label: "Cuarto Trimestre (Oct-Dic)" },
-]
+  { value: "5", label: "Herramienta o equipo en mal estado" },
+];
 
-export function ColorCodeSection({ config, setValue, watch, errors, readonly = false }: ColorCodeSectionProps) {
+export function ColorCodeSection({
+  config,
+  setValue,
+  watch,
+  errors,
+  readonly = false,
+}: ColorCodeSectionProps) {
   if (!config.enabled) {
-    return null
+    return null;
   }
 
-  const selectedColor = watch("verification.codigoColor") as string
-  const selectedTrimestre = watch("verification.trimestre") as string
+  const selectedColor = watch("verification.codigoColor") as string;
+  const selectedTrimestre = watch("verification.trimestre") as string;
 
   return (
     <Paper elevation={2} sx={{ p: 3 }}>
@@ -41,13 +64,25 @@ export function ColorCodeSection({ config, setValue, watch, errors, readonly = f
         Código de Color
       </Typography>
 
-      <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" } }}>
-        <FormControl fullWidth required error={!!errors.verification?.codigoColor}>
+      <Box
+        sx={{
+          display: "grid",
+          gap: 2,
+          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+        }}
+      >
+        <FormControl
+          fullWidth
+          required
+          error={!!errors.verification?.codigoColor}
+        >
           <InputLabel>Color</InputLabel>
           <Select
             value={selectedColor || ""}
             label="Color"
-            onChange={(e) => setValue("verification.codigoColor", e.target.value)}
+            onChange={(e) =>
+              setValue("verification.codigoColor", e.target.value)
+            }
             disabled={readonly}
           >
             {COLOR_OPTIONS.map((option) => (
@@ -68,17 +103,25 @@ export function ColorCodeSection({ config, setValue, watch, errors, readonly = f
             ))}
           </Select>
           {errors.verification?.codigoColor && (
-            <FormHelperText>{errors.verification.codigoColor.message as string}</FormHelperText>
+            <FormHelperText>
+              {errors.verification.codigoColor.message as string}
+            </FormHelperText>
           )}
         </FormControl>
 
         {config.hasTrimestre && (
-          <FormControl fullWidth required error={!!errors.verification?.trimestre}>
+          <FormControl
+            fullWidth
+            required
+            error={!!errors.verification?.trimestre}
+          >
             <InputLabel>Trimestre</InputLabel>
             <Select
               value={selectedTrimestre || ""}
               label="Trimestre"
-              onChange={(e) => setValue("verification.trimestre", e.target.value)}
+              onChange={(e) =>
+                setValue("verification.trimestre", e.target.value)
+              }
               disabled={readonly}
             >
               {TRIMESTRE_OPTIONS.map((option) => (
@@ -88,11 +131,13 @@ export function ColorCodeSection({ config, setValue, watch, errors, readonly = f
               ))}
             </Select>
             {errors.verification?.trimestre && (
-              <FormHelperText>{errors.verification.trimestre.message as string}</FormHelperText>
+              <FormHelperText>
+                {errors.verification.trimestre.message as string}
+              </FormHelperText>
             )}
           </FormControl>
         )}
       </Box>
     </Paper>
-  )
+  );
 }
