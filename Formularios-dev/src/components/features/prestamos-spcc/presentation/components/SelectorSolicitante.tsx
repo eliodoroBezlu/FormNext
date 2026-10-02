@@ -83,7 +83,7 @@ export function SelectorSolicitante({
                 {t.nomina}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                CI {t.ci} · {t.area || "Sin área"}
+                {t.ci ? `CI ${t.ci}` : "Sin CI"} · {t.area || "Sin área"}
               </Typography>
             </Box>
           </Box>

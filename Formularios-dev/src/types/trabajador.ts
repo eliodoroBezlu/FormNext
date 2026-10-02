@@ -1,6 +1,9 @@
 export interface Trabajador {
   _id: string;
-  ci: string;
+  /** Id de la ficha en el padrón del IAM: la clave estable de la persona. */
+  iam_trabajador_id?: string;
+  /** Puede faltar: el IAM admite personal sin CI (contratistas). */
+  ci?: string;
   nomina: string;
   puesto: string;
   fecha_ingreso: string;
