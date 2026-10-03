@@ -105,7 +105,7 @@ export default function GestionTrabajadores() {
 
     if (ciFilter.trim()) {
       filtrados = filtrados.filter((t) =>
-        t.ci.toLowerCase().includes(ciFilter.toLowerCase().trim()),
+        (t.ci ?? "").toLowerCase().includes(ciFilter.toLowerCase().trim()),
       );
     }
 
@@ -362,7 +362,7 @@ export default function GestionTrabajadores() {
                         >
                           <TableCell>
                             <Typography variant="body2" fontWeight="medium">
-                              {trabajador.ci}
+                              {trabajador.ci || "Sin CI"}
                             </Typography>
                           </TableCell>
                           <TableCell>{trabajador.nomina}</TableCell>
@@ -447,7 +447,7 @@ export default function GestionTrabajadores() {
           {detalleTrabajador && (
             <Grid container spacing={2} sx={{ mt: 0.5 }}>
               {[
-                { label: "CI", value: detalleTrabajador.ci },
+                { label: "CI", value: detalleTrabajador.ci || "Sin CI" },
                 { label: "Puesto", value: detalleTrabajador.puesto },
                 {
                   label: "Superintendencia",

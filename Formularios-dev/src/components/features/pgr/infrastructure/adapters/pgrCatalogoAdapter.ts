@@ -31,7 +31,9 @@ export interface GrupoResponsable {
 }
 
 export interface MiembroGrupo {
-  ci: string;
+  /** Id del trabajador en forms: clave estable (el CI puede faltar). */
+  id: string;
+  ci: string | null;
   nombre: string;
   puesto: string;
   area: string;

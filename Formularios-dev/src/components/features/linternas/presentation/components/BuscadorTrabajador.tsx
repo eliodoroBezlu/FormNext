@@ -162,7 +162,7 @@ export function BuscadorTrabajador({
                   {t.nomina}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  CI {t.ci} · {areaDe(t)}
+                  {t.ci ? `CI ${t.ci}` : "Sin CI"} · {areaDe(t)}
                 </Typography>
               </Box>
             </Box>

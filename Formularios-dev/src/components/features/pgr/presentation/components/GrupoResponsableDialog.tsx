@@ -268,7 +268,7 @@ export function GrupoResponsableDialog({
                         }}
                       >
                         {miembros.map((m) => (
-                          <Typography key={m.ci} variant="caption" display="block">
+                          <Typography key={m.id} variant="caption" display="block">
                             {m.nombre} — {m.puesto} · {m.area}
                           </Typography>
                         ))}
