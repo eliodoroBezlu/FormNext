@@ -17,6 +17,7 @@ const DATA_SOURCES = [
   { value: "equipo", label: "Equipo" },
   { value: "vicepresidencia", label: "Vicepresidencia" },
   { value: "supervisor", label: "Supervisor" },
+  { value: "empresa", label: "Empresa" },
 ];
 
 const OPCIONES_TIPO = [

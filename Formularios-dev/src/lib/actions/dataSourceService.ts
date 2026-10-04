@@ -2,6 +2,7 @@
 
 import { API_BASE_URL } from "../constants";
 import { getAuthHeaders } from "./helpers";
+import { EMPRESAS } from "../catalogos/empresas";
 
 export type DataSourceType = 
   | "area" 
@@ -11,7 +12,8 @@ export type DataSourceType =
   | "cargo" 
   | "equipo"
   | "vicepresidencia"
-  | "supervisor";
+  | "supervisor"
+  | "empresa";
 
   interface BackendItem {
   nombre?: string;
@@ -188,7 +190,8 @@ const ENDPOINTS: Record<DataSourceType, string> = {
   cargo: "/cargos",
   equipo: "/equipos",
   vicepresidencia: "/vicepresidencias",
-  supervisor: "/supervisores"
+  supervisor: "/supervisores",
+  empresa: "/empresas"
 };
 
 async function fetchFromBackend(endpoint: string): Promise<string[]> {
@@ -287,6 +290,10 @@ export const fetchDataBySource = async (dataSource: DataSourceType): Promise<str
     return SUPERVISORES;
   }
 
+  if (dataSource === 'empresa') {
+    return [...EMPRESAS];
+  }
+
   const endpoint = ENDPOINTS[dataSource];
   
   if (!endpoint) {
@@ -312,6 +319,12 @@ export const searchDataBySource = async (
 
   if (dataSource === 'supervisor') {
     return SUPERVISORES.filter(item => 
+      item.toLowerCase().includes(query.toLowerCase())
+    );
+  }
+
+  if (dataSource === 'empresa') {
+    return EMPRESAS.filter(item =>
       item.toLowerCase().includes(query.toLowerCase())
     );
   }

@@ -35,6 +35,7 @@ const DATA_SOURCES: Array<{ value: string; label: string }> = [
   { value: "equipo", label: "Equipo" },
   { value: "vicepresidencia", label: "Vicepresidencia" },
   { value: "supervisor", label: "Supervisor" },
+  { value: "empresa", label: "Empresa" },
 ];
 
 interface Props {

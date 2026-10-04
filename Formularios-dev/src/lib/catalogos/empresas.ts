@@ -1,0 +1,68 @@
+/**
+ * Empresas que se ofrecen en los campos «Empresa» (origen de datos `empresa`).
+ *
+ * Es la lista de empresas activas. La lista de origen trae además ~90 con el
+ * prefijo «zzz», que es como se marcan las dadas de baja: no se ofrecen, pero
+ * el campo admite texto libre, así que una de ellas se puede escribir a mano.
+ *
+ * Vive fuera de `dataSourceService.ts` porque ese archivo es `"use server"` y
+ * solo puede exportar funciones asíncronas.
+ */
+export const EMPRESAS: readonly string[] = [
+  "MSC",
+  "Apraccuk",
+  "ACHUPALLA",
+  "ACTIVA FITNESS",
+  "Banco Bisa",
+  "C & C",
+  "Cayara",
+  "COINTAR",
+  "Comser",
+  "Cooperativa 11 de Julio",
+  "Cooperativa Nor Lipez",
+  "Cooperativa San Cristóbal de Lípez",
+  "Emp. Trans. Mackay Taborga",
+  "ENTEL",
+  "ESMI",
+  "Eurocom",
+  "Fanexa",
+  "FCA",
+  "Finning",
+  "Fundación San Cristóbal",
+  "Geotec",
+  "GEO AGUAS",
+  "Hexagon Inc.",
+  "INSEIN SRL",
+  "Jayula",
+  "Juan Carlos Huaranca Ariste (Consultor)",
+  "Komatsu",
+  "KLIMAX LTDA",
+  "LEDUC",
+  "Maldonado Exploraciones",
+  "MB White Metals Service & Constructions Ltda.",
+  "MegaMaquinaria",
+  "MELBI",
+  "Metso:Outotec",
+  "MIRIAN QUISPE",
+  "NEUMA BOLIVIA S.R.L.",
+  "NEWREST",
+  "OPEC",
+  "REMSA",
+  "REMAFIL",
+  "Rolando Dominguez Moreno",
+  "SafetyPro",
+  "SC Tesa",
+  "SEINCAL",
+  "Semconst",
+  "SILEX",
+  "SPECTROLAB",
+  "STT",
+  "Tesorera",
+  "TrackNet",
+  "Trans Omar",
+  "TTMB",
+  "UATF",
+  "VOLTA ENERGY",
+  "WET Chemical Bolivia SRL",
+  "Wila Kara",
+];

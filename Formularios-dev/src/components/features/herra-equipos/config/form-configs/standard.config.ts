@@ -1147,4 +1147,80 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
     requiresPhotos: true,
     allowDraft: true,
   },
+  "1.02.P06.F72": {
+    formCode: "1.02.P06.F72",
+    formName: "INSPECCIÓN CALEFACTORES VERTICALES, TECHO Y ESTUFAS",
+    formType: "standard",
+    approval: {
+      enabled: true,
+      requiredRoles: ["supervisor", "admin", "superintendente"],
+      allowSelfApproval: true,
+      requiresComments: true,
+    },
+    signatures: {
+      inspector: {
+        enabled: true,
+        title: "NOMBRE DEL RESPONSABLE DE LA INSPECCIÓN",
+        fields: {
+          name: {
+            enabled: true,
+            type: "autocomplete",
+            dataSource: "trabajador",
+            label: "NOMBRE DEL RESPONSABLE DE LA INSPECCIÓN",
+            required: true,
+            fieldName: "inspectorSignature.inspectorName",
+          },
+          signature: {
+            type: "canvas",
+            enabled: true,
+            required: true,
+            fieldName: "inspectorSignature.inspectorSignature",
+          },
+        },
+      },
+      supervisor: {
+        enabled: true,
+        title: "NOMBRE DEL SUPERVISOR DE LA INSPECCIÓN",
+        fields: {
+          name: {
+            enabled: true,
+            type: "autocomplete",
+            label: "NOMBRE DEL SUPERVISOR DE LA INSPECCIÓN",
+            required: false,
+            dataSource: "supervisor",
+            fieldName: "supervisorSignature.supervisorName",
+          },
+          signature: {
+            type: "canvas",
+            enabled: true,
+            required: false,
+            heightPercentage: 30,
+            fieldName: "supervisorSignature.supervisorSignature",
+          },
+        },
+      },
+    },
+    // ✅ NUEVAS CONFIGURACIONES
+    questionObservations: {
+      enabled: true,
+      required: false,
+      label: "Observaciones",
+      placeholder: "Comentarios adicionales sobre esta pregunta...",
+    },
+
+    requiresPhotos: true,
+    allowDraft: true,
+    // Igual que la F19: se elige qué equipos (secciones raíz) se inspeccionan.
+    sectionSelector: {
+      enabled: true,
+      items: [
+        {
+          sectionTitle: "ROOT",
+          label: "Seleccione los equipos de calefacción a inspeccionar",
+          helperText: "Puede seleccionar uno o más y continúe con la inspección",
+          required: true,
+        },
+      ],
+    },
+  },
 };
