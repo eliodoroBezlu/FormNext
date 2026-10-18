@@ -17,6 +17,15 @@ export enum Role {
    * jerárquico. Se evalúa con `tieneRolExacto`, nunca con `hasPermission`.
    */
   INSPECTOR_ASIGNADO = "inspector_asignado",
+  /**
+   * Monitoreo de equipos de Confiabilidad (formato 2.03.P01.R09). Es un rol
+   * **exclusivo**: solo lo tiene el área y quien se nombre, y ningún otro lo
+   * hereda —tampoco admin—. Sus rutas y su menú van con `exacto: true`.
+   *
+   * No es restringido: quien lo tiene sigue viendo lo demás según sus otros
+   * roles. Solo se agrega esta sección.
+   */
+  MONITOREO_CONFIABILIDAD = "monitoreo_confiabilidad",
 }
 
 export type UserRole = Role;
@@ -26,6 +35,11 @@ export interface RoutePermission {
   requiredRoles: UserRole[];
   requiredPermissions?: string[];
   excludeRoles?: UserRole[];
+  /**
+   * Se exige el rol tal cual, sin `ROLE_HIERARCHY`: para roles exclusivos,
+   * que un admin no debe heredar.
+   */
+  exacto?: boolean;
 }
 
 /**
@@ -184,6 +198,14 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
     requiredRoles: [Role.ADMIN, Role.SUPERVISOR, Role.SUPERINTENDENTE],
   },
 
+  // Monitoreo de equipos (2.03.P01.R09): solo Confiabilidad y quien se nombre.
+  // `exacto` porque la jerarquía dejaría entrar a admin y a super_admin.
+  {
+    path: "/dashboard/monitoreo-equipos",
+    requiredRoles: [Role.MONITOREO_CONFIABILIDAD],
+    exacto: true,
+  },
+
   // ── Rutas que antes no tenían regla ─────────────────────────────────────
   // Sin regla, `puedeAccederARuta` deja pasar a cualquier rol no restringido:
   // la tarjeta del panel las ocultaba, pero la URL escrita a mano entraba.
@@ -306,6 +328,7 @@ export function puedeAccederARuta(
 
   if (!regla) return !esRolRestringido(rolesDelUsuario);
   if (regla.requiredRoles.length === 0) return true;
+  if (regla.exacto) return tieneRolExacto(rolesDelUsuario, regla.requiredRoles);
 
   // Los roles restringidos se comprueban contra sus roles reales: la
   // jerarquía los absorbería y anularía la restricción.
@@ -362,6 +385,9 @@ export const ROLE_HIERARCHY: Record<UserRole, UserRole[]> = {
    * el filtrado de plantillas del backend, nunca por jerarquía.
    */
   [Role.INSPECTOR_ASIGNADO]: [Role.INSPECTOR_ASIGNADO],
+
+  /** Exclusivo: nadie lo hereda y no implica nada más. */
+  [Role.MONITOREO_CONFIABILIDAD]: [Role.MONITOREO_CONFIABILIDAD],
 };
 
 /**

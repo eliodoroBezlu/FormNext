@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState, useSyncExternalStore, useTransition } from "react";
 import { Box, Alert, CircularProgress, Typography, Paper } from "@mui/material";
 import { inspectorLoginAction } from "@/app/actions/auth";
 
@@ -67,10 +67,20 @@ const benefits = [
   },
 ];
 
+const sinSuscripcion = () => () => {};
+
 export default function Home() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // `?clave=cambiada` llega desde «Cambiar contraseña». Se lee de la URL con
+  // un store externo y no con useSearchParams, que exigiría envolver la
+  // página en <Suspense>; en el servidor no hay aviso que mostrar.
+  const claveCambiada = useSyncExternalStore(
+    sinSuscripcion,
+    () => new URLSearchParams(window.location.search).get("clave") === "cambiada",
+    () => false,
+  );
 
   const handleInspectorLogin = () => {
     setError(null);
@@ -306,6 +316,12 @@ export default function Home() {
           >
             Seleccione su método de acceso
           </Typography>
+
+          {claveCambiada && !error && (
+            <Alert severity="success" sx={{ mb: 4, borderRadius: 3 }}>
+              Contraseña cambiada. Inicia sesión con la nueva.
+            </Alert>
+          )}
 
           {error && (
             <Alert severity="error" sx={{ mb: 4, borderRadius: 3 }}>

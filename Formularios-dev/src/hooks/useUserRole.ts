@@ -40,6 +40,8 @@ interface User {
   permissions?: string[];
   area?: string; // área del Trabajador vinculado
   superintendencia?: string; // superintendencia del Trabajador vinculado
+  /** Acceso «Inspector Técnico»: una cuenta para todos, sin contraseña propia. */
+  cuentaCompartida?: boolean;
 }
 
 // Caché global para evitar múltiples peticiones concurrentes

@@ -19,6 +19,8 @@ type NavigationItemBase = {
   children?: NavigationItem[];
   requiredRoles?: UserRole[];
   excludeRoles?: UserRole[];
+  /** El rol se exige tal cual, sin jerarquía: para roles exclusivos. */
+  exacto?: boolean;
 };
 
 export type NavigationItem =
@@ -31,6 +33,7 @@ export type NavigationItem =
       children?: NavigationItem[];
       requiredRoles?: UserRole[];
       excludeRoles?: UserRole[];
+      exacto?: boolean;
     });
 
 export const NAVIGATION: NavigationItem[] = [
@@ -107,6 +110,14 @@ export const NAVIGATION: NavigationItem[] = [
     // Supervisor y superintendente entran por las aprobaciones de pérdida,
     // aunque no puedan registrar entregas: la ruta hija tiene su propia regla.
     requiredRoles: [Role.ADMIN, Role.SUPERVISOR, Role.SUPERINTENDENTE],
+  },
+  {
+    segment: "monitoreo-equipos",
+    title: "Monitoreo de equipos",
+    icon: "barChart",
+    // Solo Confiabilidad y quien se nombre: ni admin lo ve sin el rol.
+    requiredRoles: [Role.MONITOREO_CONFIABILIDAD],
+    exacto: true,
   },
   {
     kind: "divider",
@@ -209,6 +220,9 @@ export function Navigation({ onNavigate }: { onNavigate: () => void }) {
     if (!item.requiredRoles || item.requiredRoles.length === 0) {
       return !esRolRestringido(roles);
     }
+
+    // Un rol exclusivo no se hereda: la jerarquía lo daría a admin.
+    if (item.exacto) return tieneRolExacto(roles, item.requiredRoles);
 
     // Los roles restringidos se evalúan contra sus roles reales, nunca contra
     // `ROLE_HIERARCHY`: una jerarquía que absorbe hacia arriba no sabe

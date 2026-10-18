@@ -43,6 +43,7 @@ export async function GET() {
       roles: data.roles || [],
       permissions: data.permissions || [],
       fullName: data.fullName,
+      cuentaCompartida: data.cuentaCompartida === true,
     };
 
     return NextResponse.json({ user });

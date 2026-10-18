@@ -627,6 +627,60 @@ export async function logoutAction() {
 }
 
 // ============================================
+// CAMBIAR CONTRASEÑA PROPIA
+// ============================================
+/**
+ * Cambia la contraseña del usuario en el IAM (la misma de forms, Sync y el
+ * portal). El IAM cierra todas sus sesiones, así que al salir bien se borran
+ * también las cookies de aquí: quien llama tiene que llevarlo a iniciar sesión.
+ *
+ * `data.status` devuelve el código HTTP del fallo para que el hook distinga
+ * un límite de intentos (429) de una contraseña rechazada (400).
+ */
+export async function cambiarClaveAction(
+  currentPassword: string,
+  newPassword: string,
+): Promise<ActionResult> {
+  try {
+    const cookieStore = await cookies();
+    const accessToken = cookieStore.get('access_token')?.value;
+    const refreshToken = cookieStore.get('refresh_token')?.value;
+    if (!accessToken) {
+      return { success: false, error: 'La sesión expiró. Inicia sesión de nuevo.', data: { status: 401 } };
+    }
+
+    const response = await fetch(`${API_URL}/auth/me/password`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        // El refresh_token hace que el IAM cuente el límite de intentos por
+        // sesión y no por la IP del servidor, que es la misma para todos.
+        Cookie: `access_token=${accessToken}${refreshToken ? `; refresh_token=${refreshToken}` : ''}`,
+      },
+      body: JSON.stringify({ currentPassword, newPassword }),
+      cache: 'no-store',
+    });
+
+    const data = (await response.json().catch(() => ({}))) as { message?: unknown };
+
+    if (!response.ok) {
+      const mensaje = Array.isArray(data.message) ? data.message.join('. ') : data.message;
+      return {
+        success: false,
+        error: typeof mensaje === 'string' && mensaje ? mensaje : 'No se pudo cambiar la contraseña',
+        data: { status: response.status },
+      };
+    }
+
+    clearSessionCookies(cookieStore);
+    return { success: true, message: 'Contraseña actualizada' };
+  } catch (error) {
+    console.error('💥 [CAMBIAR CLAVE] Error:', error);
+    return { success: false, error: 'Error de conexión' };
+  }
+}
+
+// ============================================
 // VERIFY 2FA
 // ============================================
 export async function verify2FAAction(tempToken: string, code: string): Promise<ActionResult> {

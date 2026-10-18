@@ -4,6 +4,7 @@ import {
   registerAction,
   verify2FAAction,
   inspectorLoginAction,
+  cambiarClaveAction,
 } from "@/app/actions/auth";
 import type { ActionResult } from "@/app/actions/auth";
 
@@ -48,6 +49,14 @@ export const authAdapter = {
    */
   async verify2FA(tempToken: string, code: string): Promise<ActionResult> {
     return verify2FAAction(tempToken, code);
+  },
+
+  /**
+   * Cambia la contraseña propia en el IAM. Al salir bien la sesión queda
+   * cerrada (el IAM cierra todas): hay que llevar al usuario a iniciar sesión.
+   */
+  async cambiarClave(currentPassword: string, newPassword: string): Promise<ActionResult> {
+    return cambiarClaveAction(currentPassword, newPassword);
   },
 };
 

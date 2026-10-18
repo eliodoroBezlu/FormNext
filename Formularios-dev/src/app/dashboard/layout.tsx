@@ -15,14 +15,18 @@ import {
   Divider,
   Typography,
   Avatar,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
 import CloseIcon from "@mui/icons-material/Close";
+import LockResetIcon from "@mui/icons-material/LockReset";
 import { Navigation } from "@/components/layout/navigation/Navigation";
 import { lightTheme, darkTheme } from "../../styles/theme";
 import { LogoutButton } from "@/components/features/auth/presentation/components/LogoutButton";
+import { CambiarClaveDialog } from "@/components/features/auth/presentation/components/CambiarClaveDialog";
 import { useUserRole } from "@/hooks/useUserRole";
 import { DynamicBreadcrumbs } from "@/components/layout/navigation/DynamicBreadcrumbs";
 import { NotificationBell } from "@/components/features/dashboard/presentation/components/NotificationBell";
@@ -38,6 +42,7 @@ export default function DashboardLayout({
   const [mounted, setMounted] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [cambiandoClave, setCambiandoClave] = useState(false);
   const { user } = useUserRole();
 
   /**
@@ -200,8 +205,27 @@ export default function DashboardLayout({
                   Sesión: {user?.roles?.[0] || "Ninguno"}
                 </MenuItem>
                 <Divider />
+                {/* La cuenta compartida de inspector no tiene contraseña propia. */}
+                {user && !user.cuentaCompartida && (
+                  <MenuItem
+                    onClick={() => {
+                      handleUserMenuClose();
+                      setCambiandoClave(true);
+                    }}
+                  >
+                    <ListItemIcon>
+                      <LockResetIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Cambiar contraseña</ListItemText>
+                  </MenuItem>
+                )}
                 <LogoutButton onClose={handleUserMenuClose} />
               </Menu>
+              {/* Fuera del Menu: al cerrarse, el Menu desmonta su contenido. */}
+              <CambiarClaveDialog
+                open={cambiandoClave}
+                onClose={() => setCambiandoClave(false)}
+              />
             </Box>
           </Toolbar>
         </AppBar>
