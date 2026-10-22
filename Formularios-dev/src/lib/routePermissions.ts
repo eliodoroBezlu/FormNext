@@ -293,6 +293,20 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
     requiredRoles: [Role.ADMIN, Role.SUPERVISOR, Role.SUPERINTENDENTE],
   },
   {
+    // Quien llena la IRO tiene que poder seguirla: «Guardar avance» la deja en
+    // borrador y se retoma desde *Mis inspecciones*. El listado de reportes
+    // sigue cerrado; solo se abre la pantalla de una IRO.
+    path: "/dashboard/reports/report-iro-isop/editar",
+    requiredRoles: [
+      Role.ADMIN,
+      Role.SUPERVISOR,
+      Role.SUPERINTENDENTE,
+      Role.TECNICO,
+      Role.INSPECTOR,
+      Role.USER,
+    ],
+  },
+  {
     // El rol restringido sí entra aquí, pero el backend le devuelve
     // únicamente las inspecciones de las plantillas asignadas a su rol.
     path: "/dashboard/reports/report-herra-equipos",

@@ -413,7 +413,7 @@ export type PopulatedFormInstance = Omit<
   FormInstance,
   "templateId" | "createdAt" | "updatedAt"
 > & {
-  templateId?: { name?: string };
+  templateId?: { name?: string; code?: string };
   createdAt: string;
   updatedAt: string;
 };
@@ -422,7 +422,9 @@ export async function obtenerInspecciones(): Promise<PopulatedFormInstance[]> {
   try {
     const headers = await getAuthHeaders();
 
-    const response = await fetch(`${API_URL}/instances?limit=100`, {
+    // Antes eran las últimas 100 y en producción ya hay más: las viejas no
+    // aparecían para generar su plan.
+    const response = await fetch(`${API_URL}/instances?limit=500`, {
       method: "GET",
       headers,
       cache: "no-store",

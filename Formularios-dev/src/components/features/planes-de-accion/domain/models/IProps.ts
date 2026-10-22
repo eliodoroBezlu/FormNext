@@ -55,6 +55,15 @@ export interface PlanDeAccion {
 
   estado: "abierto" | "en-progreso" | "cerrado";
 
+  // La IRO se terminó sin observaciones que cumplan el criterio: el plan nace
+  // cerrado, sin tareas, y `motivoSinObservaciones` dice por qué.
+  sinObservaciones?: boolean;
+  motivoSinObservaciones?: string;
+
+  // De qué IRO o ISOP sale (la plantilla de su inspección). Lo agrega el
+  // backend al listar; un plan manual no lo tiene.
+  tipoInspeccion?: { codigo: string; nombre: string };
+
   // Aprobación global del Superintendente — eje independiente del
   // `aprobado` por tarea. Mientras no sea 'aprobado', el Supervisor
   // no debe ver este plan (reforzado también en el backend).

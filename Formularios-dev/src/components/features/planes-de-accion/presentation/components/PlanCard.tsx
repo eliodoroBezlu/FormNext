@@ -1,7 +1,7 @@
 "use client";
 
 import { Box, Typography, Chip, IconButton, Button } from "@mui/material";
-import { Edit, Delete } from "@mui/icons-material";
+import { Edit, Delete, InfoOutlined } from "@mui/icons-material";
 import { PlanDeAccion } from "../../domain/models/IProps";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Role } from "@/lib/routePermissions";
@@ -13,7 +13,12 @@ interface PlanCardProps {
   onDelete: (id: string) => void;
 }
 
-type EstadoVisual = "abierto" | "en-progreso" | "cerrado" | "aprobado";
+type EstadoVisual =
+  | "abierto"
+  | "en-progreso"
+  | "cerrado"
+  | "aprobado"
+  | "sin-observaciones";
 
 const ESTADO_STYLE: Record<
   EstadoVisual,
@@ -43,6 +48,12 @@ const ESTADO_STYLE: Record<
     fg: "#7C3AED",
     label: "Aprobado",
   },
+  "sin-observaciones": {
+    border: "#94A3B8",
+    bg: "rgba(100,116,139,.15)",
+    fg: "#475569",
+    label: "Sin observaciones",
+  },
 };
 
 export function PlanCard({ plan, onView, onEdit, onDelete }: PlanCardProps) {
@@ -51,7 +62,11 @@ export function PlanCard({ plan, onView, onEdit, onDelete }: PlanCardProps) {
 
   const estaAprobado =
     plan.tareas.length > 0 && plan.tareas.every((t) => t.aprobado === true);
-  const estadoVisual: EstadoVisual = estaAprobado ? "aprobado" : plan.estado;
+  const estadoVisual: EstadoVisual = plan.sinObservaciones
+    ? "sin-observaciones"
+    : estaAprobado
+      ? "aprobado"
+      : plan.estado;
   const style = ESTADO_STYLE[estadoVisual];
 
   const shortId = `PA-${plan._id.slice(-6).toUpperCase()}`;
@@ -113,6 +128,8 @@ export function PlanCard({ plan, onView, onEdit, onDelete }: PlanCardProps) {
                 bgcolor: style.bg,
               }}
             />
+            {/* Sin tareas no hay nada que aprobar. */}
+            {!plan.sinObservaciones && (
             <Chip
               label={
                 plan.estadoAprobacion === "aprobado"
@@ -124,6 +141,7 @@ export function PlanCard({ plan, onView, onEdit, onDelete }: PlanCardProps) {
               variant="outlined"
               sx={{ height: 24, fontSize: 11, fontWeight: 600 }}
             />
+            )}
           </Box>
 
           <Box
@@ -150,6 +168,23 @@ export function PlanCard({ plan, onView, onEdit, onDelete }: PlanCardProps) {
             </Box>
           </Box>
 
+          {plan.sinObservaciones ? (
+            // El porqué de la pestaña «Sin observaciones».
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 1,
+                color: "text.secondary",
+              }}
+            >
+              <InfoOutlined fontSize="small" sx={{ mt: "1px" }} />
+              <Typography sx={{ fontSize: 13 }}>
+                {plan.motivoSinObservaciones ??
+                  "La IRO se terminó sin observaciones que cumplan el criterio."}
+              </Typography>
+            </Box>
+          ) : (
           <Box
             sx={{
               display: "flex",
@@ -188,6 +223,7 @@ export function PlanCard({ plan, onView, onEdit, onDelete }: PlanCardProps) {
               {plan.porcentajeCierre}% avance
             </Typography>
           </Box>
+          )}
         </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>

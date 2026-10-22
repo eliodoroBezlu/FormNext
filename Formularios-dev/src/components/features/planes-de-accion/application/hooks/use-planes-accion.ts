@@ -23,16 +23,31 @@ import {
   GenerarPlanesOptions,
   PlanDeAccion,
   PlanSummary as PlanSummaryType,
-  TareaObservacion,
   UpdatePlanDeAccionDTO,
   UpdateTareaDTO,
 } from "../../domain/models/IProps";
 import type { AreaBackend } from "@/lib/actions/area-actions";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Role } from "@/lib/routePermissions";
+import {
+  areaDeLaInspeccion,
+  conTareasQueSeguir,
+  estaEnPestana,
+  nombreDeArea,
+  type TabValue,
+} from "../../domain/pestanasPlan";
+import { claveDeTipo, opcionesDeTipo } from "../../domain/tipoInspeccion";
 
-export type { PopulatedFormInstance };
-export type TabValue = "abierto" | "en-progreso" | "cerrado" | "aprobado";
+export type { PopulatedFormInstance, TabValue };
+
+/** El tipo de una inspección: su plantilla viene poblada con código y nombre. */
+export const tipoDeLaInspeccion = (inspeccion: PopulatedFormInstance) =>
+  inspeccion.templateId?.code
+    ? {
+        codigo: inspeccion.templateId.code,
+        nombre: inspeccion.templateId.name ?? inspeccion.templateId.code,
+      }
+    : undefined;
 
 interface SnackbarState {
   open: boolean;
@@ -57,6 +72,9 @@ export function usePlanesAccion() {
 
   const [filtroArea, setFiltroArea] = useState<string>("");
   const [filtroAnio, setFiltroAnio] = useState<string>("");
+  // Por IRO / ISOP: en la lista de planes y en «Generar desde inspección».
+  const [filtroTipo, setFiltroTipo] = useState<string>("");
+  const [tipoAlGenerar, setTipoAlGenerar] = useState<string>("");
 
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     open: false,
@@ -146,34 +164,21 @@ export function usePlanesAccion() {
     [areasVisibles],
   );
 
-  // Planes visibles según rol: Admin todos, Superintendente solo los de sus
-  // áreas, Supervisor solo aquellos donde figura como responsable de cierre
-  // de al menos una tarea.
-  const planesVisibles = useMemo(() => {
-    if (isSupervisor) {
-      // El Supervisor nunca debe ver un plan que el Superintendente no
-      // aprobó globalmente todavía (el backend ya aplica esta misma regla
-      // al listar; esto es una segunda barrera defensiva en el cliente).
-      return planes.filter(
-        (p) =>
-          p.estadoAprobacion === "aprobado" &&
-          p.tareas.some(
-            (t) => t.responsableAreaCierreUsername === user?.username,
-          ),
-      );
-    }
-    if (isSuperintendente) {
-      return planes.filter((p) => nombresAreasVisibles.has(p.areaFisica));
-    }
-    return planes;
-  }, [planes, isSupervisor, isSuperintendente, user?.username, nombresAreasVisibles]);
+  // Qué planes ve cada quien lo decide el backend (`alcance-plan.ts`): el
+  // admin todos, el superintendente los de su superintendencia, el supervisor
+  // los de su área y los de sus tareas. Aquí no se vuelve a filtrar: dos
+  // copias de la regla terminan diciendo cosas distintas.
+  const planesVisibles = planes;
 
-  const areasParaFiltro = useMemo(() => {
-    if (isSupervisor) {
-      return [...new Set(planesVisibles.map((p) => p.areaFisica))].sort();
-    }
-    return [...new Set(areasVisibles.map((a) => a.nombre))].sort();
-  }, [isSupervisor, planesVisibles, areasVisibles]);
+  // Las áreas del filtro salen de los planes que llegaron, tal como las
+  // escribió el inspector (sin espacios de más).
+  const areasParaFiltro = useMemo(
+    () =>
+      [...new Set(planesVisibles.map((p) => nombreDeArea(p.areaFisica)))]
+        .filter(Boolean)
+        .sort(),
+    [planesVisibles],
+  );
 
   const añosDisponibles = useMemo(
     () =>
@@ -201,22 +206,33 @@ export function usePlanesAccion() {
     );
     if (!isSuperintendente) return noUsadas;
     return noUsadas.filter((inspeccion) => {
-      const area =
-        inspeccion.verificationList?.["Área"] ||
-        inspeccion.verificationList?.["Lugar"];
+      const area = areaDeLaInspeccion(inspeccion.verificationList);
       return !!area && nombresAreasVisibles.has(area);
     });
   }, [inspecciones, instanceIdsUsadas, isSuperintendente, nombresAreasVisibles]);
 
+  const tiposAlGenerar = useMemo(
+    () => opcionesDeTipo(inspeccionesDisponibles.map(tipoDeLaInspeccion)),
+    [inspeccionesDisponibles],
+  );
+
+  const tiposParaFiltro = useMemo(
+    () => opcionesDeTipo(planesVisibles.map((p) => p.tipoInspeccion)),
+    [planesVisibles],
+  );
+
+  // Los «sin observaciones» no entran en el resumen: no tienen nada que
+  // cerrar, y contarlos como cerrados inflaría la tasa de cierre.
   const summary = useMemo<PlanSummaryType>(() => {
-    const totalPlanes = planesVisibles.length;
-    const planesAbiertos = planesVisibles.filter(
+    const conTareas = conTareasQueSeguir(planesVisibles);
+    const totalPlanes = conTareas.length;
+    const planesAbiertos = conTareas.filter(
       (p) => p.estado === "abierto",
     ).length;
-    const planesEnProgreso = planesVisibles.filter(
+    const planesEnProgreso = conTareas.filter(
       (p) => p.estado === "en-progreso",
     ).length;
-    const planesCerrados = planesVisibles.filter(
+    const planesCerrados = conTareas.filter(
       (p) => p.estado === "cerrado",
     ).length;
     return {
@@ -232,20 +248,15 @@ export function usePlanesAccion() {
   const filteredPlanes = useMemo(
     () =>
       planesVisibles.filter((plan) => {
-        if (activeTab === "aprobado") {
-          if (
-            !(
-              plan.tareas.length > 0 &&
-              plan.tareas.every((t: TareaObservacion) => t.aprobado === true)
-            )
-          ) {
-            return false;
-          }
-        } else if (plan.estado !== activeTab) {
+        if (!estaEnPestana(plan, activeTab)) return false;
+
+        if (filtroArea && nombreDeArea(plan.areaFisica) !== filtroArea) {
           return false;
         }
 
-        if (filtroArea && plan.areaFisica !== filtroArea) return false;
+        if (filtroTipo && claveDeTipo(plan.tipoInspeccion) !== filtroTipo) {
+          return false;
+        }
 
         if (
           filtroAnio &&
@@ -256,7 +267,7 @@ export function usePlanesAccion() {
 
         return true;
       }),
-    [planesVisibles, activeTab, filtroArea, filtroAnio],
+    [planesVisibles, activeTab, filtroArea, filtroAnio, filtroTipo],
   );
 
   const handleViewPlan = useCallback(
@@ -521,5 +532,12 @@ export function usePlanesAccion() {
     setFiltroArea,
     filtroAnio,
     setFiltroAnio,
+    // Filtro por IRO / ISOP
+    tiposParaFiltro,
+    filtroTipo,
+    setFiltroTipo,
+    tiposAlGenerar,
+    tipoAlGenerar,
+    setTipoAlGenerar,
   };
 }

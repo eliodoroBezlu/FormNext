@@ -35,7 +35,10 @@ import { PlanSummary } from "@/components/features/planes-de-accion/presentation
 import {
   usePlanesAccion,
   PopulatedFormInstance,
+  tipoDeLaInspeccion,
 } from "@/components/features/planes-de-accion/application/hooks/use-planes-accion";
+import { areaDeLaInspeccion } from "@/components/features/planes-de-accion/domain/pestanasPlan";
+import { claveDeTipo } from "@/components/features/planes-de-accion/domain/tipoInspeccion";
 import {
   CreatePlanDeAccionDTO,
   PlanDeAccion,
@@ -111,6 +114,12 @@ export default function PlanesDeAccionPage() {
     setFiltroArea,
     filtroAnio,
     setFiltroAnio,
+    tiposParaFiltro,
+    filtroTipo,
+    setFiltroTipo,
+    tiposAlGenerar,
+    tipoAlGenerar,
+    setTipoAlGenerar,
   } = usePlanesAccion();
 
   useEffect(() => {
@@ -122,9 +131,7 @@ export default function PlanesDeAccionPage() {
   const SIN_AREA = "Sin área";
 
   const getAreaInspeccion = (option: PopulatedFormInstance): string =>
-    option.verificationList?.["Área"] ||
-    option.verificationList?.["Lugar"] ||
-    SIN_AREA;
+    areaDeLaInspeccion(option.verificationList) || SIN_AREA;
 
   // ✅ Opciones y filtro de Área/Año para el modal "Generar desde Inspección"
   const areasInspeccionOptions = useMemo(
@@ -146,6 +153,12 @@ export default function PlanesDeAccionPage() {
 
   const inspeccionesFiltradasParaGenerar = useMemo(() => {
     return inspeccionesDisponibles.filter((i) => {
+      if (
+        tipoAlGenerar &&
+        claveDeTipo(tipoDeLaInspeccion(i)) !== tipoAlGenerar
+      ) {
+        return false;
+      }
       if (filtroAreaGenerar && getAreaInspeccion(i) !== filtroAreaGenerar) {
         return false;
       }
@@ -157,7 +170,7 @@ export default function PlanesDeAccionPage() {
       }
       return true;
     });
-  }, [inspeccionesDisponibles, filtroAreaGenerar, filtroAnioGenerar]);
+  }, [inspeccionesDisponibles, filtroAreaGenerar, filtroAnioGenerar, tipoAlGenerar]);
 
   // ✅ Preview de preguntas que se generarán
   const previewPreguntas = useMemo(() => {
@@ -288,6 +301,7 @@ export default function PlanesDeAccionPage() {
     setIncluirSoloConComentario(false);
     setFiltroAreaGenerar("");
     setFiltroAnioGenerar("");
+    setTipoAlGenerar("");
   };
 
   const handleGenerarPlan = async () => {
@@ -464,6 +478,24 @@ export default function PlanesDeAccionPage() {
       </Box>
 
       <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap" }}>
+        {/* Por IRO / ISOP: el tipo sale de la plantilla de la inspección. */}
+        <FormControl size="small" sx={{ minWidth: 240 }}>
+          <InputLabel id="filtro-tipo-label">Tipo</InputLabel>
+          <Select
+            labelId="filtro-tipo-label"
+            label="Tipo"
+            value={filtroTipo}
+            onChange={(e) => setFiltroTipo(e.target.value)}
+          >
+            <MenuItem value="">Todos los tipos</MenuItem>
+            {tiposParaFiltro.map((tipo) => (
+              <MenuItem key={tipo.valor} value={tipo.valor}>
+                {tipo.etiqueta}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
         <FormControl size="small" sx={{ minWidth: 220 }}>
           <InputLabel id="filtro-area-label">Área</InputLabel>
           <Select
@@ -640,6 +672,26 @@ export default function PlanesDeAccionPage() {
             {/* ✅ Filtros para acotar la lista de inspecciones */}
             {inspeccionesDisponibles.length > 0 && (
               <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+                <FormControl size="small" sx={{ minWidth: 220 }}>
+                  <InputLabel id="filtro-tipo-generar-label">Tipo</InputLabel>
+                  <Select
+                    labelId="filtro-tipo-generar-label"
+                    label="Tipo"
+                    value={tipoAlGenerar}
+                    onChange={(e) => {
+                      setTipoAlGenerar(e.target.value);
+                      setSelectedInstancia(null);
+                    }}
+                  >
+                    <MenuItem value="">Todos los tipos</MenuItem>
+                    {tiposAlGenerar.map((tipo) => (
+                      <MenuItem key={tipo.valor} value={tipo.valor}>
+                        {tipo.etiqueta}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
                 <FormControl size="small" sx={{ minWidth: 200 }}>
                   <InputLabel id="filtro-area-generar-label">Área</InputLabel>
                   <Select
@@ -700,10 +752,7 @@ export default function PlanesDeAccionPage() {
                   const fecha = new Date(option.createdAt).toLocaleDateString(
                     "es-ES",
                   );
-                  const area =
-                    option.verificationList?.["Área"] ||
-                    option.verificationList?.["Lugar"] ||
-                    "Sin área";
+                  const area = getAreaInspeccion(option);
                   const compliance = option.overallCompliancePercentage || 0;
                   const template = option.templateId?.name || "Sin template";
                   return `${fecha} - ${template} - ${area} (${compliance.toFixed(1)}%)`;
@@ -724,10 +773,7 @@ export default function PlanesDeAccionPage() {
                       minute: "2-digit",
                     },
                   );
-                  const area =
-                    option.verificationList?.["Área"] ||
-                    option.verificationList?.["Lugar"] ||
-                    "Sin área";
+                  const area = getAreaInspeccion(option);
                   const compliance = option.overallCompliancePercentage || 0;
                   const template = option.templateId?.name || "Sin template";
                   const empresa = option.verificationList?.["Empresa"] || "";
@@ -830,8 +876,7 @@ export default function PlanesDeAccionPage() {
                   <strong>Inspección seleccionada:</strong>
                   <br />
                   Área:{" "}
-                  {selectedInstancia.verificationList?.["Área"] ||
-                    selectedInstancia.verificationList?.["Lugar"] ||
+                  {areaDeLaInspeccion(selectedInstancia.verificationList) ||
                     "No especificada"}
                   <br />
                   Empresa:{" "}

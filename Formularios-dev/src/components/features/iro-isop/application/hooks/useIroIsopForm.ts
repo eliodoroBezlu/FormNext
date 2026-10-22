@@ -236,9 +236,19 @@ export const useIroIsopForm = ({
     [getValues, setValue, trigger, readonly]
   );
 
-  // --- SUBMIT DEL FORMULARIO CON TRANSICIÓN DE ESTADO ---
-  const onSubmit = useCallback(
-    (data: InspectionFormData) => {
+  /**
+   * Una IRO que ya se terminó se sigue pudiendo corregir, pero no vuelve a
+   * borrador: el backend conserva su estado y su plan de acción no se regenera.
+   */
+  const estadoInicial = initialData?.status;
+  const yaTerminada = !!estadoInicial && estadoInicial !== "borrador";
+
+  // --- GUARDAR CON TRANSICIÓN DE ESTADO ---
+  // `borrador` = «Guardar avance» (sin validar: se sigue después desde
+  // Mis inspecciones → IRO-ISOP → «Seguir»). `completado` = «Terminar IRO»: el backend
+  // exige todo respondido y genera el plan de acción.
+  const guardar = useCallback(
+    (data: InspectionFormData, status: NonNullable<FormInstance["status"]>) => {
       if (readonly) return;
 
       // El path interno de RHF para estos campos está saneado
@@ -269,6 +279,7 @@ export const useIroIsopForm = ({
             aspectosPositivos: data.aspectosPositivos,
             aspectosAdicionales: data.aspectosAdicionales,
             personalInvolucrado: data.personalInvolucrado,
+            status,
           };
 
           if (isEditMode && initialData) {
@@ -284,7 +295,11 @@ export const useIroIsopForm = ({
             const result = await iroIsopAdapter.saveInspectionInstance(commonPayload);
 
             if (result.success) {
-              setSuccess(result.message || "Formulario guardado exitosamente");
+              setSuccess(
+                status === "borrador"
+                  ? "Avance guardado: la IRO sigue en borrador y se puede seguir desde Mis inspecciones → IRO-ISOP → «Seguir»."
+                  : "IRO terminada: su plan de acción se generó automáticamente."
+              );
 
               const formInstance: FormInstance = {
                 _id: result.data?._id || "",
@@ -301,7 +316,7 @@ export const useIroIsopForm = ({
                 totalMaxPoints: result.data?.totalMaxPoints || 0,
                 totalNaCount: result.data?.totalNaCount || 0,
                 overallCompliancePercentage: result.data?.overallCompliancePercentage || 0,
-                status: "borrador" as const,
+                status,
                 createdBy: "current-user",
                 createdAt: result.data?.createdAt || new Date(),
                 updatedAt: result.data?.updatedAt || new Date(),
@@ -326,6 +341,19 @@ export const useIroIsopForm = ({
     [template._id, template.verificationFields, onSave, readonly, isEditMode, initialData, getValues]
   );
 
+  /** «Terminar IRO» (o «Guardar cambios» si ya estaba terminada): pasa por la validación. */
+  const onSubmit = useCallback(
+    (data: InspectionFormData) =>
+      guardar(data, yaTerminada && estadoInicial ? estadoInicial : "completado"),
+    [guardar, yaTerminada, estadoInicial]
+  );
+
+  /** «Guardar avance»: sin validar, con lo que haya. */
+  const onGuardarAvance = useCallback(
+    () => guardar(getValues(), "borrador"),
+    [guardar, getValues]
+  );
+
   return {
     methods,
     control,
@@ -336,6 +364,8 @@ export const useIroIsopForm = ({
     errors,
     isDirty,
     onSubmit,
+    onGuardarAvance,
+    yaTerminada,
     // Miembros de equipo
     teamMembers,
     addTeamMember,

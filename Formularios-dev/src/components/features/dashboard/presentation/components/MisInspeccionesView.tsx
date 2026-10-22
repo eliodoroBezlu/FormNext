@@ -14,8 +14,9 @@ import {
   Paper,
   Skeleton,
   Alert,
+  Button,
 } from "@mui/material";
-import { ExpandMore, Assignment } from "@mui/icons-material";
+import { ExpandMore, Assignment, PlayArrow } from "@mui/icons-material";
 import AutocompleteCustom from "@/components/ui/autocomplete/AutocompleteCustom";
 import { useRouter } from "next/navigation";
 
@@ -239,15 +240,38 @@ export function MisInspeccionesView({ username, area }: MisInspeccionesViewProps
       render: (row) => `${Math.round(row.overallCompliancePercentage ?? 0)}%`,
     },
     {
+      key: "estado",
+      label: "Estado",
+      render: (row) =>
+        row.status === "borrador" || !row.status ? (
+          <Chip label="En avance" size="small" color="warning" variant="outlined" />
+        ) : (
+          <Chip label="Terminada" size="small" color="success" variant="outlined" />
+        ),
+    },
+    {
       key: "acciones",
       label: "Acciones",
       align: "center",
       render: (row) => (
+        <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
+          {/* «Guardar avance» la dejó en borrador: aquí se sigue hasta terminarla. */}
+          {(row.status === "borrador" || !row.status) && (
+            <Button
+              size="small"
+              variant="contained"
+              startIcon={<PlayArrow />}
+              onClick={() => router.push(`/dashboard/reports/report-iro-isop/editar/${row._id}`)}
+            >
+              Seguir
+            </Button>
+          )}
         <ReportActionButtons
           onView={() => router.push(`/dashboard/reports/report-iro-isop/editar/${row._id}?mode=view`)}
           onDownloadPdf={() => downloadIroIsopPdf(row._id)}
           show={VIEW_ONLY_ACTIONS}
         />
+        </Box>
       ),
     },
   ];

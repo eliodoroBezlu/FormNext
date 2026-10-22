@@ -50,6 +50,10 @@ export interface IroIsopInspectionFormProps {
   isEditMode: boolean;
   onCancel: () => void;
   onSubmit: (data: InspectionFormData) => void;
+  /** «Guardar avance»: guarda sin validar y la IRO sigue en borrador. */
+  onGuardarAvance: () => void;
+  /** Ya se terminó: se corrige con «Guardar cambios», sin volver a borrador. */
+  yaTerminada: boolean;
 
   success: string | null;
   error: string | null;

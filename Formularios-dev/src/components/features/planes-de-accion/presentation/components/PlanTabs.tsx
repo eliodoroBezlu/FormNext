@@ -2,8 +2,7 @@
 
 import { Tabs, Tab, Paper, Badge } from '@mui/material';
 import { PlanDeAccion } from '../../domain/models/IProps';
-
-type TabValue = 'abierto' | 'en-progreso' | 'cerrado' | 'aprobado';
+import { estaEnPestana, type TabValue } from '../../domain/pestanasPlan';
 
 interface PlanTabsProps {
   activeTab: TabValue;
@@ -11,61 +10,51 @@ interface PlanTabsProps {
   onChange: (tab: TabValue) => void;
 }
 
-export function PlanTabs({ activeTab, planes, onChange }: PlanTabsProps) {
-  const abiertosCount = planes.filter((p) => p.estado === 'abierto').length;
-  const enProgresoCount = planes.filter((p) => p.estado === 'en-progreso').length;
-  const cerradosCount = planes.filter((p) => p.estado === 'cerrado').length;
-  
-  const aprobadosCount = planes.filter((p) => {
-    if (p.tareas.length === 0) return false;
-    return p.tareas.every((t) => t.aprobado === true);
-  }).length;
+const PESTANAS: {
+  valor: TabValue;
+  texto: string;
+  color: 'error' | 'warning' | 'success' | 'primary' | 'default';
+}[] = [
+  { valor: 'abierto', texto: 'Abiertas', color: 'error' },
+  { valor: 'en-progreso', texto: 'En Progreso', color: 'warning' },
+  { valor: 'cerrado', texto: 'Cerradas', color: 'success' },
+  { valor: 'aprobado', texto: 'Aprobadas', color: 'primary' },
+  // IRO terminadas sin observaciones que cumplan el criterio: cerradas sin
+  // plan, con el motivo en cada tarjeta.
+  { valor: 'sin-observaciones', texto: 'Sin observaciones', color: 'default' },
+];
 
+export function PlanTabs({ activeTab, planes, onChange }: PlanTabsProps) {
   return (
     <Paper sx={{ mb: 3 }}>
       <Tabs
         value={activeTab}
         onChange={(_, value) => onChange(value as TabValue)}
-        variant="fullWidth"
+        variant="scrollable"
+        scrollButtons="auto"
+        allowScrollButtonsMobile
         sx={{
+          '& .MuiTabs-flexContainer': { justifyContent: { md: 'space-around' } },
           '& .MuiTab-root': {
             fontWeight: 600,
             fontSize: '0.95rem',
           },
         }}
       >
-        <Tab
-          label={
-            <Badge badgeContent={abiertosCount} color="error" max={999}>
-              <span style={{ paddingRight: abiertosCount > 0 ? 16 : 0 }}>Abiertas</span>
-            </Badge>
-          }
-          value="abierto"
-        />
-        <Tab
-          label={
-            <Badge badgeContent={enProgresoCount} color="warning" max={999}>
-              <span style={{ paddingRight: enProgresoCount > 0 ? 16 : 0 }}>En Progreso</span>
-            </Badge>
-          }
-          value="en-progreso"
-        />
-        <Tab
-          label={
-            <Badge badgeContent={cerradosCount} color="success" max={999}>
-              <span style={{ paddingRight: cerradosCount > 0 ? 16 : 0 }}>Cerradas</span>
-            </Badge>
-          }
-          value="cerrado"
-        />
-        <Tab
-          label={
-            <Badge badgeContent={aprobadosCount} color="primary" max={999}>
-              <span style={{ paddingRight: aprobadosCount > 0 ? 16 : 0 }}>Aprobadas</span>
-            </Badge>
-          }
-          value="aprobado"
-        />
+        {PESTANAS.map(({ valor, texto, color }) => {
+          const cuantos = planes.filter((p) => estaEnPestana(p, valor)).length;
+          return (
+            <Tab
+              key={valor}
+              value={valor}
+              label={
+                <Badge badgeContent={cuantos} color={color} max={999}>
+                  <span style={{ paddingRight: cuantos > 0 ? 16 : 0 }}>{texto}</span>
+                </Badge>
+              }
+            />
+          );
+        })}
       </Tabs>
     </Paper>
   );

@@ -15,7 +15,7 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { Description, Add } from "@mui/icons-material";
-import {  FormTemplate } from "@/types/formTypes";
+import { FormInstance, FormTemplate } from "@/types/formTypes";
 import { getTemplates } from "@/lib/actions/template-actions";
 import { InspectionFormIroIsop } from "@/components/features/iro-isop/InspectionFormIroIsop";
 import { BaseCard } from "@/components/ui/cards/BaseCard";
@@ -174,11 +174,18 @@ export default function HomePage() {
     setCurrentView("success");
   };
 
-  // Callback cuando IRO ISOP se guarda correctamente
-  const handleSaveInstanceIroIsop = () => {
+  // Callback cuando IRO ISOP se guarda correctamente: como avance o terminada.
+  const handleSaveInstanceIroIsop = (instancia: FormInstance) => {
+    if (instancia.status === "borrador") {
+      handleSuccess(
+          "Avance guardado",
+          `«${selectedTemplate?.name}» quedó en borrador. Para seguirla: Mis inspecciones → IRO-ISOP → «Seguir».`
+      );
+      return;
+    }
     handleSuccess(
-        "¡Inspección IRO - ISOP Guardada!",
-        `Se ha registrado correctamente el formulario: ${selectedTemplate?.name}`
+        "¡IRO terminada!",
+        `Se registró «${selectedTemplate?.name}» y se generó su plan de acción (o su «sin observaciones»).`
     );
   };
 

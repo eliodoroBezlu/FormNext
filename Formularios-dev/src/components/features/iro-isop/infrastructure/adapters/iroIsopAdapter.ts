@@ -6,7 +6,8 @@ import type { PersonalInvolucrado } from "../../types/IProps";
 
 export const iroIsopAdapter = {
   /**
-   * Envía la instancia de inspección completada al servidor para su persistencia.
+   * Envía la instancia de inspección al servidor: como borrador (avance) o
+   * terminada, según `status`.
    */
   async saveInspectionInstance(data: {
     templateId: string;
@@ -17,6 +18,7 @@ export const iroIsopAdapter = {
     aspectosPositivos: string;
     aspectosAdicionales: string;
     personalInvolucrado?: PersonalInvolucrado[];
+    status?: "borrador" | "completado" | "revisado" | "aprobado";
   }) {
     return createInstance(data);
   },

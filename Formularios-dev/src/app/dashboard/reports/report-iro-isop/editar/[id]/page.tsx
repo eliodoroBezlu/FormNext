@@ -14,6 +14,10 @@ import {
 } from "@/lib/actions/instance-actions";
 import { getTemplateById } from "@/lib/actions/template-actions";
 import { FormInstance, FormTemplate } from "@/types/formTypes";
+import { useUserRole } from "@/hooks/useUserRole";
+import { puedeAccederARuta } from "@/lib/routePermissions";
+
+const LISTADO_DE_REPORTES = "/dashboard/reports/report-iro-isop";
 
 export default function EditarIroIsopPage() {
   const params = useParams();
@@ -22,6 +26,7 @@ export default function EditarIroIsopPage() {
 
   const id = params.id as string;
   const isViewMode = searchParams.get("mode") === "view"; // 🔥 Detectar si es solo lectura
+  const { user } = useUserRole();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +78,13 @@ export default function EditarIroIsopPage() {
     try {
       const result = await updateInstance(id, data);
       if (result.success) {
-        router.push("/dashboard/reports/report-iro-isop");
+        // El inspector sigue sus IRO desde «Mis inspecciones»: el listado de
+        // reportes no es para su rol.
+        router.push(
+          puedeAccederARuta(LISTADO_DE_REPORTES, user?.roles ?? [])
+            ? LISTADO_DE_REPORTES
+            : "/dashboard/mis-inspecciones",
+        );
       } else {
         alert("Error al actualizar: " + result.error);
       }

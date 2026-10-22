@@ -2,7 +2,7 @@
 
 import React, { useCallback } from "react";
 import { Box, Typography, Grid, Paper, Alert, Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
-import { Save, ExpandMore, Group } from "@mui/icons-material";
+import { Save, ExpandMore, Group, TaskAlt } from "@mui/icons-material";
 import { Button } from "@/components/ui/buttons/Button";
 import { FormProvider, type UseFormReturn } from "react-hook-form";
 import type { Section } from "@/types/formTypes";
@@ -27,6 +27,8 @@ export const IroIsopInspectionForm = ({
   readonly,
   onCancel,
   onSubmit,
+  onGuardarAvance,
+  yaTerminada,
   success,
   error,
   submitting,
@@ -172,16 +174,32 @@ export const IroIsopInspectionForm = ({
                 {readonly ? "Volver" : "Cancelar"}
               </Button>
             </Grid>
+            {/* Guardar avance: sin validar, la IRO sigue en borrador. */}
+            {!readonly && !yaTerminada && (
+              <Grid size={{ xs: 12, sm: "auto" }}>
+                <Button
+                  type="button"
+                  variant="outlined"
+                  startIcon={<Save />}
+                  onClick={onGuardarAvance}
+                  disabled={submitting}
+                  sx={{ width: { xs: "100%", sm: "auto" } }}
+                >
+                  Guardar avance
+                </Button>
+              </Grid>
+            )}
+            {/* Terminar: exige todo respondido y genera el plan de acción. */}
             {!readonly && (
               <Grid size={{ xs: 12, sm: "auto" }}>
                 <Button
                   type="submit"
                   variant="contained"
-                  startIcon={<Save />}
+                  startIcon={yaTerminada ? <Save /> : <TaskAlt />}
                   disabled={submitting}
                   sx={{ width: { xs: "100%", sm: "auto" } }}
                 >
-                  {submitting ? "Guardando..." : "Guardar Formulario"}
+                  {submitting ? "Guardando..." : yaTerminada ? "Guardar cambios" : "Terminar IRO"}
                 </Button>
               </Grid>
             )}
