@@ -53,6 +53,8 @@ export interface CorregirTareaDTO {
   familiaPeligro?: string;
   accionPropuesta?: string;
   responsableAreaCierre?: string;
+  /** El usuario del supervisor: es por el que él ve la tarea en su lista. */
+  responsableAreaCierreUsername?: string;
   fechaCumplimientoAcordada?: string;
   fechaCumplimientoEfectiva?: string;
 }

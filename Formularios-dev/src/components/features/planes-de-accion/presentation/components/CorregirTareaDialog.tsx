@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   CircularProgress,
@@ -22,6 +23,11 @@ import {
   faltantesParaEstado,
   NOMBRE_DEL_ESTADO,
 } from "../../domain/requisitosTarea";
+import {
+  obtenerSupervisoresDisponibles,
+  type SupervisorOption,
+} from "../../infrastructure/adapters/trabajadoresAdapter";
+import { FAMILIAS_PELIGRO } from "@/lib/constants";
 
 interface CorregirTareaDialogProps {
   open: boolean;
@@ -56,8 +62,29 @@ export function CorregirTareaDialog({
 }: CorregirTareaDialogProps) {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** `null`: todavía no llegaron; `[]`: llegaron y no hay ninguno. */
+  const [supervisores, setSupervisores] = useState<SupervisorOption[] | null>(
+    null,
+  );
 
-  const { control, handleSubmit } = useForm<FormCorreccion>({
+  // Los mismos supervisores que ofrece el formulario de la tarea: los que
+  // tienen acceso al sistema y pueden ver la tarea en su lista.
+  useEffect(() => {
+    if (!open) return;
+    let vigente = true;
+    obtenerSupervisoresDisponibles()
+      .then((lista) => {
+        if (vigente) setSupervisores(lista);
+      })
+      .catch(() => {
+        if (vigente) setSupervisores([]);
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [open]);
+
+  const { control, handleSubmit, setValue } = useForm<FormCorreccion>({
     mode: "onTouched",
     defaultValues: {
       motivo: "",
@@ -65,6 +92,7 @@ export function CorregirTareaDialog({
       familiaPeligro: tarea?.familiaPeligro ?? "",
       accionPropuesta: tarea?.accionPropuesta ?? "",
       responsableAreaCierre: tarea?.responsableAreaCierre ?? "",
+      responsableAreaCierreUsername: tarea?.responsableAreaCierreUsername ?? "",
       fechaCumplimientoAcordada: comoDia(tarea?.fechaCumplimientoAcordada),
       fechaCumplimientoEfectiva: comoDia(tarea?.fechaCumplimientoEfectiva),
     },
@@ -134,8 +162,25 @@ export function CorregirTareaDialog({
           <Controller
             name="familiaPeligro"
             control={control}
-            render={({ field }) => (
-              <TextField {...field} label="Familia de peligro" size="small" />
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Autocomplete
+                freeSolo
+                options={FAMILIAS_PELIGRO}
+                value={value || null}
+                onChange={(_e, nuevo) => onChange(nuevo ?? "")}
+                onInputChange={(_e, texto, motivo) => {
+                  if (motivo === "input") onChange(texto);
+                }}
+                onBlur={onBlur}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Familia de peligro"
+                    placeholder="Seleccione o escriba"
+                    size="small"
+                  />
+                )}
+              />
             )}
           />
 
@@ -156,13 +201,59 @@ export function CorregirTareaDialog({
           <Controller
             name="responsableAreaCierre"
             control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Responsable de área para el cierre"
-                size="small"
-              />
-            )}
+            render={({ field: { onBlur, value } }) => {
+              const lista = supervisores ?? [];
+              const elegido =
+                lista.find(
+                  (s) => s.username === valores.responsableAreaCierreUsername,
+                ) ?? null;
+              // Uno cargado antes del selector (texto libre) no está en la
+              // lista: se avisa en vez de mostrarlo vacío.
+              const fueraDeLista = !elegido && !!value;
+              return (
+                <Autocomplete
+                  options={lista}
+                  loading={supervisores === null}
+                  value={elegido}
+                  getOptionLabel={(s) => `${s.nomina} - ${s.puesto}`}
+                  isOptionEqualToValue={(a, b) => a.username === b.username}
+                  onChange={(_e, nuevo) => {
+                    setValue("responsableAreaCierre", nuevo?.nomina ?? "");
+                    setValue(
+                      "responsableAreaCierreUsername",
+                      nuevo?.username ?? "",
+                    );
+                  }}
+                  onBlur={onBlur}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Responsable de área para el cierre"
+                      placeholder="Seleccione un supervisor"
+                      size="small"
+                      helperText={
+                        fueraDeLista
+                          ? `Ahora: «${value}», que no está entre los supervisores con acceso. Elige uno para que vea la tarea.`
+                          : "Solo supervisores con acceso al sistema"
+                      }
+                      slotProps={{
+                        input: {
+                          ...params.InputProps,
+                          endAdornment: (
+                            <>
+                              {supervisores === null && (
+                                <CircularProgress size={18} />
+                              )}
+                              {params.InputProps.endAdornment}
+                            </>
+                          ),
+                        },
+                      }}
+                    />
+                  )}
+                />
+              );
+            }}
           />
 
           <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
