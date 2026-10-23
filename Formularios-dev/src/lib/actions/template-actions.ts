@@ -162,6 +162,29 @@ export async function getTemplateById(id: string): Promise<ApiResponse<FormTempl
   }
 }
 
+/**
+ * La revisión **vigente** de una plantilla por su código (el mismo para todas
+ * sus revisiones). Es lo que abre la dirección de un formulario IRO/ISOP:
+ * `/dashboard/formularios-de-inspeccion/iro-isop/<código>`.
+ */
+export async function getTemplateByCode(code: string): Promise<ApiResponse<FormTemplate>> {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(
+      `${API_BASE_URL}/templates/code/${encodeURIComponent(code)}`,
+      { method: "GET", headers, cache: "no-store" },
+    );
+    const result = await handleApiResponse<FormTemplate>(response);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error("Error fetching template by code:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error al obtener el formulario",
+    };
+  }
+}
+
 // Obtener estadísticas de templates
 export async function getTemplateStats() {
   try {

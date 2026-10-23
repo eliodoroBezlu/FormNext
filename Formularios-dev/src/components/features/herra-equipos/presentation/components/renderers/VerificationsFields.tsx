@@ -1,7 +1,7 @@
 // components/form-filler/VerificationFields.tsx
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Controller, Control, FieldErrors, FieldPath, UseFormSetValue, PathValue, useWatch } from "react-hook-form";
 import { Typography, Card, CardContent, TextField, Grid, Autocomplete, CircularProgress } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -9,19 +9,12 @@ import { TimePicker } from "@mui/x-date-pickers/TimePicker";
 import dayjs, { Dayjs } from "dayjs";
 import AutocompleteCustom from "@/components/ui/autocomplete/AutocompleteCustom";
 import {
-  CadenaOrganizativa,
   DataSourceType,
   EquipoBackend,
   fetchDataBySourceAdapter,
-  obtenerCadenaDeAreasAdapter,
   obtenerEquiposAdapter,
 } from "../../../infrastructure/adapters/catalogDataAdapter";
-import {
-  autofillCadenaOrganizativa,
-  indexarCadenas,
-  isGerenciaField,
-  isSuperintendenciaField,
-} from "../../../domain/models/EquipmentAutofill";
+import { useCadenaOrganizativa } from "@/hooks/useCadenaOrganizativa";
 import {
   VerificationField,
   FormDataHerraEquipos,
@@ -128,62 +121,23 @@ export const VerificationFields = <
     }
   }, [user, areaField, isEditMode, setValue]);
 
-  //
-  // ── Superintendencia y gerencia deducidas del área ────────────────────
-  //
-  // El área ya determina las dos en el maestro, así que preguntárselas al
-  // inspector solo abre la puerta a que el mismo parte se contradiga. Se
-  // rellenan y se dejan editables: el maestro puede ir por detrás de una
-  // reorganización.
-  //
-  const necesitaCadena = fields.some(
-    (f) => isSuperintendenciaField(f.label) || isGerenciaField(f.label),
+  // Superintendencia y gerencia salen del área (hook compartido con IRO/ISOP).
+  const etiquetas = React.useMemo(() => fields.map((f) => f.label), [fields]);
+  const aplicarDesdeArea = React.useCallback(
+    (etiqueta: string, valor: string) =>
+      setValue(
+        verificationFieldPath(etiqueta) as FieldPath<T>,
+        valor as PathValue<T, FieldPath<T>>,
+        { shouldValidate: true, shouldDirty: true },
+      ),
+    [setValue],
   );
-
-  const [cadenas, setCadenas] = useState<Map<string, CadenaOrganizativa>>(
-    () => new Map(),
-  );
-
-  useEffect(() => {
-    if (!necesitaCadena) return;
-
-    let vigente = true;
-    obtenerCadenaDeAreasAdapter()
-      .then((datos) => {
-        if (vigente) setCadenas(indexarCadenas(datos));
-      })
-      .catch((err: unknown) => {
-        // Sin la cadena el formulario sigue siendo usable: los campos quedan
-        // como estaban y el inspector los escribe. No se bloquea por esto.
-        console.error("Error al cargar la cadena de áreas:", err);
-      });
-
-    return () => {
-      vigente = false;
-    };
-  }, [necesitaCadena]);
-
-  /**
-   * Última área que se resolvió, para no repetir trabajo ni pisar ediciones.
-   *
-   * En modo edición la primera pasada trae el área **ya guardada**, y ahí no
-   * se toca nada: lo que el inspector declaró aquel día es el registro. A
-   * partir de ahí, si cambia el área, la cadena vuelve a resolverse.
-   */
-  const areaResuelta = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!watchedArea || cadenas.size === 0) return;
-
-    if (areaResuelta.current === null && isEditMode) {
-      areaResuelta.current = watchedArea;
-      return;
-    }
-    if (areaResuelta.current === watchedArea) return;
-
-    areaResuelta.current = watchedArea;
-    autofillCadenaOrganizativa(setValue, fields, watchedArea, cadenas);
-  }, [watchedArea, cadenas, fields, setValue, isEditMode]);
+  useCadenaOrganizativa({
+    etiquetas,
+    area: watchedArea,
+    esEdicion: isEditMode,
+    aplicar: aplicarDesdeArea,
+  });
 
   // Filtrar equipos sugeridos según el área seleccionada
   const filteredEquipos = React.useMemo(() => {

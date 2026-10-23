@@ -15,6 +15,7 @@ import {
   type ValoracionValue,
 } from "@/components/features/iro-isop/domain/models/IroIsopDomain";
 import { iroIsopAdapter } from "@/components/features/iro-isop/infrastructure/adapters/iroIsopAdapter";
+import { valorInicialDelCampo } from "@/components/features/iro-isop/domain/models/valoresIniciales";
 
 export const useIroIsopForm = ({
   template,
@@ -52,8 +53,10 @@ export const useIroIsopForm = ({
                 (field: VerificationField): field is VerificationField & { _id: string } =>
                   !!field._id
               )
+              // Una IRO nueva nace con la fecha de hoy y la empresa propia
+              // (ver `valoresIniciales.ts`); el resto, vacío.
               .reduce((acc: Record<string, string>, field: VerificationField) => {
-                acc[sanitizeFieldKey(field.label)] = "";
+                acc[sanitizeFieldKey(field.label)] = valorInicialDelCampo(field) as string;
                 return acc;
               }, {} as Record<string, string>),
             inspectionTeam: [

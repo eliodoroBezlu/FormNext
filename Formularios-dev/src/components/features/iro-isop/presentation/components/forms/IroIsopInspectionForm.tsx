@@ -25,6 +25,7 @@ export const IroIsopInspectionForm = ({
   trigger,
   template,
   readonly,
+  isEditMode,
   onCancel,
   onSubmit,
   onGuardarAvance,
@@ -98,6 +99,7 @@ export const IroIsopInspectionForm = ({
           control={control}
           verificationFields={template.verificationFields}
           readonly={readonly}
+          isEditMode={isEditMode}
         />
 
         {/* EQUIPO DE INSPECCIÓN */}

@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
   Typography,
@@ -15,14 +15,13 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { Description, Add } from "@mui/icons-material";
-import { FormInstance, FormTemplate } from "@/types/formTypes";
+import { FormTemplate } from "@/types/formTypes";
+import { rutaDelFormularioIro } from "@/components/features/iro-isop/domain/models/rutas";
 import { getTemplates } from "@/lib/actions/template-actions";
-import { InspectionFormIroIsop } from "@/components/features/iro-isop/InspectionFormIroIsop";
 import { BaseCard } from "@/components/ui/cards/BaseCard";
 import { TemplateCard } from "@/components/ui/cards/TemplateCard";
 import { InspeccionSistemasEmergencia } from "@/components/features/sistemas-emergencia/InspeccionSistemasEmergencia";
 import NewInspectionTemplates from "@/components/features/herra-equipos/presentation/components/management/NewInspectionTemplates";
-import { SuccessScreen } from "@/components/ui/feedback/SuccessScreen"; 
 
 import PageHeader from "@/components/layout/page-header/PageHeader";
 
@@ -68,8 +67,30 @@ const FORMULARIOS_FIJOS: CustomForm[] = [
       },
     ];
 
-export default function HomePage() {
+/**
+ * La pestaña vive en la dirección (`?tab=iro`): al volver de un formulario,
+ * con «atrás» o al recargar, se cae en la misma pestaña y no en la primera.
+ */
+const PESTANAS = ["emergencia", "iro", "herramientas"] as const;
+
+const pestanaDeLaUrl = (valor: string | null): number => {
+  const i = PESTANAS.indexOf(valor as (typeof PESTANAS)[number]);
+  return i >= 0 ? i : 0;
+};
+
+// `useSearchParams` exige un límite de Suspense en una página que se
+// prerenderiza.
+export default function FormulariosDeInspeccionPage() {
+  return (
+    <Suspense fallback={null}>
+      <HomePage />
+    </Suspense>
+  );
+}
+
+function HomePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // --- ESTADOS DE DATOS ---
   const [templates, setTemplates] = useState<FormTemplate[]>([]);
@@ -78,25 +99,23 @@ export default function HomePage() {
   
   // --- ESTADOS DE NAVEGACIÓN Y VISTA ---
   // 'list': Muestra las tarjetas
-  // 'form': Muestra el formulario dinámico (IRO ISOP)
   // 'customForm': Muestra componentes hardcoded (Sistemas Emergencia)
-  // 'success': Muestra la pantalla de éxito
-  const [currentView, setCurrentView] = useState<"list" | "form" | "customForm" | "success">("list");
-  
-  const [selectedTemplate, setSelectedTemplate] = useState<FormTemplate | null>(null);
+  // Los formularios IRO/ISOP tienen su propia ruta (`rutaDelFormularioIro`).
+  const [currentView, setCurrentView] = useState<"list" | "customForm">("list");
+
   const [selectedCustomForm, setSelectedCustomForm] = useState<CustomForm | null>(null);
-  const [tabValue, setTabValue] = useState(0); // 0: Emergencia, 1: IRO ISOP, 2: Herramientas
+  // 0: Emergencia, 1: IRO ISOP, 2: Herramientas (ver `PESTANAS`)
+  const tabValue = pestanaDeLaUrl(searchParams.get("tab"));
+  const setTabValue = (indice: number) =>
+    // `replace`: cambiar de pestaña no llena el historial de «atrás».
+    router.replace(`/dashboard/formularios-de-inspeccion?tab=${PESTANAS[indice]}`, {
+      scroll: false,
+    });
   
   // --- ESTADOS DE UI ---
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Configuración para la pantalla de éxito dinámica
-  const [successInfo, setSuccessInfo] = useState({
-    title: "¡Formulario Guardado!",
-    subtitle: "",
-    redirectPath: "/dashboard/formularios-de-inspeccion"
-  });
 
   // Responsive
   const theme = useTheme();
@@ -149,8 +168,7 @@ export default function HomePage() {
 
   // Iniciar formulario IRO ISOP
   const handleCreateForm = (template: FormTemplate) => {
-    setSelectedTemplate(template);
-    setCurrentView("form");
+    router.push(rutaDelFormularioIro(template.code));
   };
 
   // Iniciar formulario Custom (Sistemas Emergencia)
@@ -162,31 +180,6 @@ export default function HomePage() {
       setSelectedCustomForm(customForm);
       setCurrentView("customForm");
     }
-  };
-
-  // Función centralizada para mostrar éxito
-  const handleSuccess = (title: string, subtitle: string) => {
-    setSuccessInfo({
-        title,
-        subtitle,
-        redirectPath: "/dashboard/formularios-de-inspeccion"
-    });
-    setCurrentView("success");
-  };
-
-  // Callback cuando IRO ISOP se guarda correctamente: como avance o terminada.
-  const handleSaveInstanceIroIsop = (instancia: FormInstance) => {
-    if (instancia.status === "borrador") {
-      handleSuccess(
-          "Avance guardado",
-          `«${selectedTemplate?.name}» quedó en borrador. Para seguirla: Mis inspecciones → IRO-ISOP → «Seguir».`
-      );
-      return;
-    }
-    handleSuccess(
-        "¡IRO terminada!",
-        `Se registró «${selectedTemplate?.name}» y se generó su plan de acción (o su «sin observaciones»).`
-    );
   };
 
   // --- RENDERIZADO DE COMPONENTES ---
@@ -293,32 +286,6 @@ export default function HomePage() {
   };
 
   // --- VISTAS ---
-
-  // 1. PANTALLA DE ÉXITO (Global)
-  if (currentView === "success") {
-    return (
-      <SuccessScreen 
-        title={successInfo.title}
-        subtitle={successInfo.subtitle}
-        autoRedirect={true}
-        redirectDelay={3000}
-        onBackToList={() => setCurrentView("list")}
-        onViewDetails={() => console.log("Detalles no implementado aquí")}
-        redirectPath={successInfo.redirectPath}
-      />
-    );
-  }
-
-  // 2. FORMULARIO IRO ISOP
-  if (currentView === "form" && selectedTemplate) {
-    return (
-      <InspectionFormIroIsop
-        template={selectedTemplate}
-        onSave={handleSaveInstanceIroIsop} // Llama a nuestra función de éxito
-        onCancel={() => setCurrentView("list")}
-      />
-    );  
-  }
 
   // 3. FORMULARIO PERSONALIZADO (Sistemas Emergencia)
   if (currentView === "customForm" && selectedCustomForm) {

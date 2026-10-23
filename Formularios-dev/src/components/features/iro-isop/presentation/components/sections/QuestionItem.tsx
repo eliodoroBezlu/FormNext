@@ -5,6 +5,7 @@ import { Select } from "@/components/ui/inputs/Select";
 import { Input } from "@/components/ui/inputs/Input";
 import { valoracionOptions } from "@/lib/constants";
 import type { QuestionItemProps } from "@/components/features/iro-isop/types/IProps";
+import { motivoDelComentario } from "@/components/features/iro-isop/domain/models/comentarioObligatorio";
 
 export const QuestionItem = React.memo(
   ({
@@ -24,6 +25,16 @@ export const QuestionItem = React.memo(
     const responseError = questionErrors?.[questionIndex] as Record<string, unknown> | undefined;
     const commentError = questionErrors?.[questionIndex] as Record<string, unknown> | undefined;
     const hasError = !!responseError || !!commentError;
+
+    /** Si esta respuesta exige comentario, el mensaje; si no, `null`. */
+    const comentarioPedido = () => {
+      const preguntas = getValues(`sections.${flatIndex}.questions`) as { response: string }[] | undefined;
+      return motivoDelComentario({
+        respuesta: getValues(`sections.${flatIndex}.questions.${questionIndex}.response`),
+        obligatoria: !!question.obligatorio,
+        seccionEnteraNoAplica: !!preguntas?.length && preguntas.every((q) => q.response === "N/A"),
+      });
+    };
 
     return (
       <Paper
@@ -141,23 +152,12 @@ export const QuestionItem = React.memo(
                 name={`sections.${flatIndex}.questions.${questionIndex}.comment`}
                 control={control}
                 rules={{
+                  // Puntaje 0, 1 o 2: siempre; «No aplica»: solo en las rojas
+                  // (ver `comentarioObligatorio.ts`).
                   validate: (val) => {
                     if (readonly) return true;
-                    const currentResponse = getValues(`sections.${flatIndex}.questions.${questionIndex}.response`);
-                    
-                    // Si esta pregunta no está marcada como N/A o no es obligatoria, no exige comentario
-                    if (!question.obligatorio || currentResponse !== "N/A") return true;
-
-                    // Verificar si TODAS las preguntas de esta sección están marcadas como "N/A"
-                    const allQuestions = getValues(`sections.${flatIndex}.questions`) as { response: string }[];
-                    const allAreNA = allQuestions && allQuestions.every(q => q.response === "N/A");
-
-                    // Si TODAS las preguntas están marcadas como N/A, la justificación se hace a nivel de sección, no pregunta por pregunta
-                    if (allAreNA) return true;
-
-                    if (!val || val.trim() === "") {
-                      return "Se debe justificar en los comentarios el motivo por el cual NO APLICA";
-                    }
+                    const motivo = comentarioPedido();
+                    if (motivo && (!val || val.trim() === "")) return motivo;
                     return true;
                   }
                 }}
@@ -169,7 +169,10 @@ export const QuestionItem = React.memo(
                     error={!!error}
                     helperText={error?.message}
                     inputProps={{
-                      placeholder: "Comentario",
+                      placeholder:
+                        !readonly && comentarioPedido()
+                          ? "Comentario (obligatorio)"
+                          : "Comentario",
                       readOnly: readonly,
                     }}
                     disabled={readonly}
