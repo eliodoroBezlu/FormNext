@@ -10,6 +10,7 @@ import {
   generarPlanDesdeInstancia,
   agregarTarea as agregarTareaAdapter,
   actualizarTarea as actualizarTareaAdapter,
+  corregirTarea as corregirTareaAdapter,
   eliminarTarea as eliminarTareaAdapter,
   aprobarTarea as aprobarTareaAdapter,
   aprobarPlanGlobal as aprobarPlanGlobalAdapter,
@@ -19,6 +20,7 @@ import {
 } from "../../infrastructure/adapters/planesAccionAdapter";
 import {
   AddTareaDTO,
+  CorregirTareaDTO,
   CreatePlanDeAccionDTO,
   GenerarPlanesOptions,
   PlanDeAccion,
@@ -429,6 +431,31 @@ export function usePlanesAccion() {
     [selectedPlan, showSnackbar],
   );
 
+  /** Corrección del admin: datos y estado, también hacia atrás, con motivo. */
+  const corregirTarea = useCallback(
+    async (tareaId: string, data: CorregirTareaDTO) => {
+      if (!selectedPlan) return;
+      setIsPending(true);
+      try {
+        const result = await corregirTareaAdapter(
+          selectedPlan._id,
+          tareaId,
+          data,
+        );
+        if (result.success && result.data) {
+          setSelectedPlan(result.data);
+          showSnackbar("✅ Tarea corregida: quedó en el historial", "success");
+        } else {
+          showSnackbar(`❌ ${result.error}`, "error");
+          throw new Error(result.error);
+        }
+      } finally {
+        setIsPending(false);
+      }
+    },
+    [selectedPlan, showSnackbar],
+  );
+
   const eliminarTarea = useCallback(
     async (tareaId: string) => {
       if (!selectedPlan) return;
@@ -515,6 +542,7 @@ export function usePlanesAccion() {
     generarPlan,
     agregarTarea,
     actualizarTarea,
+    corregirTarea,
     eliminarTarea,
     aprobarTarea,
     aprobarPlanGlobal,

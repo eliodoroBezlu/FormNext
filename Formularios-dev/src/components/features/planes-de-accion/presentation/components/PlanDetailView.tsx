@@ -21,9 +21,11 @@ import {
   Download as DownloadIcon,
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
-import { PlanDeAccion, TareaObservacion, AddTareaDTO, UpdateTareaDTO } from '../../domain/models/IProps';
+import { PlanDeAccion, TareaObservacion, AddTareaDTO, UpdateTareaDTO, CorregirTareaDTO } from '../../domain/models/IProps';
 import { TareasTable } from './TareasTable';
 import { TareaFormModal } from './TareaFormModal';
+import { CorregirTareaDialog } from './CorregirTareaDialog';
+import { HistorialTareaDialog } from './HistorialTareaDialog';
 import { HeaderInfo } from './HeaderInfo';
 import { TaskSummary } from './TaskSummary';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -38,6 +40,7 @@ interface PlanDetailViewProps {
   onEditHeader: () => void;
   onAddTarea: (data: AddTareaDTO) => Promise<void>;
   onUpdateTarea: (tareaId: string, data: UpdateTareaDTO) => Promise<void>;
+  onCorregirTarea: (tareaId: string, data: CorregirTareaDTO) => Promise<void>;
   onDeleteTarea: (tareaId: string) => Promise<void>;
   onApproveTarea: (tareaId: string) => Promise<void>;
   onApprovePlan: (planId: string, observaciones?: string) => Promise<unknown>;
@@ -52,6 +55,7 @@ export function PlanDetailView({
   onEditHeader,
   onAddTarea,
   onUpdateTarea,
+  onCorregirTarea,
   onDeleteTarea,
   onApproveTarea,
   onApprovePlan,
@@ -69,6 +73,12 @@ export function PlanDetailView({
   const [aperturaTarea, setAperturaTarea] = useState(0);
   const [selectedTarea, setSelectedTarea] = useState<TareaObservacion | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  // Por id y no la tarea: tras corregir, el plan llega de nuevo y el
+  // historial tiene que mostrar la versión nueva.
+  const [idCorregir, setIdCorregir] = useState<string | null>(null);
+  const [idHistorial, setIdHistorial] = useState<string | null>(null);
+  const tareaPorId = (id: string | null) =>
+    plan.tareas.find((t) => t._id === id) ?? null;
   const [isDownloading, setIsDownloading] = useState(false);
   const [openAprobarPlanModal, setOpenAprobarPlanModal] = useState(false);
   const [observacionesAprobacion, setObservacionesAprobacion] = useState('');
@@ -267,7 +277,8 @@ export function PlanDetailView({
             {plan.estado.toUpperCase()}
           </Box>
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+        {/* `div` y no `p`: el Chip es un div, y un div dentro de un p rompe la hidratación. */}
+        <Typography component="div" variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           <strong>Aprobación Superintendente:</strong>{' '}
           <Chip
             size="small"
@@ -315,6 +326,22 @@ export function PlanDetailView({
         onEdit={handleEditTarea}
         onDelete={handleDeleteTarea}
         onApprove={handleApproveTarea}
+        onCorregir={(tarea) => setIdCorregir(tarea._id ?? null)}
+        onHistorial={(tarea) => setIdHistorial(tarea._id ?? null)}
+      />
+
+      <CorregirTareaDialog
+        key={idCorregir ?? 'cerrado'}
+        open={idCorregir !== null}
+        tarea={tareaPorId(idCorregir)}
+        onClose={() => setIdCorregir(null)}
+        onCorregir={onCorregirTarea}
+      />
+
+      <HistorialTareaDialog
+        open={idHistorial !== null}
+        tarea={tareaPorId(idHistorial)}
+        onClose={() => setIdHistorial(null)}
       />
 
       <TareaFormModal

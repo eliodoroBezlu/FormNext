@@ -4,6 +4,7 @@ import { getAuthHeaders, handleApiResponse } from "@/lib/actions/helpers";
 import { obtenerAreasCompletas, type AreaBackend } from "@/lib/actions/area-actions";
 import {
   AddTareaDTO,
+  CorregirTareaDTO,
   CreatePlanDeAccionDTO,
   GenerarPlanesOptions,
   PlanDeAccion,
@@ -251,6 +252,29 @@ export async function agregarTarea(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Error al agregar tarea",
+    };
+  }
+}
+
+/** Corrección del admin (`PATCH …/tareas/:id/corregir`): queda en el historial. */
+export async function corregirTarea(
+  planId: string,
+  tareaId: string,
+  data: CorregirTareaDTO,
+): Promise<ActionResult<PlanDeAccion>> {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(
+      `${API_URL}/planes-accion/${planId}/tareas/${tareaId}/corregir`,
+      { method: "PATCH", headers, body: JSON.stringify(data) },
+    );
+    const plan = await handleApiResponse<PlanDeAccion>(response);
+    return { success: true, data: plan, message: "Tarea corregida" };
+  } catch (error) {
+    console.error("Error corrigiendo tarea:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error al corregir la tarea",
     };
   }
 }

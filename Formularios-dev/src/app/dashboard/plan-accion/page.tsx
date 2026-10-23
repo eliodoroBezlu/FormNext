@@ -103,6 +103,7 @@ export default function PlanesDeAccionPage() {
     generarPlan,
     agregarTarea,
     actualizarTarea,
+    corregirTarea,
     eliminarTarea,
     aprobarTarea,
     aprobarPlanGlobal,
@@ -335,6 +336,7 @@ export default function PlanesDeAccionPage() {
           onEditHeader={() => handleOpenEditHeaderModal(selectedPlan)}
           onAddTarea={agregarTarea}
           onUpdateTarea={actualizarTarea}
+          onCorregirTarea={corregirTarea}
           onDeleteTarea={eliminarTarea}
           onApproveTarea={aprobarTarea}
           onApprovePlan={aprobarPlanGlobal}

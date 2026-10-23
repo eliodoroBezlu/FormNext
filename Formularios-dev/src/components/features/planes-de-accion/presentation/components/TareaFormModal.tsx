@@ -43,6 +43,11 @@ import {
   obtenerSupervisoresDisponibles,
   SupervisorOption,
 } from "../../infrastructure/adapters/trabajadoresAdapter";
+import {
+  faltantesParaEstado,
+  NOMBRE_DEL_ESTADO,
+  siguienteEstado,
+} from "../../domain/requisitosTarea";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Role } from "@/lib/routePermissions";
 
@@ -328,6 +333,21 @@ export function TareaFormModal({
 
   const diasRetraso = calcularDiasRetraso();
 
+  // Lo que falta para el siguiente estado, con la misma regla que el backend:
+  // antes bastaba con que los campos no estuvieran vacíos.
+  const valoresActuales = useWatch({ control });
+  const destino = siguienteEstado(estadoActual);
+  const faltanParaAvanzar = destino
+    ? faltantesParaEstado(
+        {
+          ...valoresActuales,
+          fechaHallazgo: tarea?.fechaHallazgo,
+          evidencias,
+        },
+        destino,
+      )
+    : [];
+
   const handleFormClose = () => {
     // No hace falta limpiar nada a mano: el modal se remonta en la siguiente
     // apertura. Limpiar aquí, además, vaciaba el formulario a la vista durante
@@ -391,19 +411,10 @@ export function TareaFormModal({
               mlRecommendations.length > 0 ? mlRecommendations : undefined,
           },
         };
-        if (estadoActual === "abierto") {
-          if (
-            data.familiaPeligro &&
-            data.accionPropuesta &&
-            data.responsableAreaCierre &&
-            data.fechaCumplimientoAcordada
-          ) {
-            camposEditables.estado = "en-progreso";
-          }
-        } else if (estadoActual === "en-progreso") {
-          if (data.fechaCumplimientoEfectiva) {
-            camposEditables.estado = "cerrado";
-          }
+        // Avanza de a un paso, y solo si ya tiene lo que el siguiente
+        // estado exige; si no, guarda lo cargado y sigue donde estaba.
+        if (destino && faltanParaAvanzar.length === 0) {
+          camposEditables.estado = destino as UpdateTareaDTO["estado"];
         }
 
         await onSubmit(camposEditables);
@@ -484,6 +495,23 @@ export function TareaFormModal({
             <Alert severity="success">
               <strong>Estado: Cerrado</strong> - La tarea está lista para
               aprobación
+            </Alert>
+          )}
+
+          {!estaAprobada && esGeneradaDesdeInspeccion && destino && (
+            <Alert severity={faltanParaAvanzar.length > 0 ? "info" : "success"}>
+              {faltanParaAvanzar.length > 0 ? (
+                <>
+                  Para pasar a <strong>{NOMBRE_DEL_ESTADO[destino]}</strong>{" "}
+                  falta: {faltanParaAvanzar.join("; ")}. Puedes guardar lo
+                  cargado y completarlo después.
+                </>
+              ) : (
+                <>
+                  Al guardar, la tarea pasa a{" "}
+                  <strong>{NOMBRE_DEL_ESTADO[destino]}</strong>.
+                </>
+              )}
             </Alert>
           )}
 

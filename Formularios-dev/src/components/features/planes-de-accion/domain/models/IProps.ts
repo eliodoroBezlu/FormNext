@@ -23,6 +23,38 @@ export interface TareaObservacion {
   questionText?: string;
   puntajeObtenido?: number;
   puntajeMaximo?: number;
+
+  /** Quién cambió qué y cuándo (lo arma el backend). */
+  historial?: CambioDeTarea[];
+}
+
+export interface CampoCambiado {
+  campo: string;
+  antes: string;
+  despues: string;
+}
+
+export interface CambioDeTarea {
+  fecha: string;
+  usuario: string;
+  /** `avance`: flujo normal; `correccion`: el admin, con motivo; `aprobacion`. */
+  tipo: "avance" | "correccion" | "aprobacion";
+  cambios: CampoCambiado[];
+  motivo?: string;
+}
+
+/**
+ * Corrección del admin: datos de seguimiento y estado, también hacia atrás.
+ * Las fechas van como `YYYY-MM-DD`, o `""` para borrarlas.
+ */
+export interface CorregirTareaDTO {
+  motivo: string;
+  estado?: "abierto" | "en-progreso" | "cerrado";
+  familiaPeligro?: string;
+  accionPropuesta?: string;
+  responsableAreaCierre?: string;
+  fechaCumplimientoAcordada?: string;
+  fechaCumplimientoEfectiva?: string;
 }
 
 export interface FormTareaData extends AddTareaDTO {

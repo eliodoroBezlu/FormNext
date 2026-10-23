@@ -21,6 +21,8 @@ import {
   ChevronRight,
   AttachFile as AttachFileIcon,
   Visibility as VisibilityIcon,
+  History as HistoryIcon,
+  EditNote as EditNoteIcon,
 } from "@mui/icons-material";
 import { TareaObservacion } from "../../domain/models/IProps";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -32,6 +34,9 @@ interface TareasTableProps {
   onEdit: (tarea: TareaObservacion) => void;
   onDelete: (tareaId: string) => void;
   onApprove: (tareaId: string) => void;
+  /** Corrección del admin: datos y estado, también hacia atrás. */
+  onCorregir: (tarea: TareaObservacion) => void;
+  onHistorial: (tarea: TareaObservacion) => void;
 }
 
 export function TareasTable({
@@ -40,6 +45,8 @@ export function TareasTable({
   onEdit,
   onDelete,
   onApprove,
+  onCorregir,
+  onHistorial,
 }: TareasTableProps) {
   const { hasRole } = useUserRole();
   const canApprove = hasRole(Role.SUPERINTENDENTE) || hasRole(Role.ADMIN);
@@ -71,8 +78,14 @@ export function TareasTable({
     }
   };
 
-  const formatDate = (date: Date | string): string => {
-    return new Date(date).toLocaleDateString("es-ES");
+  // Una tarea recién generada todavía no tiene fecha acordada: antes salía
+  // «Invalid Date».
+  const formatDate = (date?: Date | string): string => {
+    if (!date) return "—";
+    const fecha = new Date(date);
+    return Number.isNaN(fecha.getTime())
+      ? "—"
+      : fecha.toLocaleDateString("es-ES");
   };
 
   return (
@@ -356,7 +369,12 @@ export function TareasTable({
                     <Box sx={{ color: "#bbb", fontSize: "1.5rem" }}>-</Box>
                   )}
                 </TableCell>
-                <TableCell sx={{ minWidth: 100, textAlign: "center" }}>
+                <TableCell sx={{ minWidth: 140, textAlign: "center", whiteSpace: "nowrap" }}>
+                  <Tooltip title="Historial de cambios">
+                    <IconButton size="small" onClick={() => onHistorial(tarea)}>
+                      <HistoryIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
                   {isAdmin && (
                     <>
                       <IconButton
@@ -366,6 +384,14 @@ export function TareasTable({
                       >
                         <Edit fontSize="small" />
                       </IconButton>
+                      <Tooltip title="Corregir datos o estado (queda en el historial)">
+                        <IconButton
+                          size="small"
+                          onClick={() => onCorregir(tarea)}
+                        >
+                          <EditNoteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       <IconButton
                         size="small"
                         onClick={() => onDelete(tarea._id!)}
