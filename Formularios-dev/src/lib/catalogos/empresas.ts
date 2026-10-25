@@ -8,6 +8,9 @@
  * Vive fuera de `dataSourceService.ts` porque ese archivo es `"use server"` y
  * solo puede exportar funciones asíncronas.
  */
+/** La propia: con la que nace el campo cuando no hay otra. */
+export const EMPRESA_PROPIA = "MSC";
+
 export const EMPRESAS: readonly string[] = [
   "MSC",
   "Apraccuk",

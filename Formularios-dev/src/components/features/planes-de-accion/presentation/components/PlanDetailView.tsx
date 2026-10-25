@@ -349,7 +349,6 @@ export function PlanDetailView({
         open={openTareaModal}
         isLoading={isLoading}
         tarea={selectedTarea}
-        plan={plan}
         onClose={handleCloseTareaModal}
         onSubmit={handleSubmitTarea}
       />

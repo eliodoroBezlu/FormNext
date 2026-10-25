@@ -23,6 +23,8 @@ interface CreateInstanceData {
 
 export interface GetInstancesFilters {
   templateId?: string
+  /** Todas las revisiones de una plantilla (su código): la ISOP rev. 7 y la 8. */
+  templateCode?: string
   status?: string
   createdBy?: string
   dateFrom?: Date

@@ -23,11 +23,12 @@ interface HistorialTareaDialogProps {
 
 const TIPO: Record<
   CambioDeTarea["tipo"],
-  { texto: string; color: "default" | "warning" | "success" }
+  { texto: string; color: "default" | "warning" | "success" | "info" }
 > = {
   avance: { texto: "Avance", color: "default" },
   correccion: { texto: "Corrección", color: "warning" },
   aprobacion: { texto: "Aprobación", color: "success" },
+  inspeccion: { texto: "Desde la IRO", color: "info" },
 };
 
 /** Quién cambió qué y cuándo, lo último primero. */

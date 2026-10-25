@@ -90,6 +90,12 @@ export const siguienteEstado = (actual?: string): string | null =>
 /** Cómo se llama cada campo en el historial (las claves vienen del backend). */
 export const NOMBRE_DEL_CAMPO: Record<string, string> = {
   estado: "Estado",
+  fechaHallazgo: "Fecha del hallazgo",
+  responsableObservacion: "Responsable de la observación",
+  empresa: "Empresa",
+  lugarFisico: "Lugar físico",
+  actividad: "Actividad",
+  descripcionObservacion: "Descripción de la observación",
   familiaPeligro: "Familia de peligro",
   accionPropuesta: "Acción propuesta",
   responsableAreaCierre: "Responsable de área",

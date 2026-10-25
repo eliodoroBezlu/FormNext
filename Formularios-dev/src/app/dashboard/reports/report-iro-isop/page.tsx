@@ -28,6 +28,10 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { FormInstance, FormTemplate } from "@/types/formTypes";
 import { getTemplates } from "@/lib/actions/template-actions";
 import {
+  mismoNombre,
+  valorDeVerificacion,
+} from "@/lib/organizacion/cadenaOrganizativa";
+import {
   getInstances,
   GetInstancesFilters,
 } from "@/lib/actions/instance-actions";
@@ -58,13 +62,14 @@ const ESTADOS_FORMULARIO = [
 
 /** Los filtros del informe, tal y como viajan en la barra de direcciones. */
 interface FiltrosIroIsop {
-  templateId: string;
-  status: string;
-  createdBy: string;
+  /**
+   * El código de la plantilla, no su `_id`: así entran todas sus revisiones.
+   * Con el `_id` solo se veía la vigente, y las inspecciones de la ISOP son
+   * casi todas de la revisión 7, ya obsoleta.
+   */
+  templateCode: string;
   dateFrom: string;
   dateTo: string;
-  minCompliance: string;
-  maxCompliance: string;
   area: string;
   superintendencia: string;
   search: string;
@@ -74,13 +79,9 @@ interface FiltrosIroIsop {
 const leerFiltrosDeUrl = (
   params: Pick<URLSearchParams, "get">,
 ): FiltrosIroIsop => ({
-  templateId: params.get("templateId") || "",
-  status: params.get("status") || "",
-  createdBy: params.get("createdBy") || "",
+  templateCode: params.get("templateCode") || "",
   dateFrom: params.get("dateFrom") || "",
   dateTo: params.get("dateTo") || "",
-  minCompliance: params.get("minCompliance") || "",
-  maxCompliance: params.get("maxCompliance") || "",
   area: params.get("area") || "",
   superintendencia: params.get("superintendencia") || "",
   search: params.get("search") || "",
@@ -109,35 +110,20 @@ const filtrarEnCliente = (
 ): FormInstance[] => {
   let resultado = datos;
 
+  // Cada plantilla nombra estos campos a su manera («Area Física:»,
+  // «Superintendencia:»…): se leen con `valorDeVerificacion`.
   if (f.area) {
-    const areaLower = f.area.toLowerCase();
-    resultado = resultado.filter((i) => {
-      const vl = i.verificationList || {};
-      const val = String(vl["Área"] || vl["area"] || vl["Area Física"] || "");
-      return val.toLowerCase() === areaLower;
-    });
-  }
-
-  if (f.superintendencia) {
-    const supLower = f.superintendencia.toLowerCase();
-    resultado = resultado.filter((i) => {
-      const vl = i.verificationList || {};
-      const val = String(vl["Superintendencia"] || vl["superintendencia"] || "");
-      return val.toLowerCase() === supLower;
-    });
-  }
-
-  const min = parseFloat(f.minCompliance);
-  if (!isNaN(min)) {
-    resultado = resultado.filter(
-      (i) => (i.overallCompliancePercentage ?? 0) >= min,
+    resultado = resultado.filter((i) =>
+      mismoNombre(valorDeVerificacion(i.verificationList, "area"), f.area),
     );
   }
 
-  const max = parseFloat(f.maxCompliance);
-  if (!isNaN(max)) {
-    resultado = resultado.filter(
-      (i) => (i.overallCompliancePercentage ?? 0) <= max,
+  if (f.superintendencia) {
+    resultado = resultado.filter((i) =>
+      mismoNombre(
+        valorDeVerificacion(i.verificationList, "superintendencia"),
+        f.superintendencia,
+      ),
     );
   }
 
@@ -184,23 +170,13 @@ function ListarInspeccionesIroIsopComponent() {
    * en el primer pintado, sin el parpadeo de campos vacíos que había antes.
    */
   const filtrosDeLaUrl = leerFiltrosDeUrl(searchParams);
-  const [templateIdFilter, setTemplateIdFilter] = useState(
-    () => filtrosDeLaUrl.templateId,
-  );
-  const [statusFilter, setStatusFilter] = useState(() => filtrosDeLaUrl.status);
-  const [createdByFilter, setCreatedByFilter] = useState(
-    () => filtrosDeLaUrl.createdBy,
+  const [templateCodeFilter, setTemplateCodeFilter] = useState(
+    () => filtrosDeLaUrl.templateCode,
   );
   const [dateFromFilter, setDateFromFilter] = useState(
     () => filtrosDeLaUrl.dateFrom,
   );
   const [dateToFilter, setDateToFilter] = useState(() => filtrosDeLaUrl.dateTo);
-  const [minComplianceFilter, setMinComplianceFilter] = useState(
-    () => filtrosDeLaUrl.minCompliance,
-  );
-  const [maxComplianceFilter, setMaxComplianceFilter] = useState(
-    () => filtrosDeLaUrl.maxCompliance,
-  );
   const [areaFilter, setAreaFilter] = useState(() => filtrosDeLaUrl.area);
   const [superintendenciaFilter, setSuperintendenciaFilter] = useState(
     () => filtrosDeLaUrl.superintendencia,
@@ -249,9 +225,7 @@ function ListarInspeccionesIroIsopComponent() {
   const consultar = useCallback(
     async (f: FiltrosIroIsop): Promise<FormInstance[]> => {
       const filters: GetInstancesFilters = { limit: 10000 };
-      if (f.templateId) filters.templateId = f.templateId;
-      if (f.status) filters.status = f.status;
-      if (f.createdBy) filters.createdBy = f.createdBy;
+      if (f.templateCode) filters.templateCode = f.templateCode;
       if (f.dateFrom) filters.dateFrom = new Date(f.dateFrom);
       if (f.dateTo) filters.dateTo = new Date(f.dateTo);
 
@@ -288,13 +262,9 @@ function ListarInspeccionesIroIsopComponent() {
   /** Búsqueda a petición: botón «Buscar» o Enter en un campo. */
   const buscarInstancias = useCallback(async () => {
     const f: FiltrosIroIsop = {
-      templateId: templateIdFilter,
-      status: statusFilter,
-      createdBy: createdByFilter,
+      templateCode: templateCodeFilter,
       dateFrom: dateFromFilter,
       dateTo: dateToFilter,
-      minCompliance: minComplianceFilter,
-      maxCompliance: maxComplianceFilter,
       area: areaFilter,
       superintendencia: superintendenciaFilter,
       search: searchFilter,
@@ -315,13 +285,9 @@ function ListarInspeccionesIroIsopComponent() {
       setLoading(false);
     }
   }, [
-    templateIdFilter,
-    statusFilter,
-    createdByFilter,
+    templateCodeFilter,
     dateFromFilter,
     dateToFilter,
-    minComplianceFilter,
-    maxComplianceFilter,
     areaFilter,
     superintendenciaFilter,
     searchFilter,
@@ -375,13 +341,9 @@ function ListarInspeccionesIroIsopComponent() {
   }, [searchParams, consultar, aplicar, avisarFallo]);
 
   const limpiarFiltros = () => {
-    setTemplateIdFilter("");
-    setStatusFilter("");
-    setCreatedByFilter("");
+    setTemplateCodeFilter("");
     setDateFromFilter("");
     setDateToFilter("");
-    setMinComplianceFilter("");
-    setMaxComplianceFilter("");
     setAreaFilter("");
     setSuperintendenciaFilter("");
     setSearchFilter("");
@@ -403,6 +365,12 @@ function ListarInspeccionesIroIsopComponent() {
       console.error(err);
     }
   };
+
+  // La lista trae solo la revisión vigente de cada plantilla; el filtro va
+  // por código, así que basta una opción por código.
+  const plantillasPorCodigo = [
+    ...new Map(templates.map((t) => [t.code, t])).values(),
+  ].sort((a, b) => a.name.localeCompare(b.name, "es"));
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const obtenerTemplateNombre = (
@@ -441,16 +409,16 @@ function ListarInspeccionesIroIsopComponent() {
       key: "area",
       label: "Área",
       render: (row) => {
-        const vl = row.verificationList || {};
-        return String(vl["Área"] || vl["area"] || vl["Area Física"] || "-");
+        return valorDeVerificacion(row.verificationList, "area") || "-";
       },
     },
     {
       key: "superintendencia",
       label: "Superintendencia",
       render: (row) => {
-        const vl = row.verificationList || {};
-        return String(vl["Superintendencia"] || vl["superintendencia"] || "-");
+        return (
+          valorDeVerificacion(row.verificationList, "superintendencia") || "-"
+        );
       },
     },
     {
@@ -554,49 +522,20 @@ function ListarInspeccionesIroIsopComponent() {
             <FormControl fullWidth size="small">
               <InputLabel>Template de Formulario</InputLabel>
               <Select
-                value={templateIdFilter}
-                onChange={(e) => setTemplateIdFilter(e.target.value)}
+                value={templateCodeFilter}
+                onChange={(e) => setTemplateCodeFilter(e.target.value)}
                 label="Template de Formulario"
                 disabled={loadingTemplates}
               >
                 <MenuItem value="">Todos</MenuItem>
-                {templates.map((t) => (
-                  <MenuItem key={t._id} value={t._id}>
+                {/* Una opción por código: incluye todas sus revisiones. */}
+                {plantillasPorCodigo.map((t) => (
+                  <MenuItem key={t.code} value={t.code}>
                     {t.name} ({t.code})
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 2 }}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Estado</InputLabel>
-              <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                label="Estado"
-              >
-                <MenuItem value="">Todos</MenuItem>
-                {ESTADOS_FORMULARIO.map((e) => (
-                  <MenuItem key={e.value} value={e.value}>
-                    {e.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 3 }}>
-            <TextField
-              fullWidth
-              label="Creado por"
-              variant="outlined"
-              size="small"
-              value={createdByFilter}
-              onChange={(e) => setCreatedByFilter(e.target.value)}
-              onKeyPress={handleKeyPress}
-            />
           </Grid>
 
           <Grid size={{ xs: 12, md: 3 }}>
@@ -620,28 +559,6 @@ function ListarInspeccionesIroIsopComponent() {
               value={dateToFilter}
               onChange={(e) => setDateToFilter(e.target.value)}
               InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-
-          <Grid size={{ xs: 6, md: 2 }}>
-            <TextField
-              fullWidth
-              label="Min %"
-              type="number"
-              size="small"
-              value={minComplianceFilter}
-              onChange={(e) => setMinComplianceFilter(e.target.value)}
-            />
-          </Grid>
-
-          <Grid size={{ xs: 6, md: 2 }}>
-            <TextField
-              fullWidth
-              label="Max %"
-              type="number"
-              size="small"
-              value={maxComplianceFilter}
-              onChange={(e) => setMaxComplianceFilter(e.target.value)}
             />
           </Grid>
 

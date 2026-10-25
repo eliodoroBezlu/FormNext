@@ -28,6 +28,7 @@ import {
   type SupervisorOption,
 } from "../../infrastructure/adapters/trabajadoresAdapter";
 import { FAMILIAS_PELIGRO } from "@/lib/constants";
+import { CamposDelHallazgo } from "./CamposDelHallazgo";
 
 interface CorregirTareaDialogProps {
   open: boolean;
@@ -46,7 +47,8 @@ const comoDia = (fecha?: Date | string) =>
 
 /**
  * Corrección del admin. A diferencia del formulario de avance, aquí se puede
- * cambiar cualquier dato de seguimiento y llevar la tarea a cualquier estado,
+ * cambiar cualquier dato (también los del hallazgo, que en una tarea de IRO
+ * están bloqueados al avanzar) y llevar la tarea a cualquier estado,
  * también hacia atrás, para arreglar algo que se cargó mal. Pide un motivo y
  * todo queda en el historial con lo que había antes.
  *
@@ -89,6 +91,12 @@ export function CorregirTareaDialog({
     defaultValues: {
       motivo: "",
       estado: tarea?.estado ?? "abierto",
+      fechaHallazgo: comoDia(tarea?.fechaHallazgo),
+      responsableObservacion: tarea?.responsableObservacion ?? "",
+      empresa: tarea?.empresa ?? "",
+      lugarFisico: tarea?.lugarFisico ?? "",
+      actividad: tarea?.actividad ?? "",
+      descripcionObservacion: tarea?.descripcionObservacion ?? "",
       familiaPeligro: tarea?.familiaPeligro ?? "",
       accionPropuesta: tarea?.accionPropuesta ?? "",
       responsableAreaCierre: tarea?.responsableAreaCierre ?? "",
@@ -100,11 +108,7 @@ export function CorregirTareaDialog({
 
   const valores = useWatch({ control });
   const faltan = faltantesParaEstado(
-    {
-      ...valores,
-      fechaHallazgo: tarea?.fechaHallazgo,
-      evidencias: tarea?.evidencias,
-    },
+    { ...valores, evidencias: tarea?.evidencias },
     valores.estado ?? "abierto",
   );
 
@@ -144,6 +148,11 @@ export function CorregirTareaDialog({
               aprobación.
             </Alert>
           )}
+
+          <CamposDelHallazgo
+            control={control}
+            vieneDeInspeccion={!!tarea?.instanceId}
+          />
 
           <Controller
             name="estado"

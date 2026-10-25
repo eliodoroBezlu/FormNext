@@ -34,9 +34,10 @@ import {
   UpdateTareaDTO,
   EvidenciaDto,
   FormTareaData,
-  PlanDeAccion,
 } from "../../domain/models/IProps";
 import { FAMILIAS_PELIGRO } from "@/lib/constants";
+import { EMPRESA_PROPIA, EMPRESAS } from "@/lib/catalogos/empresas";
+import AutocompleteTrabajador from "@/components/ui/autocomplete/AutocompleteTrabajador";
 import { getRecommendedActions } from "../../infrastructure/adapters/mlRecommendationsAdapter";
 import { uploadFile } from "../../infrastructure/adapters/uploadAdapter";
 import {
@@ -55,7 +56,6 @@ interface TareaFormModalProps {
   open: boolean;
   isLoading: boolean;
   tarea?: TareaObservacion | null;
-  plan?: PlanDeAccion | null;
   onClose: () => void;
   onSubmit: (data: AddTareaDTO | UpdateTareaDTO) => Promise<void>;
 }
@@ -94,7 +94,8 @@ const valoresDeFormulario = (
 ): FormTareaData => ({
   fechaHallazgo: toDateInputValue(tarea?.fechaHallazgo),
   responsableObservacion: tarea?.responsableObservacion ?? "",
-  empresa: tarea?.empresa ?? "",
+  // Una tarea nueva casi siempre es de la propia empresa; se cambia si no.
+  empresa: tarea ? (tarea.empresa ?? "") : EMPRESA_PROPIA,
   lugarFisico: tarea?.lugarFisico ?? "",
   actividad: tarea?.actividad ?? "",
   familiaPeligro: tarea?.familiaPeligro ?? "",
@@ -113,7 +114,6 @@ export function TareaFormModal({
   open,
   isLoading,
   tarea,
-  plan,
   onClose,
   onSubmit,
 }: TareaFormModalProps) {
@@ -262,7 +262,9 @@ export function TareaFormModal({
   const { hasRole } = useUserRole();
   const isAdmin = hasRole(Role.ADMIN);
 
-  const esGeneradaDesdeInspeccion = plan?.instanceId !== undefined;
+  // Es de la tarea, no del plan: en un plan que salió de una IRO también se
+  // agregan tareas a mano, y esas se llenan completas.
+  const esGeneradaDesdeInspeccion = !!tarea?.instanceId;
   const estaAprobada = tarea?.aprobado === true;
   const estadoActual =
     useWatch({ control, name: "estado" }) || tarea?.estado || "abierto";
@@ -394,7 +396,7 @@ export function TareaFormModal({
 
   const onFormSubmit = async (data: FormTareaData) => {
     try {
-      if (esGeneradaDesdeInspeccion) {
+      if (tarea) {
         const camposEditables: UpdateTareaDTO = {
           familiaPeligro: data.familiaPeligro,
           accionPropuesta: data.accionPropuesta,
@@ -411,6 +413,16 @@ export function TareaFormModal({
               mlRecommendations.length > 0 ? mlRecommendations : undefined,
           },
         };
+        if (!esGeneradaDesdeInspeccion) {
+          Object.assign(camposEditables, {
+            fechaHallazgo: data.fechaHallazgo,
+            responsableObservacion: data.responsableObservacion,
+            empresa: data.empresa,
+            lugarFisico: data.lugarFisico,
+            actividad: data.actividad,
+            descripcionObservacion: data.descripcionObservacion,
+          });
+        }
         // Avanza de a un paso, y solo si ya tiene lo que el siguiente
         // estado exige; si no, guarda lo cargado y sigue donde estaba.
         if (destino && faltanParaAvanzar.length === 0) {
@@ -446,6 +458,8 @@ export function TareaFormModal({
             <Alert severity="info" icon={<LockIcon />}>
               Esta tarea fue generada automáticamente desde una inspección. Los
               campos base están bloqueados, pero puedes editar según el estado.
+              Si la inspección se corrige, se actualizan solos; un administrador
+              también puede cambiarlos desde «Corregir tarea».
               {mlRecommendations.length > 0 && (
                 <>
                   <br />
@@ -498,7 +512,7 @@ export function TareaFormModal({
             </Alert>
           )}
 
-          {!estaAprobada && esGeneradaDesdeInspeccion && destino && (
+          {!estaAprobada && tarea && destino && (
             <Alert severity={faltanParaAvanzar.length > 0 ? "info" : "success"}>
               {faltanParaAvanzar.length > 0 ? (
                 <>
@@ -544,46 +558,79 @@ export function TareaFormModal({
             name="responsableObservacion"
             control={control}
             rules={{ required: "Campo requerido" }}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Responsable de la Observación"
-                fullWidth
-                InputProps={{
-                  readOnly: esGeneradaDesdeInspeccion,
-                  endAdornment: esGeneradaDesdeInspeccion && (
-                    <LockIcon fontSize="small" color="disabled" />
-                  ),
-                }}
-                disabled={esGeneradaDesdeInspeccion}
-                error={!!errors.responsableObservacion}
-                helperText={errors.responsableObservacion?.message}
-                sx={esGeneradaDesdeInspeccion ? { bgcolor: "#f5f5f5" } : {}}
-              />
-            )}
+            render={({ field }) =>
+              !esGeneradaDesdeInspeccion ? (
+                <AutocompleteTrabajador
+                  label="Responsable de la Observación"
+                  value={field.value}
+                  onChange={(nomina) => field.onChange(nomina ?? "")}
+                  onBlur={field.onBlur}
+                  error={!!errors.responsableObservacion}
+                  helperText={errors.responsableObservacion?.message}
+                />
+              ) : (
+                <TextField
+                  {...field}
+                  label="Responsable de la Observación"
+                  fullWidth
+                  InputProps={{
+                    readOnly: esGeneradaDesdeInspeccion,
+                    endAdornment: esGeneradaDesdeInspeccion && (
+                      <LockIcon fontSize="small" color="disabled" />
+                    ),
+                  }}
+                  disabled={esGeneradaDesdeInspeccion}
+                  error={!!errors.responsableObservacion}
+                  helperText={errors.responsableObservacion?.message}
+                  sx={esGeneradaDesdeInspeccion ? { bgcolor: "#f5f5f5" } : {}}
+                />
+              )
+            }
           />
 
           <Controller
             name="empresa"
             control={control}
             rules={{ required: "Campo requerido" }}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Empresa"
-                fullWidth
-                InputProps={{
-                  readOnly: esGeneradaDesdeInspeccion,
-                  endAdornment: esGeneradaDesdeInspeccion && (
-                    <LockIcon fontSize="small" color="disabled" />
-                  ),
-                }}
-                disabled={esGeneradaDesdeInspeccion}
-                error={!!errors.empresa}
-                helperText={errors.empresa?.message}
-                sx={esGeneradaDesdeInspeccion ? { bgcolor: "#f5f5f5" } : {}}
-              />
-            )}
+            render={({ field }) =>
+              !esGeneradaDesdeInspeccion ? (
+                <Autocomplete
+                  freeSolo
+                  options={EMPRESAS}
+                  value={field.value || null}
+                  onChange={(_e, nueva) => field.onChange(nueva ?? "")}
+                  onInputChange={(_e, texto, motivo) => {
+                    if (motivo === "input") field.onChange(texto);
+                  }}
+                  onBlur={field.onBlur}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Empresa"
+                      placeholder="Seleccione o escriba"
+                      error={!!errors.empresa}
+                      helperText={errors.empresa?.message}
+                    />
+                  )}
+                />
+              ) : (
+                <TextField
+                  {...field}
+                  label="Empresa"
+                  fullWidth
+                  InputProps={{
+                    readOnly: esGeneradaDesdeInspeccion,
+                    endAdornment: esGeneradaDesdeInspeccion && (
+                      <LockIcon fontSize="small" color="disabled" />
+                    ),
+                  }}
+                  disabled={esGeneradaDesdeInspeccion}
+                  error={!!errors.empresa}
+                  helperText={errors.empresa?.message}
+                  sx={esGeneradaDesdeInspeccion ? { bgcolor: "#f5f5f5" } : {}}
+                />
+              )
+            }
           />
 
           <Controller

@@ -18,6 +18,8 @@ export interface TareaObservacion {
   aprobado: boolean;
   evidencias?: EvidenciaDto[];
 
+  /** La inspección de la que salió la tarea; sin él, se agregó a mano. */
+  instanceId?: string;
   sectionId?: string;
   sectionTitle?: string;
   questionText?: string;
@@ -38,7 +40,7 @@ export interface CambioDeTarea {
   fecha: string;
   usuario: string;
   /** `avance`: flujo normal; `correccion`: el admin, con motivo; `aprobacion`. */
-  tipo: "avance" | "correccion" | "aprobacion";
+  tipo: "avance" | "correccion" | "aprobacion" | "inspeccion";
   cambios: CampoCambiado[];
   motivo?: string;
 }
@@ -50,6 +52,12 @@ export interface CambioDeTarea {
 export interface CorregirTareaDTO {
   motivo: string;
   estado?: "abierto" | "en-progreso" | "cerrado";
+  fechaHallazgo?: string;
+  responsableObservacion?: string;
+  empresa?: string;
+  lugarFisico?: string;
+  actividad?: string;
+  descripcionObservacion?: string;
   familiaPeligro?: string;
   accionPropuesta?: string;
   responsableAreaCierre?: string;

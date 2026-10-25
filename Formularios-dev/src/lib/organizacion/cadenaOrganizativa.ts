@@ -96,3 +96,35 @@ export function valoresDesdeElArea(
   }
   return valores;
 }
+
+/**
+ * El área o la superintendencia que declaró una inspección, la nombre como la
+ * nombre su plantilla («Área», «Area Física:», «Superintendencia:»…).
+ *
+ * Para el área va primero el campo que se llama solo «Área» (el que se elige
+ * del maestro): F47, F48 y F51 tienen además un «Área Física» de texto libre.
+ */
+export function valorDeVerificacion(
+  lista: Record<string, unknown> | null | undefined,
+  campo: "area" | "superintendencia",
+): string {
+  const entradas = Object.entries(lista ?? {})
+    .map(([etiqueta, valor]) => ({
+      norm: normalizarEtiqueta(etiqueta),
+      etiqueta,
+      valor: String(valor ?? "").trim(),
+    }))
+    .filter((e) => e.valor);
+  if (campo === "area") {
+    return (
+      entradas.find((e) => e.norm === "AREA")?.valor ??
+      entradas.find((e) => esCampoDeArea(e.etiqueta))?.valor ??
+      ""
+    );
+  }
+  return entradas.find((e) => esCampoDeSuperintendencia(e.etiqueta))?.valor ?? "";
+}
+
+/** Igualdad de nombres sin mayúsculas, tildes ni espacios de más. */
+export const mismoNombre = (a: string, b: string): boolean =>
+  normalizarEtiqueta(a) === normalizarEtiqueta(b);
