@@ -32,6 +32,23 @@ interface GetRecommendationParams {
 
 
 /**
+ * Lo que ve el usuario cuando el servicio de IA no responde (caído, sin red o
+ * con un error interno): el detalle técnico queda en el log del servidor.
+ */
+const IA_NO_DISPONIBLE =
+  "Las recomendaciones de IA no están disponibles en este momento. Puedes escribir la acción propuesta a mano.";
+
+/** El texto que el backend pone en `mensaje`, o null si no lo hay. */
+const mensajeDelBackend = (texto: string): string | null => {
+  try {
+    const cuerpo = JSON.parse(texto) as { mensaje?: unknown };
+    return typeof cuerpo.mensaje === "string" ? cuerpo.mensaje : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
  * Obtiene recomendaciones ML del backend
  */
 export async function getMLRecommendation(
@@ -73,9 +90,14 @@ export async function getMLRecommendation(
         };
       }
 
+      // Un 5xx es el servicio de IA, no algo que el usuario pueda arreglar.
+      if (response.status >= 500) {
+        return { success: false, error: IA_NO_DISPONIBLE };
+      }
+
       return {
         success: false,
-        error: `Error ${response.status}: ${errorText}`,
+        error: mensajeDelBackend(errorText) ?? IA_NO_DISPONIBLE,
       };
     }
 
@@ -103,10 +125,7 @@ export async function getMLRecommendation(
       };
     }
 
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido',
-    };
+    return { success: false, error: IA_NO_DISPONIBLE };
   }
 }
 
@@ -141,10 +160,7 @@ export async function getRecommendedActions(
     }
   } catch (error) {
     console.error('Error en getRecommendedActions:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido',
-    };
+    return { success: false, error: IA_NO_DISPONIBLE };
   }
 }
 

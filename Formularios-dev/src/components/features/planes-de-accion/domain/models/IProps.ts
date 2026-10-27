@@ -11,6 +11,8 @@ export interface TareaObservacion {
   accionPropuesta: string;
   responsableAreaCierre: string;
   responsableAreaCierreUsername?: string;
+  /** Todos los responsables de cierre (ver `responsablesCierre.ts`). */
+  responsablesAreaCierreUsernames?: string[];
   fechaCumplimientoAcordada: Date;
   fechaCumplimientoEfectiva?: Date;
   diasRetraso: number;
@@ -63,6 +65,7 @@ export interface CorregirTareaDTO {
   responsableAreaCierre?: string;
   /** El usuario del supervisor: es por el que él ve la tarea en su lista. */
   responsableAreaCierreUsername?: string;
+  responsablesAreaCierreUsernames?: string[];
   fechaCumplimientoAcordada?: string;
   fechaCumplimientoEfectiva?: string;
 }
@@ -152,6 +155,8 @@ export interface AddTareaDTO {
   accionPropuesta: string;
   responsableAreaCierre: string;
   responsableAreaCierreUsername?: string;
+  /** Todos los responsables de cierre (ver `responsablesCierre.ts`). */
+  responsablesAreaCierreUsernames?: string[];
   fechaCumplimientoAcordada: Date | string;
   fechaCumplimientoEfectiva?: Date | string;
 }

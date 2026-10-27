@@ -24,11 +24,16 @@ import {
   NOMBRE_DEL_ESTADO,
 } from "../../domain/requisitosTarea";
 import {
-  obtenerSupervisoresDisponibles,
-  type SupervisorOption,
+  obtenerResponsablesDeCierre,
+  type ResponsableCierreOption,
 } from "../../infrastructure/adapters/trabajadoresAdapter";
 import { FAMILIAS_PELIGRO } from "@/lib/constants";
 import { CamposDelHallazgo } from "./CamposDelHallazgo";
+import { SelectorResponsablesCierre } from "./SelectorResponsablesCierre";
+import {
+  camposDeCierre,
+  usuariosDeCierre,
+} from "../../domain/responsablesCierre";
 
 interface CorregirTareaDialogProps {
   open: boolean;
@@ -65,7 +70,7 @@ export function CorregirTareaDialog({
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /** `null`: todavía no llegaron; `[]`: llegaron y no hay ninguno. */
-  const [supervisores, setSupervisores] = useState<SupervisorOption[] | null>(
+  const [supervisores, setSupervisores] = useState<ResponsableCierreOption[] | null>(
     null,
   );
 
@@ -74,7 +79,7 @@ export function CorregirTareaDialog({
   useEffect(() => {
     if (!open) return;
     let vigente = true;
-    obtenerSupervisoresDisponibles()
+    obtenerResponsablesDeCierre()
       .then((lista) => {
         if (vigente) setSupervisores(lista);
       })
@@ -101,6 +106,7 @@ export function CorregirTareaDialog({
       accionPropuesta: tarea?.accionPropuesta ?? "",
       responsableAreaCierre: tarea?.responsableAreaCierre ?? "",
       responsableAreaCierreUsername: tarea?.responsableAreaCierreUsername ?? "",
+      responsablesAreaCierreUsernames: usuariosDeCierre(tarea),
       fechaCumplimientoAcordada: comoDia(tarea?.fechaCumplimientoAcordada),
       fechaCumplimientoEfectiva: comoDia(tarea?.fechaCumplimientoEfectiva),
     },
@@ -210,59 +216,27 @@ export function CorregirTareaDialog({
           <Controller
             name="responsableAreaCierre"
             control={control}
-            render={({ field: { onBlur, value } }) => {
-              const lista = supervisores ?? [];
-              const elegido =
-                lista.find(
-                  (s) => s.username === valores.responsableAreaCierreUsername,
-                ) ?? null;
-              // Uno cargado antes del selector (texto libre) no está en la
-              // lista: se avisa en vez de mostrarlo vacío.
-              const fueraDeLista = !elegido && !!value;
-              return (
-                <Autocomplete
-                  options={lista}
-                  loading={supervisores === null}
-                  value={elegido}
-                  getOptionLabel={(s) => `${s.nomina} - ${s.puesto}`}
-                  isOptionEqualToValue={(a, b) => a.username === b.username}
-                  onChange={(_e, nuevo) => {
-                    setValue("responsableAreaCierre", nuevo?.nomina ?? "");
-                    setValue(
-                      "responsableAreaCierreUsername",
-                      nuevo?.username ?? "",
-                    );
-                  }}
-                  onBlur={onBlur}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Responsable de área para el cierre"
-                      placeholder="Seleccione un supervisor"
-                      size="small"
-                      helperText={
-                        fueraDeLista
-                          ? `Ahora: «${value}», que no está entre los supervisores con acceso. Elige uno para que vea la tarea.`
-                          : "Solo supervisores con acceso al sistema"
-                      }
-                      slotProps={{
-                        input: {
-                          ...params.InputProps,
-                          endAdornment: (
-                            <>
-                              {supervisores === null && (
-                                <CircularProgress size={18} />
-                              )}
-                              {params.InputProps.endAdornment}
-                            </>
-                          ),
-                        },
-                      }}
-                    />
-                  )}
-                />
-              );
-            }}
+            render={({ field: { onBlur, value } }) => (
+              <SelectorResponsablesCierre
+                supervisores={supervisores}
+                usuarios={valores.responsablesAreaCierreUsernames ?? []}
+                nombreGuardado={value}
+                size="small"
+                onChange={(seleccion) => {
+                  const campos = camposDeCierre(seleccion);
+                  setValue("responsableAreaCierre", campos.responsableAreaCierre);
+                  setValue(
+                    "responsableAreaCierreUsername",
+                    campos.responsableAreaCierreUsername,
+                  );
+                  setValue(
+                    "responsablesAreaCierreUsernames",
+                    campos.responsablesAreaCierreUsernames,
+                  );
+                }}
+                onBlur={onBlur}
+              />
+            )}
           />
 
           <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>

@@ -4,6 +4,26 @@ import { Trabajador, TrabajadorResumen } from "@/types/trabajador";
 import { API_BASE_URL } from "../constants";
 import { getAuthHeaders, handleApiResponse } from "./helpers";
 
+/** Supervisores y superintendentes que pueden ser responsables de cierre. */
+export async function obtenerResponsablesDeCierreApi(): Promise<
+  {
+    nomina: string;
+    puesto: string;
+    username: string;
+    area: string;
+    superintendencia: string;
+    rol: "supervisor" | "superintendente";
+  }[]
+> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/trabajadores/responsables-cierre`, {
+    method: "GET",
+    headers,
+    cache: "no-store",
+  });
+  return handleApiResponse(response);
+}
+
 // Obtener todos los trabajadores
 export async function obtenerTrabajadores(): Promise<Trabajador[]> {
   try {

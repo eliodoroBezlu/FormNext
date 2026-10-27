@@ -38,11 +38,16 @@ import {
 import { FAMILIAS_PELIGRO } from "@/lib/constants";
 import { EMPRESA_PROPIA, EMPRESAS } from "@/lib/catalogos/empresas";
 import AutocompleteTrabajador from "@/components/ui/autocomplete/AutocompleteTrabajador";
+import {
+  camposDeCierre,
+  usuariosDeCierre,
+} from "../../domain/responsablesCierre";
+import { SelectorResponsablesCierre } from "./SelectorResponsablesCierre";
 import { getRecommendedActions } from "../../infrastructure/adapters/mlRecommendationsAdapter";
 import { uploadFile } from "../../infrastructure/adapters/uploadAdapter";
 import {
-  obtenerSupervisoresDisponibles,
-  SupervisorOption,
+  obtenerResponsablesDeCierre,
+  ResponsableCierreOption,
 } from "../../infrastructure/adapters/trabajadoresAdapter";
 import {
   faltantesParaEstado,
@@ -103,6 +108,7 @@ const valoresDeFormulario = (
   accionPropuesta: tarea?.accionPropuesta ?? "",
   responsableAreaCierre: tarea?.responsableAreaCierre ?? "",
   responsableAreaCierreUsername: tarea?.responsableAreaCierreUsername ?? "",
+  responsablesAreaCierreUsernames: usuariosDeCierre(tarea),
   fechaCumplimientoAcordada: toDateInputValue(tarea?.fechaCumplimientoAcordada),
   fechaCumplimientoEfectiva: tarea?.fechaCumplimientoEfectiva
     ? toDateInputValue(tarea.fechaCumplimientoEfectiva)
@@ -138,12 +144,9 @@ export function TareaFormModal({
    * ninguno». Distinguirlos permite derivar el indicador de carga en vez de
    * mantenerlo en un estado aparte que había que activar a mano.
    */
-  const [supervisores, setSupervisores] = useState<SupervisorOption[] | null>(
+  const [supervisores, setSupervisores] = useState<ResponsableCierreOption[] | null>(
     null,
   );
-  const loadingSupervisores = supervisores === null;
-  /** Para pintar: mientras cargan, la lista está vacía. */
-  const opcionesSupervisor = supervisores ?? [];
 
   const {
     control,
@@ -242,7 +245,7 @@ export function TareaFormModal({
     // la promesa, que es el uso para el que están pensados los efectos.
     let vigente = true;
 
-    obtenerSupervisoresDisponibles()
+    obtenerResponsablesDeCierre()
       .then((lista) => {
         // Si el modal se cerró mientras la consulta estaba en vuelo, la
         // respuesta ya no interesa.
@@ -314,7 +317,7 @@ export function TareaFormModal({
   // render prop de <Controller>.
   const responsableUsernameActual = useWatch({
     control,
-    name: "responsableAreaCierreUsername",
+    name: "responsablesAreaCierreUsernames",
   });
 
   const calcularDiasRetraso = (): number => {
@@ -402,6 +405,7 @@ export function TareaFormModal({
           accionPropuesta: data.accionPropuesta,
           responsableAreaCierre: data.responsableAreaCierre,
           responsableAreaCierreUsername: data.responsableAreaCierreUsername,
+          responsablesAreaCierreUsernames: data.responsablesAreaCierreUsernames,
           fechaCumplimientoAcordada: data.fechaCumplimientoAcordada,
           fechaCumplimientoEfectiva: data.fechaCumplimientoEfectiva,
           evidencias: evidencias.length > 0 ? evidencias : undefined,
@@ -870,61 +874,39 @@ export function TareaFormModal({
             name="responsableAreaCierre"
             control={control}
             rules={{ required: "Campo requerido" }}
-            render={({ field: { onBlur } }) => {
-              const seleccionado =
-                opcionesSupervisor.find(
-                  (s) => s.username === responsableUsernameActual,
-                ) ?? null;
-
-              return (
-                <Autocomplete
-                  options={opcionesSupervisor}
-                  loading={loadingSupervisores}
-                  value={seleccionado}
-                  getOptionLabel={(s) => `${s.nomina} - ${s.puesto}`}
-                  isOptionEqualToValue={(a, b) => a.username === b.username}
-                  onChange={(_event, newValue) => {
-                    setValue("responsableAreaCierre", newValue?.nomina ?? "", {
-                      shouldValidate: true,
-                    });
-                    setValue(
-                      "responsableAreaCierreUsername",
-                      newValue?.username ?? "",
-                    );
-                  }}
-                  onBlur={onBlur}
-                  disabled={estaAprobada || !esEstadoAbierto}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Responsable de Área para Cierre"
-                      placeholder="Seleccione un supervisor"
-                      error={!!errors.responsableAreaCierre}
-                      helperText={
-                        errors.responsableAreaCierre?.message ||
-                        (estaAprobada
-                          ? "No se puede editar (tarea aprobada)"
-                          : !esEstadoAbierto
-                            ? "Solo editable en estado Abierto"
-                            : "Solo supervisores con acceso al sistema")
-                      }
-                      required
-                      InputProps={{
-                        ...params.InputProps,
-                        endAdornment: (
-                          <>
-                            {loadingSupervisores ? (
-                              <CircularProgress size={20} />
-                            ) : null}
-                            {params.InputProps.endAdornment}
-                          </>
-                        ),
-                      }}
-                    />
-                  )}
-                />
-              );
-            }}
+            render={({ field: { onBlur, value } }) => (
+              <SelectorResponsablesCierre
+                supervisores={supervisores}
+                usuarios={responsableUsernameActual ?? []}
+                nombreGuardado={value}
+                onChange={(seleccion) => {
+                  const campos = camposDeCierre(seleccion);
+                  setValue("responsableAreaCierre", campos.responsableAreaCierre, {
+                    shouldValidate: true,
+                  });
+                  setValue(
+                    "responsableAreaCierreUsername",
+                    campos.responsableAreaCierreUsername,
+                  );
+                  setValue(
+                    "responsablesAreaCierreUsernames",
+                    campos.responsablesAreaCierreUsernames,
+                  );
+                }}
+                onBlur={onBlur}
+                disabled={estaAprobada || !esEstadoAbierto}
+                required
+                error={!!errors.responsableAreaCierre}
+                helperText={
+                  errors.responsableAreaCierre?.message ||
+                  (estaAprobada
+                    ? "No se puede editar (tarea aprobada)"
+                    : !esEstadoAbierto
+                      ? "Solo editable en estado Abierto"
+                      : undefined)
+                }
+              />
+            )}
           />
 
           <Controller
