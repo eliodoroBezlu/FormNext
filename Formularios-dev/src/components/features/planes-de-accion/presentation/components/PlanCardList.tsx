@@ -8,7 +8,6 @@ interface PlanCardListProps {
   planes: PlanDeAccion[];
   isLoading: boolean;
   onView: (plan: PlanDeAccion) => void;
-  onEdit: (plan: PlanDeAccion) => void;
   onDelete: (planId: string) => void;
 }
 
@@ -16,7 +15,6 @@ export function PlanCardList({
   planes,
   isLoading,
   onView,
-  onEdit,
   onDelete,
 }: PlanCardListProps) {
   if (isLoading) {
@@ -54,7 +52,6 @@ export function PlanCardList({
           key={plan._id}
           plan={plan}
           onView={onView}
-          onEdit={onEdit}
           onDelete={onDelete}
         />
       ))}

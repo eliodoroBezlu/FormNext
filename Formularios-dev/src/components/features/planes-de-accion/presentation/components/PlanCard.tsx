@@ -1,15 +1,16 @@
 "use client";
 
 import { Box, Typography, Chip, IconButton, Button } from "@mui/material";
-import { Edit, Delete, InfoOutlined } from "@mui/icons-material";
+import { AssignmentOutlined, Delete, InfoOutlined } from "@mui/icons-material";
 import { PlanDeAccion } from "../../domain/models/IProps";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Role } from "@/lib/routePermissions";
+import { ItemsCriticos } from "./ItemsCriticos";
+import { etiquetaDeTipo } from "../../domain/tipoInspeccion";
 
 interface PlanCardProps {
   plan: PlanDeAccion;
   onView: (plan: PlanDeAccion) => void;
-  onEdit: (plan: PlanDeAccion) => void;
   onDelete: (id: string) => void;
 }
 
@@ -56,7 +57,7 @@ const ESTADO_STYLE: Record<
   },
 };
 
-export function PlanCard({ plan, onView, onEdit, onDelete }: PlanCardProps) {
+export function PlanCard({ plan, onView, onDelete }: PlanCardProps) {
   const { hasRole } = useUserRole();
   const isAdmin = hasRole(Role.ADMIN);
 
@@ -72,6 +73,12 @@ export function PlanCard({ plan, onView, onEdit, onDelete }: PlanCardProps) {
   const shortId = `PA-${plan._id.slice(-6).toUpperCase()}`;
   const fecha = new Date(plan.fechaCreacion).toLocaleDateString("es-ES");
   const pct = Math.min(plan.porcentajeCierre, 100);
+  // De qué IRO o ISOP sale; un plan sin inspección se creó a mano.
+  const origen = plan.tipoInspeccion
+    ? etiquetaDeTipo(plan.tipoInspeccion.nombre)
+    : plan.instanceId
+      ? null
+      : "Plan manual";
 
   return (
     <Box
@@ -117,6 +124,21 @@ export function PlanCard({ plan, onView, onEdit, onDelete }: PlanCardProps) {
             <Typography sx={{ fontSize: 15, fontWeight: 700 }}>
               {plan.areaFisica}
             </Typography>
+            {origen && (
+              <Chip
+                icon={<AssignmentOutlined />}
+                label={origen}
+                title={plan.tipoInspeccion?.codigo}
+                size="small"
+                variant="outlined"
+                sx={{
+                  height: 24,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  "& .MuiChip-icon": { fontSize: 15 },
+                }}
+              />
+            )}
             <Chip
               label={style.label}
               size="small"
@@ -224,6 +246,8 @@ export function PlanCard({ plan, onView, onEdit, onDelete }: PlanCardProps) {
             </Typography>
           </Box>
           )}
+
+          {plan.instanceId && <ItemsCriticos texto={plan.itemsCriticos} />}
         </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -235,21 +259,9 @@ export function PlanCard({ plan, onView, onEdit, onDelete }: PlanCardProps) {
           >
             Ver
           </Button>
+          {/* La cabecera del plan se edita desde su detalle («Ver»). */}
           {isAdmin && (
             <>
-              <IconButton
-                title="Editar plan"
-                onClick={() => onEdit(plan)}
-                sx={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: "9px",
-                  bgcolor: "rgba(99,102,241,.12)",
-                  color: "primary.main",
-                }}
-              >
-                <Edit fontSize="small" />
-              </IconButton>
               <IconButton
                 title="Eliminar plan"
                 onClick={() => onDelete(plan._id)}

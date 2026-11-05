@@ -206,6 +206,9 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
     exacto: true,
   },
 
+  // Pruebas del servicio de formularios (servicio-formularios): solo admin.
+  { path: "/dashboard/servicio-formularios", requiredRoles: [Role.ADMIN] },
+
   // ── Rutas que antes no tenían regla ─────────────────────────────────────
   // Sin regla, `puedeAccederARuta` deja pasar a cualquier rol no restringido:
   // la tarjeta del panel las ocultaba, pero la URL escrita a mano entraba.

@@ -18,6 +18,7 @@ import {
   ArrowBack,
   Add as AddIcon,
   Edit as EditIcon,
+  Sync as SyncIcon,
   Download as DownloadIcon,
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
@@ -41,6 +42,8 @@ interface PlanDetailViewProps {
   onAddTarea: (data: AddTareaDTO) => Promise<void>;
   onUpdateTarea: (tareaId: string, data: UpdateTareaDTO) => Promise<void>;
   onCorregirTarea: (tareaId: string, data: CorregirTareaDTO) => Promise<void>;
+  /** Admin: traer al plan lo que su IRO dice ahora. */
+  onSincronizarConInspeccion: () => Promise<void>;
   onDeleteTarea: (tareaId: string) => Promise<void>;
   onApproveTarea: (tareaId: string) => Promise<void>;
   onApprovePlan: (planId: string, observaciones?: string) => Promise<unknown>;
@@ -56,6 +59,7 @@ export function PlanDetailView({
   onAddTarea,
   onUpdateTarea,
   onCorregirTarea,
+  onSincronizarConInspeccion,
   onDeleteTarea,
   onApproveTarea,
   onApprovePlan,
@@ -307,6 +311,26 @@ export function PlanDetailView({
             disabled={isLoading}
           >
             Editar Datos Organizacionales
+          </Button>
+        )}
+        {isAdmin && plan.instanceId && (
+          <Button
+            type="button"
+            variant="outlined"
+            startIcon={<SyncIcon />}
+            disabled={isLoading}
+            onClick={() => {
+              // Pisa también lo corregido a mano en el plan: se avisa antes.
+              if (
+                window.confirm(
+                  "Se traerán de la IRO, tal como está ahora, la cabecera y en cada tarea el responsable de la observación, la empresa, el lugar y la descripción. Lo corregido a mano en el plan se reemplaza (queda en el historial de cada tarea). Las tareas aprobadas no se tocan. ¿Continuar?",
+                )
+              ) {
+                void onSincronizarConInspeccion();
+              }
+            }}
+          >
+            Traer datos de la IRO
           </Button>
         )}
         <Button

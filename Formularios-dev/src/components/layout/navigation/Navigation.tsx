@@ -120,6 +120,13 @@ export const NAVIGATION: NavigationItem[] = [
     exacto: true,
   },
   {
+    segment: "servicio-formularios",
+    title: "Servicio de formularios (pruebas)",
+    icon: "description",
+    // Mientras se prueba la integración: solo admin.
+    requiredRoles: [Role.ADMIN],
+  },
+  {
     kind: "divider",
   },
   {

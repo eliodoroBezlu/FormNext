@@ -20,6 +20,8 @@ export interface TareaObservacion {
   aprobado: boolean;
   evidencias?: EvidenciaDto[];
 
+  /** `false`: dada de baja (no se borra). */
+  activo?: boolean;
   /** La inspección de la que salió la tarea; sin él, se agregó a mano. */
   instanceId?: string;
   sectionId?: string;
@@ -108,6 +110,8 @@ export interface PlanDeAccion {
   // De qué IRO o ISOP sale (la plantilla de su inspección). Lo agrega el
   // backend al listar; un plan manual no lo tiene.
   tipoInspeccion?: { codigo: string; nombre: string };
+  /** «Ítems críticos / aspectos adicionales» de la IRO (lo agrega el listado). */
+  itemsCriticos?: string;
 
   // Aprobación global del Superintendente — eje independiente del
   // `aprobado` por tarea. Mientras no sea 'aprobado', el Supervisor

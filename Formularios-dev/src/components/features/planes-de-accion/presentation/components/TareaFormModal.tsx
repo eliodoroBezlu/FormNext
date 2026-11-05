@@ -37,7 +37,8 @@ import {
 } from "../../domain/models/IProps";
 import { FAMILIAS_PELIGRO } from "@/lib/constants";
 import { EMPRESA_PROPIA, EMPRESAS } from "@/lib/catalogos/empresas";
-import AutocompleteTrabajador from "@/components/ui/autocomplete/AutocompleteTrabajador";
+import { SelectorPersonas } from "./SelectorPersonas";
+import { useNombresDeTrabajadores } from "../../application/hooks/useNombresDeTrabajadores";
 import {
   camposDeCierre,
   usuariosDeCierre,
@@ -262,6 +263,7 @@ export function TareaFormModal({
     };
   }, [open]);
 
+  const trabajadores = useNombresDeTrabajadores(open);
   const { hasRole } = useUserRole();
   const isAdmin = hasRole(Role.ADMIN);
 
@@ -564,11 +566,12 @@ export function TareaFormModal({
             rules={{ required: "Campo requerido" }}
             render={({ field }) =>
               !esGeneradaDesdeInspeccion ? (
-                <AutocompleteTrabajador
-                  label="Responsable de la Observación"
+                <SelectorPersonas
+                  label="Responsables de la Observación"
                   value={field.value}
-                  onChange={(nomina) => field.onChange(nomina ?? "")}
+                  onChange={field.onChange}
                   onBlur={field.onBlur}
+                  opciones={trabajadores}
                   error={!!errors.responsableObservacion}
                   helperText={errors.responsableObservacion?.message}
                 />

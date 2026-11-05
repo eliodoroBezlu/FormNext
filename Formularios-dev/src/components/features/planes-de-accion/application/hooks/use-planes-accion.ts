@@ -11,6 +11,7 @@ import {
   agregarTarea as agregarTareaAdapter,
   actualizarTarea as actualizarTareaAdapter,
   corregirTarea as corregirTareaAdapter,
+  sincronizarConInspeccion as sincronizarConInspeccionAdapter,
   eliminarTarea as eliminarTareaAdapter,
   aprobarTarea as aprobarTareaAdapter,
   aprobarPlanGlobal as aprobarPlanGlobalAdapter,
@@ -456,6 +457,29 @@ export function usePlanesAccion() {
     [selectedPlan, showSnackbar],
   );
 
+  /** El admin trae al plan lo que su IRO dice ahora (observaciones, supervisor…). */
+  const sincronizarConInspeccion = useCallback(async () => {
+    if (!selectedPlan) return;
+    setIsPending(true);
+    try {
+      const result = await sincronizarConInspeccionAdapter(selectedPlan._id);
+      if (result.success && result.data) {
+        setSelectedPlan(result.data.plan);
+        const { tareas, cabecera } = result.data;
+        showSnackbar(
+          tareas === 0 && cabecera === 0
+            ? "El plan ya estaba al día con su IRO"
+            : `✅ Datos de la IRO traídos: ${tareas} tarea(s) y ${cabecera} dato(s) de cabecera (quedó en el historial)`,
+          "success",
+        );
+      } else {
+        showSnackbar(`❌ ${result.error}`, "error");
+      }
+    } finally {
+      setIsPending(false);
+    }
+  }, [selectedPlan, showSnackbar]);
+
   const eliminarTarea = useCallback(
     async (tareaId: string) => {
       if (!selectedPlan) return;
@@ -543,6 +567,7 @@ export function usePlanesAccion() {
     agregarTarea,
     actualizarTarea,
     corregirTarea,
+    sincronizarConInspeccion,
     eliminarTarea,
     aprobarTarea,
     aprobarPlanGlobal,

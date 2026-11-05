@@ -104,6 +104,7 @@ export default function PlanesDeAccionPage() {
     agregarTarea,
     actualizarTarea,
     corregirTarea,
+    sincronizarConInspeccion,
     eliminarTarea,
     aprobarTarea,
     aprobarPlanGlobal,
@@ -337,6 +338,7 @@ export default function PlanesDeAccionPage() {
           onAddTarea={agregarTarea}
           onUpdateTarea={actualizarTarea}
           onCorregirTarea={corregirTarea}
+          onSincronizarConInspeccion={sincronizarConInspeccion}
           onDeleteTarea={eliminarTarea}
           onApproveTarea={aprobarTarea}
           onApprovePlan={aprobarPlanGlobal}
@@ -543,7 +545,6 @@ export default function PlanesDeAccionPage() {
         planes={filteredPlanes}
         isLoading={isPending}
         onView={handleViewPlan}
-        onEdit={handleOpenEditHeaderModal}
         onDelete={handleDeletePlan}
       />
 

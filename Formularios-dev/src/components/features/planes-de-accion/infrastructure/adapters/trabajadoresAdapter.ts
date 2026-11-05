@@ -1,6 +1,17 @@
 "use server";
 
-import { obtenerResponsablesDeCierreApi } from "@/lib/actions/trabajador-actions";
+import {
+  obtenerResponsablesDeCierreApi,
+  obtenerTrabajadoresCompletos,
+} from "@/lib/actions/trabajador-actions";
+
+/** Los nombres de todos los trabajadores, para nombrar a quien observó. */
+export async function obtenerNombresDeTrabajadores(): Promise<string[]> {
+  const trabajadores = await obtenerTrabajadoresCompletos();
+  return [...new Set(trabajadores.map((t) => t.nomina).filter(Boolean))].sort(
+    (a, b) => a.localeCompare(b, "es"),
+  );
+}
 
 export interface ResponsableCierreOption {
   nomina: string;

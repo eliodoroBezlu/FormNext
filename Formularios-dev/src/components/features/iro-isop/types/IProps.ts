@@ -11,6 +11,7 @@ import type {
   Section,
   Question,
   QuestionResponse,
+  CambioDesdePlan,
 } from "@/types/formTypes";
 
 export interface PersonalInvolucrado {
@@ -26,6 +27,8 @@ export interface InspectionFormData {
   aspectosPositivos: string;
   aspectosAdicionales: string;
   personalInvolucrado?: PersonalInvolucrado[];
+  /** Solo para mostrar: comentarios corregidos desde el plan (no se envía). */
+  cambiosDesdePlan?: CambioDesdePlan[];
 }
 
 export interface InspectionFormProps {

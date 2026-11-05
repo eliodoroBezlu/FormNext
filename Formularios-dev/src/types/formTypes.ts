@@ -442,6 +442,18 @@ export interface PersonalInvolucrado {
   nombre: string;
   ci: string;
 }
+/** Un comentario de la IRO corregido desde el plan de acción (lo anota el backend). */
+export interface CambioDesdePlan {
+  fecha: string
+  usuario: string
+  planId: string
+  seccion: string
+  pregunta: string
+  antes: string
+  despues: string
+  motivo?: string
+}
+
 export interface FormInstance {
   _id: string
   templateId: string
@@ -456,6 +468,9 @@ export interface FormInstance {
   
   aspectosPositivos?: string
   aspectosAdicionales?: string
+
+  /** Comentarios corregidos desde el plan de acción. */
+  cambiosDesdePlan?: CambioDesdePlan[]
   
   // Campos calculados automáticamente para toda la instancia
   totalObtainedPoints: number // Suma de obtainedPoints de todas las secciones

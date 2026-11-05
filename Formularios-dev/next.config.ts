@@ -3,6 +3,17 @@ import type { NextConfig } from "next";
 const apiUrl     = process.env.NEXT_PUBLIC_API_URL || '';
 const iamCoreUrl = process.env.IAM_CORE_URL || 'http://localhost:4000';
 
+// La web del servicio de formularios se muestra en un iframe (pestaña de
+// pruebas): sin `frame-src` el CSP cae en `default-src 'self'` y la bloquea.
+// Solo su origen, y solo si está configurada.
+const webFormularios = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_FORMULARIOS_WEB_URL || '').origin;
+  } catch {
+    return '';
+  }
+})();
+
 const nextConfig: NextConfig = {
   /* config options here */
 
@@ -63,7 +74,7 @@ const nextConfig: NextConfig = {
           // Cabecera CSP (Content Security Policy)
           {
             key: 'Content-Security-Policy',
-            value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://res.cloudinary.com; font-src 'self'; connect-src 'self'  ${apiUrl} http://localhost:8080 https://res.cloudinary.com; frame-ancestors 'self';`
+            value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://res.cloudinary.com; font-src 'self'; connect-src 'self'  ${apiUrl} http://localhost:8080 https://res.cloudinary.com; frame-src 'self' ${webFormularios}; frame-ancestors 'self';`
           },
           // Anti-Clickjacking
           {

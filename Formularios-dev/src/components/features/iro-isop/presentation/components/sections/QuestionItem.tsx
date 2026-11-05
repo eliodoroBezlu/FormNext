@@ -1,11 +1,16 @@
 import React from "react";
 import { Box, Typography, Grid, Paper } from "@mui/material";
-import { Controller, useFormContext } from "react-hook-form";
+import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { Select } from "@/components/ui/inputs/Select";
 import { Input } from "@/components/ui/inputs/Input";
 import { valoracionOptions } from "@/lib/constants";
 import type { QuestionItemProps } from "@/components/features/iro-isop/types/IProps";
 import { motivoDelComentario } from "@/components/features/iro-isop/domain/models/comentarioObligatorio";
+import {
+  textoDelCambio,
+  ultimoCambioDesdePlan,
+} from "@/components/features/iro-isop/domain/models/cambiosDesdePlan";
+import type { InspectionFormData } from "@/components/features/iro-isop/types/IProps";
 
 export const QuestionItem = React.memo(
   ({
@@ -25,6 +30,12 @@ export const QuestionItem = React.memo(
     const responseError = questionErrors?.[questionIndex] as Record<string, unknown> | undefined;
     const commentError = questionErrors?.[questionIndex] as Record<string, unknown> | undefined;
     const hasError = !!responseError || !!commentError;
+
+    // Si el comentario se corrigió desde el plan de acción, quién y cuándo.
+    const cambiosDesdePlan = useWatch<InspectionFormData, "cambiosDesdePlan">({
+      name: "cambiosDesdePlan",
+    });
+    const cambioDesdePlan = ultimoCambioDesdePlan(cambiosDesdePlan, section.title, question.text);
 
     /** Si esta respuesta exige comentario, el mensaje; si no, `null`. */
     const comentarioPedido = () => {
@@ -185,6 +196,15 @@ export const QuestionItem = React.memo(
                   />
                 )}
               />
+              {cambioDesdePlan && (
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: "block", mt: 0.5, lineHeight: 1.3 }}
+                >
+                  {textoDelCambio(cambioDesdePlan)}
+                </Typography>
+              )}
             </Box>
           </Grid>
         </Grid>

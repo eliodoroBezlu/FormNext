@@ -279,6 +279,31 @@ export async function corregirTarea(
   }
 }
 
+/**
+ * El admin trae al plan lo que su IRO dice ahora (`POST …/sincronizar-inspeccion`)
+ * y vuelve a leer el plan. Lo que se pisa queda en el historial de cada tarea.
+ */
+export async function sincronizarConInspeccion(
+  planId: string,
+): Promise<ActionResult<{ plan: PlanDeAccion; tareas: number; cabecera: number }>> {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(
+      `${API_URL}/planes-accion/${planId}/sincronizar-inspeccion`,
+      { method: "POST", headers },
+    );
+    const resumen = await handleApiResponse<{ cabecera: number; tareas: number }>(response);
+    const plan = await obtenerPlanPorId(planId);
+    return { success: true, data: { plan, ...resumen } };
+  } catch (error) {
+    console.error("Error sincronizando con la inspección:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "No se pudieron traer los datos de la IRO",
+    };
+  }
+}
+
 export async function actualizarTarea(
   planId: string,
   tareaId: string,

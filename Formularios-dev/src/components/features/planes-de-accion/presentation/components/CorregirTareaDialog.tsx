@@ -158,6 +158,7 @@ export function CorregirTareaDialog({
           <CamposDelHallazgo
             control={control}
             vieneDeInspeccion={!!tarea?.instanceId}
+            pregunta={{ seccion: tarea?.sectionTitle, texto: tarea?.questionText }}
           />
 
           <Controller

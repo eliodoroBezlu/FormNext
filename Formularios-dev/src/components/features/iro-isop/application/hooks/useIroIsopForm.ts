@@ -46,6 +46,7 @@ export const useIroIsopForm = ({
             aspectosPositivos: initialData.aspectosPositivos || "",
             aspectosAdicionales: initialData.aspectosAdicionales || "",
             personalInvolucrado: initialData.personalInvolucrado || [],
+            cambiosDesdePlan: initialData.cambiosDesdePlan ?? [],
           }
         : {
             verificationList: template.verificationFields
@@ -123,6 +124,7 @@ export const useIroIsopForm = ({
       aspectosPositivos: initialData.aspectosPositivos || "",
       aspectosAdicionales: initialData.aspectosAdicionales || "",
       personalInvolucrado: initialData.personalInvolucrado || [],
+      cambiosDesdePlan: initialData.cambiosDesdePlan ?? [],
     });
     setMetricsTrigger((prev) => prev + 1);
   }
