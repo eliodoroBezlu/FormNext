@@ -4,6 +4,7 @@ import { ApiResponse, FormInstance, InspectionTeamMember, SectionResponse, Valor
 import { revalidatePath } from "next/cache"
 import {  getAuthHeaders, handleApiResponse } from "./helpers"
 import { API_BASE_URL } from "../constants"
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 
 
@@ -72,7 +73,7 @@ export async function createInstance(instanceData: CreateInstanceData): Promise<
     console.error('Error creating instance:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido al crear instancia'
+      error: mensajeParaUsuario(error, 'Error desconocido al crear instancia')
     };
   }
 }
@@ -127,7 +128,7 @@ export async function getInstances(filters?: GetInstancesFilters): Promise<ApiRe
     console.error('Error fetching instances:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido al obtener instancias'
+      error: mensajeParaUsuario(error, 'Error desconocido al obtener instancias')
     };
   }
 }
@@ -155,7 +156,7 @@ export async function getInstanceById(id: string): Promise<ApiResponse<FormInsta
     
     const errorMessage = error instanceof Error && error.message.includes('404')
       ? 'Instancia no encontrada'
-      : error instanceof Error ? error.message : 'Error desconocido al obtener instancia';
+      : mensajeParaUsuario(error, 'Error desconocido al obtener instancia');
     
     return {
       success: false,
@@ -224,9 +225,7 @@ export async function updateInstance(
     const errorMessage =
       error instanceof Error && error.message.includes('404')
         ? 'Instancia no encontrada'
-        : error instanceof Error
-          ? error.message
-          : 'Error desconocido al actualizar instancia';
+        : mensajeParaUsuario(error, 'Error desconocido al actualizar instancia');
 
     return {
       success: false,
@@ -269,7 +268,7 @@ export async function updateInstanceStatus(
     // Manejo específico para instancia no encontrada
     const errorMessage = error instanceof Error && error.message.includes('404')
       ? 'Instancia no encontrada'
-      : error instanceof Error ? error.message : 'Error desconocido al actualizar estado';
+      : mensajeParaUsuario(error, 'Error desconocido al actualizar estado');
     
     return {
       success: false,

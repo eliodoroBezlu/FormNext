@@ -28,6 +28,7 @@ import {
   type ClaveAnimacion,
   type ConfigBienvenida,
 } from "../../domain/models/Bienvenida";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 /** Área con la que se previsualiza; vacío = el mensaje general. */
 const SIN_AREA = "";
@@ -80,7 +81,7 @@ export function ConfigBienvenidaForm() {
     try {
       cambiar("logoUrl", await bienvenidaAdapter.subirLogo(archivo));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo subir la imagen.");
+      setError(mensajeParaUsuario(e, "No se pudo subir la imagen."));
     } finally {
       setSubiendo(false);
       // Sin esto, volver a elegir el mismo archivo no dispara `onChange`.
@@ -101,7 +102,7 @@ export function ConfigBienvenidaForm() {
         setGuardado(JSON.stringify(c));
       })
       .catch((e: unknown) => {
-        if (vigente) setError(e instanceof Error ? e.message : "No se pudo cargar.");
+        if (vigente) setError(mensajeParaUsuario(e, "No se pudo cargar."));
       })
       .finally(() => {
         if (vigente) setCargando(false);
@@ -145,7 +146,7 @@ export function ConfigBienvenidaForm() {
       setGuardado(JSON.stringify(confirmado));
       setAviso("Configuración guardada.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo guardar.");
+      setError(mensajeParaUsuario(e, "No se pudo guardar."));
     } finally {
       setGuardando(false);
     }

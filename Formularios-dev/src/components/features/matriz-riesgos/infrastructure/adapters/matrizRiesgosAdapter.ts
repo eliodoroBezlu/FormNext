@@ -17,6 +17,7 @@ import {
   ResumenImportacionGuardada,
   RiesgoDto,
 } from "../../domain/models/IProps";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 export interface ActionResult<T> {
   success: boolean;
@@ -40,7 +41,7 @@ async function headersMultipart(): Promise<Record<string, string>> {
 }
 
 const mensajeDeError = (error: unknown, porDefecto: string): string =>
-  error instanceof Error ? error.message : porDefecto;
+  mensajeParaUsuario(error, porDefecto);
 
 // ────────────────────────────────────────────────────────────────────────────
 // Importación

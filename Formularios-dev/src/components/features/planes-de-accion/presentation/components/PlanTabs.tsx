@@ -13,12 +13,12 @@ interface PlanTabsProps {
 const PESTANAS: {
   valor: TabValue;
   texto: string;
-  color: 'error' | 'warning' | 'success' | 'primary' | 'default';
+  color: 'info' | 'error' | 'warning' | 'success' | 'primary' | 'default';
 }[] = [
-  { valor: 'abierto', texto: 'Abiertas', color: 'error' },
+  { valor: 'abierto', texto: 'Abiertas', color: 'info' },
   { valor: 'en-progreso', texto: 'En Progreso', color: 'warning' },
   { valor: 'cerrado', texto: 'Cerradas', color: 'success' },
-  { valor: 'aprobado', texto: 'Aprobadas', color: 'primary' },
+  { valor: 'aprobado', texto: 'Aprobadas', color: 'success' },
   // IRO terminadas sin observaciones que cumplan el criterio: cerradas sin
   // plan, con el motivo en cada tarjeta.
   { valor: 'sin-observaciones', texto: 'Sin observaciones', color: 'default' },

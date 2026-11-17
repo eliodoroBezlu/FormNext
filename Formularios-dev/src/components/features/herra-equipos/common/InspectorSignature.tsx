@@ -120,7 +120,7 @@ export function InspectorSignature({
             defaultValue=""
             rules={{
               required: field.required
-                ? `${field.label || key} es obligatorio`
+                ? (field.label ? `${field.label} es obligatorio` : "Este campo es obligatorio")
                 : false,
             }}
             render={({ field: controllerField }) => (
@@ -147,7 +147,7 @@ export function InspectorSignature({
             defaultValue=""
             rules={{
               required: field.required
-                ? `${field.label || key} es obligatorio`
+                ? "Falta la firma: dibújela y pulse «Guardar Firma»."
                 : false,
             }}
             render={({ field: controllerField }) => (
@@ -215,7 +215,7 @@ export function InspectorSignature({
             {...commonProps}
             {...register(fieldName as Path<FormDataHerraEquipos>, {
               required: field.required
-                ? `${field.label || key} es obligatorio`
+                ? (field.label ? `${field.label} es obligatorio` : "Este campo es obligatorio")
                 : false,
             })}
             disabled={readonly}

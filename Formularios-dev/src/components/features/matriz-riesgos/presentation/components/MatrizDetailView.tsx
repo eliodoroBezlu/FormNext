@@ -42,6 +42,8 @@ import {
   requierePgr,
   verificadoresDe,
 } from "../../domain/matrizHelpers";
+import { EstadoChip } from "@/components/ui/feedback/EstadoChip";
+import { estiloDeNivel } from "./NivelRiesgoChip";
 
 function Dato({ etiqueta, valor }: { etiqueta: string; valor?: string | number }) {
   return (
@@ -222,11 +224,10 @@ export function MatrizDetailView({ id }: { id: string }) {
             {matriz.areaNombre} · {matriz.superintendencia}
           </Typography>
         </Box>
-        <Chip
-          label={ETIQUETA_ESTADO[matriz.estado]}
-          color={
-            colorDeEstado(matriz.estado) as "default" | "warning" | "success"
-          }
+        <EstadoChip
+          etiqueta={ETIQUETA_ESTADO[matriz.estado]}
+          color={colorDeEstado(matriz.estado)}
+          size="medium"
         />
       </Stack>
 
@@ -298,7 +299,7 @@ export function MatrizDetailView({ id }: { id: string }) {
                   key={d.nivel}
                   size="small"
                   label={`${d.nivel}: ${d.cantidad}`}
-                  sx={{ bgcolor: d.color, color: "#fff" }}
+                  sx={estiloDeNivel(d.color)}
                 />
               ))}
             </Stack>

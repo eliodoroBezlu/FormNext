@@ -2,6 +2,7 @@
 
 import { API_BASE_URL } from "../constants";
 import { getAuthHeaders, handleApiResponse } from "./helpers";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 export interface ClasificacionBackend {
   _id: string;
@@ -28,7 +29,7 @@ export async function obtenerClasificaciones(): Promise<ClasificacionBackend[]> 
     return handleApiResponse<ClasificacionBackend[]>(response);
   } catch (error) {
     console.error('Error al obtener clasificaciones:', error);
-    throw new Error(`No se pudieron obtener las clasificaciones: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudieron obtener las clasificaciones: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -47,7 +48,7 @@ export async function crearClasificacion(data: ClasificacionForm): Promise<Clasi
     return handleApiResponse<ClasificacionBackend>(response);
   } catch (error) {
     console.error('Error al crear clasificación:', error);
-    throw new Error(`No se pudo crear la clasificación: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo crear la clasificación: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -66,7 +67,7 @@ export async function actualizarClasificacion(id: string, data: ClasificacionFor
     return handleApiResponse<ClasificacionBackend>(response);
   } catch (error) {
     console.error('Error al actualizar clasificación:', error);
-    throw new Error(`No se pudo actualizar la clasificación: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo actualizar la clasificación: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -84,6 +85,6 @@ export async function eliminarClasificacion(id: string): Promise<void> {
     }
   } catch (error) {
     console.error('Error al eliminar clasificación:', error);
-    throw new Error(`No se pudo eliminar la clasificación: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo eliminar la clasificación: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }

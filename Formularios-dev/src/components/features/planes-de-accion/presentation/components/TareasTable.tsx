@@ -27,21 +27,33 @@ import {
 import { TareaObservacion } from "../../domain/models/IProps";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Role } from "@/lib/routePermissions";
+import { EstadoChip } from "@/components/ui/feedback/EstadoChip";
+import { estadoDeTarea } from "../../domain/estadosVisuales";
+import { alpha } from "@mui/material/styles";
+import { keyframes } from "@emotion/react";
+import { puedeContinuarTarea } from "../../domain/accionesTarea";
+
+/** La fila recién cambiada: aparece teñida, se sostiene un instante y se apaga. */
+const destello = keyframes`
+  0%, 30% { background-color: var(--resalte); }
+  100% { background-color: transparent; }
+`;
 
 interface TareasTableProps {
   tareas: TareaObservacion[];
-  esGeneradaDesdeInspeccion: boolean;
   onEdit: (tarea: TareaObservacion) => void;
   onDelete: (tareaId: string) => void;
   onApprove: (tareaId: string) => void;
   /** Corrección del admin: datos y estado, también hacia atrás. */
   onCorregir: (tarea: TareaObservacion) => void;
   onHistorial: (tarea: TareaObservacion) => void;
+  /** Tareas recién cambiadas: se iluminan un momento (ver `domain/resaltado.ts`). */
+  resaltadas?: readonly string[];
 }
 
 export function TareasTable({
   tareas,
-  esGeneradaDesdeInspeccion,
+  resaltadas = [],
   onEdit,
   onDelete,
   onApprove,
@@ -52,32 +64,6 @@ export function TareasTable({
   const canApprove = hasRole(Role.SUPERINTENDENTE) || hasRole(Role.ADMIN);
   const isAdmin = hasRole(Role.ADMIN);
 
-  const getStatusColor = (estado: TareaObservacion["estado"]) => {
-    switch (estado) {
-      case "abierto":
-        return "error";
-      case "en-progreso":
-        return "warning";
-      case "cerrado":
-        return "success";
-      default:
-        return "default";
-    }
-  };
-
-  const getStatusLabel = (estado: TareaObservacion["estado"]) => {
-    switch (estado) {
-      case "abierto":
-        return "Abierto";
-      case "en-progreso":
-        return "En Progreso";
-      case "cerrado":
-        return "Cerrado";
-      default:
-        return estado;
-    }
-  };
-
   // Una tarea recién generada todavía no tiene fecha acordada: antes salía
   // «Invalid Date».
   const formatDate = (date?: Date | string): string => {
@@ -85,7 +71,9 @@ export function TareasTable({
     const fecha = new Date(date);
     return Number.isNaN(fecha.getTime())
       ? "—"
-      : fecha.toLocaleDateString("es-ES");
+      : // Días de calendario guardados como medianoche UTC (ver TareaFormModal):
+        // en la hora local salían un día antes.
+        fecha.toLocaleDateString("es-ES", { timeZone: "UTC" });
   };
 
   return (
@@ -95,7 +83,7 @@ export function TareasTable({
     >
       <Table sx={{ minWidth: 2600 }}>
         <TableHead
-          sx={{ backgroundColor: "#f5f5f5", position: "sticky", top: 0 }}
+          sx={{ backgroundColor: "background.default", position: "sticky", top: 0 }}
         >
           <TableRow>
             <TableCell
@@ -198,7 +186,7 @@ export function TareasTable({
             <TableRow>
               <TableCell
                 colSpan={17}
-                sx={{ textAlign: "center", py: 3, color: "#666" }}
+                sx={{ textAlign: "center", py: 3, color: "text.secondary" }}
               >
                 No hay tareas registradas en este plan
               </TableCell>
@@ -208,7 +196,19 @@ export function TareasTable({
               <TableRow
                 key={tarea._id}
                 hover
-                sx={{ "&:hover": { backgroundColor: "#fafafa" } }}
+                sx={[
+                  { "&:hover": { backgroundColor: "action.hover" } },
+                  // Recién cambiada: se ilumina y se apaga sola.
+                  resaltadas.includes(tarea._id ?? "") &&
+                    ((theme) => ({
+                      "--resalte": alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.22 : 0.14),
+                      animation: `${destello} 2.6s ease-out`,
+                      "@media (prefers-reduced-motion: reduce)": {
+                        animation: "none",
+                        backgroundColor: "var(--resalte)",
+                      },
+                    })),
+                ]}
               >
                 <TableCell sx={{ fontWeight: 500, minWidth: 40 }}>
                   {tarea.numeroItem}
@@ -347,26 +347,25 @@ export function TareasTable({
                       ))}
                     </Box>
                   ) : (
-                    <Box sx={{ color: "#bbb", fontSize: "0.875rem" }}>
+                    <Box sx={{ color: "text.secondary", fontSize: "0.875rem" }}>
                       Sin evidencias
                     </Box>
                   )}
                 </TableCell>
 
                 <TableCell sx={{ minWidth: 100 }} align="center">
-                  <Chip
-                    label={getStatusLabel(tarea.estado)}
-                    color={getStatusColor(tarea.estado)}
-                    size="small"
+                  <EstadoChip
+                    etiqueta={estadoDeTarea(tarea.estado).etiqueta}
+                    color={estadoDeTarea(tarea.estado).color}
                   />
                 </TableCell>
                 <TableCell sx={{ minWidth: 90 }} align="center">
                   {tarea.aprobado ? (
                     <CheckCircle
-                      sx={{ color: "#4caf50", fontSize: "1.5rem" }}
+                      sx={{ color: "success.main", fontSize: "1.5rem" }}
                     />
                   ) : (
-                    <Box sx={{ color: "#bbb", fontSize: "1.5rem" }}>-</Box>
+                    <Box sx={{ color: "text.secondary", fontSize: "1.5rem" }}>-</Box>
                   )}
                 </TableCell>
                 <TableCell sx={{ minWidth: 140, textAlign: "center", whiteSpace: "nowrap" }}>
@@ -402,9 +401,7 @@ export function TareasTable({
                     </>
                   )}
 
-                  {!isAdmin &&
-                    esGeneradaDesdeInspeccion &&
-                    !tarea.aprobado && (
+                  {puedeContinuarTarea(tarea, isAdmin) && (
                       <Tooltip title="Continuar">
                         <IconButton
                           size="small"
@@ -425,7 +422,7 @@ export function TareasTable({
                         >
                           <CheckCircle
                             fontSize="small"
-                            sx={{ color: "#4caf50" }}
+                            sx={{ color: "success.main" }}
                           />
                         </IconButton>
                       </Tooltip>

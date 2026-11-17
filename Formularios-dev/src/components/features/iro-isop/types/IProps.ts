@@ -61,6 +61,8 @@ export interface IroIsopInspectionFormProps {
   success: string | null;
   error: string | null;
   submitting: boolean;
+  /** Qué botón disparó el guardado en curso. */
+  accionDeGuardado?: "avance" | "terminar" | null;
 
   teamMembers: FieldArrayWithId<InspectionFormData, "inspectionTeam", "id">[];
   addTeamMember: () => void;

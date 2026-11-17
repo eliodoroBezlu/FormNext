@@ -144,9 +144,10 @@ export const ImageManager: React.FC<ImageManagerProps> = ({ sectionPath, control
           p={3}
           textAlign="center"
           sx={{
-            border: "2px dashed #ddd",
+            border: "2px dashed",
+            borderColor: "divider",
             borderRadius: 2,
-            backgroundColor: "#fafafa",
+            backgroundColor: "action.hover",
           }}
         >
           <ImageIcon sx={{ fontSize: 48, color: "text.secondary", mb: 1 }} />
@@ -163,7 +164,7 @@ export const ImageManager: React.FC<ImageManagerProps> = ({ sectionPath, control
                   sx={{
                     position: "relative",
                     paddingTop: "75%",
-                    backgroundColor: "#f5f5f5",
+                    backgroundColor: "background.default",
                     overflow: "hidden",
                   }}
                 >
@@ -259,7 +260,7 @@ export const ImageManager: React.FC<ImageManagerProps> = ({ sectionPath, control
                       sx={{
                         width: "100%",
                         height: 200,
-                        backgroundColor: "#f5f5f5",
+                        backgroundColor: "background.default",
                         borderRadius: 1,
                         overflow: "hidden",
                         display: "flex",
@@ -287,7 +288,7 @@ export const ImageManager: React.FC<ImageManagerProps> = ({ sectionPath, control
                     sx={{
                       width: "100%",
                       height: 200,
-                      backgroundColor: "#f5f5f5",
+                      backgroundColor: "background.default",
                       borderRadius: 1,
                       overflow: "hidden",
                       display: "flex",

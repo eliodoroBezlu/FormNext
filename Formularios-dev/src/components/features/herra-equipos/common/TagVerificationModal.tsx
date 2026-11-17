@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import { Check, Info } from '@mui/icons-material';
 import { checkEquipmentStatus } from '@/lib/actions/equipment-tracking';
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 // ✅ Definir interfaces tipadas
 interface TrackingData {
@@ -107,7 +108,7 @@ export function TagVerificationModal({
 
     } catch (err) {
       console.error('❌ Error en verificación:', err);
-      setError(err instanceof Error ? err.message : 'Error al verificar el equipo');
+      setError(mensajeParaUsuario(err, 'Error al verificar el equipo'));
     } finally {
       setLoading(false);
     }

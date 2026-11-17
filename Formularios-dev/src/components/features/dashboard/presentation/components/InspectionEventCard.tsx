@@ -2,14 +2,11 @@
 
 import React from "react";
 import { Box, Typography, Chip, Button, Paper } from "@mui/material";
-import {
-  CheckCircle,
-  HourglassEmpty,
-  Cancel,
-  Circle,
-  OpenInNew,
-  ThumbUp,
-} from "@mui/icons-material";
+import { alpha } from "@mui/material/styles";
+import { EditNote, OpenInNew, ThumbUp } from "@mui/icons-material";
+import { EstadoChip } from "@/components/ui/feedback/EstadoChip";
+import { estadoDeInspeccion } from "@/components/features/herra-equipos/domain/models/estadosVisuales";
+import { ICONO_DE_ESTADO } from "@/components/features/herra-equipos/common/InspectionStatusChip";
 import { useRouter } from "next/navigation";
 import type { InspectionResponse } from "../../infrastructure/adapters/dashboardAdapter";
 import { InspectionStatus } from "@/components/features/herra-equipos/types/IProps";
@@ -21,56 +18,15 @@ interface InspectionEventCardProps {
   compact?: boolean;
 }
 
-const STATUS_CONFIG: Record<
-  string,
-  { label: string; color: string; bg: string; icon: React.ReactNode }
-> = {
-  [InspectionStatus.COMPLETED]: {
-    label: "Completada",
-    color: "#16a34a",
-    bg: "#f0fdf4",
-    icon: <CheckCircle sx={{ fontSize: 15, color: "#16a34a" }} />,
-  },
-  [InspectionStatus.PENDING_APPROVAL]: {
-    label: "Pend. Aprobación",
-    color: "#d97706",
-    bg: "#fffbeb",
-    icon: <HourglassEmpty sx={{ fontSize: 15, color: "#d97706" }} />,
-  },
-  [InspectionStatus.APPROVED]: {
-    label: "Aprobada",
-    color: "#2563eb",
-    bg: "#eff6ff",
-    icon: <CheckCircle sx={{ fontSize: 15, color: "#2563eb" }} />,
-  },
-  [InspectionStatus.REJECTED]: {
-    label: "Rechazada",
-    color: "#dc2626",
-    bg: "#fef2f2",
-    icon: <Cancel sx={{ fontSize: 15, color: "#dc2626" }} />,
-  },
-  [InspectionStatus.DRAFT]: {
-    label: "Borrador",
-    color: "#6b7280",
-    bg: "#f9fafb",
-    icon: <Circle sx={{ fontSize: 15, color: "#6b7280" }} />,
-  },
-  [InspectionStatus.IN_PROGRESS]: {
-    label: "En Progreso",
-    color: "#7c3aed",
-    bg: "#f5f3ff",
-    icon: <HourglassEmpty sx={{ fontSize: 15, color: "#7c3aed" }} />,
-  },
-};
-
 export function InspectionEventCard({
   inspection,
   showApproveButton = false,
   compact = false,
 }: InspectionEventCardProps) {
   const router = useRouter();
-  const status =
-    STATUS_CONFIG[inspection.status] || STATUS_CONFIG[InspectionStatus.DRAFT];
+  // Etiqueta y color de la misma tabla que el chip del formulario y el reporte.
+  const estado = estadoDeInspeccion(inspection.status);
+  const tono = estado.color === "default" ? "secondary" : estado.color;
 
   const handleView = () => {
     router.push(
@@ -102,12 +58,12 @@ export function InspectionEventCard({
         mb: 1,
         borderRadius: 2,
         border: "1px solid",
-        borderColor: "rgba(0,0,0,0.06)",
-        bgcolor: status.bg,
+        borderColor: "divider",
+        bgcolor: (theme) => alpha(theme.palette[tono].main, 0.06),
         transition: "box-shadow 0.2s, border-color 0.2s",
         "&:hover": {
-          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-          borderColor: status.color + "40",
+          boxShadow: 2,
+          borderColor: (theme) => alpha(theme.palette[tono].main, 0.35),
         },
       }}
     >
@@ -128,7 +84,9 @@ export function InspectionEventCard({
             minWidth: 0,
           }}
         >
-          <Box sx={{ mt: 0.3, flexShrink: 0 }}>{status.icon}</Box>
+          <Box sx={{ mt: 0.3, flexShrink: 0, display: "flex", color: `${tono}.main`, "& svg": { fontSize: 15 } }}>
+            {ICONO_DE_ESTADO[inspection.status] ?? <EditNote />}
+          </Box>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography
               sx={{
@@ -149,10 +107,10 @@ export function InspectionEventCard({
             >
               {inspectorName}
               {inspection.area && (
-                <span style={{ color: "#6366f1", fontWeight: 600 }}>
+                <Box component="span" sx={{ color: "primary.main", fontWeight: 600 }}>
                   {" "}
                   · {inspection.area}
-                </span>
+                </Box>
               )}
             </Typography>
 
@@ -165,18 +123,7 @@ export function InspectionEventCard({
                 flexWrap: "wrap",
               }}
             >
-              <Chip
-                label={status.label}
-                size="small"
-                sx={{
-                  fontSize: "10px",
-                  height: 20,
-                  bgcolor: status.color + "18",
-                  color: status.color,
-                  fontWeight: 700,
-                  border: "1px solid " + status.color + "30",
-                }}
-              />
+              <EstadoChip etiqueta={estado.etiqueta} color={estado.color} />
               {codigoEquipo && (
                 <Chip
                   label={codigoEquipo}
@@ -209,21 +156,12 @@ export function InspectionEventCard({
             {showApproveButton &&
               inspection.status === InspectionStatus.PENDING_APPROVAL && (
                 <Button
+                  type="button"
                   size="small"
+                  variant="contained"
                   startIcon={<ThumbUp sx={{ fontSize: 13 }} />}
                   onClick={handleApprove}
-                  sx={{
-                    fontSize: "11px",
-                    py: 0.5,
-                    px: 1.2,
-                    borderRadius: 1.5,
-                    bgcolor: "#d97706",
-                    color: "#fff",
-                    fontWeight: 700,
-                    textTransform: "none",
-                    minWidth: 0,
-                    "&:hover": { bgcolor: "#b45309" },
-                  }}
+                  sx={{ fontSize: "11px", py: 0.5, px: 1.2, borderRadius: 1.5, fontWeight: 700, minWidth: 0 }}
                 >
                   Aprobar
                 </Button>
@@ -237,12 +175,12 @@ export function InspectionEventCard({
                 py: 0.5,
                 px: 1.2,
                 borderRadius: 1.5,
-                bgcolor: "rgba(99,102,241,0.08)",
-                color: "#6366f1",
+                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+                color: "primary.main",
                 fontWeight: 700,
                 textTransform: "none",
                 minWidth: 0,
-                "&:hover": { bgcolor: "rgba(99,102,241,0.16)" },
+                "&:hover": { bgcolor: (theme) => alpha(theme.palette.primary.main, 0.16) },
               }}
             >
               Ver

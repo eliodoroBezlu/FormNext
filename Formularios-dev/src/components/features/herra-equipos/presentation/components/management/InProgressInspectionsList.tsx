@@ -19,6 +19,7 @@ import {
   getInProgressInspections,
   InProgressInspection,
 } from "@/lib/actions/inspection-herra-equipos";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 interface InProgressInspectionsListProps {
   filterByTemplateCode?: string;
@@ -47,9 +48,7 @@ export function InProgressInspectionsList({
         setInspections(result.data ?? []);
       } catch (err) {
         setError(
-          err instanceof Error
-            ? err.message
-            : "Error al cargar inspecciones en progreso",
+          mensajeParaUsuario(err, "Error al cargar inspecciones en progreso"),
         );
       } finally {
         setLoading(false);

@@ -38,6 +38,7 @@ import {
 } from "@mui/icons-material";
 import { Trabajador } from "@/types/trabajador";
 import { obtenerTrabajadores } from "@/lib/actions/trabajador-actions";
+import { SincronizarTrabajadoresIam } from "@/components/features/settings/presentation/components/SincronizarTrabajadoresIam";
 
 const IAM_PORTAL_URL =
   process.env.NEXT_PUBLIC_IAM_PORTAL_URL ?? "http://localhost:3005";
@@ -98,6 +99,15 @@ export default function GestionTrabajadores() {
     return () => {
       vigente = false;
     };
+  }, [consultar, aplicar, avisarFallo]);
+
+  /** Vuelve a pedir la lista (después de sincronizar con el IAM). */
+  const recargar = useCallback(() => {
+    setLoading(true);
+    consultar()
+      .then(aplicar)
+      .catch(avisarFallo)
+      .finally(() => setLoading(false));
   }, [consultar, aplicar, avisarFallo]);
 
   const filtrarTrabajadores = () => {
@@ -187,10 +197,12 @@ export default function GestionTrabajadores() {
           </Button>
         }
       >
-        Estos datos se sincronizan desde IAM Core — esta pantalla es de solo
-        lectura. Para crear, editar o dar de baja trabajadores y usuarios, usá
-        el Portal IAM.
+        Estos datos vienen del Portal IAM y esta pantalla es de solo lectura.
+        Para crear, editar o dar de baja trabajadores y usuarios, usá el Portal
+        IAM; después, «Sincronizar con el IAM» los trae a forms.
       </Alert>
+
+      <SincronizarTrabajadoresIam alTerminar={recargar} />
 
       {/* PANEL DE FILTROS */}
       <Paper elevation={3} sx={{ mb: 4, p: 3, borderRadius: "8px" }}>
@@ -328,7 +340,7 @@ export default function GestionTrabajadores() {
             <TableContainer>
               <Table>
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
+                  <TableRow sx={{ backgroundColor: "background.default" }}>
                     <TableCell>CI</TableCell>
                     <TableCell>Nómina</TableCell>
                     <TableCell>Puesto</TableCell>
@@ -358,7 +370,7 @@ export default function GestionTrabajadores() {
                       .map((trabajador) => (
                         <TableRow
                           key={trabajador._id}
-                          sx={{ "&:hover": { backgroundColor: "#f9f9f9" } }}
+                          sx={{ "&:hover": { backgroundColor: "action.hover" } }}
                         >
                           <TableCell>
                             <Typography variant="body2" fontWeight="medium">

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   Box,
   Button,
-  Chip,
   CircularProgress,
   MenuItem,
   Paper,
@@ -27,6 +26,7 @@ import {
 } from "../../domain/models/IProps";
 import { colorDeEstado, ETIQUETA_ESTADO } from "../../domain/matrizHelpers";
 import { NuevaMatrizDialog } from "./NuevaMatrizDialog";
+import { EstadoChip } from "@/components/ui/feedback/EstadoChip";
 
 const ESTADOS: EstadoMatriz[] = [
   "BORRADOR",
@@ -199,15 +199,9 @@ export function MatrizListView() {
                   <TableCell align="center">{m.anio}</TableCell>
                   <TableCell align="center">v{m.version}</TableCell>
                   <TableCell>
-                    <Chip
-                      size="small"
-                      label={ETIQUETA_ESTADO[m.estado]}
-                      color={
-                        colorDeEstado(m.estado) as
-                          | "default"
-                          | "warning"
-                          | "success"
-                      }
+                    <EstadoChip
+                      etiqueta={ETIQUETA_ESTADO[m.estado]}
+                      color={colorDeEstado(m.estado)}
                     />
                   </TableCell>
                   <TableCell>

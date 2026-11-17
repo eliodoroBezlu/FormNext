@@ -190,7 +190,7 @@ export const QuestionBuilder = memo(function QuestionBuilder({
       ref={nodoRef}
       style={estilo}
       elevation={arrastrando ? 6 : 1}
-      sx={{ p: 2, mb: 2, backgroundColor: theme => theme.palette.mode === 'dark' ? 'background.paper' : '#fafafa' }}
+      sx={{ p: 2, mb: 2, backgroundColor: theme => theme.palette.mode === 'dark' ? 'background.paper' : 'action.hover' }}
     >
       <Box display="flex" alignItems="flex-start" gap={2}>
         <Box mt={0.5}>
@@ -323,7 +323,7 @@ export const QuestionBuilder = memo(function QuestionBuilder({
               </Grid>
               {(uploadedFile || (imageUrl && !uploadedFile)) && (
                 <Grid size={{ xs: 12 }}>
-                  <Box sx={{ width: "100%", height: 200, backgroundColor: "#f5f5f5", borderRadius: 1, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Box sx={{ width: "100%", height: 200, backgroundColor: "background.default", borderRadius: 1, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <Box
                       component="img" src={uploadedFile || imageUrl} alt="Preview"
                       onError={() => setImageError("No se pudo cargar la imagen")}

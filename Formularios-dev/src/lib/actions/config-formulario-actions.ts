@@ -2,6 +2,7 @@
 
 import { API_BASE_URL } from "../constants";
 import { getAuthHeaders, handleApiResponse } from "./helpers";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 export interface CampoFormulario {
   name: string;
@@ -30,7 +31,7 @@ export async function obtenerConfigFormularios(): Promise<ConfigFormularioBacken
     return handleApiResponse<ConfigFormularioBackend[]>(response);
   } catch (error) {
     console.error('Error al obtener config formularios:', error);
-    throw new Error(`No se pudieron obtener las configuraciones: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudieron obtener las configuraciones: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -46,7 +47,7 @@ export async function obtenerConfigFormularioPorTipo(tipoEquipo: string): Promis
     return handleApiResponse<ConfigFormularioBackend>(response);
   } catch (error) {
     console.error(`Error al obtener config formulario para ${tipoEquipo}:`, error);
-    throw new Error(`No se pudo obtener la configuración: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo obtener la configuración: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -65,7 +66,7 @@ export async function crearConfigFormulario(data: ConfigFormularioBackend): Prom
     return handleApiResponse<ConfigFormularioBackend>(response);
   } catch (error) {
     console.error('Error al crear config formulario:', error);
-    throw new Error(`No se pudo crear la configuración: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo crear la configuración: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -84,7 +85,7 @@ export async function actualizarConfigFormulario(tipoEquipo: string, data: Confi
     return handleApiResponse<ConfigFormularioBackend>(response);
   } catch (error) {
     console.error('Error al actualizar config formulario:', error);
-    throw new Error(`No se pudo actualizar la configuración: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo actualizar la configuración: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -102,6 +103,6 @@ export async function eliminarConfigFormulario(tipoEquipo: string): Promise<void
     }
   } catch (error) {
     console.error('Error al eliminar config formulario:', error);
-    throw new Error(`No se pudo eliminar la configuración: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo eliminar la configuración: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }

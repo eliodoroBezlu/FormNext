@@ -61,7 +61,7 @@ export function InspectionDetailModal({
             </Typography>
             <Box
               sx={{
-                bgcolor: '#f5f5f5',
+                bgcolor: 'background.default',
                 p: 2,
                 borderRadius: 1,
                 maxHeight: 300,

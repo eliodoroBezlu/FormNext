@@ -12,6 +12,7 @@ import {
 } from "@/components/features/herra-equipos/types/IProps";
 import { getAuthHeaders, handleApiResponse } from "./helpers";
 import { revalidatePath } from "next/cache";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 const INSPECTIONS_ENDPOINT = `${API_BASE_URL}/inspections-herra-equipos`;
@@ -195,7 +196,7 @@ export async function createInspectionHerraEquipos(
     console.error("❌ [INSPECTION_ACTION] Error al crear inspección:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido",
+      error: mensajeParaUsuario(error, "Error desconocido"),
     };
   }
 }
@@ -240,7 +241,7 @@ export async function approveInspection(
     console.error(`❌ [INSPECTION_ACTION] Error al aprobar inspección ${id}:`, error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido",
+      error: mensajeParaUsuario(error, "Error desconocido"),
     };
   }
 }
@@ -285,7 +286,7 @@ export async function rejectInspection(
     console.error(`❌ [INSPECTION_ACTION] Error al rechazar inspección ${id}:`, error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido",
+      error: mensajeParaUsuario(error, "Error desconocido"),
     };
   }
 }
@@ -330,7 +331,7 @@ export async function getPendingApprovals(
     console.error("❌ [INSPECTION_ACTION] Error al obtener pendientes:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido",
+      error: mensajeParaUsuario(error, "Error desconocido"),
       data: [],
     };
   }
@@ -444,7 +445,7 @@ export async function updateInProgressInspection(
     console.error(`❌ [INSPECTION_ACTION] Error al actualizar inspección ${id}:`, error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido",
+      error: mensajeParaUsuario(error, "Error desconocido"),
     };
   }
 }
@@ -480,7 +481,7 @@ export async function getInProgressInspections(filters?: {
     console.error("❌ [INSPECTION_ACTION] Error al obtener inspecciones en progreso:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido",
+      error: mensajeParaUsuario(error, "Error desconocido"),
       data: [],
     };
   }
@@ -522,7 +523,7 @@ export async function getInspectionsHerraEquipos(filters?: {
     console.error("❌ [INSPECTION_ACTION] Error al obtener inspecciones:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido",
+      error: mensajeParaUsuario(error, "Error desconocido"),
       data: [],
     };
   }
@@ -547,7 +548,7 @@ export async function getInspectionById(id: string): Promise<ApiResponse<Inspect
     console.error(`❌ [INSPECTION_ACTION] Error al obtener inspección ${id}:`, error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido",
+      error: mensajeParaUsuario(error, "Error desconocido"),
     };
   }
 }
@@ -576,7 +577,7 @@ export async function getDraftInspections(userId?: string): Promise<ApiResponse<
     console.error("❌ [INSPECTION_ACTION] Error al obtener borradores:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido",
+      error: mensajeParaUsuario(error, "Error desconocido"),
       data: [],
     };
   }
@@ -621,7 +622,7 @@ export async function updateInspection(
     console.error(`❌ [INSPECTION_ACTION] Error al actualizar inspección ${id}:`, error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido",
+      error: mensajeParaUsuario(error, "Error desconocido"),
     };
   }
 }
@@ -651,7 +652,7 @@ export async function deleteInspection(id: string): Promise<ApiResponse<null>> {
     console.error(`❌ [INSPECTION_ACTION] Error al eliminar inspección ${id}:`, error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido",
+      error: mensajeParaUsuario(error, "Error desconocido"),
     };
   }
 }
@@ -680,7 +681,7 @@ export async function getInspectionStats(templateCode?: string): Promise<ApiResp
     console.error("❌ [INSPECTION_ACTION] Error al obtener estadísticas:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido",
+      error: mensajeParaUsuario(error, "Error desconocido"),
     };
   }
 }
@@ -707,7 +708,7 @@ export async function getInspectionsByTemplateCode(
     console.error("❌ [INSPECTION_ACTION] Error al obtener inspecciones por template:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido",
+      error: mensajeParaUsuario(error, "Error desconocido"),
       data: [],
     };
   }
@@ -787,7 +788,7 @@ export async function getRecentActivityByArea(params: {
     console.error("❌ [INSPECTION_ACTION] Error al obtener actividad reciente:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido",
+      error: mensajeParaUsuario(error, "Error desconocido"),
       data: [],
     };
   }

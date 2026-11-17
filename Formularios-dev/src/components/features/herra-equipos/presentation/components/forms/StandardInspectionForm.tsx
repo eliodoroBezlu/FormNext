@@ -33,6 +33,7 @@ import {
   StandardInspectionFormProps,
 } from "../../../application/hooks/useStandardInspectionForm";
 import { autorizarSalida } from "../../../domain/models/SalidaSinAviso";
+import { BotonGuardar } from "@/components/ui/buttons/BotonGuardar";
 
 export function StandardInspectionForm(props: StandardInspectionFormProps) {
   const {
@@ -473,19 +474,13 @@ export function StandardInspectionForm(props: StandardInspectionFormProps) {
                   Guardar Borrador
                 </Button>
               )}
-              <Button
-                variant="contained"
+              {/* En el paso 4, «Siguiente» firma y guarda: que se vea que está guardando. */}
+              <BotonGuardar
+                type="button"
+                estado={isSubmitting ? "guardando" : "inactivo"}
+                etiqueta="Siguiente Sección"
                 onClick={handleNextStep}
-                disabled={isSubmitting}
-                sx={{
-                  background: "linear-gradient(135deg, #6366F1, #818CF8)",
-                  "&:hover": {
-                    background: "linear-gradient(135deg, #4F46E5, #6366F1)",
-                  },
-                }}
-              >
-                Siguiente Sección
-              </Button>
+              />
             </Box>
           </Box>
         )}

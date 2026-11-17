@@ -32,12 +32,10 @@ export const colorDeNivel = (nivel?: string | null): string =>
  * Color del chip de eficacia de un control, con el semáforo del Excel:
  * Eficaz en verde, Satisfactorio en amarillo, No Eficaz en rojo.
  *
- * Se devuelve el nombre del color de MUI y no un hexadecimal porque el chip de
- * eficacia usa `color=` en vez de `sx.bgcolor`, a diferencia del de nivel.
+ * Se devuelve el color semántico del tema (lo dibuja `EstadoChip`) y no un
+ * hexadecimal, a diferencia del nivel, que conserva los tonos del Excel.
  */
-export const colorEficacia = (
-  eficacia?: string | null,
-): "success" | "warning" | "error" | "default" => {
+export const colorEficacia = (eficacia?: string | null): ColorSemantico => {
   if (eficacia === "Control/Acción Eficaz") return "success";
   if (eficacia === "Control/Acción Satisfactorio") return "warning";
   if (eficacia === "Control/Acción No Eficaz") return "error";
@@ -48,14 +46,17 @@ export const colorEficacia = (
 export const requierePgr = (nivel?: string | null): boolean =>
   !!nivel && NIVELES_QUE_REQUIEREN_PGR.includes(nivel as NivelRiesgo);
 
-const COLOR_ESTADO: Record<EstadoMatriz, string> = {
+/** Los colores semánticos del tema (los mismos de `EstadoChip`). */
+export type ColorSemantico = "default" | "info" | "warning" | "success" | "error";
+
+const COLOR_ESTADO: Record<EstadoMatriz, ColorSemantico> = {
   BORRADOR: "default",
   EN_REVISION: "warning",
   APROBADA: "success",
   SUPERADA: "default",
 };
 
-export const colorDeEstado = (estado: EstadoMatriz): string =>
+export const colorDeEstado = (estado: EstadoMatriz): ColorSemantico =>
   COLOR_ESTADO[estado] ?? "default";
 
 export const ETIQUETA_ESTADO: Record<EstadoMatriz, string> = {

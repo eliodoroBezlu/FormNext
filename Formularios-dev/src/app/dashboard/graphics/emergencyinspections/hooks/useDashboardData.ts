@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Tag, FormularioInspeccion, Extintor } from "../types/IProps";
 import { obtenerDashboardData } from "../actions";
 import { AreaBackend } from "@/lib/actions/area-actions";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 export const useDashboardData = () => {
   const [tags, setTags] = useState<Tag[]>([]);
@@ -28,7 +29,7 @@ export const useDashboardData = () => {
 
   const avisarFallo = useCallback((err: unknown) => {
     console.error("Error fetching data:", err);
-    setError(err instanceof Error ? err.message : "Error desconocido");
+    setError(mensajeParaUsuario(err, "Error desconocido"));
   }, []);
 
   const fetchData = useCallback(async (showRefresh = false) => {

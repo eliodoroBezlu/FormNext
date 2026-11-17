@@ -24,6 +24,8 @@ import {
 import { TagVerificationModal } from "@/components/features/herra-equipos/common/TagVerificationModal";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Role } from "@/lib/routePermissions";
+import { EsqueletoFormulario } from "@/components/ui/feedback/EsqueletoFormulario";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 /**
  * Igual que en la página de creación: la UI especializada se decide por la
@@ -206,7 +208,7 @@ export default function FormularioDinamicoPage() {
         }
       } catch (err) {
         console.error("❌ [PAGE] Error:", err);
-        setError(err instanceof Error ? err.message : "Error desconocido");
+        setError(mensajeParaUsuario(err, "Error desconocido"));
       } finally {
         setLoading(false);
       }
@@ -426,7 +428,7 @@ export default function FormularioDinamicoPage() {
       setSnackbar({
         open: true,
         message:
-          err instanceof Error ? err.message : "Error al enviar formulario",
+          mensajeParaUsuario(err, "Error al enviar formulario"),
         severity: "error",
       });
     } finally {
@@ -436,14 +438,7 @@ export default function FormularioDinamicoPage() {
 
   if (loading)
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="400px"
-      >
-        <CircularProgress />
-      </Box>
+      <EsqueletoFormulario />
     );
 
   if (error || !template)
@@ -494,7 +489,7 @@ export default function FormularioDinamicoPage() {
             zIndex: 9999,
           }}
         >
-          <Box textAlign="center" bgcolor="white" p={4} borderRadius={2}>
+          <Box textAlign="center" bgcolor="background.paper" p={4} borderRadius={2}>
             <CircularProgress />
             <Box mt={2}>Procesando...</Box>
           </Box>

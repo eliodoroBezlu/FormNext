@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   obtenerPlanes,
   obtenerInspecciones,
@@ -12,6 +12,7 @@ import {
   actualizarTarea as actualizarTareaAdapter,
   corregirTarea as corregirTareaAdapter,
   sincronizarConInspeccion as sincronizarConInspeccionAdapter,
+  cargarPlanillaDelPlan,
   eliminarTarea as eliminarTareaAdapter,
   aprobarTarea as aprobarTareaAdapter,
   aprobarPlanGlobal as aprobarPlanGlobalAdapter,
@@ -40,6 +41,9 @@ import {
   type TabValue,
 } from "../../domain/pestanasPlan";
 import { claveDeTipo, opcionesDeTipo } from "../../domain/tipoInspeccion";
+import type { ResultadoCargaPlanilla } from "../../domain/cargaPlanilla";
+import { idsActualizados, idsNuevos } from "../../domain/resaltado";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 export type { PopulatedFormInstance, TabValue };
 
@@ -109,7 +113,7 @@ export function usePlanesAccion() {
       const result = await obtenerPlanes();
       setPlanes(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al cargar planes");
+      setError(mensajeParaUsuario(err, "Error al cargar planes"));
     } finally {
       setIsPending(false);
     }
@@ -388,6 +392,19 @@ export function usePlanesAccion() {
     [loadPlanes, showSnackbar],
   );
 
+  /**
+   * Las tareas que se iluminan un momento en la tabla después de un cambio,
+   * para que se vea dónde cayó. Se apagan solas.
+   */
+  const [tareasResaltadas, setTareasResaltadas] = useState<string[]>([]);
+  const apagarResaltado = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resaltar = useCallback((ids: string[]) => {
+    if (ids.length === 0) return;
+    if (apagarResaltado.current) clearTimeout(apagarResaltado.current);
+    setTareasResaltadas(ids);
+    apagarResaltado.current = setTimeout(() => setTareasResaltadas([]), 3000);
+  }, []);
+
   const agregarTarea = useCallback(
     async (data: AddTareaDTO) => {
       if (!selectedPlan) return;
@@ -396,6 +413,7 @@ export function usePlanesAccion() {
         const result = await agregarTareaAdapter(selectedPlan._id, data);
         if (result.success && result.data) {
           setSelectedPlan(result.data);
+          resaltar(idsNuevos(selectedPlan.tareas, result.data.tareas));
           showSnackbar("✅ Tarea agregada exitosamente", "success");
         } else {
           showSnackbar(`❌ ${result.error}`, "error");
@@ -405,7 +423,7 @@ export function usePlanesAccion() {
         setIsPending(false);
       }
     },
-    [selectedPlan, showSnackbar],
+    [selectedPlan, showSnackbar, resaltar],
   );
 
   const actualizarTarea = useCallback(
@@ -420,6 +438,7 @@ export function usePlanesAccion() {
         );
         if (result.success && result.data) {
           setSelectedPlan(result.data);
+          resaltar([tareaId]);
           showSnackbar("✅ Tarea actualizada exitosamente", "success");
         } else {
           showSnackbar(`❌ ${result.error}`, "error");
@@ -429,7 +448,7 @@ export function usePlanesAccion() {
         setIsPending(false);
       }
     },
-    [selectedPlan, showSnackbar],
+    [selectedPlan, showSnackbar, resaltar],
   );
 
   /** Corrección del admin: datos y estado, también hacia atrás, con motivo. */
@@ -445,6 +464,7 @@ export function usePlanesAccion() {
         );
         if (result.success && result.data) {
           setSelectedPlan(result.data);
+          resaltar([tareaId]);
           showSnackbar("✅ Tarea corregida: quedó en el historial", "success");
         } else {
           showSnackbar(`❌ ${result.error}`, "error");
@@ -454,7 +474,35 @@ export function usePlanesAccion() {
         setIsPending(false);
       }
     },
-    [selectedPlan, showSnackbar],
+    [selectedPlan, showSnackbar, resaltar],
+  );
+
+  /**
+   * El admin sube la planilla descargada y editada. Sin `aplicar` solo
+   * devuelve qué haría con cada fila; si se aplicó algo, el plan queda al día.
+   */
+  const cargarPlanilla = useCallback(
+    async (
+      formData: FormData,
+      aplicar: boolean,
+    ): Promise<ActionResult<ResultadoCargaPlanilla>> => {
+      if (!selectedPlan) return { success: false, error: "No hay un plan abierto" };
+      const result = await cargarPlanillaDelPlan(selectedPlan._id, formData, aplicar);
+      if (!result.success || !result.data) {
+        return { success: false, error: result.error };
+      }
+      const { resultado, plan } = result.data;
+      if (plan) {
+        setSelectedPlan(plan);
+        resaltar(idsActualizados(resultado.filas));
+        showSnackbar(
+          `✅ Planilla cargada: ${resultado.resumen.actualiza} tarea(s) actualizada(s), quedó en el historial`,
+          "success",
+        );
+      }
+      return { success: true, data: resultado };
+    },
+    [selectedPlan, showSnackbar, resaltar],
   );
 
   /** El admin trae al plan lo que su IRO dice ahora (observaciones, supervisor…). */
@@ -508,6 +556,7 @@ export function usePlanesAccion() {
         const result = await aprobarTareaAdapter(selectedPlan._id, tareaId);
         if (result.success && result.data) {
           setSelectedPlan(result.data);
+          resaltar([tareaId]);
           showSnackbar("✅ Tarea aprobada exitosamente", "success");
         } else {
           showSnackbar(`❌ ${result.error}`, "error");
@@ -517,7 +566,7 @@ export function usePlanesAccion() {
         setIsPending(false);
       }
     },
-    [selectedPlan, showSnackbar],
+    [selectedPlan, showSnackbar, resaltar],
   );
 
   const aprobarPlanGlobal = useCallback(
@@ -568,6 +617,8 @@ export function usePlanesAccion() {
     actualizarTarea,
     corregirTarea,
     sincronizarConInspeccion,
+    cargarPlanilla,
+    tareasResaltadas,
     eliminarTarea,
     aprobarTarea,
     aprobarPlanGlobal,

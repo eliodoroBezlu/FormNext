@@ -2,6 +2,7 @@
 
 import { getAuthHeaders, handleApiResponse } from "@/lib/actions/helpers";
 import { API_BASE_URL } from "@/lib/constants";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 const CATALOGO_URL = `${API_BASE_URL}/pgr/catalogos`;
 
@@ -139,7 +140,7 @@ async function escribir<T>(
     console.error(`Error en ${method} ${url}:`, error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al guardar",
+      error: mensajeParaUsuario(error, "Error al guardar"),
     };
   }
 }

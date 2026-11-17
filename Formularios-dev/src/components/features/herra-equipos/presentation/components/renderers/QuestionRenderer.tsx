@@ -595,7 +595,7 @@ export const QuestionRenderer = <
       sx={{
         p: 2,
         mb: 2,
-        backgroundColor: (theme) => theme.palette.mode === "dark" ? "background.paper" : "#fafafa",
+        backgroundColor: (theme) => theme.palette.mode === "dark" ? "background.paper" : "action.hover",
         borderLeft: `3px solid ${stripColor}`,
         transition: "border-left-color 0.2s ease",
       }}

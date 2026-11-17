@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Typography, IconButton, Grid } from "@mui/material";
 import { Security, Refresh } from "@mui/icons-material";
+import { superficieDeMarca } from "@/styles/marca";
 
 interface DashboardHeaderProps {
   tagsCount: number;
@@ -15,7 +16,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   return (
     <Box
       sx={{
-        background: "linear-gradient(135deg, #6366F1 0%, #06B6D4 100%)",
+        background: (theme) => superficieDeMarca(theme.palette.mode),
         borderRadius: 2,
         p: 3,
         color: "white",

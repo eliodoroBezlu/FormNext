@@ -5,6 +5,7 @@ import {  getAuthHeaders, handleApiResponse } from "./helpers";
 import { FormBuilderDataHerraEquipos } from "@/components/features/herra-equipos/domain/models/BuilderTypes";
 import { revalidatePath } from "next/cache";
 import type { CamposVersionado } from "@/types/versionado";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 // Tipos de respuesta
 export type TemplateHerraEquipo = FormBuilderDataHerraEquipos & CamposVersionado & {
@@ -36,7 +37,7 @@ export async function createTemplateHerraEquipo(
     console.error("❌ [TEMPLATE_ACTION] Error al crear plantilla:", error);
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : "Error desconocido al crear el template" 
+      error: mensajeParaUsuario(error, "Error desconocido al crear el template") 
     };
   }
 }
@@ -77,7 +78,7 @@ export async function getTemplatesHerraEquipos(
     console.error("Error fetching templates:", error);
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : "Error al obtener los templates" 
+      error: mensajeParaUsuario(error, "Error al obtener los templates") 
     };
   }
 }
@@ -103,7 +104,7 @@ export async function getTemplateHerraEquipoById(
     console.error(`Error fetching template ${id}:`, error);
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : "Error al obtener el template" 
+      error: mensajeParaUsuario(error, "Error al obtener el template") 
     };
   }
 }
@@ -132,7 +133,7 @@ export async function updateTemplateHerraEquipo(
     console.error(`❌ [TEMPLATE_ACTION] Error al actualizar plantilla ${id}:`, error);
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : "Error al actualizar el template" 
+      error: mensajeParaUsuario(error, "Error al actualizar el template") 
     };
   }
 }
@@ -168,7 +169,7 @@ export async function deleteTemplateHerraEquipo(
     console.error(`❌ [TEMPLATE_ACTION] Error al eliminar plantilla ${id}:`, error);
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : "Error al eliminar el template" 
+      error: mensajeParaUsuario(error, "Error al eliminar el template") 
     };
   }
 }
@@ -194,7 +195,7 @@ export async function searchTemplatesHerraEquipos(
     console.error("Error searching templates:", error);
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : "Error al buscar templates" 
+      error: mensajeParaUsuario(error, "Error al buscar templates") 
     };
   }
 }

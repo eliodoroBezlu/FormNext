@@ -56,6 +56,7 @@ import {
 import { activarExtintor, actualizarExtintor, crearExtintor, eliminarExtintor, obtenerExtintores, obtenerExtintorPorId } from "@/lib/actions/extintor-actions"
 import { desactivarExtintor } from "@/app/actions/inspeccion"
 import { ExtintorBackend } from "@/types/formTypes"
+import { useConfirmar } from "@/components/ui/feedback/Confirmacion";
 
 
 
@@ -308,8 +309,9 @@ export default function GestionExtintores() {
     }
   }
 
+  const confirmar = useConfirmar();
   const handleEliminarExtintor = async (id: string) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar este extintor?")) return
+    if (!await confirmar("¿Estás seguro de que quieres eliminar este extintor?")) return
     
     try {
       setLoading(true)
@@ -513,7 +515,7 @@ export default function GestionExtintores() {
             <TableContainer>
               <Table>
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableRow sx={{ backgroundColor: 'background.default' }}>
                     <TableCell>Área</TableCell>
                     <TableCell>Tag</TableCell>
                     <TableCell>Código Extintor</TableCell>
@@ -539,7 +541,7 @@ export default function GestionExtintores() {
                       .map((extintor, index) => (
                         <TableRow 
                           key={`${extintor._id}-${page * rowsPerPage + index}`}
-                          sx={{ '&:hover': { backgroundColor: '#f9f9f9' } }}
+                          sx={{ '&:hover': { backgroundColor: 'action.hover' } }}
                         >
                           <TableCell>{extintor.area}</TableCell>
                           <TableCell>{extintor.tag}</TableCell>

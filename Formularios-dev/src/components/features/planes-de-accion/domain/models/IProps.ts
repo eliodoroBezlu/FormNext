@@ -110,6 +110,8 @@ export interface PlanDeAccion {
   // De qué IRO o ISOP sale (la plantilla de su inspección). Lo agrega el
   // backend al listar; un plan manual no lo tiene.
   tipoInspeccion?: { codigo: string; nombre: string };
+  /** Día en que se hizo esa IRO o ISOP (`AAAA-MM-DD`, lo agrega el listado). */
+  fechaInspeccion?: string;
   /** «Ítems críticos / aspectos adicionales» de la IRO (lo agrega el listado). */
   itemsCriticos?: string;
 

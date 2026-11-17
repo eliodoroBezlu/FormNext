@@ -1,6 +1,7 @@
 "use client";
 
-import { Chip } from "@mui/material";
+import type { ReactElement } from "react";
+import { EstadoChip } from "@/components/ui/feedback/EstadoChip";
 import {
   EditNote,
   HourglassTop,
@@ -10,69 +11,31 @@ import {
   TaskAlt,
 } from "@mui/icons-material";
 import { InspectionStatus } from "../types/IProps";
+import { estadoDeInspeccion } from "../domain/models/estadosVisuales";
 
 interface InspectionStatusChipProps {
   status: InspectionStatus | string;
   size?: "small" | "medium";
 }
 
-const STATUS_CONFIG: Record<
-  string,
-  {
-    label: string;
-    color: "default" | "warning" | "success" | "error" | "info" | "primary";
-    icon: React.ReactElement;
-  }
-> = {
-  [InspectionStatus.DRAFT]: {
-    label: "Borrador",
-    color: "default",
-    icon: <EditNote fontSize="small" />,
-  },
-  [InspectionStatus.IN_PROGRESS]: {
-    label: "En Progreso",
-    color: "warning",
-    icon: <HourglassTop fontSize="small" />,
-  },
-  [InspectionStatus.PENDING_APPROVAL]: {
-    label: "Pendiente Aprobación",
-    color: "info",
-    icon: <Pending fontSize="small" />,
-  },
-  [InspectionStatus.APPROVED]: {
-    label: "Aprobado",
-    color: "success",
-    icon: <CheckCircle fontSize="small" />,
-  },
-  [InspectionStatus.REJECTED]: {
-    label: "Rechazado",
-    color: "error",
-    icon: <Cancel fontSize="small" />,
-  },
-  [InspectionStatus.COMPLETED]: {
-    label: "Completado",
-    color: "success",
-    icon: <TaskAlt fontSize="small" />,
-  },
+/** El ícono de cada estado; la etiqueta y el color salen de `estadosVisuales`. */
+export const ICONO_DE_ESTADO: Record<string, ReactElement> = {
+  [InspectionStatus.DRAFT]: <EditNote fontSize="small" />,
+  [InspectionStatus.IN_PROGRESS]: <HourglassTop fontSize="small" />,
+  [InspectionStatus.PENDING_APPROVAL]: <Pending fontSize="small" />,
+  [InspectionStatus.APPROVED]: <CheckCircle fontSize="small" />,
+  [InspectionStatus.REJECTED]: <Cancel fontSize="small" />,
+  [InspectionStatus.COMPLETED]: <TaskAlt fontSize="small" />,
 };
 
-export function InspectionStatusChip({
-  status,
-  size = "small",
-}: InspectionStatusChipProps) {
-  const cfg = STATUS_CONFIG[status] ?? {
-    label: status,
-    color: "default" as const,
-    icon: <EditNote fontSize="small" />,
-  };
-
+export function InspectionStatusChip({ status, size = "small" }: InspectionStatusChipProps) {
+  const estado = estadoDeInspeccion(status);
   return (
-    <Chip
-      label={cfg.label}
-      color={cfg.color}
+    <EstadoChip
+      etiqueta={estado.etiqueta}
+      color={estado.color}
       size={size}
-      icon={cfg.icon}
-      variant="filled"
+      icono={ICONO_DE_ESTADO[status] ?? <EditNote fontSize="small" />}
     />
   );
 }

@@ -45,6 +45,8 @@ import { fetchDataBySource } from "@/lib/actions/dataSourceService";
 import { obtenerEquipos, EquipoBackend } from "@/lib/actions/equipo-actions";
 import { obtenerDisponibilidadEquipos } from "@/lib/actions/equipment-tracking";
 import { Trabajador } from "@/types/trabajador";
+import { EsqueletoFormulario } from "@/components/ui/feedback/EsqueletoFormulario";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 /**
  * Decide si una plantilla usa la UI especializada (stepper de 5 pasos, firmas,
@@ -396,7 +398,7 @@ export default function FormularioDinamicoPage() {
         }
       } catch (err) {
         console.error("❌ [PAGE] Error al cargar datos:", err);
-        setError(err instanceof Error ? err.message : "Error desconocido");
+        setError(mensajeParaUsuario(err, "Error desconocido"));
       } finally {
         setLoading(false);
       }
@@ -598,7 +600,7 @@ export default function FormularioDinamicoPage() {
       setSnackbar({
         open: true,
         message:
-          error instanceof Error ? error.message : "Error al guardar borrador",
+          mensajeParaUsuario(error, "Error al guardar borrador"),
         severity: "error",
       });
     } finally {
@@ -653,9 +655,7 @@ export default function FormularioDinamicoPage() {
       setSnackbar({
         open: true,
         message:
-          error instanceof Error
-            ? error.message
-            : "Error al guardar en progreso",
+          mensajeParaUsuario(error, "Error al guardar en progreso"),
         severity: "error",
       });
     } finally {
@@ -729,9 +729,7 @@ export default function FormularioDinamicoPage() {
       setSnackbar({
         open: true,
         message:
-          error instanceof Error
-            ? error.message
-            : "Error al finalizar inspección",
+          mensajeParaUsuario(error, "Error al finalizar inspección"),
         severity: "error",
       });
     } finally {
@@ -790,7 +788,7 @@ export default function FormularioDinamicoPage() {
       setSnackbar({
         open: true,
         message:
-          error instanceof Error ? error.message : "Error al enviar formulario",
+          mensajeParaUsuario(error, "Error al enviar formulario"),
         severity: "error",
       });
     } finally {
@@ -816,14 +814,7 @@ export default function FormularioDinamicoPage() {
 
   if (loading) {
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="400px"
-      >
-        <CircularProgress />
-      </Box>
+      <EsqueletoFormulario />
     );
   }
 
@@ -1027,7 +1018,7 @@ export default function FormularioDinamicoPage() {
             zIndex: 9999,
           }}
         >
-          <Box textAlign="center" bgcolor="white" p={4} borderRadius={2}>
+          <Box textAlign="center" bgcolor="background.paper" p={4} borderRadius={2}>
             <CircularProgress />
             <Box mt={2}>Guardando...</Box>
           </Box>

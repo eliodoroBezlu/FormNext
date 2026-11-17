@@ -17,6 +17,7 @@ import type {
   Resultado,
   UsoDeImagen,
 } from "@/components/features/monitoreo-equipos/domain/models/Monitoreo";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 const BASE = `${API_BASE_URL}/monitoreo-equipos`;
 
@@ -64,7 +65,7 @@ async function pedir<T>(
     return {
       ok: false,
       errores: [
-        error instanceof Error ? error.message : "No se pudo conectar con el servidor.",
+        mensajeParaUsuario(error, "No se pudo conectar con el servidor."),
       ],
     };
   }

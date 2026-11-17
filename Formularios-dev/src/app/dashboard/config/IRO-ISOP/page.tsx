@@ -17,6 +17,8 @@ import {
   DialogoRevisionBloqueada,
 } from "@/components/ui/versionado/DialogosVersionado"
 import { estadoDeRevision } from "@/types/versionado"
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
+import { useConfirmar } from "@/components/ui/feedback/Confirmacion";
 
 interface CustomForm {
   id: string
@@ -64,7 +66,7 @@ export default function HomePage() {
 
   const avisarFallo = useCallback((error: unknown) => {
     setError(
-      error instanceof Error ? error.message : "Error al cargar los templates",
+      mensajeParaUsuario(error, "Error al cargar los templates"),
     )
   }, [])
 
@@ -141,7 +143,7 @@ export default function HomePage() {
         setError(result.error || "Error al cargar el template")
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al cargar el template")
+      setError(mensajeParaUsuario(err, "Error al cargar el template"))
     } finally {
       setLoadingDetail(false)
     }
@@ -162,7 +164,7 @@ export default function HomePage() {
         setError(result.error || "Error al cargar el template")
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al cargar el template")
+      setError(mensajeParaUsuario(err, "Error al cargar el template"))
     } finally {
       setLoadingDetail(false)
     }
@@ -173,8 +175,9 @@ export default function HomePage() {
     setCurrentView("create-custom")
   }
 
+  const confirmar = useConfirmar();
   const handleDeleteTemplate = async (templateId: string) => {
-    if (!confirm("¿Estás seguro de que deseas eliminar este template?")) {
+    if (!await confirmar("¿Estás seguro de que deseas eliminar este template?")) {
       return
     }
 
@@ -187,12 +190,12 @@ export default function HomePage() {
         setError(result.error || "Error al eliminar el template")
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al eliminar el template")
+      setError(mensajeParaUsuario(err, "Error al eliminar el template"))
     }
   }
 
   const handleDeleteCustomForm = async (customFormId: string) => {
-    if (!confirm("¿Estás seguro de que deseas eliminar este formulario personalizado?")) {
+    if (!await confirmar("¿Estás seguro de que deseas eliminar este formulario personalizado?")) {
       return
     }
 

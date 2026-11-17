@@ -17,6 +17,7 @@ import {
   Visibility,
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
+import { superficieDeMarca } from "@/styles/marca";
 
 interface SuccessScreenProps {
   title?: string;
@@ -100,7 +101,7 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
             textAlign: "center",
             position: "relative",
             overflow: "hidden",
-            background: "linear-gradient(135deg, #667eea 0%, #4b57a2ff 100%)",
+            background: (theme) => superficieDeMarca(theme.palette.mode),
             color: "white",
           }}
         >

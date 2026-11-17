@@ -3,6 +3,7 @@
 import { ApiResponse, FormTemplate } from "@/types/formTypes"
 import {   getAuthHeaders, handleApiResponse } from "./helpers"
 import { API_BASE_URL } from "../constants";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 
 
@@ -30,7 +31,7 @@ export async function createTemplate(templateData: Omit<FormTemplate, "_id">) {
     console.error("Error creating template:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al crear el template",
+      error: mensajeParaUsuario(error, "Error al crear el template"),
     };
   }
 }
@@ -62,7 +63,7 @@ export async function updateTemplate(_id: string, templateData: Partial<FormTemp
     console.error("Error updating template:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al actualizar el template",
+      error: mensajeParaUsuario(error, "Error al actualizar el template"),
     };
   }
 }
@@ -88,7 +89,7 @@ export async function deleteTemplate(id: string) {
     console.error("Error deleting template:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al eliminar el template",
+      error: mensajeParaUsuario(error, "Error al eliminar el template"),
     };
   }
 }
@@ -128,7 +129,7 @@ export async function getTemplates(filters?: {
     console.error("Error fetching templates:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al obtener los templates",
+      error: mensajeParaUsuario(error, "Error al obtener los templates"),
       data: [],
     };
   }
@@ -156,7 +157,7 @@ export async function getTemplateById(id: string): Promise<ApiResponse<FormTempl
     console.error("Error fetching template:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al obtener el template",
+      error: mensajeParaUsuario(error, "Error al obtener el template"),
       // data: null, // TypeScript prefiere que omitas data si falló, o uses undefined
     };
   }
@@ -180,7 +181,7 @@ export async function getTemplateByCode(code: string): Promise<ApiResponse<FormT
     console.error("Error fetching template by code:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al obtener el formulario",
+      error: mensajeParaUsuario(error, "Error al obtener el formulario"),
     };
   }
 }
@@ -206,7 +207,7 @@ export async function getTemplateStats() {
     console.error("Error fetching template stats:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al obtener las estadísticas",
+      error: mensajeParaUsuario(error, "Error al obtener las estadísticas"),
       data: null,
     };
   }
@@ -234,7 +235,7 @@ export async function deactivateTemplate(id: string) {
     console.error("Error deactivating template:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al desactivar el template",
+      error: mensajeParaUsuario(error, "Error al desactivar el template"),
     };
   }
 }

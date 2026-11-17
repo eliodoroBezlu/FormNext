@@ -24,6 +24,7 @@ import type { UbicacionBackend } from "../../infrastructure/adapters/ubicaciones
 import { TablaArbolUbicaciones } from "./TablaArbolUbicaciones";
 import { DialogoUbicacion } from "./DialogoUbicacion";
 import { DialogoFusion } from "./DialogoFusion";
+import { useConfirmar } from "@/components/ui/feedback/Confirmacion";
 
 /** Diálogo de alta/edición: cerrado, creando (con padre sugerido) o editando. */
 type EstadoDialogo =
@@ -52,8 +53,9 @@ export function GestionUbicaciones() {
     return ok;
   };
 
-  const darDeBaja = (nodo: UbicacionBackend) => {
-    if (window.confirm(`¿Dar de baja «${nodo.ruta}»? Se puede restaurar después.`)) {
+  const confirmar = useConfirmar();
+  const darDeBaja = async (nodo: UbicacionBackend) => {
+    if (await confirmar(`¿Dar de baja «${nodo.ruta}»? Se puede restaurar después.`)) {
       void gestion.darDeBaja(nodo);
     }
   };

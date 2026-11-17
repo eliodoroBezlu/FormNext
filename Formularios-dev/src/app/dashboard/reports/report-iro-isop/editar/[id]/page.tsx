@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation"; // 🔥 Agregamos useSearchParams
-import { Box, CircularProgress, Typography, Alert, Chip } from "@mui/material";
+import { Box, Typography, Alert, Chip } from "@mui/material";
 import { ArrowBack, Visibility } from "@mui/icons-material";
 import { Button } from "@/components/ui/buttons/Button";
 
@@ -16,6 +16,8 @@ import { getTemplateById } from "@/lib/actions/template-actions";
 import { FormInstance, FormTemplate } from "@/types/formTypes";
 import { useUserRole } from "@/hooks/useUserRole";
 import { puedeAccederARuta } from "@/lib/routePermissions";
+import { EsqueletoFormulario } from "@/components/ui/feedback/EsqueletoFormulario";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 const LISTADO_DE_REPORTES = "/dashboard/reports/report-iro-isop";
 
@@ -63,7 +65,7 @@ export default function EditarIroIsopPage() {
         setTemplateData(templateRes.data);
       } catch (err) {
         console.error(err);
-        setError(err instanceof Error ? err.message : "Error desconocido");
+        setError(mensajeParaUsuario(err, "Error desconocido"));
       } finally {
         setLoading(false);
       }
@@ -96,9 +98,7 @@ export default function EditarIroIsopPage() {
 
   if (loading)
     return (
-      <Box display="flex" justifyContent="center" p={5}>
-        <CircularProgress />
-      </Box>
+      <EsqueletoFormulario />
     );
   if (error)
     return (

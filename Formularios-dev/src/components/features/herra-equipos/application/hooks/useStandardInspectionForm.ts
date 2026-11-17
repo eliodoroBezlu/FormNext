@@ -36,6 +36,7 @@ import { EquipoBackend } from "@/lib/actions/equipo-actions";
 
 import { subirAlInicio } from "../../utils/navegacion-pasos";
 import { autorizarSalida, salidaEstaAutorizada } from "../../domain/models/SalidaSinAviso";
+import { irAlPrimerError } from "@/lib/formularios/irAlPrimerError";
 export interface StandardInspectionFormProps {
   template: FormTemplateHerraEquipos;
   onSubmit: (data: FormDataHerraEquipos) => void;
@@ -629,20 +630,7 @@ export function useStandardInspectionForm({
   const handleInvalidSubmit = (errors: FieldErrors<FormDataHerraEquipos>) => {
     setHasSubmitErrors(true);
     console.log("errors", errors);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const firstInvalid = document.querySelector<HTMLElement>(
-          '[data-question-error="true"], [aria-invalid="true"]',
-        );
-        if (firstInvalid) {
-          firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
-          const focusable = firstInvalid.querySelector<HTMLElement>(
-            "input, textarea, button[aria-pressed]",
-          );
-          (focusable ?? firstInvalid).focus?.();
-        }
-      });
-    });
+    irAlPrimerError('[data-question-error="true"], [aria-invalid="true"]');
   };
 
   const handleDraftSave = (data: FormDataHerraEquipos) => {
@@ -697,7 +685,9 @@ export function useStandardInspectionForm({
         );
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const isValid = await trigger(step1FieldNames as any);
+        // Si falta algo, llevar a lo primero que falta (no solo pintarlo de rojo).
         if (isValid) handleStepChange(2);
+        else irAlPrimerError();
       }
     } else if (activeStep === 2) {
       // Always validate ALL verification fields in step 2
@@ -706,11 +696,15 @@ export function useStandardInspectionForm({
       );
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const isValid = await trigger(step2FieldNames as any);
+      // Si falta algo, llevar a lo primero que falta (no solo pintarlo de rojo).
       if (isValid) handleStepChange(3);
+      else irAlPrimerError();
     } else if (activeStep === 3) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const isValid = await trigger("responses" as any);
+      // Si falta algo, llevar a lo primero que falta (no solo pintarlo de rojo).
       if (isValid) handleStepChange(4);
+      else irAlPrimerError();
     } else if (activeStep === 4) {
       const step4FieldNames = [
         "generalObservations",
@@ -727,7 +721,10 @@ export function useStandardInspectionForm({
       ];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const isValid = await trigger(step4FieldNames as any);
-      if (!isValid) return;
+      if (!isValid) {
+        irAlPrimerError();
+        return;
+      }
 
       if (onSaveDraft) {
         handleSubmit(async (data) => {

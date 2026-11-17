@@ -36,6 +36,8 @@ import {
   MisInspeccionesViewProps,
   Vista,
 } from "../../domain/models/dashboardModels";
+import { alpha } from "@mui/material/styles";
+import { MARCA } from "@/styles/marca";
 
 const VIEW_ONLY_ACTIONS = { view: true, pdf: true, edit: false, excel: false, duplicate: false, delete: false };
 
@@ -141,7 +143,7 @@ function ModuloSection({
 }) {
   return (
     <Box sx={{ mb: 4 }}>
-      <Typography sx={{ fontSize: "15px", fontWeight: 800, color: "#1e3e66", mb: 1.5 }}>
+      <Typography sx={{ fontSize: "15px", fontWeight: 800, color: "primary.main", mb: 1.5 }}>
         {titulo}
       </Typography>
       {loading ? (
@@ -315,9 +317,9 @@ export function MisInspeccionesView({ username, area }: MisInspeccionesViewProps
           ))
         ) : (
           <>
-            <KpiCard value={totalActivo} label="Total en esta vista" color="#6366f1" />
+            <KpiCard value={totalActivo} label="Total en esta vista" color={MARCA.acero} />
             <KpiCard value={herraEquipos.length} label="Herramientas y Equipos" color="#2563eb" />
-            <KpiCard value={isoInstances.length} label="IRO-ISOP" color="#7c3aed" />
+            <KpiCard value={isoInstances.length} label="IRO-ISOP" color={MARCA.petroleo} />
             {vista === "area" && (
               <KpiCard value={emergencia.length} label="Sistemas de Emergencia" color="#d97706" />
             )}
@@ -329,7 +331,7 @@ export function MisInspeccionesView({ username, area }: MisInspeccionesViewProps
       <Tabs
         value={vista}
         onChange={(_, v: Vista) => setVista(v)}
-        sx={{ mb: 3, borderBottom: "1px solid rgba(0,0,0,0.08)" }}
+        sx={{ mb: 3, borderBottom: "1px solid", borderColor: "divider" }}
       >
         <Tab value="mias" label="Realizadas por mí" />
         {/*
@@ -454,12 +456,12 @@ function EmptyFolders() {
       sx={{
         py: 4,
         textAlign: "center",
-        bgcolor: "rgba(99,102,241,0.03)",
+        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.03),
         borderRadius: 3,
-        border: "1px dashed rgba(99,102,241,0.2)",
+        border: (theme) => `1px dashed ${alpha(theme.palette.primary.main, 0.2)}`,
       }}
     >
-      <Assignment sx={{ fontSize: 36, color: "#c7d2fe", mb: 1 }} />
+      <Assignment sx={{ fontSize: 36, color: (theme) => alpha(theme.palette.primary.main, 0.3), mb: 1 }} />
       <Typography variant="body2" color="text.secondary" fontWeight={600}>
         No hay inspecciones en esta vista.
       </Typography>

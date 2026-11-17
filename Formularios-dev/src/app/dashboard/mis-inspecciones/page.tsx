@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Box, Typography, LinearProgress } from "@mui/material";
+import { superficieDeMarca } from "@/styles/marca";
 import { Assignment } from "@mui/icons-material";
 import { useUserRole } from "@/hooks/useUserRole";
 import { MisInspeccionesView } from "@/components/features/dashboard/presentation/components/MisInspeccionesView";
@@ -27,7 +28,7 @@ export default function MisInspeccionesPage() {
               width: 40,
               height: 40,
               borderRadius: 2,
-              background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+              bgcolor: (theme) => superficieDeMarca(theme.palette.mode),
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -51,7 +52,7 @@ export default function MisInspeccionesPage() {
             <Typography variant="body2" sx={{ color: "text.secondary", fontSize: "13px" }}>
               {user.fullName || user.username}
               {user.area && (
-                <span style={{ color: "#6366f1", fontWeight: 600 }}> · {user.area}</span>
+                <Box component="span" sx={{ color: "primary.main", fontWeight: 600 }}> · {user.area}</Box>
               )}
             </Typography>
           </Box>

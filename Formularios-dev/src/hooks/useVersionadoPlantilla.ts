@@ -6,6 +6,7 @@ import type {
   EntradaHistorial,
   PlantillaVersionada,
 } from "@/types/versionado";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 export interface AvisoVersionado {
   mensaje: string;
@@ -20,7 +21,7 @@ interface Opciones {
 }
 
 const mensajeDe = (e: unknown) =>
-  e instanceof Error ? e.message : "No se pudo completar la operación";
+  mensajeParaUsuario(e, "No se pudo completar la operación");
 
 /**
  * Estado y operaciones del versionado de plantillas, compartido por las

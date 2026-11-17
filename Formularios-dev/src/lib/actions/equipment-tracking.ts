@@ -3,6 +3,7 @@
 
 import { getAuthHeaders, handleApiResponse } from "./helpers";
 import { API_BASE_URL } from "../constants";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 export interface CheckEquipmentStatusResponse {
   canProceed: boolean;
@@ -91,7 +92,7 @@ export async function checkEquipmentStatus(
     console.error("❌ [ACTION] Error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido",
+      error: mensajeParaUsuario(error, "Error desconocido"),
     };
   }
 }

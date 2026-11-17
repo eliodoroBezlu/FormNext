@@ -30,6 +30,7 @@ import {
   CapturaFotoDialog,
   hayCamaraDisponible,
 } from "@/components/ui/camera/CapturaFotoDialog";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 const SignatureField = dynamic(
   () =>
@@ -123,7 +124,7 @@ export function EntregaForm({ estado, stockDisponible, onRegistrar }: Props) {
       else setEvidencias((prev) => [...prev, adjunto]);
     } catch (err) {
       setErrorArchivo(
-        err instanceof Error ? err.message : "No se pudo subir el archivo.",
+        mensajeParaUsuario(err, "No se pudo subir el archivo."),
       );
     } finally {
       setSubiendo(false);

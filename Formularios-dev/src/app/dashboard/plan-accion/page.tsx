@@ -44,6 +44,7 @@ import {
   PlanDeAccion,
 } from "@/components/features/planes-de-accion/domain/models/IProps";
 import { QuestionResponse, SectionResponse } from "@/types/formTypes";
+import { useConfirmar } from "@/components/ui/feedback/Confirmacion";
 
 export default function PlanesDeAccionPage() {
   const [localError, setLocalError] = useState<string | null>(null);
@@ -105,6 +106,8 @@ export default function PlanesDeAccionPage() {
     actualizarTarea,
     corregirTarea,
     sincronizarConInspeccion,
+    cargarPlanilla,
+    tareasResaltadas,
     eliminarTarea,
     aprobarTarea,
     aprobarPlanGlobal,
@@ -280,9 +283,10 @@ export default function PlanesDeAccionPage() {
     }
   };
 
+  const confirmar = useConfirmar();
   const handleDeletePlan = async (planId: string) => {
     if (
-      !confirm(
+      !await confirmar(
         "¿Está seguro de dar de baja este plan? Dejará de aparecer en los listados junto con sus tareas.",
       )
     )
@@ -339,6 +343,8 @@ export default function PlanesDeAccionPage() {
           onUpdateTarea={actualizarTarea}
           onCorregirTarea={corregirTarea}
           onSincronizarConInspeccion={sincronizarConInspeccion}
+          onCargarPlanilla={cargarPlanilla}
+          tareasResaltadas={tareasResaltadas}
           onDeleteTarea={eliminarTarea}
           onApproveTarea={aprobarTarea}
           onApprovePlan={aprobarPlanGlobal}
@@ -471,14 +477,18 @@ export default function PlanesDeAccionPage() {
             Generar desde Inspección
           </Button>
         )}
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleOpenCreatePlanModal}
-          disabled={isPending}
-        >
-          Crear Plan Manualmente
-        </Button>
+        {/* Crear un plan es solo del admin en el backend (`POST /planes-accion`):
+            a otro rol el botón lo llevaba a un formulario que fallaba al guardar. */}
+        {isAdmin && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleOpenCreatePlanModal}
+            disabled={isPending}
+          >
+            Crear Plan Manualmente
+          </Button>
+        )}
       </Box>
 
       <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap" }}>

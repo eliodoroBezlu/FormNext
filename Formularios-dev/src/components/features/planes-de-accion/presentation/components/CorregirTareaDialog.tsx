@@ -7,7 +7,6 @@ import {
   Autocomplete,
   Box,
   Button,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -34,6 +33,9 @@ import {
   camposDeCierre,
   usuariosDeCierre,
 } from "../../domain/responsablesCierre";
+import { useEstadoDeGuardado } from "@/hooks/useEstadoDeGuardado";
+import { BotonGuardar } from "@/components/ui/buttons/BotonGuardar";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 interface CorregirTareaDialogProps {
   open: boolean;
@@ -67,7 +69,8 @@ export function CorregirTareaDialog({
   onClose,
   onCorregir,
 }: CorregirTareaDialogProps) {
-  const [guardando, setGuardando] = useState(false);
+  const { estado: estadoGuardado, guardar: conAviso } = useEstadoDeGuardado();
+  const guardando = estadoGuardado !== "inactivo";
   const [error, setError] = useState<string | null>(null);
   /** `null`: todavía no llegaron; `[]`: llegaron y no hay ninguno. */
   const [supervisores, setSupervisores] = useState<ResponsableCierreOption[] | null>(
@@ -120,15 +123,14 @@ export function CorregirTareaDialog({
 
   const guardar = async (data: FormCorreccion) => {
     if (!tarea?._id) return;
-    setGuardando(true);
+    const id = tarea._id;
     setError(null);
     try {
-      await onCorregir(tarea._id, data);
+      // «Guardando…» y después «✓ Guardado» antes de cerrar.
+      await conAviso(() => onCorregir(id, data));
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo corregir");
-    } finally {
-      setGuardando(false);
+      setError(mensajeParaUsuario(err, "No se pudo corregir"));
     }
   };
 
@@ -312,14 +314,14 @@ export function CorregirTareaDialog({
         <Button type="button" onClick={onClose} disabled={guardando}>
           Cancelar
         </Button>
-        <Button
+        <BotonGuardar
           type="button"
-          variant="contained"
+          estado={estadoGuardado}
+          etiqueta="Guardar corrección"
+          etiquetaGuardado="Corregida"
           onClick={handleSubmit(guardar)}
-          disabled={guardando || faltan.length > 0}
-        >
-          {guardando ? <CircularProgress size={20} /> : "Guardar corrección"}
-        </Button>
+          disabled={faltan.length > 0}
+        />
       </DialogActions>
     </Dialog>
   );

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { obtenerPgrPorId } from "../../infrastructure/adapters/pgrAdapter";
 import { Pgr } from "../../domain/models/IProps";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 /**
  * Hook compartido para cargar un único PGR por id.
@@ -31,7 +32,7 @@ export function usePgr(id: string) {
 
   const aplicarFallo = useCallback((err: unknown) => {
     setError(
-      err instanceof Error ? err.message : "No se pudo cargar el plan PGR",
+      mensajeParaUsuario(err, "No se pudo cargar el plan PGR"),
     );
     setPgr(null);
   }, []);

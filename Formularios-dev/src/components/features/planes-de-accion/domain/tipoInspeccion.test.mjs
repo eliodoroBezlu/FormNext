@@ -22,3 +22,10 @@ test("un plan manual cae en «sin inspección»", () => {
     ["IRO · Izaje", "Sin inspección (manual)"],
   );
 });
+
+test("el día de la inspección se muestra tal cual, sin correrse por la zona horaria", async () => {
+  const { diaLegible } = await import("./tipoInspeccion.ts");
+  assert.equal(diaLegible("2026-10-21"), "21/10/2026");
+  assert.equal(diaLegible(undefined), "");
+  assert.equal(diaLegible("2026-10-21T04:00:00.000Z"), "");
+});

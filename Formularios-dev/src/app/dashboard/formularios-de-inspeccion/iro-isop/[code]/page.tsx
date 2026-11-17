@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Alert, Box, CircularProgress } from "@mui/material";
+import { Alert, Box } from "@mui/material";
 import { InspectionFormIroIsop } from "@/components/features/iro-isop/InspectionFormIroIsop";
 import { SuccessScreen } from "@/components/ui/feedback/SuccessScreen";
 import { Button } from "@/components/ui/buttons/Button";
 import { getTemplateByCode } from "@/lib/actions/template-actions";
 import type { FormInstance, FormTemplate } from "@/types/formTypes";
 import { LISTADO_DE_IRO as LISTADO } from "@/components/features/iro-isop/domain/models/rutas";
+import { EsqueletoFormulario } from "@/components/ui/feedback/EsqueletoFormulario";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 /**
  * Un formulario IRO/ISOP con su propia dirección
@@ -41,7 +43,7 @@ export default function FormularioIroIsopPage() {
       })
       .catch((err: unknown) => {
         if (vigente) {
-          setError(err instanceof Error ? err.message : "No se encontró el formulario");
+          setError(mensajeParaUsuario(err, "No se encontró el formulario"));
         }
       });
     return () => {
@@ -83,9 +85,7 @@ export default function FormularioIroIsopPage() {
 
   if (!plantilla) {
     return (
-      <Box display="flex" justifyContent="center" p={5}>
-        <CircularProgress />
-      </Box>
+      <EsqueletoFormulario />
     );
   }
 

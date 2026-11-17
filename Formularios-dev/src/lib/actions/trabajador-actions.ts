@@ -1,6 +1,11 @@
 "use server";
 
 import { Trabajador, TrabajadorResumen } from "@/types/trabajador";
+import type {
+  ResultadoDeAplicar,
+  UltimaSincronizacion,
+  VistaPrevia,
+} from "@/components/features/settings/domain/models/sincronizacionTrabajadores";
 import { API_BASE_URL } from "../constants";
 import { getAuthHeaders, handleApiResponse } from "./helpers";
 
@@ -19,6 +24,49 @@ export async function obtenerResponsablesDeCierreApi(): Promise<
   const response = await fetch(`${API_BASE_URL}/trabajadores/responsables-cierre`, {
     method: "GET",
     headers,
+    cache: "no-store",
+  });
+  return handleApiResponse(response);
+}
+
+/**
+ * forms guarda su propia copia del padrón y no la actualiza sola: quien crea
+ * un trabajador en el Portal IAM tiene que sincronizar para verlo aquí. Las
+ * dos son solo para admin.
+ *
+ * Qué cambiaría sincronizar, sin escribir nada.
+ */
+export async function obtenerVistaPreviaSincronizacion(): Promise<VistaPrevia> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/trabajadores/sync/vista-previa`, {
+    method: "GET",
+    headers,
+    cache: "no-store",
+  });
+  return handleApiResponse(response);
+}
+
+/** Cuándo fue la última sincronización y quién la hizo (no consulta al IAM). */
+export async function obtenerUltimaSincronizacion(): Promise<UltimaSincronizacion | null> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/trabajadores/sync/ultima`, {
+    method: "GET",
+    headers,
+    cache: "no-store",
+  });
+  return handleApiResponse(response);
+}
+
+/** Aplica lo elegido de la vista previa (ids de fichas del IAM) y, si se pide, los supervisores. */
+export async function aplicarSincronizacionIam(
+  ids: string[],
+  supervisores: boolean,
+): Promise<ResultadoDeAplicar> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/trabajadores/sync`, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({ ids, supervisores }),
     cache: "no-store",
   });
   return handleApiResponse(response);

@@ -26,6 +26,7 @@ import {
   ETIQUETA_DEVOLUCION,
   ETIQUETA_ESTADO,
   COLOR_ESTADO,
+  COLOR_DEVOLUCION,
   diasDeAtraso,
   estaVencida,
   resumirSolicitado,
@@ -37,6 +38,7 @@ import {
   type LineaPrestamo,
   type SolicitudPrestamo,
 } from "../../domain/models/Prestamo";
+import { EstadoChip } from "@/components/ui/feedback/EstadoChip";
 
 const fecha = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString("es-BO") : "—";
@@ -164,11 +166,7 @@ export function DetallePrestamo({
       <DialogTitle>
         <Box display="flex" alignItems="center" gap={1.5} flexWrap="wrap">
           <span>{solicitud.numero}</span>
-          <Chip
-            size="small"
-            label={ETIQUETA_ESTADO[solicitud.estado]}
-            color={COLOR_ESTADO[solicitud.estado]}
-          />
+          <EstadoChip etiqueta={ETIQUETA_ESTADO[solicitud.estado]} color={COLOR_ESTADO[solicitud.estado]} />
           {estaVencida(solicitud) && (
             <Chip
               size="small"
@@ -310,14 +308,9 @@ export function DetallePrestamo({
 
                   {devuelto && item.devolucion && (
                     <Box mt={0.5}>
-                      <Chip
-                        size="small"
-                        label={`Devuelto · ${ETIQUETA_DEVOLUCION[item.devolucion.estado]}`}
-                        color={
-                          item.devolucion.estado === "operativo"
-                            ? "success"
-                            : "warning"
-                        }
+                      <EstadoChip
+                        etiqueta={`Devuelto · ${ETIQUETA_DEVOLUCION[item.devolucion.estado]}`}
+                        color={COLOR_DEVOLUCION[item.devolucion.estado]}
                       />
                       {item.devolucion.observacion && (
                         <Typography variant="caption" display="block" mt={0.5}>

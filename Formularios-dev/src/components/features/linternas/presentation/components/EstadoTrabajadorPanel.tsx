@@ -19,25 +19,15 @@ import {
 } from "./AccionesEntrega";
 import {
   ETIQUETA_ESTADO,
+  COLOR_ESTADO,
   ETIQUETA_TIPO,
   EstadoEntrega,
   TipoEntrega,
   type EntregaLinterna,
   type EstadoTrabajador,
 } from "../../domain/models/Linterna";
-
-const COLOR_ESTADO: Record<
-  EstadoEntrega,
-  "default" | "success" | "warning" | "error"
-> = {
-  [EstadoEntrega.REGISTRADA]: "success",
-  [EstadoEntrega.APROBADA]: "success",
-  [EstadoEntrega.PENDIENTE_APROBACION]: "warning",
-  [EstadoEntrega.RECHAZADA]: "error",
-  // Gris a propósito: una entrega anulada no es un fallo, es un asiento que
-  // se queda pero ya no cuenta.
-  [EstadoEntrega.ANULADA]: "default",
-};
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
+import { EstadoChip } from "@/components/ui/feedback/EstadoChip";
 
 const fecha = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString("es-BO") : "—";
@@ -68,7 +58,7 @@ export function EstadoTrabajadorPanel({
       await linternasAdapter.descargarActa(id);
     } catch (err) {
       setErrorActa(
-        err instanceof Error ? err.message : "No se pudo generar el acta.",
+        mensajeParaUsuario(err, "No se pudo generar el acta."),
       );
     } finally {
       setDescargando(null);
@@ -85,9 +75,8 @@ export function EstadoTrabajadorPanel({
       </Typography>
 
       <Stack direction="row" gap={1} flexWrap="wrap" sx={{ mt: 1.5 }}>
-        <Chip
-          size="small"
-          label={estado.tieneDotacion ? "Con dotación" : "Sin dotación"}
+        <EstadoChip
+          etiqueta={estado.tieneDotacion ? "Con dotación" : "Sin dotación"}
           color={estado.tieneDotacion ? "success" : "default"}
         />
         <Chip size="small" label={`${estado.totalCambios} cambio(s)`} />
@@ -135,12 +124,7 @@ export function EstadoTrabajadorPanel({
                       : "default"
                   }
                 />
-                <Chip
-                  size="small"
-                  variant="outlined"
-                  label={ETIQUETA_ESTADO[h.estado]}
-                  color={COLOR_ESTADO[h.estado]}
-                />
+                <EstadoChip etiqueta={ETIQUETA_ESTADO[h.estado]} color={COLOR_ESTADO[h.estado]} />
                 <Typography variant="caption" color="text.secondary">
                   {/*
                     Sin `fechaEntrega` no se cae en `createdAt`: en las

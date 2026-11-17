@@ -233,10 +233,11 @@ export const ETIQUETA_ESTADO: Record<EstadoSolicitud, string> = {
   cancelada: "Cancelada",
 };
 
-export const COLOR_ESTADO: Record<
-  EstadoSolicitud,
-  "warning" | "info" | "success" | "default"
-> = {
+/** Los colores semánticos del tema (los de `EstadoChip`). */
+export type ColorSemantico = "default" | "info" | "warning" | "success" | "error";
+
+/** Color de cada estado de una solicitud (`docs/SISTEMA_DE_DISENO.md`, 1.3). */
+export const COLOR_ESTADO: Record<EstadoSolicitud, ColorSemantico> = {
   solicitada: "warning",
   entregada: "info",
   cerrada: "success",
@@ -247,6 +248,13 @@ export const ETIQUETA_DEVOLUCION: Record<EstadoDevolucion, string> = {
   operativo: "Operativo",
   requiere_inspeccion: "Requiere inspección",
   baja: "Dar de baja",
+};
+
+/** Cómo volvió un equipo: operativo en verde, a revisar en ámbar, para baja en rojo. */
+export const COLOR_DEVOLUCION: Record<EstadoDevolucion, ColorSemantico> = {
+  operativo: "success",
+  requiere_inspeccion: "warning",
+  baja: "error",
 };
 
 /**

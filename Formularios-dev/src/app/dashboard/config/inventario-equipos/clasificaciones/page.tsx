@@ -42,6 +42,8 @@ import {
   ClasificacionBackend,
   ClasificacionForm
 } from "@/lib/actions/clasificacion-actions"
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
+import { useConfirmar } from "@/components/ui/feedback/Confirmacion";
 
 const initialFormData: ClasificacionForm = {
   nombre: "",
@@ -90,7 +92,7 @@ export default function GestionClasificaciones() {
 
   const avisarFallo = useCallback((error: unknown) => {
     setError(
-      error instanceof Error ? error.message : "Error al cargar clasificaciones",
+      mensajeParaUsuario(error, "Error al cargar clasificaciones"),
     )
   }, [])
 
@@ -174,18 +176,19 @@ export default function GestionClasificaciones() {
       handleCloseModal()
       cargarDatos()
     } catch (err) {
-      showNotification(err instanceof Error ? err.message : "Error al guardar clasificación", "error")
+      showNotification(mensajeParaUsuario(err, "Error al guardar clasificación"), "error")
     }
   }
 
+  const confirmar = useConfirmar();
   const handleDelete = async (id: string) => {
-    if (window.confirm("¿Está seguro de que desea eliminar esta clasificación?")) {
+    if (await confirmar("¿Está seguro de que desea eliminar esta clasificación?")) {
       try {
         await eliminarClasificacion(id)
         showNotification("Clasificación eliminada con éxito", "success")
         cargarDatos()
       } catch (err) {
-        showNotification(err instanceof Error ? err.message : "Error al eliminar clasificación", "error")
+        showNotification(mensajeParaUsuario(err, "Error al eliminar clasificación"), "error")
       }
     }
   }

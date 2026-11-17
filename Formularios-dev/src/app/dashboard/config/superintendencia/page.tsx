@@ -41,6 +41,7 @@ import {
   Power as PowerIcon,
 } from "@mui/icons-material"
 import { activarSuperintendencia, actualizarSuperintendencia, crearSuperintendencia, CreateSuperintendenciaDto, desactivarSuperintendencia, eliminarSuperintendencia, obtenerSuperintendenciaPorId, obtenerSuperintendencias, SuperintendenciaBackend } from "@/lib/actions/superintendecia-actions"
+import { useConfirmar } from "@/components/ui/feedback/Confirmacion";
 
 interface SuperintendenciaForm {
   nombre: string
@@ -236,8 +237,9 @@ export default function GestionSuperintendencias() {
     }
   }
 
+  const confirmar = useConfirmar();
   const handleEliminarSuperintendencia = async (id: string) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar esta superintendencia? Esta acción no se puede deshacer y eliminará también todas las áreas asociadas.")) return
+    if (!await confirmar("¿Estás seguro de que quieres eliminar esta superintendencia? Esta acción no se puede deshacer y eliminará también todas las áreas asociadas.")) return
     
     try {
       setLoading(true)
@@ -400,7 +402,7 @@ export default function GestionSuperintendencias() {
             <TableContainer>
               <Table>
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableRow sx={{ backgroundColor: 'background.default' }}>
                     <TableCell>Nombre</TableCell>
                     <TableCell align="center">Estado</TableCell>
                     <TableCell align="center">Fecha Creación</TableCell>
@@ -424,7 +426,7 @@ export default function GestionSuperintendencias() {
                       .map((superintendencia) => (
                         <TableRow 
                           key={superintendencia._id}
-                          sx={{ '&:hover': { backgroundColor: '#f9f9f9' } }}
+                          sx={{ '&:hover': { backgroundColor: 'action.hover' } }}
                         >
                           <TableCell>
                             <Typography variant="body2" fontWeight="medium">

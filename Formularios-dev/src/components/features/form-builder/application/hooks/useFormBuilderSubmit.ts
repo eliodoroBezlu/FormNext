@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import type { FormBuilderData, FormTemplate } from "@/types/formTypes";
 import { templateAdapter } from "@/components/features/form-builder/infrastructure/adapters/templateAdapter";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 interface UseFormBuilderSubmitParams {
   template: FormTemplate | null;
@@ -118,7 +119,7 @@ export const useFormBuilderSubmit = ({
           setError(result.error || "Error desconocido");
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Error inesperado");
+        setError(mensajeParaUsuario(err, "Error inesperado"));
       }
     });
   };

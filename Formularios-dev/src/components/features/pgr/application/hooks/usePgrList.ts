@@ -7,6 +7,7 @@ import {
   eliminarPgr,
 } from "../../infrastructure/adapters/pgrAdapter";
 import { Pgr, PgrFilters } from "../../domain/models/IProps";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 interface SnackbarState {
   open: boolean;
@@ -58,9 +59,7 @@ export function usePgrList() {
       setPlanes(data);
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "No se pudieron cargar los planes PGR",
+        mensajeParaUsuario(err, "No se pudieron cargar los planes PGR"),
       );
     } finally {
       setIsLoading(false);

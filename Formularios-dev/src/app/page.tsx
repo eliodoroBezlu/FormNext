@@ -3,7 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore, useTransition } from "react";
 import { Box, Alert, CircularProgress, Typography, Paper } from "@mui/material";
-import { inspectorLoginAction } from "@/app/actions/auth";
+import { alpha } from "@mui/material/styles";
+import { DERIVADOS, MARCA } from "@/styles/marca";
+import { authAdapter } from "@/components/features/auth/infrastructure/adapters/authAdapter";
 
 // Beneficios con iconos SVG del diseño Claude
 const benefits = [
@@ -87,7 +89,7 @@ export default function Home() {
 
     startTransition(async () => {
       try {
-        const result = await inspectorLoginAction();
+        const result = await authAdapter.loginInspector();
 
         if (result?.success) {
           console.log("✅ Inspector autenticado, redirigiendo...");
@@ -126,7 +128,7 @@ export default function Home() {
         sx={{
           flex: { xs: "none", md: "0 0 58%" },
           background:
-            "radial-gradient(circle at 1px 1px, rgba(255,255,255,.13) 1px, transparent 0) 0 0/26px 26px, linear-gradient(135deg,#4F46E5 0%,#6366F1 60%,#7C3AED 100%)",
+            `radial-gradient(circle at 1px 1px, rgba(255,255,255,.13) 1px, transparent 0) 0 0/26px 26px, linear-gradient(135deg,${DERIVADOS.petroleoProfundo} 0%,${MARCA.petroleo} 60%,${MARCA.acero} 100%)`,
           color: "white",
           display: "flex",
           flexDirection: "column",
@@ -446,7 +448,8 @@ export default function Home() {
                 bgcolor: "background.paper",
                 border: "1px solid",
                 borderColor: "divider",
-                borderLeft: "4px solid #6366F1", // indigo primary
+                borderLeft: "4px solid",
+                borderLeftColor: "primary.main",
                 borderRadius: "16px",
                 p: "20px 22px",
                 cursor: isPending ? "not-allowed" : "pointer",
@@ -467,7 +470,8 @@ export default function Home() {
                   width: 48,
                   height: 48,
                   borderRadius: "12px",
-                  bgcolor: "rgba(99,102,241,.12)",
+                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
+                  color: "primary.main",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -479,7 +483,7 @@ export default function Home() {
                   height="24"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="#6366F1"
+                  stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"

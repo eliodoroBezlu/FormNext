@@ -1,4 +1,4 @@
-import { Section } from "../types/IProps";
+import type { Section } from "../types/IProps";
 
 /**
  * Filtra recursivamente las secciones según las selecciones
@@ -51,6 +51,32 @@ export const filterSectionsBySelections = (
     
     return section;
   });
+};
+
+/**
+ * Las secciones que se muestran al revisar una inspección, cada una con su
+ * posición en la plantilla (`responses.section_N`).
+ *
+ * Las subsecciones no conservan su posición: el formulario guarda las respuestas
+ * del primer tipo elegido en `sub0`, del segundo en `sub1`, y así (numera solo
+ * las visibles). Por eso hay que filtrarlas igual que el formulario antes de
+ * leerlas: recorrer la plantilla completa le atribuía las respuestas de la
+ * escalera telescópica a la escalera simple.
+ */
+export const seccionesParaRevisar = (
+  sections: Section[],
+  selectedItems: Record<string, string[]> | undefined,
+  conSelector: boolean,
+): { section: Section; indice: number }[] => {
+  const visibles = conSelector
+    ? filterSectionsBySelections(sections, selectedItems ?? {})
+    : sections;
+  return visibles.map((section) => ({
+    section,
+    indice: sections.findIndex(
+      (s) => (!!section._id && s._id === section._id) || s.title === section.title,
+    ),
+  }));
 };
 
 /**

@@ -16,6 +16,9 @@ import { SectionAccordion } from "../sections/SectionAccordion";
 import { ConclusionesSection } from "../sections/ConclusionesSection";
 import { ResumenGeneralSection } from "../sections/ResumenGeneralSection";
 import { PersonalInvolucrado } from "./PersonalInvolucrado";
+import { irAlPrimerError } from "@/lib/formularios/irAlPrimerError";
+import { BotonGuardar } from "@/components/ui/buttons/BotonGuardar";
+import { estadoDelBoton } from "@/components/features/iro-isop/domain/models/estadoDelBoton";
 
 export const IroIsopInspectionForm = ({
   methods,
@@ -33,6 +36,7 @@ export const IroIsopInspectionForm = ({
   success,
   error,
   submitting,
+  accionDeGuardado = null,
   teamMembers,
   addTeamMember,
   removeTeamMember,
@@ -43,22 +47,12 @@ export const IroIsopInspectionForm = ({
   handleUpdateQuestionResponse,
 }: IroIsopInspectionFormProps & { methods: UseFormReturn<InspectionFormData> }) => {
 
+  // El botón que se pulsó muestra «Guardando…» y, al terminar, «✓ …» hasta la pantalla de «listo».
+  const estadoDeGuardado = { accion: accionDeGuardado, guardando: submitting, guardado: !!success };
+
   // --- DOUBLE FRAME SMOOTH SCROLL TO ERRORS (PROJECT baseline standard) ---
   const handleInvalidSubmit = useCallback(() => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const errorElement = document.querySelector<HTMLElement>(
-          '[data-question-error="true"], [aria-invalid="true"], .Mui-error'
-        );
-        if (errorElement) {
-          errorElement.scrollIntoView({ behavior: "smooth", block: "center" });
-          const focusable = errorElement.querySelector<HTMLElement>(
-            "input, textarea, button[aria-pressed]"
-          );
-          (focusable ?? errorElement).focus?.();
-        }
-      });
-    });
+    irAlPrimerError('[data-question-error="true"], [aria-invalid="true"], .Mui-error');
   }, []);
 
   // --- RENDERIZADO RECURSIVO DE SECCIONES JERÁRQUICAS ---
@@ -179,30 +173,31 @@ export const IroIsopInspectionForm = ({
             {/* Guardar avance: sin validar, la IRO sigue en borrador. */}
             {!readonly && !yaTerminada && (
               <Grid size={{ xs: 12, sm: "auto" }}>
-                <Button
+                <BotonGuardar
                   type="button"
                   variant="outlined"
                   startIcon={<Save />}
+                  estado={estadoDelBoton("avance", estadoDeGuardado)}
+                  etiqueta="Guardar avance"
+                  etiquetaGuardado="Avance guardado"
                   onClick={onGuardarAvance}
-                  disabled={submitting}
+                  disabled={submitting || !!success}
                   sx={{ width: { xs: "100%", sm: "auto" } }}
-                >
-                  Guardar avance
-                </Button>
+                />
               </Grid>
             )}
             {/* Terminar: exige todo respondido y genera el plan de acción. */}
             {!readonly && (
               <Grid size={{ xs: 12, sm: "auto" }}>
-                <Button
+                <BotonGuardar
                   type="submit"
-                  variant="contained"
                   startIcon={yaTerminada ? <Save /> : <TaskAlt />}
-                  disabled={submitting}
+                  estado={estadoDelBoton("terminar", estadoDeGuardado)}
+                  etiqueta={yaTerminada ? "Guardar cambios" : "Terminar IRO"}
+                  etiquetaGuardado={yaTerminada ? "Guardado" : "IRO terminada"}
+                  disabled={submitting || !!success}
                   sx={{ width: { xs: "100%", sm: "auto" } }}
-                >
-                  {submitting ? "Guardando..." : yaTerminada ? "Guardar cambios" : "Terminar IRO"}
-                </Button>
+                />
               </Grid>
             )}
           </Grid>

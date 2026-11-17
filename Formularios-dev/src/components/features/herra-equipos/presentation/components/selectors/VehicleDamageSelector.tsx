@@ -421,7 +421,7 @@ const VehicleDamageSelectorInner = <TFieldValues extends FieldValues = FieldValu
       </Box>
 
       {/* Leyenda */}
-      <Box sx={{ p: 2, backgroundColor: '#f5f5f5', borderRadius: 1, mb: 2 }}>
+      <Box sx={{ p: 2, backgroundColor: 'background.default', borderRadius: 1, mb: 2 }}>
         <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>Leyenda:</Typography>
         <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
           {(Object.entries(DAMAGE_TYPES) as [DamageType, DamageTypeConfig][]).map(([key, config]) => (

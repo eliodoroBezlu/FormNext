@@ -1,11 +1,4 @@
-import {
-  loginAction,
-  logoutAction,
-  registerAction,
-  verify2FAAction,
-  inspectorLoginAction,
-  cambiarClaveAction,
-} from "@/app/actions/auth";
+import { logoutAction, inspectorLoginAction, cambiarClaveAction } from "@/app/actions/auth";
 import type { ActionResult } from "@/app/actions/auth";
 
 /**
@@ -15,14 +8,6 @@ import type { ActionResult } from "@/app/actions/auth";
  * de este adaptador.
  */
 export const authAdapter = {
-  /**
-   * Inicia sesión con usuario/contraseña. Puede devolver `requires2FA`
-   * cuando la cuenta tiene 2FA habilitado.
-   */
-  async login(formData: FormData): Promise<ActionResult> {
-    return loginAction(formData);
-  },
-
   /**
    * Inicia sesión automática como técnico/inspector (sin credenciales).
    */
@@ -35,20 +20,6 @@ export const authAdapter = {
    */
   async logout(): Promise<void> {
     await logoutAction();
-  },
-
-  /**
-   * Registra un nuevo usuario.
-   */
-  async register(formData: FormData): Promise<ActionResult> {
-    return registerAction(formData);
-  },
-
-  /**
-   * Verifica el código 2FA asociado a un `tempToken` de login.
-   */
-  async verify2FA(tempToken: string, code: string): Promise<ActionResult> {
-    return verify2FAAction(tempToken, code);
   },
 
   /**

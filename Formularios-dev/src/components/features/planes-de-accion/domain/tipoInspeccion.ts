@@ -55,3 +55,13 @@ export function opcionesDeTipo(
     .map(([valor, etiqueta]) => ({ valor, etiqueta }))
     .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta, "es"));
 }
+
+/**
+ * «2026-10-21» → «21/10/2026». El backend manda el día ya resuelto en Bolivia;
+ * se reordena el texto sin pasar por `Date`, que lo leería como medianoche UTC
+ * y en Bolivia mostraría el día anterior. Lo que no sea un día queda en blanco.
+ */
+export function diaLegible(dia?: string): string {
+  const partes = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dia ?? "");
+  return partes ? `${partes[3]}/${partes[2]}/${partes[1]}` : "";
+}

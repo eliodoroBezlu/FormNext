@@ -2,6 +2,7 @@
 
 import { API_BASE_URL } from "../constants";
 import { getAuthHeaders, handleApiResponse } from "./helpers";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 // Types
 export interface TagBackend {
@@ -34,7 +35,7 @@ export async function obtenerTags(): Promise<TagBackend[]> {
     return handleApiResponse<TagBackend[]>(response);
   } catch (error) {
     console.error('Error al obtener tags:', error);
-    throw new Error(`No se pudieron obtener los tags: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudieron obtener los tags: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -52,7 +53,7 @@ export async function obtenerTagPorId(id: string): Promise<TagBackend> {
     return handleApiResponse<TagBackend>(response);
   } catch (error) {
     console.error('Error al obtener tag:', error);
-    throw new Error(`No se pudo obtener el tag: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo obtener el tag: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -71,7 +72,7 @@ export async function crearTag(tagData: TagForm): Promise<TagBackend> {
     return handleApiResponse<TagBackend>(response);
   } catch (error) {
     console.error('Error al crear tag:', error);
-    throw new Error(`No se pudo crear el tag: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo crear el tag: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -90,7 +91,7 @@ export async function actualizarTag(id: string, tagData: Partial<TagForm>): Prom
     return handleApiResponse<TagBackend>(response);
   } catch (error) {
     console.error('Error al actualizar tag:', error);
-    throw new Error(`No se pudo actualizar el tag: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo actualizar el tag: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -108,7 +109,7 @@ export async function eliminarTag(id: string): Promise<{ message: string }> {
     return handleApiResponse<{ message: string }>(response);
   } catch (error) {
     console.error('Error al eliminar tag:', error);
-    throw new Error(`No se pudo eliminar el tag: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo eliminar el tag: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -126,7 +127,7 @@ export async function desactivarTag(id: string): Promise<TagBackend> {
     return handleApiResponse<TagBackend>(response);
   } catch (error) {
     console.error('Error al desactivar tag:', error);
-    throw new Error(`No se pudo desactivar el tag: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo desactivar el tag: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -144,7 +145,7 @@ export async function activarTag(id: string): Promise<TagBackend> {
     return handleApiResponse<TagBackend>(response);
   } catch (error) {
     console.error('Error al activar tag:', error);
-    throw new Error(`No se pudo activar el tag: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo activar el tag: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -162,6 +163,6 @@ export async function obtenerTagsPorArea(area: string): Promise<string[]> {
     return handleApiResponse<string[]>(response);
   } catch (error) {
     console.error('Error al obtener tags por área:', error);
-    throw new Error(`No se pudieron obtener los tags del área: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudieron obtener los tags del área: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }

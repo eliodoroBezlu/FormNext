@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Button, Typography, Alert, CircularProgress, Paper } from '@mui/material';
 import { EngineeringOutlined } from '@mui/icons-material';
-import { inspectorLoginAction } from '@/app/actions/auth';
+import { authAdapter } from '@/components/features/auth/infrastructure/adapters/authAdapter';
 
 export default function InspectorLoginPage() {
   const router = useRouter();
@@ -20,7 +20,7 @@ export default function InspectorLoginPage() {
     setError(null);
 
     try {
-      const result = await inspectorLoginAction();
+      const result = await authAdapter.loginInspector();
 
       if (!result?.success) {
         setError(result?.error ?? 'No se pudo iniciar sesión como inspector.');

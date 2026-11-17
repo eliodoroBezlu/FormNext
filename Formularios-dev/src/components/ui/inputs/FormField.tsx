@@ -6,7 +6,7 @@ import {
   type RegisterOptions,
 } from "react-hook-form";
 import { Input, type InputProps } from "./Input";
-import { Select, type SelectProps } from "../selects/Select";
+import { Select, type SelectProps } from "./Select";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import {
   FormControl,

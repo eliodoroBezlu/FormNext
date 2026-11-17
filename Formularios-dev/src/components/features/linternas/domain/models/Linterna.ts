@@ -40,6 +40,23 @@ export const ETIQUETA_TIPO: Record<TipoEntrega, string> = {
   [TipoEntrega.REPOSICION_PERDIDA]: "Reposición por pérdida",
 };
 
+/** Los colores semánticos del tema (los de `EstadoChip`). */
+export type ColorSemantico = "default" | "info" | "warning" | "success" | "error";
+
+/**
+ * Color de cada estado de una entrega (`docs/SISTEMA_DE_DISENO.md`, 1.3).
+ * La pendiente va en ámbar y no en azul: mientras no se resuelva, no se puede
+ * registrar otra entrega para esa persona. Anulada en gris: no es un fallo, es
+ * un asiento que se queda pero ya no cuenta.
+ */
+export const COLOR_ESTADO: Record<EstadoEntrega, ColorSemantico> = {
+  [EstadoEntrega.REGISTRADA]: "success",
+  [EstadoEntrega.APROBADA]: "success",
+  [EstadoEntrega.PENDIENTE_APROBACION]: "warning",
+  [EstadoEntrega.RECHAZADA]: "error",
+  [EstadoEntrega.ANULADA]: "default",
+};
+
 export const ETIQUETA_ESTADO: Record<EstadoEntrega, string> = {
   [EstadoEntrega.REGISTRADA]: "Registrada",
   [EstadoEntrega.PENDIENTE_APROBACION]: "Pendiente de aprobación",

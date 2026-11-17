@@ -25,6 +25,9 @@ import CloseIcon from "@mui/icons-material/Close";
 import LockResetIcon from "@mui/icons-material/LockReset";
 import { Navigation } from "@/components/layout/navigation/Navigation";
 import { lightTheme, darkTheme } from "../../styles/theme";
+import { ConfirmacionProvider } from "@/components/ui/feedback/Confirmacion";
+import { alpha } from "@mui/material/styles";
+import { MARCA, superficieDeMarca } from "../../styles/marca";
 import { LogoutButton } from "@/components/features/auth/presentation/components/LogoutButton";
 import { CambiarClaveDialog } from "@/components/features/auth/presentation/components/CambiarClaveDialog";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -90,7 +93,11 @@ export default function DashboardLayout({
   };
 
   if (!mounted) {
-    return <div style={{ visibility: "hidden" }}>{children}</div>;
+    return (
+      <ConfirmacionProvider>
+        <div style={{ visibility: "hidden" }}>{children}</div>
+      </ConfirmacionProvider>
+    );
   }
 
   const currentTheme = darkMode ? darkTheme : lightTheme;
@@ -104,7 +111,7 @@ export default function DashboardLayout({
           position="fixed"
           sx={{
             zIndex: (theme) => theme.zIndex.drawer + 2, // Por encima del drawer para mantenerlo accesible
-            background: "linear-gradient(135deg, rgba(99, 102, 241, 0.96), rgba(79, 70, 229, 0.96))",
+            background: (theme) => alpha(superficieDeMarca(theme.palette.mode), 0.96),
             backdropFilter: "blur(12px)",
             borderBottom: "1px solid rgba(255, 255, 255, 0.12)",
             boxShadow: "var(--shadow-md)",
@@ -152,7 +159,7 @@ export default function DashboardLayout({
                 <Avatar
                   sx={{
                     bgcolor: "#ffffff",
-                    color: "#4F46E5",
+                    color: MARCA.petroleo,
                     width: 34,
                     height: 34,
                     fontSize: "13px",
@@ -290,7 +297,8 @@ export default function DashboardLayout({
           <Toolbar />
           <Box className="fade-in" sx={{ flexGrow: 1 }}>
             <DynamicBreadcrumbs />
-            {children}
+            {/* Diálogo de confirmación del sistema (`useConfirmar`), con el tema del panel. */}
+            <ConfirmacionProvider>{children}</ConfirmacionProvider>
           </Box>
         </Box>
       </Box>

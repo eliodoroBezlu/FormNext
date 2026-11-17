@@ -1,6 +1,7 @@
 "use client";
 
 import { Box, Typography } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import {
   FolderOutlined,
   RadioButtonUncheckedOutlined,
@@ -18,28 +19,28 @@ export function PlanSummary({ summary }: PlanSummaryProps) {
     {
       label: "Total Planes",
       value: summary.totalPlanes,
-      color: "#6366F1",
+      color: "secondary",
       icon: FolderOutlined,
     },
     {
       label: "Abiertos",
       value: summary.planesAbiertos,
-      color: "#3B82F6",
+      color: "info",
       icon: RadioButtonUncheckedOutlined,
     },
     {
       label: "En Progreso",
       value: summary.planesEnProgreso,
-      color: "#F59E0B",
+      color: "warning",
       icon: AccessTimeOutlined,
     },
     {
       label: "Cerrados",
       value: summary.planesCerrados,
-      color: "#10B981",
+      color: "success",
       icon: CheckCircleOutlineOutlined,
     },
-  ];
+  ] as const;
 
   const pctText = `${summary.porcentajeCierre.toFixed(1)}%`;
 
@@ -62,8 +63,11 @@ export function PlanSummary({ summary }: PlanSummaryProps) {
               borderRadius: 4,
               boxShadow: 1,
               p: 2.75,
-              borderBottom: `3px solid ${color}`,
-              background: `linear-gradient(135deg, ${color}14, #fff)`,
+              borderBottom: "3px solid",
+              borderBottomColor: `${color}.main`,
+              // Teñido del color del estado sobre el papel del tema (claro u oscuro).
+              background: (theme) =>
+                `linear-gradient(135deg, ${alpha(theme.palette[color].main, 0.08)}, ${theme.palette.background.paper})`,
             }}
           >
             <Box
@@ -86,10 +90,10 @@ export function PlanSummary({ summary }: PlanSummaryProps) {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  bgcolor: `${color}14`,
+                  bgcolor: (theme) => alpha(theme.palette[color].main, 0.08),
                 }}
               >
-                <Icon sx={{ color, fontSize: 24 }} />
+                <Icon sx={{ color: `${color}.main`, fontSize: 24 }} />
               </Box>
             </Box>
             <Typography
@@ -128,7 +132,7 @@ export function PlanSummary({ summary }: PlanSummaryProps) {
           >
             Tasa de cierre
           </Typography>
-          <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#10B981" }}>
+          <Typography sx={{ fontSize: 13, fontWeight: 700, color: "success.main" }}>
             {pctText}
           </Typography>
         </Box>
@@ -136,7 +140,7 @@ export function PlanSummary({ summary }: PlanSummaryProps) {
           sx={{
             height: 8,
             borderRadius: 6,
-            bgcolor: "#F1F5F9",
+            bgcolor: "action.hover",
             overflow: "hidden",
           }}
         >
@@ -145,8 +149,10 @@ export function PlanSummary({ summary }: PlanSummaryProps) {
               height: "100%",
               width: `${Math.min(summary.porcentajeCierre, 100)}%`,
               borderRadius: 6,
-              background: "linear-gradient(90deg, #10B981, #34D399)",
-              transition: "width .3s ease",
+              bgcolor: "success.main",
+              // La barra se llena hasta su avance.
+              transition: "width 0.6s ease-out",
+              "@media (prefers-reduced-motion: reduce)": { transition: "none" },
             }}
           />
         </Box>

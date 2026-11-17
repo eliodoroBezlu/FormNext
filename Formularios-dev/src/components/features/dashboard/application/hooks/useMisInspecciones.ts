@@ -14,6 +14,7 @@ import {
   groupByFolder,
   Vista,
 } from "../../domain/models/dashboardModels";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 /**
  * Orquesta la carga, filtrado y agrupamiento en carpetas de las tres
@@ -92,9 +93,7 @@ export function useMisInspecciones(username: string, area?: string) {
       .catch((err: unknown) => {
         if (!vigente) return;
         setErrorHerra(
-          err instanceof Error
-            ? err.message
-            : "Error al cargar Herramientas y Equipos.",
+          mensajeParaUsuario(err, "Error al cargar Herramientas y Equipos."),
         );
         setHerraEquipos([]);
       })
@@ -143,7 +142,7 @@ export function useMisInspecciones(username: string, area?: string) {
       .catch((err: unknown) => {
         if (!vigente) return;
         setErrorIso(
-          err instanceof Error ? err.message : "Error al cargar IRO-ISOP.",
+          mensajeParaUsuario(err, "Error al cargar IRO-ISOP."),
         );
         setIsoInstances([]);
       })

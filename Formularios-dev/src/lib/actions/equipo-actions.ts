@@ -5,6 +5,7 @@ import { getAuthHeaders, handleApiResponse } from "./helpers";
 import { AreaBackend } from "./area-actions";
 import { UbicacionBackend } from "./ubicacion-actions";
 import { ClasificacionBackend } from "./clasificacion-actions";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 /** Una foto del equipo. La primera del array hace de portada. */
 export interface FotoEquipo {
@@ -111,7 +112,7 @@ export async function obtenerEquipos(): Promise<EquipoBackend[]> {
     return handleApiResponse<EquipoBackend[]>(response);
   } catch (error) {
     console.error('Error al obtener equipos:', error);
-    throw new Error(`No se pudieron obtener los equipos: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudieron obtener los equipos: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -127,7 +128,7 @@ export async function obtenerEquipoPorId(id: string): Promise<EquipoBackend> {
     return handleApiResponse<EquipoBackend>(response);
   } catch (error) {
     console.error('Error al obtener equipo:', error);
-    throw new Error(`No se pudo obtener el equipo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo obtener el equipo: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -146,7 +147,7 @@ export async function crearEquipo(data: EquipoForm): Promise<EquipoBackend> {
     return handleApiResponse<EquipoBackend>(response);
   } catch (error) {
     console.error('Error al crear equipo:', error);
-    throw new Error(`No se pudo crear el equipo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo crear el equipo: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -165,7 +166,7 @@ export async function actualizarEquipo(id: string, data: EquipoForm): Promise<Eq
     return handleApiResponse<EquipoBackend>(response);
   } catch (error) {
     console.error('Error al actualizar equipo:', error);
-    throw new Error(`No se pudo actualizar el equipo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo actualizar el equipo: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -183,7 +184,7 @@ export async function eliminarEquipo(id: string): Promise<void> {
     }
   } catch (error) {
     console.error('Error al eliminar equipo:', error);
-    throw new Error(`No se pudo eliminar el equipo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo eliminar el equipo: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -212,7 +213,7 @@ export async function migrarExcel(formData?: FormData): Promise<MigracionResulta
     return handleApiResponse<MigracionResultado>(response);
   } catch (error) {
     console.error('Error en migración de Excel:', error);
-    throw new Error(`Error en la migración de Excel: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`Error en la migración de Excel: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 

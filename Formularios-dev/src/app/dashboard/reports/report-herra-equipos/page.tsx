@@ -73,6 +73,8 @@ import {
   ReportSnackbar,
   useReportNotification,
 } from "@/components/features/reports/presentation/components/ReportSnackbar";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
+import { useConfirmar } from "@/components/ui/feedback/Confirmacion";
 
 
 
@@ -267,7 +269,7 @@ function ListarInspeccionHerraEquiposComponent() {
   const avisarFallo = useCallback((err: unknown) => {
     console.error(err);
     setError(
-      err instanceof Error ? err.message : "No se pudieron cargar las inspecciones",
+      mensajeParaUsuario(err, "No se pudieron cargar las inspecciones"),
     );
     setInspections([]);
     setMostrarResultados(false);
@@ -480,8 +482,9 @@ function ListarInspeccionHerraEquiposComponent() {
     }
   };
 
+  const confirmar = useConfirmar();
   const handleEliminar = async (id: string) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar esta inspección?"))
+    if (!await confirmar("¿Estás seguro de que quieres eliminar esta inspección?"))
       return;
     try {
       setLoading(true);
@@ -493,7 +496,7 @@ function ListarInspeccionHerraEquiposComponent() {
     } catch (err) {
       console.error(err);
       mostrar(
-        err instanceof Error ? err.message : "Error al eliminar",
+        mensajeParaUsuario(err, "Error al eliminar"),
         "error",
       );
     } finally {
@@ -518,7 +521,7 @@ function ListarInspeccionHerraEquiposComponent() {
     } catch (err) {
       console.error(err);
       mostrar(
-        err instanceof Error ? err.message : "Error al descargar el Excel",
+        mensajeParaUsuario(err, "Error al descargar el Excel"),
         "error",
       );
     }
@@ -531,7 +534,7 @@ function ListarInspeccionHerraEquiposComponent() {
     } catch (err) {
       console.error(err);
       mostrar(
-        err instanceof Error ? err.message : "Error al descargar el ZIP",
+        mensajeParaUsuario(err, "Error al descargar el ZIP"),
         "error",
       );
     }
@@ -882,7 +885,7 @@ function ListarInspeccionHerraEquiposComponent() {
               </Typography>
               <Box
                 sx={{
-                  bgcolor: "#f5f5f5",
+                  bgcolor: "background.default",
                   p: 2,
                   borderRadius: 1,
                   maxHeight: 300,

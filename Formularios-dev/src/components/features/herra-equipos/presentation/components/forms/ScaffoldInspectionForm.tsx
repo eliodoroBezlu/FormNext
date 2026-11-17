@@ -46,6 +46,8 @@ import {
   subirAlInicio,
 } from "../../../utils/navegacion-pasos";
 import { autorizarSalida, salidaEstaAutorizada } from "../../../domain/models/SalidaSinAviso";
+import { irAlPrimerError } from "@/lib/formularios/irAlPrimerError";
+import { BotonGuardar } from "@/components/ui/buttons/BotonGuardar";
 interface ScaffoldInspectionFormProps {
   template: FormTemplateHerraEquipos;
   onSubmit: (data: FormDataHerraEquipos) => void;
@@ -465,20 +467,7 @@ export function ScaffoldInspectionForm({
   const handleInvalidSubmit = (errors: FieldErrors<FormDataHerraEquipos>) => {
     setHasSubmitErrors(true);
     console.log("errors", errors);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const firstInvalid = document.querySelector<HTMLElement>(
-          '[data-question-error="true"], [aria-invalid="true"]',
-        );
-        if (firstInvalid) {
-          firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
-          const focusable = firstInvalid.querySelector<HTMLElement>(
-            "input, textarea, button[aria-pressed]",
-          );
-          (focusable ?? firstInvalid).focus?.();
-        }
-      });
-    });
+    irAlPrimerError('[data-question-error="true"], [aria-invalid="true"]');
   };
 
   const handleApprovalSubmit = () => {
@@ -549,7 +538,9 @@ export function ScaffoldInspectionForm({
         );
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const isValid = await trigger(step1FieldNames as any);
+        // Si falta algo, llevar a lo primero que falta (no solo pintarlo de rojo).
         if (isValid) handleStepChange(2);
+        else irAlPrimerError();
       }
     } else if (activeStep === 2) {
       // Always validate ALL verification fields
@@ -558,7 +549,9 @@ export function ScaffoldInspectionForm({
       );
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const isValid = await trigger(step2FieldNames as any);
+      // Si falta algo, llevar a lo primero que falta (no solo pintarlo de rojo).
       if (isValid) handleStepChange(3);
+      else irAlPrimerError();
     } else if (activeStep === 3) {
       // Validate checklist & daily routines
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -584,7 +577,10 @@ export function ScaffoldInspectionForm({
       ];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const isValid = await trigger(step4FieldNames as any);
-      if (!isValid) return;
+      if (!isValid) {
+        irAlPrimerError();
+        return;
+      }
 
       if (onSaveDraft) {
         handleSubmit(async (data) => {
@@ -997,19 +993,13 @@ export function ScaffoldInspectionForm({
                 </Button>
               )}
 
-              <Button
-                variant="contained"
+              {/* En el paso 4, «Siguiente» firma y guarda: que se vea que está guardando. */}
+              <BotonGuardar
+                type="button"
+                estado={isSubmitting ? "guardando" : "inactivo"}
+                etiqueta="Siguiente Sección"
                 onClick={handleNextStep}
-                disabled={isSubmitting}
-                sx={{
-                  background: "linear-gradient(135deg, #6366F1, #818CF8)",
-                  "&:hover": {
-                    background: "linear-gradient(135deg, #4F46E5, #6366F1)",
-                  },
-                }}
-              >
-                Siguiente Sección
-              </Button>
+              />
             </Box>
           </Box>
         )}

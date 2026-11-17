@@ -31,6 +31,7 @@ import {
   type ReclasificarEntregaPayload,
 } from "../../domain/models/Linterna";
 import { linternasAdapter } from "../../infrastructure/adapters/linternasAdapter";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 interface FormularioReclasificar extends FieldValues {
   tipo: TipoEntrega;
@@ -137,7 +138,7 @@ export function ReclasificarDialog({
       else setEvidencias((prev) => [...prev, adjunto]);
     } catch (err) {
       setErrorArchivo(
-        err instanceof Error ? err.message : "No se pudo subir el archivo.",
+        mensajeParaUsuario(err, "No se pudo subir el archivo."),
       );
     } finally {
       setSubiendo(false);

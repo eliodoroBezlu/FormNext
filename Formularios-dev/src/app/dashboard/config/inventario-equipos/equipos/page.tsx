@@ -60,6 +60,8 @@ import { obtenerClasificaciones, ClasificacionBackend } from "@/lib/actions/clas
 import { obtenerSuperintendencias, SuperintendenciaBackend } from "@/lib/actions/superintendecia-actions"
 import { obtenerGerencias, GerenciaBackend } from "@/lib/actions/gerencia-actions"
 import { obtenerConfigFormularios, ConfigFormularioBackend } from "@/lib/actions/config-formulario-actions"
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
+import { useConfirmar } from "@/components/ui/feedback/Confirmacion";
 
 const initialFormData: EquipoForm = {
   codigo: "",
@@ -151,7 +153,7 @@ export default function GestionEquipos() {
   )
 
   const avisarFallo = useCallback((error: unknown) => {
-    setError(error instanceof Error ? error.message : "Error al cargar equipos")
+    setError(mensajeParaUsuario(error, "Error al cargar equipos"))
   }, [])
 
   /** Recarga a peticion, tras crear, editar o importar equipos. */
@@ -337,25 +339,26 @@ export default function GestionEquipos() {
       handleCloseModal()
       cargarDatos()
     } catch (err) {
-      showNotification(err instanceof Error ? err.message : "Error al guardar el equipo", "error")
+      showNotification(mensajeParaUsuario(err, "Error al guardar el equipo"), "error")
     }
   }
 
+  const confirmar = useConfirmar();
   const handleDelete = async (id: string) => {
-    if (window.confirm("¿Está seguro de que desea eliminar este equipo?")) {
+    if (await confirmar("¿Está seguro de que desea eliminar este equipo?")) {
       try {
         await eliminarEquipo(id)
         showNotification("Equipo eliminado con éxito", "success")
         cargarDatos()
       } catch (err) {
-        showNotification(err instanceof Error ? err.message : "Error al eliminar el equipo", "error")
+        showNotification(mensajeParaUsuario(err, "Error al eliminar el equipo"), "error")
       }
     }
   }
 
   // --- Ejecución de Migración de Excel ---
   const handleMigrarExcelLocal = async () => {
-    if (window.confirm("¿Desea iniciar la migración del inventario utilizando el archivo local de plantillas (Inventario.xlsx)?")) {
+    if (await confirmar("¿Desea iniciar la migración del inventario utilizando el archivo local de plantillas (Inventario.xlsx)?")) {
       setMigrationLoading(true)
       try {
         const res = await migrarExcel()
@@ -367,7 +370,7 @@ export default function GestionEquipos() {
           showNotification("La migración no se completó exitosamente", "error")
         }
       } catch (err) {
-        showNotification(err instanceof Error ? err.message : "Error en migración", "error")
+        showNotification(mensajeParaUsuario(err, "Error en migración"), "error")
       } finally {
         setMigrationLoading(false)
       }
@@ -393,7 +396,7 @@ export default function GestionEquipos() {
         showNotification("La migración no se completó exitosamente", "error")
       }
     } catch (err) {
-      showNotification(err instanceof Error ? err.message : "Error en migración", "error")
+      showNotification(mensajeParaUsuario(err, "Error en migración"), "error")
     } finally {
       setMigrationLoading(false)
       // Reset input
@@ -416,7 +419,7 @@ export default function GestionEquipos() {
       return
     }
     if (filteredEquipos.length > LIMITE_FOTOS_EXPORT) {
-      const continuar = window.confirm(
+      const continuar = await confirmar(
         `Vas a exportar ${filteredEquipos.length} equipos. Por encima de ${LIMITE_FOTOS_EXPORT}, el Excel se genera sin fotos incrustadas para no volverlo lento y pesado. ¿Continuar?`
       )
       if (!continuar) return
@@ -428,7 +431,7 @@ export default function GestionEquipos() {
       await exportarInventarioEquiposExcelCliente(ids)
       showNotification("Excel generado con éxito", "success")
     } catch (err) {
-      showNotification(err instanceof Error ? err.message : "Error al exportar el inventario", "error")
+      showNotification(mensajeParaUsuario(err, "Error al exportar el inventario"), "error")
     } finally {
       setExportLoading(false)
     }

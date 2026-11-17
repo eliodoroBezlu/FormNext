@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { Programacion, ProgramacionFormData } from "../types/IProps";
 import { programacionAPI } from "../utils/programacion.utils";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 interface UseProgramacionesReturn {
   programaciones: Programacion[];
@@ -57,7 +58,7 @@ export const useProgramaciones = (initialProgramaciones: Programacion[]): UsePro
 
       await programacionAPI.crear(payload);
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Error al crear programación";
+      const errorMessage = mensajeParaUsuario(err, "Error al crear programación");
       setError(errorMessage);
       throw err;
     } finally {
@@ -87,7 +88,7 @@ export const useProgramaciones = (initialProgramaciones: Programacion[]): UsePro
 
       await programacionAPI.actualizar(id, payload);
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Error al actualizar programación";
+      const errorMessage = mensajeParaUsuario(err, "Error al actualizar programación");
       setError(errorMessage);
       throw err;
     } finally {
@@ -107,7 +108,7 @@ export const useProgramaciones = (initialProgramaciones: Programacion[]): UsePro
         return [...new Set(updatedProgramaciones.map(p => p.area))];
       });
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Error al eliminar programación";
+      const errorMessage = mensajeParaUsuario(err, "Error al eliminar programación");
       setError(errorMessage);
       throw err;
     } finally {

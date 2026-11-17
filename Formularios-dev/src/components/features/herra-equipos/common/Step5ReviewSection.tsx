@@ -52,6 +52,8 @@ import { descargarPdfHerraEquipoCliente } from "@/lib/actions/client";
 import { SupervisorSignature } from "./SupervisorSignature";
 import { ApprovalSection } from "./ApprovalSection";
 import { getFormConfig } from "../config/form-config.helpers";
+import { seccionesParaRevisar } from "../utils/section-utils";
+import { alpha } from "@mui/material/styles";
 
 interface Step5ReviewSectionProps {
   template: FormTemplateHerraEquipos;
@@ -231,8 +233,14 @@ export function Step5ReviewSection({
     formType === "vehicle" ||
     formType === "scaffold"
   ) {
-    template.sections.forEach((section, sIdx) => {
-      const sectionKey = `section_${sIdx}`;
+    // Mismo filtro que el formulario: sin él, la sección del tipo de escalera
+    // leía las respuestas de otra (ver `seccionesParaRevisar`).
+    seccionesParaRevisar(
+      template.sections,
+      formData.selectedItems,
+      getFormConfig(template.code)?.sectionSelector?.enabled === true,
+    ).forEach(({ section, indice }) => {
+      const sectionKey = `section_${indice}`;
       const sectionResponses =
         (formData.responses?.[sectionKey] as Record<string, unknown>) || {};
       collectRows(section, sectionKey, 0, sectionResponses);
@@ -389,7 +397,7 @@ export function Step5ReviewSection({
       {/* 1. SECCIÓN: DATOS DE VERIFICACIÓN (PASO 1 Y PASO 2) */}
       <Card
         sx={{
-          bgcolor: isDark ? "background.paper" : "#f8fafc",
+          bgcolor: isDark ? "background.paper" : "action.hover",
           border: "1px solid",
           borderColor: "divider",
         }}
@@ -583,7 +591,7 @@ export function Step5ReviewSection({
               <Table size="small">
                 <TableHead
                   sx={{
-                    bgcolor: isDark ? "rgba(255, 255, 255, 0.05)" : "#f1f5f9",
+                    bgcolor: isDark ? "rgba(255, 255, 255, 0.05)" : "action.selected",
                   }}
                 >
                   <TableRow>
@@ -611,8 +619,8 @@ export function Step5ReviewSection({
                             colSpan={3}
                             sx={{
                               bgcolor: isDark
-                                ? `rgba(99, 102, 241, ${Math.max(0.04, 0.12 - row.level * 0.03)})`
-                                : `rgba(99, 102, 241, ${Math.max(0.015, 0.06 - row.level * 0.015)})`,
+                                ? alpha(theme.palette.primary.main, Math.max(0.04, 0.12 - row.level * 0.03))
+                                : alpha(theme.palette.primary.main, Math.max(0.015, 0.06 - row.level * 0.015)),
                               fontWeight: "bold",
                               color: "primary.main",
                               pl: 2 + row.level * 2,
@@ -670,7 +678,7 @@ export function Step5ReviewSection({
               <Table size="small">
                 <TableHead
                   sx={{
-                    bgcolor: isDark ? "rgba(255, 255, 255, 0.05)" : "#f1f5f9",
+                    bgcolor: isDark ? "rgba(255, 255, 255, 0.05)" : "action.selected",
                   }}
                 >
                   <TableRow>
@@ -702,8 +710,8 @@ export function Step5ReviewSection({
                             colSpan={3}
                             sx={{
                               bgcolor: isDark
-                                ? "rgba(99, 102, 241, 0.1)"
-                                : "rgba(99, 102, 241, 0.05)",
+                                ? alpha(theme.palette.primary.main, 0.1)
+                                : alpha(theme.palette.primary.main, 0.05),
                               fontWeight: "bold",
                               color: "primary.main",
                             }}
@@ -751,7 +759,7 @@ export function Step5ReviewSection({
                 border: "1px solid",
                 borderColor: "divider",
                 borderRadius: 2,
-                bgcolor: isDark ? "rgba(255,255,255,0.01)" : "#fafafa",
+                bgcolor: isDark ? "rgba(255,255,255,0.01)" : "action.hover",
               }}
             >
               <Typography
@@ -864,7 +872,7 @@ export function Step5ReviewSection({
                 <Table size="small">
                   <TableHead
                     sx={{
-                      bgcolor: isDark ? "rgba(255, 255, 255, 0.05)" : "#f1f5f9",
+                      bgcolor: isDark ? "rgba(255, 255, 255, 0.05)" : "action.selected",
                     }}
                   >
                     <TableRow>
@@ -964,7 +972,7 @@ export function Step5ReviewSection({
                 sx={{
                   p: 2,
                   borderRadius: 2,
-                  bgcolor: isDark ? "rgba(255,255,255,0.02)" : "#fafafa",
+                  bgcolor: isDark ? "rgba(255,255,255,0.02)" : "action.hover",
                   border: "1px solid",
                   borderColor: "divider",
                   minHeight: "100px",
@@ -1093,7 +1101,7 @@ export function Step5ReviewSection({
                   borderColor: "divider",
                   borderRadius: 3,
                   textAlign: "center",
-                  bgcolor: isDark ? "rgba(255,255,255,0.01)" : "#f8fafc",
+                  bgcolor: isDark ? "rgba(255,255,255,0.01)" : "action.hover",
                 }}
               >
                 <Typography
@@ -1167,7 +1175,7 @@ export function Step5ReviewSection({
                   borderColor: "divider",
                   borderRadius: 3,
                   textAlign: "center",
-                  bgcolor: isDark ? "rgba(255,255,255,0.01)" : "#f8fafc",
+                  bgcolor: isDark ? "rgba(255,255,255,0.01)" : "action.hover",
                   height: "100%",
                   display: "flex",
                   flexDirection: "column",

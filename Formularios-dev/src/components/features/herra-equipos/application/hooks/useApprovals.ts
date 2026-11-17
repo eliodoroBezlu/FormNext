@@ -6,6 +6,7 @@ import {
   type InspectionResponse,
 } from '../../infrastructure/adapters/inspectionAdapter';
 import { Role } from '@/lib/routePermissions';
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 // ─── Cache helpers ──────────────────────────────────────────────────────────
 const CACHE_KEY = 'pendingApprovals_cache';
@@ -268,7 +269,7 @@ export const useApprovals = () => {
           username: user.username,
         });
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error desconocido');
+        setError(mensajeParaUsuario(err, 'Error desconocido'));
       } finally {
         setLoading(false);
       }

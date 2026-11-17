@@ -225,7 +225,7 @@ export const SectionRenderer = <T extends FormDataHerraEquipos = FormDataHerraEq
                   key={img._id || idx}
                   variant="outlined"
                   sx={{
-                    backgroundColor: "#f5f5f5",
+                    backgroundColor: "background.default",
                     display: "flex",
                     flexDirection: "column",
                     flex: 1,

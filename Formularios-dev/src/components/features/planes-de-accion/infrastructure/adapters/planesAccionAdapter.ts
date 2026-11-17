@@ -12,11 +12,13 @@ import {
   UpdatePlanDeAccionDTO,
   UpdateTareaDTO,
 } from "../../domain/models/IProps";
+import type { ResultadoCargaPlanilla } from "../../domain/cargaPlanilla";
 import {
   FormInstance,
   SectionResponse,
   QuestionResponse,
 } from "@/types/formTypes";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 export async function obtenerAreas(): Promise<AreaBackend[]> {
   return obtenerAreasCompletas();
@@ -115,7 +117,7 @@ export async function crearPlan(
     console.error("Error creando plan:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al crear plan",
+      error: mensajeParaUsuario(error, "Error al crear plan"),
     };
   }
 }
@@ -145,7 +147,7 @@ export async function actualizarPlan(
     return {
       success: false,
       error:
-        error instanceof Error ? error.message : "Error al actualizar plan",
+        mensajeParaUsuario(error, "Error al actualizar plan"),
     };
   }
 }
@@ -171,7 +173,7 @@ export async function eliminarPlan(
     console.error("Error eliminando plan:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al eliminar plan",
+      error: mensajeParaUsuario(error, "Error al eliminar plan"),
     };
   }
 }
@@ -218,7 +220,7 @@ export async function generarPlanDesdeInstancia(
     console.error("Error generando plan:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al generar plan",
+      error: mensajeParaUsuario(error, "Error al generar plan"),
     };
   }
 }
@@ -251,7 +253,7 @@ export async function agregarTarea(
     console.error("Error agregando tarea:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al agregar tarea",
+      error: mensajeParaUsuario(error, "Error al agregar tarea"),
     };
   }
 }
@@ -274,7 +276,37 @@ export async function corregirTarea(
     console.error("Error corrigiendo tarea:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al corregir la tarea",
+      error: mensajeParaUsuario(error, "Error al corregir la tarea"),
+    };
+  }
+}
+
+/**
+ * Sube la planilla descargada y editada (`POST …/planilla`, solo admin). Sin
+ * `aplicar` solo revisa qué haría; con él aplica las filas válidas y vuelve a
+ * leer el plan.
+ */
+export async function cargarPlanillaDelPlan(
+  planId: string,
+  formData: FormData,
+  aplicar: boolean,
+): Promise<ActionResult<{ resultado: ResultadoCargaPlanilla; plan?: PlanDeAccion }>> {
+  try {
+    const headers = await getAuthHeaders();
+    // El navegador pone el Content-Type con su separador del multipart.
+    delete headers["Content-Type"];
+    const response = await fetch(
+      `${API_URL}/planes-accion/${planId}/planilla${aplicar ? "?aplicar=true" : ""}`,
+      { method: "POST", headers, body: formData, cache: "no-store" },
+    );
+    const resultado = await handleApiResponse<ResultadoCargaPlanilla>(response);
+    const plan = resultado.aplicado ? await obtenerPlanPorId(planId) : undefined;
+    return { success: true, data: { resultado, plan } };
+  } catch (error) {
+    console.error("Error cargando la planilla:", error);
+    return {
+      success: false,
+      error: mensajeParaUsuario(error, "Error al cargar la planilla"),
     };
   }
 }
@@ -299,7 +331,7 @@ export async function sincronizarConInspeccion(
     console.error("Error sincronizando con la inspección:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "No se pudieron traer los datos de la IRO",
+      error: mensajeParaUsuario(error, "No se pudieron traer los datos de la IRO"),
     };
   }
 }
@@ -333,7 +365,7 @@ export async function actualizarTarea(
     return {
       success: false,
       error:
-        error instanceof Error ? error.message : "Error al actualizar tarea",
+        mensajeParaUsuario(error, "Error al actualizar tarea"),
     };
   }
 }
@@ -364,7 +396,7 @@ export async function eliminarTarea(
     console.error("Error eliminando tarea:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al eliminar tarea",
+      error: mensajeParaUsuario(error, "Error al eliminar tarea"),
     };
   }
 }
@@ -395,7 +427,7 @@ export async function aprobarTarea(
     console.error("Error aprobando tarea:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al aprobar tarea",
+      error: mensajeParaUsuario(error, "Error al aprobar tarea"),
     };
   }
 }
@@ -428,7 +460,7 @@ export async function aprobarPlanGlobal(
     return {
       success: false,
       error:
-        error instanceof Error ? error.message : "Error al aprobar el plan",
+        mensajeParaUsuario(error, "Error al aprobar el plan"),
     };
   }
 }

@@ -4,6 +4,8 @@
 
 import { useState, useEffect } from "react";
 import { Box, Typography } from "@mui/material";
+import { MARCA } from "@/styles/marca";
+import { alpha } from "@mui/material/styles";
 import { useUserRole } from "@/hooks/useUserRole";
 import Link from "next/link";
 import { getMeAction } from "../actions/auth";
@@ -58,7 +60,7 @@ const serviceItems = [
     title: "Nueva Inspección",
     subtitle: "Inspecciones de Seguridad",
     href: "/dashboard/formularios-de-inspeccion",
-    color: "#06B6D4",
+    color: MARCA.acero,
     roles: ["admin", "supervisor", "tecnico", "superintendente"],
     icon: NuevaInspeccionIcon,
   },
@@ -67,7 +69,7 @@ const serviceItems = [
     title: "Herramientas",
     subtitle: "Equipos y Accesorios",
     href: "/dashboard/form-herra-equipos",
-    color: "#06B6D4",
+    color: MARCA.acero,
     // `inspector` e `inspector_asignado` van aquí porque la ruta ya se los
     // concede en ROUTE_PERMISSIONS. Faltaban solo en esta lista, así que el
     // menú lateral les mostraba la sección y el panel les dejaba la rejilla
@@ -105,7 +107,7 @@ const serviceItems = [
     title: "Generador QR",
     subtitle: "Códigos de Equipos",
     href: "/dashboard/qr-generator",
-    color: "#8B5CF6",
+    color: MARCA.acero,
     roles: ["admin"],
     icon: QrIcon,
   },
@@ -181,7 +183,7 @@ export default function DashboardHome() {
 
   /**
    * Aquí sí se sabe de quién es la sesión, así que el mensaje puede ser el de
-   * su área. Se guarda para la próxima entrada: en `AuthGuard` la pantalla se
+   * su área. Se guarda para la próxima entrada: la pantalla de bienvenida se
    * dibuja antes de saber quién entra, y sin este recuerdo siempre vería el
    * mensaje general.
    */
@@ -254,8 +256,8 @@ export default function DashboardHome() {
   };
 
   if (loading || !user || espera.mostrar) {
-    // Antes era una barra de progreso suelta, sin texto y distinta de la que
-    // muestra `AuthGuard`. Ahora las dos son la misma pantalla configurable.
+    // Antes era una barra de progreso suelta, sin texto y distinta de la del
+    // «Verificando sesión...». Ahora las dos son la misma pantalla configurable.
     return (
       <PantallaBienvenida
         contenido={bienvenida}
@@ -286,15 +288,9 @@ export default function DashboardHome() {
             }}
           >
             {getGreeting()},{" "}
-            <span
-              style={{
-                background: "linear-gradient(135deg, #6366F1, #06B6D4)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
-            >
+            <Box component="span" sx={{ color: "primary.main" }}>
               {user.fullName || user.username}
-            </span>{" "}
+            </Box>{" "}
             👋
           </Typography>
           <span
@@ -302,7 +298,7 @@ export default function DashboardHome() {
               fontSize: "12px",
               fontWeight: 700,
               color: "#fff",
-              background: "#6366F1",
+              background: MARCA.petroleo,
               padding: "4px 10px",
               borderRadius: "8px",
               letterSpacing: ".02em",
@@ -323,13 +319,13 @@ export default function DashboardHome() {
       <Box
         sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1, mt: 2 }}
       >
-        <Box sx={{ width: "12px", height: "2.5px", bgcolor: "#1e3e66" }} />
+        <Box sx={{ width: "12px", height: "2.5px", bgcolor: "primary.main" }} />
         <Typography
           variant="h3"
           sx={{
             fontSize: "22px",
             fontWeight: 700,
-            color: "#1e3e66",
+            color: "primary.main",
             letterSpacing: "-0.01em",
             whiteSpace: "nowrap",
           }}
@@ -337,7 +333,7 @@ export default function DashboardHome() {
           Servicios
         </Typography>
         <Box
-          sx={{ flex: 1, height: "1.5px", bgcolor: "rgba(30, 62, 102, 0.15)" }}
+          sx={{ flex: 1, height: "1.5px", bgcolor: (theme) => alpha(theme.palette.primary.main, 0.15) }}
         />
       </Box>
 
@@ -368,7 +364,8 @@ export default function DashboardHome() {
                 height: { xs: 175, sm: 185 },
                 borderRadius: "50%",
                 border: "2px solid",
-                borderColor: "rgba(30, 62, 102, 0.2)",
+                borderColor: (theme) => alpha(theme.palette.primary.main, 0.2),
+                color: "primary.main",
                 bgcolor: "background.paper",
                 boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.02)",
                 transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -378,9 +375,9 @@ export default function DashboardHome() {
                 p: "18px",
                 "&:hover": {
                   transform: "scale(1.04) translateY(-4px)",
-                  boxShadow: "0px 10px 20px rgba(30, 62, 102, 0.12)",
-                  borderColor: "#1e3e66",
-                  bgcolor: "rgba(30, 62, 102, 0.03)",
+                  boxShadow: (theme) => `0px 10px 20px ${alpha(theme.palette.primary.main, 0.12)}`,
+                  borderColor: "primary.main",
+                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.03),
                   "& svg": {
                     transform: "scale(1.08)",
                   },
@@ -403,7 +400,7 @@ export default function DashboardHome() {
                 sx={{
                   fontSize: "13px",
                   fontWeight: 700,
-                  color: "#1e3e66",
+                  color: "primary.main",
                   lineHeight: 1.2,
                   px: 0.5,
                 }}

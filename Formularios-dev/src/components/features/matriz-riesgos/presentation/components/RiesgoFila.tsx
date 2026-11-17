@@ -3,7 +3,6 @@
 import { useState } from "react";
 import {
   Box,
-  Chip,
   Collapse,
   IconButton,
   TableCell,
@@ -20,6 +19,7 @@ import { RiesgoIdentificado } from "../../domain/models/IProps";
 import { colorEficacia } from "../../domain/matrizHelpers";
 import { TransicionNivel } from "./NivelRiesgoChip";
 import { TablaControles } from "./TablaControles";
+import { EstadoChip } from "@/components/ui/feedback/EstadoChip";
 
 interface Props {
   riesgo: RiesgoIdentificado;
@@ -155,11 +155,9 @@ export function RiesgoFila({
                   renderEficacia={(i) => {
                     const eficacia = riesgo.controles[i].eficacia;
                     return (
-                      <Chip
-                        size="small"
-                        label={eficacia ?? "sin evaluar"}
+                      <EstadoChip
+                        etiqueta={eficacia ?? "Sin evaluar"}
                         color={colorEficacia(eficacia)}
-                        variant={eficacia ? "filled" : "outlined"}
                       />
                     );
                   }}

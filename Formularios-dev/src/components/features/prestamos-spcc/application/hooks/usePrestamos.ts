@@ -10,6 +10,7 @@ import type {
   EquipoPrestable,
   SolicitudPrestamo,
 } from "../../domain/models/Prestamo";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 export function usePrestamos() {
   const [solicitudes, setSolicitudes] = useState<SolicitudPrestamo[]>([]);
@@ -53,7 +54,7 @@ export function usePrestamos() {
     try {
       aplicar(await consultar());
     } catch (e) {
-      setError(e instanceof Error ? e.message : MENSAJE_CARGA_FALLIDA);
+      setError(mensajeParaUsuario(e, MENSAJE_CARGA_FALLIDA));
     } finally {
       setCargando(false);
     }
@@ -77,7 +78,7 @@ export function usePrestamos() {
         if (!vigente) return;
         // Sin este catch, un fallo de red dejaba el indicador de carga girando
         // para siempre y sin ningún mensaje.
-        setError(e instanceof Error ? e.message : MENSAJE_CARGA_FALLIDA);
+        setError(mensajeParaUsuario(e, MENSAJE_CARGA_FALLIDA));
       })
       .finally(() => {
         if (vigente) setCargando(false);
@@ -102,7 +103,7 @@ export function usePrestamos() {
         await refrescar();
         return true;
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Ocurrió un error.");
+        setError(mensajeParaUsuario(e, "Ocurrió un error."));
         return false;
       }
     },

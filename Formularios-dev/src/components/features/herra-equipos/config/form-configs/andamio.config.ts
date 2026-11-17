@@ -1,6 +1,5 @@
 import { FormFeatureConfig } from "../../types/IProps";
 
-
 // Configuraciones para formularios con accesorios agrupados (Eslings, Grilletes, etc.)
 export const andamioFormConfigs: Record<string, FormFeatureConfig> = {
   "1.02.P06.F30": {
@@ -43,7 +42,7 @@ export const andamioFormConfigs: Record<string, FormFeatureConfig> = {
             type: "autocomplete",
             label: "NOMBRE DEL SUPERVISOR DE LA INSPECCIÓN",
             required: false,
-            dataSource: "supervisor",
+            dataSource: "trabajador",
             fieldName: "supervisorSignature.supervisorName",
           },
           signature: {
@@ -58,7 +57,7 @@ export const andamioFormConfigs: Record<string, FormFeatureConfig> = {
       },
     },
 
-     routineInspection: {
+    routineInspection: {
       enabled: true,
       title: "II. INSPECCIÓN RUTINARIA DEL ANDAMIO",
       question:
@@ -78,14 +77,13 @@ export const andamioFormConfigs: Record<string, FormFeatureConfig> = {
 
         showObservations: true,
         observationsLabel: "OBSERVACIONES",
-        observationsPlaceholder: "Describa cualquier anomalía o condición detectada",
+        observationsPlaceholder:
+          "Describa cualquier anomalía o condición detectada",
 
         showSignature: true,
         signatureLabel: "FIRMA",
       },
     },
-
-    
 
     colorCode: {
       enabled: false,
@@ -98,16 +96,19 @@ export const andamioFormConfigs: Record<string, FormFeatureConfig> = {
     },
     conclusion: {
       enabled: true,
-      label: "A LA CONCLUSIÓN DE LA INSPECCIÓN DE TODOS LOS ITEMS EL INSPECTOR DEBERÁ VERIFICAR QUE:",
+      label:
+        "A LA CONCLUSIÓN DE LA INSPECCIÓN DE TODOS LOS ITEMS EL INSPECTOR DEBERÁ VERIFICAR QUE:",
       showCheckbox: true,
       checkboxOptions: {
-        liberatedLabel: "El Andamio es liberado, colocar una tarjeta verde y autorizar la utilización del mismo.",
+        liberatedLabel:
+          "El Andamio es liberado, colocar una tarjeta verde y autorizar la utilización del mismo.",
         liberatedColor: "#4caf50",
-        notLiberatedLabel: "El Andamio No es liberado, colocar tarjeta roja y cinta de peligro hasta que las observaciones se corrijan.",
+        notLiberatedLabel:
+          "El Andamio No es liberado, colocar tarjeta roja y cinta de peligro hasta que las observaciones se corrijan.",
         notLiberatedColor: "#f44336",
       },
     },
     requiresPhotos: true,
     allowDraft: true,
   },
-}
+};

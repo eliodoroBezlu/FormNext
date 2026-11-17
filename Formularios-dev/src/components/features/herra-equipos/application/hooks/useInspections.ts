@@ -5,6 +5,7 @@ import {
   inspectionAdapter,
   type InspectionResponse,
 } from '../../infrastructure/adapters/inspectionAdapter';
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 export type Inspection = InspectionResponse;
 
@@ -113,7 +114,7 @@ export const useInspections = () => {
         }
       } catch (err) {
         notify(
-          err instanceof Error ? err.message : 'Error al eliminar la inspección',
+          mensajeParaUsuario(err, 'Error al eliminar la inspección'),
           'error',
         );
       } finally {

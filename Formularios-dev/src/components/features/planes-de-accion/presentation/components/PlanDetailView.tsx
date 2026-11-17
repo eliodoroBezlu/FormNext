@@ -21,17 +21,25 @@ import {
   Sync as SyncIcon,
   Download as DownloadIcon,
   CheckCircle as CheckCircleIcon,
+  UploadFile as UploadFileIcon,
 } from '@mui/icons-material';
 import { PlanDeAccion, TareaObservacion, AddTareaDTO, UpdateTareaDTO, CorregirTareaDTO } from '../../domain/models/IProps';
 import { TareasTable } from './TareasTable';
 import { TareaFormModal } from './TareaFormModal';
 import { CorregirTareaDialog } from './CorregirTareaDialog';
+import { CargarPlanillaDialog } from './CargarPlanillaDialog';
 import { HistorialTareaDialog } from './HistorialTareaDialog';
 import { HeaderInfo } from './HeaderInfo';
 import { TaskSummary } from './TaskSummary';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Role } from '@/lib/routePermissions';
 import { downloadAdapter } from '../../infrastructure/adapters/downloadAdapter';
+import { EstadoChip } from '@/components/ui/feedback/EstadoChip';
+import { estadoDePlan } from '../../domain/estadosVisuales';
+import type { ActionResult } from '../../infrastructure/adapters/planesAccionAdapter';
+import type { ResultadoCargaPlanilla } from '../../domain/cargaPlanilla';
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
+import { useConfirmar } from "@/components/ui/feedback/Confirmacion";
 
 interface PlanDetailViewProps {
   plan: PlanDeAccion;
@@ -44,6 +52,13 @@ interface PlanDetailViewProps {
   onCorregirTarea: (tareaId: string, data: CorregirTareaDTO) => Promise<void>;
   /** Admin: traer al plan lo que su IRO dice ahora. */
   onSincronizarConInspeccion: () => Promise<void>;
+  /** Admin: subir la planilla descargada y editada (sin `aplicar` solo revisa). */
+  /** Tareas recién cambiadas, para iluminarlas en la tabla. */
+  tareasResaltadas?: readonly string[];
+  onCargarPlanilla: (
+    formData: FormData,
+    aplicar: boolean,
+  ) => Promise<ActionResult<ResultadoCargaPlanilla>>;
   onDeleteTarea: (tareaId: string) => Promise<void>;
   onApproveTarea: (tareaId: string) => Promise<void>;
   onApprovePlan: (planId: string, observaciones?: string) => Promise<unknown>;
@@ -60,6 +75,8 @@ export function PlanDetailView({
   onUpdateTarea,
   onCorregirTarea,
   onSincronizarConInspeccion,
+  onCargarPlanilla,
+  tareasResaltadas,
   onDeleteTarea,
   onApproveTarea,
   onApprovePlan,
@@ -77,6 +94,7 @@ export function PlanDetailView({
   const [aperturaTarea, setAperturaTarea] = useState(0);
   const [selectedTarea, setSelectedTarea] = useState<TareaObservacion | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [openCargarPlanilla, setOpenCargarPlanilla] = useState(false);
   // Por id y no la tarea: tras corregir, el plan llega de nuevo y el
   // historial tiene que mostrar la versión nueva.
   const [idCorregir, setIdCorregir] = useState<string | null>(null);
@@ -118,21 +136,22 @@ export function PlanDetailView({
     } else {
       await onAddTarea(data as AddTareaDTO);
     }
-    handleCloseTareaModal();
+    // El modal se cierra solo, después de mostrar «✓ Guardado».
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'Error al guardar tarea';
+    const errorMessage = mensajeParaUsuario(err, 'Error al guardar tarea');
     setLocalError(errorMessage);
     throw err;
   }
 };
 
+  const confirmar = useConfirmar();
   const handleDeleteTarea = async (tareaId: string) => {
-    if (confirm('¿Está seguro de que desea dar de baja esta tarea?')) {
+    if (await confirmar('¿Está seguro de que desea dar de baja esta tarea?')) {
       try {
         setLocalError(null);
         await onDeleteTarea(tareaId);
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Error al eliminar tarea';
+        const errorMessage = mensajeParaUsuario(err, 'Error al eliminar tarea');
         setLocalError(errorMessage);
       }
     }
@@ -143,7 +162,7 @@ export function PlanDetailView({
       setLocalError(null);
       await onApproveTarea(tareaId);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error al aprobar tarea';
+      const errorMessage = mensajeParaUsuario(err, 'Error al aprobar tarea');
       setLocalError(errorMessage);
     }
   };
@@ -156,7 +175,7 @@ export function PlanDetailView({
       setOpenAprobarPlanModal(false);
       setObservacionesAprobacion('');
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error al aprobar el plan';
+      const errorMessage = mensajeParaUsuario(err, 'Error al aprobar el plan');
       setLocalError(errorMessage);
     } finally {
       setIsAprobandoPlan(false);
@@ -169,7 +188,7 @@ export function PlanDetailView({
       setIsDownloading(true);
       await downloadAdapter.downloadPlanExcel(plan._id);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error al descargar el Excel';
+      const errorMessage = mensajeParaUsuario(err, 'Error al descargar el Excel');
       setLocalError(errorMessage);
     } finally {
       setIsDownloading(false);
@@ -236,7 +255,7 @@ export function PlanDetailView({
         </Alert>
       )}
 
-      <Box sx={{ mb: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
+      <Box sx={{ mb: 3, p: 2, bgcolor: 'action.hover', borderRadius: '12px' }}>
         <Typography variant="body2" color="text.secondary">
           <strong>ID del Plan:</strong> {plan._id}
         </Typography>
@@ -260,26 +279,12 @@ export function PlanDetailView({
             minute: '2-digit',
           })}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography component="div" variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
           <strong>Estado General:</strong>{' '}
-          <Box
-            component="span"
-            sx={{
-              px: 1,
-              py: 0.5,
-              borderRadius: 1,
-              bgcolor:
-                plan.estado === 'cerrado'
-                  ? '#4caf50'
-                  : plan.estado === 'en-progreso'
-                  ? '#ff9800'
-                  : '#f44336',
-              color: 'white',
-              fontWeight: 600,
-            }}
-          >
-            {plan.estado.toUpperCase()}
-          </Box>
+          <EstadoChip
+            etiqueta={estadoDePlan(plan.estado).etiqueta}
+            color={estadoDePlan(plan.estado).color}
+          />
         </Typography>
         {/* `div` y no `p`: el Chip es un div, y un div dentro de un p rompe la hidratación. */}
         <Typography component="div" variant="body2" color="text.secondary" sx={{ mt: 1 }}>
@@ -306,6 +311,17 @@ export function PlanDetailView({
           <Button
             type="button"
             variant="outlined"
+            startIcon={<UploadFileIcon />}
+            onClick={() => setOpenCargarPlanilla(true)}
+            disabled={isLoading}
+          >
+            Subir planilla
+          </Button>
+        )}
+        {isAdmin && (
+          <Button
+            type="button"
+            variant="outlined"
             startIcon={<EditIcon />}
             onClick={onEditHeader}
             disabled={isLoading}
@@ -319,12 +335,15 @@ export function PlanDetailView({
             variant="outlined"
             startIcon={<SyncIcon />}
             disabled={isLoading}
-            onClick={() => {
+            onClick={async () => {
               // Pisa también lo corregido a mano en el plan: se avisa antes.
               if (
-                window.confirm(
-                  "Se traerán de la IRO, tal como está ahora, la cabecera y en cada tarea el responsable de la observación, la empresa, el lugar y la descripción. Lo corregido a mano en el plan se reemplaza (queda en el historial de cada tarea). Las tareas aprobadas no se tocan. ¿Continuar?",
-                )
+                await confirmar({
+                  titulo: "Traer datos de la IRO",
+                  mensaje:
+                    "Se traerán de la IRO, tal como está ahora, la cabecera y en cada tarea el responsable de la observación, la empresa, el lugar y la descripción. Lo corregido a mano en el plan se reemplaza (queda en el historial de cada tarea). Las tareas aprobadas no se tocan.",
+                  textoConfirmar: "Traer datos",
+                })
               ) {
                 void onSincronizarConInspeccion();
               }
@@ -346,13 +365,21 @@ export function PlanDetailView({
 
       <TareasTable
         tareas={plan.tareas}
-        esGeneradaDesdeInspeccion={plan.instanceId !== undefined}
         onEdit={handleEditTarea}
         onDelete={handleDeleteTarea}
         onApprove={handleApproveTarea}
         onCorregir={(tarea) => setIdCorregir(tarea._id ?? null)}
         onHistorial={(tarea) => setIdHistorial(tarea._id ?? null)}
+        resaltadas={tareasResaltadas}
       />
+
+      {isAdmin && (
+        <CargarPlanillaDialog
+          open={openCargarPlanilla}
+          onClose={() => setOpenCargarPlanilla(false)}
+          onCargar={onCargarPlanilla}
+        />
+      )}
 
       <CorregirTareaDialog
         key={idCorregir ?? 'cerrado'}

@@ -1,6 +1,7 @@
 'use server';
  // Ajusta la ruta según tu proyecto
 import { getAuthHeaders } from "@/lib/actions/helpers";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 interface MLRecommendation {
   current_score: number;
@@ -218,7 +219,7 @@ export async function authenticatedFetch<T>(
     console.error('❌ Error en authenticatedFetch:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido',
+      error: mensajeParaUsuario(error, 'Error desconocido'),
     };
   }
 }

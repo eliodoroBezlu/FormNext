@@ -16,6 +16,7 @@ import {
 } from "@/components/features/iro-isop/domain/models/IroIsopDomain";
 import { iroIsopAdapter } from "@/components/features/iro-isop/infrastructure/adapters/iroIsopAdapter";
 import { valorInicialDelCampo } from "@/components/features/iro-isop/domain/models/valoresIniciales";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 export const useIroIsopForm = ({
   template,
@@ -27,6 +28,8 @@ export const useIroIsopForm = ({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  /** Qué botón disparó el guardado en curso (para mostrar «Guardando…» y «✓ Guardado» en ese). */
+  const [accionDeGuardado, setAccionDeGuardado] = useState<"avance" | "terminar" | null>(null);
   const [metricsTrigger, setMetricsTrigger] = useState(0);
 
   // --- OBTENER SECCIONES APLANADAS DEL DOMINIO ---
@@ -270,6 +273,7 @@ export const useIroIsopForm = ({
       data.verificationList = cleanVerificationList;
 
       setSubmitting(true);
+      setAccionDeGuardado(status === "borrador" ? "avance" : "terminar");
       setError(null);
       setSuccess(null);
 
@@ -336,7 +340,7 @@ export const useIroIsopForm = ({
           }
         } catch (err) {
           setError(
-            err instanceof Error ? err.message : "Error inesperado al guardar el formulario"
+            mensajeParaUsuario(err, "Error inesperado al guardar el formulario")
           );
         } finally {
           setSubmitting(false);
@@ -379,6 +383,7 @@ export const useIroIsopForm = ({
     error,
     success,
     submitting,
+    accionDeGuardado,
     // Métricas y secciones
     allFlatSections,
     previewMetrics,

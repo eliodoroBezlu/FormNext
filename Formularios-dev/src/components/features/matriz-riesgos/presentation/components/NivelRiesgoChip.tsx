@@ -2,6 +2,8 @@
 
 import { Box, Chip, Tooltip, Typography } from "@mui/material";
 import { ArrowForward } from "@mui/icons-material";
+import { textoLegibleSobre } from "@/lib/color/contraste";
+import { DERIVADOS, MARCA } from "@/styles/marca";
 import {
   colorDeNivel,
   escalonesReducidos,
@@ -14,6 +16,16 @@ interface NivelRiesgoChipProps {
   /** Marca visualmente los niveles que obligan a generar PGR. */
   marcarPgr?: boolean;
 }
+
+/**
+ * Fondo y texto de un chip de nivel: el fondo es el del semáforo del Excel; el
+ * texto, blanco o tinta según cuál se lea (con blanco, BAJA, ACEPTABLE CON
+ * REVISIÓN y SUSTANCIAL no pasaban AA). Lo usan este chip y el resumen por nivel.
+ */
+export const estiloDeNivel = (fondo: string) => ({
+  bgcolor: fondo,
+  color: textoLegibleSobre(fondo, { claro: MARCA.blanco, oscuro: DERIVADOS.tinta }),
+});
 
 /** Chip de nivel de riesgo con el color del semáforo del formulario. */
 export function NivelRiesgoChip({
@@ -30,8 +42,7 @@ export function NivelRiesgoChip({
       label={nivel}
       size={size}
       sx={{
-        bgcolor: colorDeNivel(nivel),
-        color: "#fff",
+        ...estiloDeNivel(colorDeNivel(nivel)),
         fontWeight: 600,
         letterSpacing: 0.2,
       }}

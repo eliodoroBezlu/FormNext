@@ -4,7 +4,6 @@ import {
   Autocomplete,
   Box,
   Button,
-  Chip,
   IconButton,
   MenuItem,
   Stack,
@@ -21,6 +20,7 @@ import {
 } from "react-hook-form";
 import { OpcionesDeCategoria, RiesgoDto } from "../../domain/models/IProps";
 import { colorEficacia } from "../../domain/matrizHelpers";
+import { EstadoChip } from "@/components/ui/feedback/EstadoChip";
 
 interface Props {
   control: Control<RiesgoDto>;
@@ -111,11 +111,9 @@ export function ControlesFieldArray({
                 <Typography variant="caption" fontWeight={700}>
                   Control {i + 1}
                 </Typography>
-                <Chip
-                  size="small"
-                  label={eficacias[i] ?? "sin evaluar"}
+                <EstadoChip
+                  etiqueta={eficacias[i] ?? "Sin evaluar"}
                   color={colorEficacia(eficacias[i] ?? null)}
-                  variant={eficacias[i] ? "filled" : "outlined"}
                 />
               </Stack>
               {!readonly && (

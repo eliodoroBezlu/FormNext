@@ -3,6 +3,7 @@
 import React from "react";
 import { Box, Typography, Paper, useTheme } from "@mui/material";
 import CheckIcon from "@mui/icons-material/Check";
+import { alpha } from "@mui/material/styles";
 
 export interface StepConfig {
   label: string;
@@ -107,7 +108,7 @@ export function FormStepperHeader({ activeStep, steps }: FormStepperHeaderProps)
                     fontWeight: "bold",
                     fontSize: "0.875rem",
                     mb: 1,
-                    boxShadow: isActive ? `0 0 0 4px ${isDark ? "rgba(99, 102, 241, 0.2)" : "rgba(99, 102, 241, 0.1)"}` : "none",
+                    boxShadow: isActive ? `0 0 0 4px ${alpha(theme.palette.primary.main, isDark ? 0.2 : 0.1)}` : "none",
                     transition: "all 0.3s ease",
                   }}
                 >

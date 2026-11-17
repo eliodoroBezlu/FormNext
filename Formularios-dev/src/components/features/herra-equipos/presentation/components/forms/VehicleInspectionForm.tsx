@@ -56,6 +56,8 @@ import {
   subirAlInicio,
 } from "../../../utils/navegacion-pasos";
 import { autorizarSalida, salidaEstaAutorizada } from "../../../domain/models/SalidaSinAviso";
+import { irAlPrimerError } from "@/lib/formularios/irAlPrimerError";
+import { BotonGuardar } from "@/components/ui/buttons/BotonGuardar";
 interface VehicleInspectionFormProps {
   template: FormTemplateHerraEquipos;
   onSubmit: (data: FormDataHerraEquipos) => void;
@@ -318,20 +320,7 @@ export function VehicleInspectionForm({
   const handleInvalidSubmit = (errors: FieldErrors<FormDataHerraEquipos>) => {
     console.log(errors);
     setHasSubmitErrors(true);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const firstInvalid = document.querySelector<HTMLElement>(
-          '[data-question-error="true"], [aria-invalid="true"]',
-        );
-        if (firstInvalid) {
-          firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
-          const focusable = firstInvalid.querySelector<HTMLElement>(
-            "input, textarea, button[aria-pressed]",
-          );
-          (focusable ?? firstInvalid).focus?.();
-        }
-      });
-    });
+    irAlPrimerError('[data-question-error="true"], [aria-invalid="true"]');
   };
 
   const handleFormSubmit = async (data: FormDataHerraEquipos) => {
@@ -443,7 +432,9 @@ export function VehicleInspectionForm({
         );
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const isValid = await trigger(step1FieldNames as any);
+        // Si falta algo, llevar a lo primero que falta (no solo pintarlo de rojo).
         if (isValid) handleStepChange(2);
+        else irAlPrimerError();
       }
     } else if (activeStep === 2) {
       // Validate step 2 verification + vehicle-specific header inputs
@@ -484,7 +475,10 @@ export function VehicleInspectionForm({
       ];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const isValid = await trigger(step4FieldNames as any);
-      if (!isValid) return;
+      if (!isValid) {
+        irAlPrimerError();
+        return;
+      }
 
       if (onSaveDraft) {
         handleSubmit(async (data) => {
@@ -648,8 +642,9 @@ export function VehicleInspectionForm({
                 sx={{
                   p: 3,
                   mb: 3,
-                  border: "2px solid #1976d2",
-                  backgroundColor: "#f8f9fa",
+                  border: "2px solid",
+                  borderColor: "primary.main",
+                  backgroundColor: "action.hover",
                 }}
               >
                 <Grid container spacing={3}>
@@ -867,8 +862,9 @@ export function VehicleInspectionForm({
                 sx={{
                   p: 3,
                   mb: 3,
-                  border: "2px solid #757575",
-                  backgroundColor: "#f5f5f5",
+                  border: "2px solid",
+                  borderColor: "divider",
+                  backgroundColor: "background.default",
                 }}
               >
                 <Typography
@@ -876,7 +872,7 @@ export function VehicleInspectionForm({
                   gutterBottom
                   sx={{
                     fontWeight: "bold",
-                    color: "#424242",
+                    color: "text.secondary",
                     mb: 3,
                     display: "flex",
                     alignItems: "center",
@@ -889,8 +885,9 @@ export function VehicleInspectionForm({
                   <Grid size={{ xs: 12, md: 6 }}>
                     <Box
                       sx={{
-                        backgroundColor: "#e0e0e0",
-                        border: "2px solid #000",
+                        backgroundColor: "action.selected",
+                        border: "2px solid",
+                        borderColor: "text.primary",
                         borderRadius: 1,
                         p: 2,
                       }}
@@ -946,8 +943,9 @@ export function VehicleInspectionForm({
                   <Grid size={{ xs: 12, md: 6 }}>
                     <Box
                       sx={{
-                        backgroundColor: "#e0e0e0",
-                        border: "2px solid #000",
+                        backgroundColor: "action.selected",
+                        border: "2px solid",
+                        borderColor: "text.primary",
                         borderRadius: 1,
                         p: 2,
                       }}
@@ -1145,19 +1143,13 @@ export function VehicleInspectionForm({
                   Guardar Borrador
                 </Button>
               )}
-              <Button
-                variant="contained"
+              {/* En el paso 4, «Siguiente» firma y guarda: que se vea que está guardando. */}
+              <BotonGuardar
+                type="button"
+                estado={isSubmitting ? "guardando" : "inactivo"}
+                etiqueta="Siguiente Sección"
                 onClick={handleNextStep}
-                disabled={isSubmitting}
-                sx={{
-                  background: "linear-gradient(135deg, #6366F1, #818CF8)",
-                  "&:hover": {
-                    background: "linear-gradient(135deg, #4F46E5, #6366F1)",
-                  },
-                }}
-              >
-                Siguiente Sección
-              </Button>
+              />
             </Box>
           </Box>
         )}

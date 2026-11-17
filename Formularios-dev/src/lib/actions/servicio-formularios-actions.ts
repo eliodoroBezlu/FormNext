@@ -2,6 +2,7 @@
 
 import { API_BASE_URL } from "../constants";
 import { getAuthHeaders } from "./helpers";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 export type TokenDelServicio =
   | { ok: true; token: string; venceEn: string }
@@ -40,7 +41,7 @@ export async function pedirTokenDelServicio(): Promise<TokenDelServicio> {
   } catch (error) {
     return {
       ok: false,
-      mensaje: error instanceof Error ? error.message : "No se pudo pedir el token",
+      mensaje: mensajeParaUsuario(error, "No se pudo pedir el token"),
     };
   }
 }

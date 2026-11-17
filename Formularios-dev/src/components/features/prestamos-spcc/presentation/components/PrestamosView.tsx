@@ -33,6 +33,7 @@ import {
 } from "../../domain/models/Prestamo";
 import { useUserRole } from "@/hooks/useUserRole";
 import { fetchDataBySource } from "@/lib/actions/dataSourceService";
+import { EstadoChip } from "@/components/ui/feedback/EstadoChip";
 
 const fecha = (iso: string) => new Date(iso).toLocaleDateString("es-BO");
 
@@ -203,11 +204,7 @@ export function PrestamosView() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      size="small"
-                      label={ETIQUETA_ESTADO[s.estado]}
-                      color={COLOR_ESTADO[s.estado]}
-                    />
+                    <EstadoChip etiqueta={ETIQUETA_ESTADO[s.estado]} color={COLOR_ESTADO[s.estado]} />
                   </TableCell>
                   <TableCell align="right">
                     <Button size="small" onClick={() => setDetalle(s._id)}>

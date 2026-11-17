@@ -29,6 +29,7 @@ import type {
   TipoCatalogo,
   UsoDeImagen,
 } from "../../domain/models/Monitoreo";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 /**
  * El error de una acción de este módulo: trae **todos** los motivos que dio el
@@ -51,7 +52,7 @@ const desenvolver = async <T>(promesa: Promise<Resultado<T>>): Promise<T> => {
 export const motivosDeError = (error: unknown): string[] =>
   error instanceof ErrorMonitoreo
     ? error.motivos
-    : [error instanceof Error ? error.message : "Ocurrió un error inesperado."];
+    : [mensajeParaUsuario(error, "Ocurrió un error inesperado.")];
 
 const TIPOS: TipoCatalogo[] = [
   "tecnica",

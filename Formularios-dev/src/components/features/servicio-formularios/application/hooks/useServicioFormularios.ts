@@ -11,6 +11,7 @@ import {
   obtenerTokenDelServicio,
   WEB_DEL_SERVICIO,
 } from "../../infrastructure/adapters/servicioFormulariosAdapter";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 type Estado =
   | { tipo: "cargando" }
@@ -52,7 +53,7 @@ export function useServicioFormularios() {
         if (vigente) {
           setEstado({
             tipo: "error",
-            mensaje: error instanceof Error ? error.message : "No se pudo pedir el token",
+            mensaje: mensajeParaUsuario(error, "No se pudo pedir el token"),
           });
         }
       });

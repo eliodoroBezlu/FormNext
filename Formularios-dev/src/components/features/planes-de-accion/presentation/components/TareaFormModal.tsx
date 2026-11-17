@@ -56,7 +56,11 @@ import {
   siguienteEstado,
 } from "../../domain/requisitosTarea";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useEstadoDeGuardado } from "@/hooks/useEstadoDeGuardado";
+import { BotonGuardar } from "@/components/ui/buttons/BotonGuardar";
 import { Role } from "@/lib/routePermissions";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
+import { irAlPrimerError } from "@/lib/formularios/irAlPrimerError";
 
 interface TareaFormModalProps {
   open: boolean;
@@ -66,18 +70,19 @@ interface TareaFormModalProps {
   onSubmit: (data: AddTareaDTO | UpdateTareaDTO) => Promise<void>;
 }
 
+/**
+ * El día guardado, para un <input type="date">. Las fechas de la tarea son
+ * días de calendario: el input manda «AAAA-MM-DD» y el backend lo guarda como
+ * medianoche UTC, así que el día se lee en UTC. Leerlo en la hora local
+ * (Bolivia, UTC−4) daba el día anterior, y como el formulario reenvía las
+ * fechas al guardar, cada guardado corría la fecha acordada un día atrás.
+ */
 const toDateInputValue = (date: Date | string | undefined): string => {
   if (!date) return dayjs().format("YYYY-MM-DD");
-
-  try {
-    const parsedDate = dayjs(date);
-    if (!parsedDate.isValid()) {
-      return dayjs().format("YYYY-MM-DD");
-    }
-    return parsedDate.format("YYYY-MM-DD");
-  } catch {
-    return dayjs().format("YYYY-MM-DD");
-  }
+  const fecha = new Date(date);
+  return Number.isNaN(fecha.getTime())
+    ? dayjs().format("YYYY-MM-DD")
+    : fecha.toISOString().slice(0, 10);
 };
 
 /** El modelo de ML necesita algo de texto para decir algo útil. */
@@ -265,6 +270,7 @@ export function TareaFormModal({
 
   const trabajadores = useNombresDeTrabajadores(open);
   const { hasRole } = useUserRole();
+  const { estado: estadoGuardado, guardar } = useEstadoDeGuardado();
   const isAdmin = hasRole(Role.ADMIN);
 
   // Es de la tarea, no del plan: en un plan que salió de una IRO también se
@@ -388,7 +394,7 @@ export function TareaFormModal({
     } catch (error) {
       console.error("Error subiendo archivo:", error);
       const errorMessage =
-        error instanceof Error ? error.message : "Error al subir el archivo";
+        mensajeParaUsuario(error, "Error al subir el archivo");
       alert(errorMessage);
     } finally {
       setUploadingFile(false);
@@ -435,11 +441,12 @@ export function TareaFormModal({
           camposEditables.estado = destino as UpdateTareaDTO["estado"];
         }
 
-        await onSubmit(camposEditables);
+        // «Guardando…» y después «✓ Guardado» antes de cerrar.
+        await guardar(() => onSubmit(camposEditables));
       } else {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { estado: _estado, ...tareaData } = data;
-        await onSubmit(tareaData);
+        await guardar(() => onSubmit(tareaData));
       }
 
       handleFormClose();
@@ -555,7 +562,7 @@ export function TareaFormModal({
                 disabled={esGeneradaDesdeInspeccion}
                 error={!!errors.fechaHallazgo}
                 helperText={errors.fechaHallazgo?.message}
-                sx={esGeneradaDesdeInspeccion ? { bgcolor: "#f5f5f5" } : {}}
+                sx={esGeneradaDesdeInspeccion ? { bgcolor: "action.hover" } : {}}
               />
             )}
           />
@@ -589,7 +596,7 @@ export function TareaFormModal({
                   disabled={esGeneradaDesdeInspeccion}
                   error={!!errors.responsableObservacion}
                   helperText={errors.responsableObservacion?.message}
-                  sx={esGeneradaDesdeInspeccion ? { bgcolor: "#f5f5f5" } : {}}
+                  sx={esGeneradaDesdeInspeccion ? { bgcolor: "action.hover" } : {}}
                 />
               )
             }
@@ -634,7 +641,7 @@ export function TareaFormModal({
                   disabled={esGeneradaDesdeInspeccion}
                   error={!!errors.empresa}
                   helperText={errors.empresa?.message}
-                  sx={esGeneradaDesdeInspeccion ? { bgcolor: "#f5f5f5" } : {}}
+                  sx={esGeneradaDesdeInspeccion ? { bgcolor: "action.hover" } : {}}
                 />
               )
             }
@@ -658,7 +665,7 @@ export function TareaFormModal({
                 disabled={esGeneradaDesdeInspeccion}
                 error={!!errors.lugarFisico}
                 helperText={errors.lugarFisico?.message}
-                sx={esGeneradaDesdeInspeccion ? { bgcolor: "#f5f5f5" } : {}}
+                sx={esGeneradaDesdeInspeccion ? { bgcolor: "action.hover" } : {}}
               />
             )}
           />
@@ -681,7 +688,7 @@ export function TareaFormModal({
                 disabled={esGeneradaDesdeInspeccion}
                 error={!!errors.actividad}
                 helperText={errors.actividad?.message}
-                sx={esGeneradaDesdeInspeccion ? { bgcolor: "#f5f5f5" } : {}}
+                sx={esGeneradaDesdeInspeccion ? { bgcolor: "action.hover" } : {}}
               />
             )}
           />
@@ -713,7 +720,7 @@ export function TareaFormModal({
                       ? "Escriba al menos 10 caracteres para ver recomendaciones de IA"
                       : "")
                   }
-                  sx={esGeneradaDesdeInspeccion ? { bgcolor: "#f5f5f5" } : {}}
+                  sx={esGeneradaDesdeInspeccion ? { bgcolor: "action.hover" } : {}}
                 />
                 {loadingML && (
                   <Alert
@@ -727,11 +734,6 @@ export function TareaFormModal({
                 {!loadingML && mlRecommendations.length > 0 && (
                   <Alert severity="success" icon={<AIIcon />} sx={{ mt: 1 }}>
                     ✅ {mlRecommendations.length} recomendaciones disponibles
-                  </Alert>
-                )}
-                {!loadingML && mlError && (
-                  <Alert severity="warning" sx={{ mt: 1 }}>
-                    {mlError}
                   </Alert>
                 )}
               </Box>
@@ -771,10 +773,14 @@ export function TareaFormModal({
             )}
           />
 
+          {/*
+            Sin `required`: la acción propuesta hace falta para pasar a En
+            progreso (lo dice `requisitosTarea` y el aviso de arriba), no para
+            guardar lo cargado. El backend tampoco la exige.
+          */}
           <Controller
             name="accionPropuesta"
             control={control}
-            rules={{ required: "Campo requerido" }}
             render={({ field: { onChange, onBlur, value } }) => (
               <Box>
                 <Autocomplete
@@ -815,7 +821,6 @@ export function TareaFormModal({
                             ? `✨ ${mlRecommendations.length} opciones de IA disponibles - También puede escribir su propia acción`
                             : "Escriba una descripción de 10+ caracteres para ver recomendaciones de IA")
                       }
-                      required
                       InputProps={{
                         ...params.InputProps,
                         startAdornment: loadingML ? (
@@ -934,7 +939,7 @@ export function TareaFormModal({
                       : "")
                 }
                 sx={
-                  estaAprobada || !esEstadoAbierto ? { bgcolor: "#f5f5f5" } : {}
+                  estaAprobada || !esEstadoAbierto ? { bgcolor: "action.hover" } : {}
                 }
               />
             )}
@@ -962,7 +967,7 @@ export function TareaFormModal({
                 }
                 sx={
                   estaAprobada || !esEstadoEnProgreso
-                    ? { bgcolor: "#f5f5f5" }
+                    ? { bgcolor: "action.hover" }
                     : {}
                 }
               />
@@ -1005,7 +1010,7 @@ export function TareaFormModal({
                     <ListItem
                       key={index}
                       sx={{
-                        bgcolor: "#f5f5f5",
+                        bgcolor: "action.hover",
                         borderRadius: 1,
                         mb: 1,
                       }}
@@ -1060,16 +1065,15 @@ export function TareaFormModal({
       </DialogContent>
 
       <DialogActions sx={{ p: 2 }}>
-        <Button onClick={handleFormClose} disabled={isLoading}>
+        <Button onClick={handleFormClose} disabled={isLoading || estadoGuardado !== "inactivo"}>
           Cancelar
         </Button>
-        <Button
-          onClick={handleSubmit(onFormSubmit)}
-          variant="contained"
+        <BotonGuardar
+          estado={estadoGuardado}
+          etiqueta="Guardar"
+          onClick={handleSubmit(onFormSubmit, () => irAlPrimerError())}
           disabled={isLoading || estaAprobada}
-        >
-          {isLoading ? <CircularProgress size={20} /> : "Guardar"}
-        </Button>
+        />
       </DialogActions>
     </Dialog>
   );

@@ -6,6 +6,7 @@ import {
   type UbicacionBackend,
   type UbicacionForm,
 } from "../../infrastructure/adapters/ubicacionesAdapter";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 export interface AvisoUbicaciones {
   mensaje: string;
@@ -13,7 +14,7 @@ export interface AvisoUbicaciones {
 }
 
 const mensajeDe = (error: unknown, porDefecto: string) =>
-  error instanceof Error ? error.message : porDefecto;
+  mensajeParaUsuario(error, porDefecto);
 
 /**
  * Datos y operaciones de la pantalla de gestión de ubicaciones.

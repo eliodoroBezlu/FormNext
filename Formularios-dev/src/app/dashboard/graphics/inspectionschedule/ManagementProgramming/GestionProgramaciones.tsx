@@ -11,6 +11,7 @@ import { useProgramacionForm } from "./hooks/useProgramacionForm";
 import { ProgramacionTable } from "./components/ProgramacionTable";
 import { ProgramacionForm } from "./components/ProgramacionForm";
 import { EmptyState } from "./components/EmptyState";
+import { useConfirmar } from "@/components/ui/feedback/Confirmacion";
 
 export default function GestionProgramaciones({
   templateId,
@@ -77,8 +78,9 @@ export default function GestionProgramaciones({
     }
   };
 
+  const confirmar = useConfirmar();
   const handleEliminarProgramacion = async (id: string) => {
-    if (!confirm("¿Está seguro de eliminar esta programación?")) return;
+    if (!await confirmar("¿Está seguro de eliminar esta programación?")) return;
 
     try {
       await eliminarProgramacion(id);

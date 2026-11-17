@@ -24,6 +24,7 @@ import { InspeccionSistemasEmergencia } from "@/components/features/sistemas-eme
 import NewInspectionTemplates from "@/components/features/herra-equipos/presentation/components/management/NewInspectionTemplates";
 
 import PageHeader from "@/components/layout/page-header/PageHeader";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 // Interfaz para formularios personalizados (Hardcoded por ahora)
 interface CustomForm {
@@ -136,7 +137,7 @@ function HomePage() {
 
   const avisarFallo = useCallback((err: unknown) => {
     setError(
-      err instanceof Error ? err.message : "Error al cargar los templates",
+      mensajeParaUsuario(err, "Error al cargar los templates"),
     );
   }, []);
 

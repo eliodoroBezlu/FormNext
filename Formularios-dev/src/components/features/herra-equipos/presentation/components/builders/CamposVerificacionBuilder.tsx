@@ -75,9 +75,10 @@ export function CamposVerificacionBuilder({ control, setValue, disabled }: Props
             p={3}
             textAlign="center"
             sx={{
-              border: (theme) => `2px dashed ${theme.palette.mode === "dark" ? "#334155" : "#ddd"}`,
+              border: "2px dashed",
+              borderColor: "divider",
               borderRadius: 2,
-              backgroundColor: (theme) => (theme.palette.mode === "dark" ? "background.default" : "#fafafa"),
+              backgroundColor: (theme) => (theme.palette.mode === "dark" ? "background.default" : "action.hover"),
             }}
           >
             <Typography color="text.secondary">No hay campos de verificación.</Typography>

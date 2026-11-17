@@ -14,6 +14,7 @@ import {
   SeguimientoBatchItem,
 } from "../../domain/models/IProps";
 import { normalizarProgramacion } from "../../domain/pgrHelpers";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 interface SnackbarState {
   open: boolean;
@@ -232,7 +233,7 @@ export function usePgrSeguimiento(id: string) {
         );
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
+      const errorMessage = mensajeParaUsuario(err, String(err));
       showSnackbar(`Error al guardar seguimiento: ${errorMessage}`, "error");
     } finally {
       setSaving(false);

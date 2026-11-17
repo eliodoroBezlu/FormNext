@@ -23,6 +23,7 @@ import {
 import { getTemplatesHerraEquipos } from "@/lib/actions/template-herra-equipos";
 import { getInProgressInspections } from "@/lib/actions/inspection-herra-equipos";
 import { FormTemplateHerraEquipos } from "@/components/features/herra-equipos/types/IProps";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 export default function NewInspectionTemplates() {
   const router = useRouter();
@@ -58,7 +59,7 @@ export default function NewInspectionTemplates() {
           setInProgressCount(inProgressResult.data?.length || 0);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Error al cargar plantillas");
+        setError(mensajeParaUsuario(err, "Error al cargar plantillas"));
       } finally {
         setLoading(false);
       }

@@ -12,6 +12,7 @@ import SistemasPasivos from "../sections/SistemasPasivos";
 import SistemasActivos from "../sections/SistemasActivos";
 import InspeccionExtintores from "../sections/InspeccionExtintores";
 import InformacionInspector from "../sections/InformacionInspector";
+import { irAlPrimerError } from "@/lib/formularios/irAlPrimerError";
 
 interface EmergencyInspectionFormProps {
   control: Control<FormularioInspeccion>;
@@ -63,20 +64,7 @@ export const EmergencyInspectionForm = ({
 
   // --- SCROLL INTERACTIVO SUAVE A ERRORES (MÉTODO OFICIAL BASELINE) ---
   const handleInvalidSubmit = useCallback(() => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const errorElement = document.querySelector<HTMLElement>(
-          '[data-question-error="true"], [aria-invalid="true"], .Mui-error'
-        );
-        if (errorElement) {
-          errorElement.scrollIntoView({ behavior: "smooth", block: "center" });
-          const focusable = errorElement.querySelector<HTMLElement>(
-            "input, textarea, button[aria-pressed]"
-          );
-          (focusable ?? errorElement).focus?.();
-        }
-      });
-    });
+    irAlPrimerError('[data-question-error="true"], [aria-invalid="true"], .Mui-error');
   }, []);
 
   return (

@@ -1187,7 +1187,7 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
             type: "autocomplete",
             label: "NOMBRE DEL SUPERVISOR DE LA INSPECCIÓN",
             required: false,
-            dataSource: "supervisor",
+            dataSource: "trabajador",
             fieldName: "supervisorSignature.supervisorName",
           },
           signature: {
@@ -1217,7 +1217,8 @@ export const standardFormConfigs: Record<string, FormFeatureConfig> = {
         {
           sectionTitle: "ROOT",
           label: "Seleccione los equipos de calefacción a inspeccionar",
-          helperText: "Puede seleccionar uno o más y continúe con la inspección",
+          helperText:
+            "Puede seleccionar uno o más y continúe con la inspección",
           required: true,
         },
       ],

@@ -13,10 +13,19 @@
   }
 }
 
+/*
+ * `clip` y no `hidden`: con `hidden`, el body pasa a ser un contenedor de
+ * desplazamiento (su overflow-y se vuelve `auto`) que no se desplaza —se
+ * desplaza la ventana—, y todo `position: sticky` queda atado a él y nunca se
+ * fija (barra de Guardar/Enviar, encabezado de la tabla de tareas…). `clip`
+ * recorta igual sin crear ese contenedor. `hidden` queda de respaldo para
+ * navegadores que no conocen `clip`.
+ */
 html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
+  overflow-x: clip;
   scroll-behavior: smooth;
 }
 

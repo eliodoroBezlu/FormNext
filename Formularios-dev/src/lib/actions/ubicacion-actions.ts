@@ -2,6 +2,7 @@
 
 import { API_BASE_URL } from "../constants";
 import { getAuthHeaders, handleApiResponse } from "./helpers";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 /**
  * Nodo del árbol de ubicaciones (hasta 7 niveles). `padre`, `ancestros`,
@@ -52,7 +53,7 @@ export async function obtenerUbicaciones(incluirBajas = false): Promise<Ubicacio
     return handleApiResponse<UbicacionBackend[]>(response);
   } catch (error) {
     console.error('Error al obtener ubicaciones:', error);
-    throw new Error(`No se pudieron obtener las ubicaciones: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudieron obtener las ubicaciones: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -71,7 +72,7 @@ export async function crearUbicacion(data: UbicacionForm): Promise<UbicacionBack
     return handleApiResponse<UbicacionBackend>(response);
   } catch (error) {
     console.error('Error al crear ubicación:', error);
-    throw new Error(`No se pudo crear la ubicación: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo crear la ubicación: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -90,7 +91,7 @@ export async function actualizarUbicacion(id: string, data: Partial<UbicacionFor
     return handleApiResponse<UbicacionBackend>(response);
   } catch (error) {
     console.error('Error al actualizar ubicación:', error);
-    throw new Error(`No se pudo actualizar la ubicación: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo actualizar la ubicación: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -107,7 +108,7 @@ export async function eliminarUbicacion(id: string): Promise<void> {
     }
   } catch (error) {
     console.error('Error al eliminar ubicación:', error);
-    throw new Error(`No se pudo dar de baja la ubicación: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo dar de baja la ubicación: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -121,7 +122,7 @@ export async function restaurarUbicacion(id: string): Promise<UbicacionBackend> 
     return handleApiResponse<UbicacionBackend>(response);
   } catch (error) {
     console.error('Error al restaurar ubicación:', error);
-    throw new Error(`No se pudo restaurar la ubicación: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudo restaurar la ubicación: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }
 
@@ -136,6 +137,6 @@ export async function fusionarUbicacion(origenId: string, destinoId: string): Pr
     return handleApiResponse<ResultadoFusion>(response);
   } catch (error) {
     console.error('Error al fusionar ubicaciones:', error);
-    throw new Error(`No se pudieron fusionar las ubicaciones: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    throw new Error(`No se pudieron fusionar las ubicaciones: ${mensajeParaUsuario(error, 'Error desconocido')}`);
   }
 }

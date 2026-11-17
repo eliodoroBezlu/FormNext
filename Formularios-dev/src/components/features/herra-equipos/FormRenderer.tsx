@@ -20,6 +20,7 @@ import { VerificationFields } from "./presentation/components/renderers/Verifica
 import { SectionRenderer } from "./presentation/components/renderers/SectionRenderer";
 import { SaveSubmitButtons } from "./common/SaveSubmitButtons";
 import { salidaEstaAutorizada } from "./domain/models/SalidaSinAviso";
+import { irAlPrimerError } from "@/lib/formularios/irAlPrimerError";
 
 // ============================================
 // PROPS DEL COMPONENTE
@@ -111,20 +112,7 @@ export const FormFiller: React.FC<FormFillerProps> = ({
     console.error("Form submission errors:", errors);
     setHasSubmitErrors(true);
     // Double rAF: first frame commits React's state update, second frame commits the DOM paint
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const firstInvalid = document.querySelector<HTMLElement>(
-          '[data-question-error="true"], [aria-invalid="true"]',
-        );
-        if (firstInvalid) {
-          firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
-          const focusable = firstInvalid.querySelector<HTMLElement>(
-            "input, textarea, button[aria-pressed]",
-          );
-          (focusable ?? firstInvalid).focus?.();
-        }
-      });
-    });
+    irAlPrimerError('[data-question-error="true"], [aria-invalid="true"]');
   };
 
   // ============================================

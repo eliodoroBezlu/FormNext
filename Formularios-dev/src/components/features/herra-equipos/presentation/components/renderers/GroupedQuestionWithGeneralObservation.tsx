@@ -312,7 +312,7 @@ export const GroupedQuestionWithGeneralObservation = <T extends FormDataHerraEqu
                     disabled={readonly}
                     sx={{
                       "& .MuiOutlinedInput-root": {
-                        backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'background.default' : '#fafafa',
+                        backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'background.default' : 'action.hover',
                         fontSize: { xs: "0.875rem", md: "1rem" },
                       },
                       "& .MuiInputLabel-root": {

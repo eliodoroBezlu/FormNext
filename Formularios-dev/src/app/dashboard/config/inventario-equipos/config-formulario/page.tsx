@@ -45,6 +45,8 @@ import {
   ConfigFormularioBackend,
   CampoFormulario
 } from "@/lib/actions/config-formulario-actions"
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
+import { useConfirmar } from "@/components/ui/feedback/Confirmacion";
 
 const campoTipos = [
   { value: "text", label: "Texto Plano" },
@@ -112,7 +114,7 @@ export default function ConfigFormularios() {
 
   const avisarFallo = useCallback((error: unknown) => {
     setError(
-      error instanceof Error ? error.message : "Error al cargar configuraciones",
+      mensajeParaUsuario(error, "Error al cargar configuraciones"),
     )
   }, [])
 
@@ -173,12 +175,13 @@ export default function ConfigFormularios() {
       setNewFormTipo("")
       await cargarDatos()
     } catch (err) {
-      showNotification(err instanceof Error ? err.message : "Error al crear configuración", "error")
+      showNotification(mensajeParaUsuario(err, "Error al crear configuración"), "error")
     }
   }
 
+  const confirmar = useConfirmar();
   const handleDeleteConfig = async (tipo: string) => {
-    if (window.confirm(`¿Está seguro de que desea eliminar toda la configuración del formulario para '${tipo}'?`)) {
+    if (await confirmar(`¿Está seguro de que desea eliminar toda la configuración del formulario para '${tipo}'?`)) {
       try {
         await eliminarConfigFormulario(tipo)
         showNotification("Configuración eliminada", "success")
@@ -187,7 +190,7 @@ export default function ConfigFormularios() {
         }
         await cargarDatos()
       } catch (err) {
-        showNotification(err instanceof Error ? err.message : "Error al eliminar configuración", "error")
+        showNotification(mensajeParaUsuario(err, "Error al eliminar configuración"), "error")
       }
     }
   }
@@ -274,7 +277,7 @@ export default function ConfigFormularios() {
       showNotification("Configuración de formulario guardada con éxito", "success")
       await cargarDatos()
     } catch (err) {
-      showNotification(err instanceof Error ? err.message : "Error al guardar cambios", "error")
+      showNotification(mensajeParaUsuario(err, "Error al guardar cambios"), "error")
     } finally {
       setLoading(false)
     }

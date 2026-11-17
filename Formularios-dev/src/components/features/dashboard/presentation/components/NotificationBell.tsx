@@ -18,6 +18,8 @@ import {
 } from "@mui/icons-material";
 import { useNotificationBell } from "../../application/hooks/useNotificationBell";
 import { InspectionEventCard } from "./InspectionEventCard";
+import { alpha } from "@mui/material/styles";
+import { superficieDeMarca } from "@/styles/marca";
 
 export function NotificationBell() {
   // ✅ TODOS los hooks PRIMERO — nunca después de un return condicional
@@ -91,7 +93,7 @@ export function NotificationBell() {
             flexDirection: "column",
             borderRadius: 3,
             boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
-            border: "1px solid rgba(99,102,241,0.15)",
+            border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
             overflow: "hidden",
           },
         }}
@@ -101,7 +103,7 @@ export function NotificationBell() {
           sx={{
             px: 2.5,
             py: 2,
-            background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+            background: (theme) => superficieDeMarca(theme.palette.mode),
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -134,7 +136,7 @@ export function NotificationBell() {
         <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
           {loading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-              <CircularProgress size={28} sx={{ color: "#6366f1" }} />
+              <CircularProgress size={28} sx={{ color: "primary.main" }} />
             </Box>
           ) : notifications.length === 0 ? (
             <Box sx={{ textAlign: "center", py: 4 }}>
@@ -168,9 +170,9 @@ export function NotificationBell() {
             sx={{
               fontSize: "12px",
               textTransform: "none",
-              color: "#6366f1",
+              color: "primary.main",
               fontWeight: 600,
-              "&:hover": { bgcolor: "rgba(99,102,241,0.06)" },
+              "&:hover": { bgcolor: (theme) => alpha(theme.palette.primary.main, 0.06) },
             }}
           >
             Ver pendientes de aprobación →

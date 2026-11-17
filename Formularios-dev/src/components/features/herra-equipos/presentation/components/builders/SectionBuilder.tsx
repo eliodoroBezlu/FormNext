@@ -56,9 +56,10 @@ function useValor<T>(
 }
 
 const cajaVacia = {
-  border: "2px dashed #ddd",
+  border: "2px dashed",
+  borderColor: "divider",
   borderRadius: 2,
-  backgroundColor: "#fafafa",
+  backgroundColor: "action.hover",
 };
 
 /**

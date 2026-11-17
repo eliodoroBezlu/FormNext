@@ -52,6 +52,7 @@ import {
   type CreateAreaDto,
 } from "@/lib/actions/area-actions"
 import { obtenerSuperintendencias, SuperintendenciaBackend } from "@/lib/actions/superintendecia-actions"
+import { useConfirmar } from "@/components/ui/feedback/Confirmacion";
 
 interface AreaForm {
   nombre: string
@@ -274,8 +275,9 @@ export default function GestionAreas() {
     }
   }
 
+  const confirmar = useConfirmar();
   const handleEliminarArea = async (id: string) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar esta área? Esta acción no se puede deshacer.")) return
+    if (!await confirmar("¿Estás seguro de que quieres eliminar esta área? Esta acción no se puede deshacer.")) return
     
     try {
       setLoading(true)
@@ -451,7 +453,7 @@ export default function GestionAreas() {
             <TableContainer>
               <Table>
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableRow sx={{ backgroundColor: 'background.default' }}>
                     <TableCell>Nombre del Área</TableCell>
                     <TableCell>Superintendencia</TableCell>
                     <TableCell align="center">Estado</TableCell>
@@ -475,7 +477,7 @@ export default function GestionAreas() {
                       .map((area) => (
                         <TableRow 
                           key={area._id}
-                          sx={{ '&:hover': { backgroundColor: '#f9f9f9' } }}
+                          sx={{ '&:hover': { backgroundColor: 'action.hover' } }}
                         >
                           <TableCell>
                             <Typography variant="body2" fontWeight="medium">

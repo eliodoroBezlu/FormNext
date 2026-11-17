@@ -64,7 +64,7 @@ export const TagDetailModal: React.FC<TagDetailModalProps> = ({
           <Chip
             size="small"
             label={`🎯 ${totalActivos} extintores activos`}
-            sx={{ bgcolor: "#f1f5f9", color: "#334155", fontWeight: 600 }}
+            sx={{ bgcolor: "action.selected", color: "text.primary", fontWeight: 600 }}
           />
           <Chip
             size="small"
@@ -81,7 +81,7 @@ export const TagDetailModal: React.FC<TagDetailModalProps> = ({
           <TableContainer component={Paper} variant="outlined">
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
+                <TableRow sx={{ backgroundColor: "background.default" }}>
                   <TableCell>Tag</TableCell>
                   <TableCell align="center">Inspección</TableCell>
                   <TableCell align="right">Activos</TableCell>

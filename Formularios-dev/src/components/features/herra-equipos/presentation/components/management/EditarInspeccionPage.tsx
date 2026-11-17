@@ -11,6 +11,7 @@ import { FormTemplateHerraEquipos, FormDataHerraEquipos, InspectionStatus } from
 import { UnifiedFormRouter } from '@/components/features/herra-equipos/presentation/components/forms/UnifiedFormRouter';
 import { getFormConfig } from '@/components/features/herra-equipos/config/form-config.helpers';
 import { getInspectionById, InspectionResponse, updateInspection } from '@/lib/actions/inspection-herra-equipos';
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 /**
  * Igual que en las páginas de creación y edición por inspección: la UI
@@ -80,7 +81,7 @@ export default function EditarInspeccionPage() {
   }, []);
 
   const avisarFallo = useCallback((err: unknown) => {
-    setError(err instanceof Error ? err.message : 'Error al cargar la inspección');
+    setError(mensajeParaUsuario(err, 'Error al cargar la inspección'));
   }, []);
 
   useEffect(() => {
@@ -134,7 +135,7 @@ export default function EditarInspeccionPage() {
     } catch (error) {
       setSnackbar({
         open: true,
-        message: error instanceof Error ? error.message : 'Error al actualizar',
+        message: mensajeParaUsuario(error, 'Error al actualizar'),
         severity: 'error'
       });
     } finally {
@@ -172,7 +173,7 @@ export default function EditarInspeccionPage() {
     } catch (error) {
       setSnackbar({
         open: true,
-        message: error instanceof Error ? error.message : 'Error al finalizar',
+        message: mensajeParaUsuario(error, 'Error al finalizar'),
         severity: 'error'
       });
     } finally {

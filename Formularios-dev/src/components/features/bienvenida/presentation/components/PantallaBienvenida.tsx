@@ -16,8 +16,8 @@ interface PantallaBienvenidaProps {
 /**
  * La pantalla que se ve mientras el sistema abre.
  *
- * Sustituye a las dos que había escritas a mano —el «Verificando sesión...» de
- * `AuthGuard` y la barra suelta del panel—, que eran distintas entre sí y no
+ * Sustituye a las dos que había escritas a mano —el «Verificando sesión...» del
+ * antiguo `AuthGuard` (ya borrado) y la barra suelta del panel—, que eran distintas entre sí y no
  * se podían configurar.
  *
  * Todo el color sale de los tokens del tema: dar por hecho un fondo blanco

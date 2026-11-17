@@ -1,12 +1,15 @@
 "use client";
 
 import { Box, Typography, Chip, IconButton, Button } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { AssignmentOutlined, Delete, InfoOutlined } from "@mui/icons-material";
 import { PlanDeAccion } from "../../domain/models/IProps";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Role } from "@/lib/routePermissions";
 import { ItemsCriticos } from "./ItemsCriticos";
-import { etiquetaDeTipo } from "../../domain/tipoInspeccion";
+import { diaLegible, etiquetaDeTipo } from "../../domain/tipoInspeccion";
+import { estadoDePlan } from "../../domain/estadosVisuales";
+import { EstadoChip } from "@/components/ui/feedback/EstadoChip";
 
 interface PlanCardProps {
   plan: PlanDeAccion;
@@ -14,64 +17,25 @@ interface PlanCardProps {
   onDelete: (id: string) => void;
 }
 
-type EstadoVisual =
-  | "abierto"
-  | "en-progreso"
-  | "cerrado"
-  | "aprobado"
-  | "sin-observaciones";
-
-const ESTADO_STYLE: Record<
-  EstadoVisual,
-  { border: string; bg: string; fg: string; label: string }
-> = {
-  abierto: {
-    border: "#3B82F6",
-    bg: "rgba(59,130,246,.15)",
-    fg: "#2563EB",
-    label: "Abierto",
-  },
-  "en-progreso": {
-    border: "#F59E0B",
-    bg: "rgba(245,158,11,.15)",
-    fg: "#D97706",
-    label: "En Progreso",
-  },
-  cerrado: {
-    border: "#10B981",
-    bg: "rgba(16,185,129,.15)",
-    fg: "#059669",
-    label: "Cerrado",
-  },
-  aprobado: {
-    border: "#8B5CF6",
-    bg: "rgba(139,92,246,.15)",
-    fg: "#7C3AED",
-    label: "Aprobado",
-  },
-  "sin-observaciones": {
-    border: "#94A3B8",
-    bg: "rgba(100,116,139,.15)",
-    fg: "#475569",
-    label: "Sin observaciones",
-  },
-};
-
 export function PlanCard({ plan, onView, onDelete }: PlanCardProps) {
   const { hasRole } = useUserRole();
   const isAdmin = hasRole(Role.ADMIN);
 
   const estaAprobado =
     plan.tareas.length > 0 && plan.tareas.every((t) => t.aprobado === true);
-  const estadoVisual: EstadoVisual = plan.sinObservaciones
-    ? "sin-observaciones"
-    : estaAprobado
-      ? "aprobado"
-      : plan.estado;
-  const style = ESTADO_STYLE[estadoVisual];
+  const estado = estadoDePlan(
+    plan.sinObservaciones ? "sin-observaciones" : estaAprobado ? "aprobado" : plan.estado,
+  );
+  // El color del estado en el tema (gris de marca para «sin observaciones»).
+  const colorDelEstado = estado.color === "default" ? "secondary.main" : `${estado.color}.main`;
 
   const shortId = `PA-${plan._id.slice(-6).toUpperCase()}`;
-  const fecha = new Date(plan.fechaCreacion).toLocaleDateString("es-ES");
+  const fecha = new Date(plan.fechaCreacion).toLocaleDateString("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+  const fechaInspeccion = diaLegible(plan.fechaInspeccion);
   const pct = Math.min(plan.porcentajeCierre, 100);
   // De qué IRO o ISOP sale; un plan sin inspección se creó a mano.
   const origen = plan.tipoInspeccion
@@ -84,7 +48,8 @@ export function PlanCard({ plan, onView, onDelete }: PlanCardProps) {
     <Box
       sx={{
         bgcolor: "background.paper",
-        borderLeft: `4px solid ${style.border}`,
+        borderLeft: "4px solid",
+        borderLeftColor: colorDelEstado,
         borderRadius: 3,
         boxShadow: 1,
         px: 2.75,
@@ -139,17 +104,7 @@ export function PlanCard({ plan, onView, onDelete }: PlanCardProps) {
                 }}
               />
             )}
-            <Chip
-              label={style.label}
-              size="small"
-              sx={{
-                height: 24,
-                fontSize: 12,
-                fontWeight: 600,
-                color: style.fg,
-                bgcolor: style.bg,
-              }}
-            />
+            <EstadoChip etiqueta={estado.etiqueta} color={estado.color} />
             {/* Sin tareas no hay nada que aprobar. */}
             {!plan.sinObservaciones && (
             <Chip
@@ -185,8 +140,11 @@ export function PlanCard({ plan, onView, onDelete }: PlanCardProps) {
               |
             </Box>
             <span>{plan.superintendencia}</span>
-            <Box component="span" sx={{ color: "text.disabled" }}>
-              · {fecha}
+            {/* Las fechas en su propio renglón: la línea de arriba suele
+                saltar de renglón y dejaba un «·» al inicio. */}
+            <Box component="span" sx={{ flexBasis: "100%" }}>
+              {fechaInspeccion && <>Inspección del {fechaInspeccion} · </>}
+              Plan del {fecha}
             </Box>
           </Box>
 
@@ -220,7 +178,7 @@ export function PlanCard({ plan, onView, onDelete }: PlanCardProps) {
                 flex: 1,
                 height: 7,
                 borderRadius: 6,
-                bgcolor: "#F1F5F9",
+                bgcolor: "action.hover",
                 overflow: "hidden",
               }}
             >
@@ -229,7 +187,10 @@ export function PlanCard({ plan, onView, onDelete }: PlanCardProps) {
                   height: "100%",
                   width: `${pct}%`,
                   borderRadius: 6,
-                  bgcolor: style.border,
+                  bgcolor: colorDelEstado,
+                  // La barra se llena hasta su avance.
+                  transition: "width 0.6s ease-out",
+                  "@media (prefers-reduced-motion: reduce)": { transition: "none" },
                 }}
               />
             </Box>
@@ -264,14 +225,15 @@ export function PlanCard({ plan, onView, onDelete }: PlanCardProps) {
             <>
               <IconButton
                 title="Eliminar plan"
+                aria-label="Eliminar plan"
                 onClick={() => onDelete(plan._id)}
-                sx={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: "9px",
-                  bgcolor: "rgba(239,68,68,.12)",
-                  color: "#EF4444",
-                }}
+                sx={(theme) => ({
+                  width: 40,
+                  height: 40,
+                  borderRadius: "10px",
+                  bgcolor: alpha(theme.palette.error.main, 0.1),
+                  color: "error.main",
+                })}
               >
                 <Delete fontSize="small" />
               </IconButton>

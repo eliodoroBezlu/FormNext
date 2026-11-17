@@ -1,10 +1,10 @@
 "use client";
 
-import { Button, Box, CircularProgress, Divider } from "@mui/material";
+import { Button, Box, CircularProgress } from "@mui/material";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
 import { Cancel, CheckCircleOutline, PlaylistAddCheck } from "@mui/icons-material";
-import type { ReactNode } from "react";
+import { StickyBar } from "@/components/ui/buttons/StickyBar";
 
 import { MOSTRAR_BOTON_BORRADOR } from "../utils/navegacion-pasos";
 interface SaveSubmitButtonsProps {
@@ -18,31 +18,6 @@ interface SaveSubmitButtonsProps {
   isInProgress?: boolean;
   /** When set, we are in pending-approval mode: hides draft and changes the submit label/color */
   approvalAction?: "approve" | "reject" | null;
-}
-
-function StickyBar({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      className="save-submit-buttons"
-      sx={{
-        position: "sticky",
-        bottom: 0,
-        zIndex: 10,
-        bgcolor: "background.paper",
-      }}
-    >
-      <Divider />
-      <Box
-        sx={{
-          px: { xs: 0, sm: 0 },
-          py: 2,
-          boxShadow: "0 -4px 20px rgba(0,0,0,0.06)",
-        }}
-      >
-        {children}
-      </Box>
-    </Box>
-  );
 }
 
 export function SaveSubmitButtons({
@@ -89,7 +64,7 @@ export function SaveSubmitButtons({
   // ── CASO 1: ANDAMIO EN PROGRESO ──────────────────────────────────────────
   if (isScaffoldForm && isInProgress) {
     return (
-      <StickyBar>
+      <StickyBar className="save-submit-buttons">
         <Box
           sx={{
             display: "flex",
@@ -135,7 +110,7 @@ export function SaveSubmitButtons({
     // En modo aprobación, mostrar solo el botón de acción
     if (isApprovalMode) {
       return (
-        <StickyBar>
+        <StickyBar className="save-submit-buttons">
           <Box
             sx={{
               display: "flex",
@@ -161,7 +136,7 @@ export function SaveSubmitButtons({
     }
 
     return (
-      <StickyBar>
+      <StickyBar className="save-submit-buttons">
         <Box
           sx={{
             display: "flex",
@@ -223,7 +198,7 @@ export function SaveSubmitButtons({
 
   // ── CASO 3: FORMULARIOS NORMALES (incluyendo modo aprobación) ────────────
   return (
-    <StickyBar>
+    <StickyBar className="save-submit-buttons">
       <Box
         sx={{
           display: "flex",

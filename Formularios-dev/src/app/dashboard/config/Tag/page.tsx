@@ -44,6 +44,7 @@ import {
   Visibility as VisibilityIcon,
 } from "@mui/icons-material"
 import { activarTag, actualizarTag, crearTag, desactivarTag, eliminarTag, obtenerTagPorId, obtenerTags, TagBackend, TagForm } from "@/lib/actions/tag-actions"
+import { useConfirmar } from "@/components/ui/feedback/Confirmacion";
 
 // Simulación de las acciones del servidor (reemplazar con las reales)
 // const obtenerTags = async () => {
@@ -262,8 +263,9 @@ export default function GestionTags() {
     }
   }
 
+  const confirmar = useConfirmar();
   const handleEliminarTag = async (id: string) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar este tag?")) return
+    if (!await confirmar("¿Estás seguro de que quieres eliminar este tag?")) return
     
     try {
       setLoading(true)
@@ -435,7 +437,7 @@ export default function GestionTags() {
             <TableContainer>
               <Table>
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableRow sx={{ backgroundColor: 'background.default' }}>
                     <TableCell>Tag</TableCell>
                     <TableCell>Área</TableCell>
                     <TableCell align="center">Estado</TableCell>
@@ -458,7 +460,7 @@ export default function GestionTags() {
                       .map((tag, index) => (
                         <TableRow 
                           key={`${tag._id}-${page * rowsPerPage + index}`}
-                          sx={{ '&:hover': { backgroundColor: '#f9f9f9' } }}
+                          sx={{ '&:hover': { backgroundColor: 'action.hover' } }}
                         >
                           <TableCell>
                             <Typography variant="body2" fontWeight="medium">

@@ -86,6 +86,7 @@ export const InspectionFormIroIsop = ({
         success={formHook.success}
         error={formHook.error}
         submitting={formHook.submitting}
+        accionDeGuardado={formHook.accionDeGuardado}
         teamMembers={formHook.teamMembers}
         addTeamMember={formHook.addTeamMember}
         removeTeamMember={formHook.removeTeamMember}

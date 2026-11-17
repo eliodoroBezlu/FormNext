@@ -146,7 +146,7 @@ export function ReportTable<T>({
       <TableContainer>
         <Table size={size}>
           <TableHead>
-            <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
+            <TableRow sx={{ backgroundColor: "background.default" }}>
               {selectable && (
                 <TableCell padding="checkbox">
                   <Checkbox
@@ -177,7 +177,7 @@ export function ReportTable<T>({
               paginated.map((row) => (
                 <TableRow
                   key={rowKey(row)}
-                  sx={{ "&:hover": { backgroundColor: "#f9f9f9" } }}
+                  sx={{ "&:hover": { backgroundColor: "action.hover" } }}
                 >
                   {selectable && (
                     <TableCell padding="checkbox">

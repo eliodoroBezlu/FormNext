@@ -11,6 +11,7 @@ import type {
   RegistrarEntregaPayload,
   StockLinternas,
 } from "../../domain/models/Linterna";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 /**
  * Estado y orquestación del módulo. Las vistas no hablan con el adaptador:
@@ -57,7 +58,7 @@ export function useLinternas() {
       setEstado(e);
       setHistorial(h);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al consultar.");
+      setError(mensajeParaUsuario(err, "Error al consultar."));
       setEstado(null);
       setHistorial([]);
     } finally {
@@ -86,7 +87,7 @@ export function useLinternas() {
         return entrega;
       } catch (err) {
         const mensaje =
-          err instanceof Error ? err.message : "No se pudo registrar.";
+          mensajeParaUsuario(err, "No se pudo registrar.");
         setError(mensaje);
         throw new Error(mensaje);
       } finally {
@@ -119,7 +120,7 @@ export function useLinternas() {
         }
         return resultado;
       } catch (err) {
-        const mensaje = err instanceof Error ? err.message : siFalla;
+        const mensaje = mensajeParaUsuario(err, siFalla);
         setError(mensaje);
         throw new Error(mensaje);
       } finally {
@@ -164,7 +165,7 @@ export function useLinternas() {
         await refrescarStock();
       } catch (err) {
         const mensaje =
-          err instanceof Error ? err.message : "No se pudo registrar.";
+          mensajeParaUsuario(err, "No se pudo registrar.");
         setError(mensaje);
         throw new Error(mensaje);
       }
@@ -242,7 +243,7 @@ export function useAprobacionesLinterna() {
         await refrescar();
       } catch (err) {
         const mensaje =
-          err instanceof Error ? err.message : "No se pudo resolver.";
+          mensajeParaUsuario(err, "No se pudo resolver.");
         setError(mensaje);
         throw new Error(mensaje);
       }

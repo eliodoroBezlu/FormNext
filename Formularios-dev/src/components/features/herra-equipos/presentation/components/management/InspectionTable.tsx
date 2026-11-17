@@ -98,7 +98,7 @@ export function InspectionTable({
           <TableContainer>
             <Table>
               <TableHead>
-                <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                <TableRow sx={{ backgroundColor: 'background.default' }}>
                   <TableCell>Código Template</TableCell>
                   <TableCell>Nombre Template</TableCell>
                   <TableCell>Estado</TableCell>
@@ -122,7 +122,7 @@ export function InspectionTable({
                   paginated.map((inspection) => (
                     <TableRow
                       key={inspection._id}
-                      sx={{ '&:hover': { backgroundColor: '#f9f9f9' } }}
+                      sx={{ '&:hover': { backgroundColor: 'action.hover' } }}
                     >
                       <TableCell>
                         <Typography variant="body2" fontWeight="medium">

@@ -12,6 +12,7 @@ import {
   UpdatePgrDto,
   VistaPreviaConsolidacion,
 } from "../../domain/models/IProps";
+import { mensajeParaUsuario } from "@/lib/errores/mensajeParaUsuario";
 
 export interface ActionResult<T> {
   success: boolean;
@@ -49,7 +50,7 @@ export async function crearPgr(
     console.error("Error creando PGR:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al crear el plan",
+      error: mensajeParaUsuario(error, "Error al crear el plan"),
     };
   }
 }
@@ -113,7 +114,7 @@ export async function actualizarPgr(
     return {
       success: false,
       error:
-        error instanceof Error ? error.message : "Error al actualizar el plan",
+        mensajeParaUsuario(error, "Error al actualizar el plan"),
     };
   }
 }
@@ -137,7 +138,7 @@ export async function eliminarPgr(id: string): Promise<ActionResult<void>> {
     console.error("Error eliminando PGR:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al eliminar el plan",
+      error: mensajeParaUsuario(error, "Error al eliminar el plan"),
     };
   }
 }
@@ -170,7 +171,7 @@ export async function aprobarPgr(
     console.error("Error aprobando PGR:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al aprobar el plan",
+      error: mensajeParaUsuario(error, "Error al aprobar el plan"),
     };
   }
 }
@@ -208,7 +209,7 @@ export async function addSeguimiento(
     return {
       success: false,
       error:
-        error instanceof Error ? error.message : "Error al guardar seguimiento",
+        mensajeParaUsuario(error, "Error al guardar seguimiento"),
     };
   }
 }
@@ -238,7 +239,7 @@ export async function addSeguimientoBatch(
     return {
       success: false,
       error:
-        error instanceof Error ? error.message : "Error al guardar seguimiento",
+        mensajeParaUsuario(error, "Error al guardar seguimiento"),
     };
   }
 }
@@ -271,9 +272,7 @@ export async function previsualizarConsolidacion(
     return {
       success: false,
       error:
-        error instanceof Error
-          ? error.message
-          : "Error al previsualizar la consolidación",
+        mensajeParaUsuario(error, "Error al previsualizar la consolidación"),
     };
   }
 }
@@ -304,7 +303,7 @@ export async function consolidarDesdeMatrices(
     return {
       success: false,
       error:
-        error instanceof Error ? error.message : "Error al consolidar",
+        mensajeParaUsuario(error, "Error al consolidar"),
     };
   }
 }
