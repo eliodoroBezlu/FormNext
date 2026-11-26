@@ -1,21 +1,11 @@
 "use client";
 
 import NextLink from "next/link";
-import {
-  Alert,
-  Box,
-  Grid,
-  Link,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography,
-} from "@mui/material";
+import { Alert, Box, Grid, Link, Paper, Typography } from "@mui/material";
+import { soloDigitos } from "../../domain/formularioReporte";
 import type { AntecedentesReporte, Catalogos } from "../../domain/models/Monitoreo";
 import { CampoCatalogo, CampoTexto, formatearDia } from "./CamposReporte";
+import { TablaPiezas } from "./TablaPiezas";
 
 interface Props {
   antecedentes: AntecedentesReporte | null;
@@ -24,9 +14,6 @@ interface Props {
   /** Las horas cambian los cálculos: al salir del campo se vuelven a pedir. */
   onCambioDeHoras: () => void;
 }
-
-const num = (n?: number, unidad = "") =>
-  n === undefined ? "—" : `${n.toLocaleString("es-BO")}${unidad}`;
 
 function Dato({ etiqueta, valor }: { etiqueta: string; valor: React.ReactNode }) {
   return (
@@ -40,11 +27,12 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor: React.ReactNode })
 }
 
 /**
- * ANTECEDENTES normalizados: lo que el sistema ya sabe de la bomba (ficha,
- * piezas montadas, última intervención) más las lecturas del día.
+ * ANTECEDENTES: las lecturas del día, lo que el sistema sabe de la bomba
+ * (equipo, última intervención), el enlace al informe anterior y la tabla de
+ * piezas, que el analista completa.
  *
- * Lo de la bomba no se escribe aquí: viene del inventario y se copia en el
- * reporte. Se rehace al guardar el borrador y se congela al enviar.
+ * Sin TMEF, horas restantes, fecha tentativa, bombas pares ni tag de PI: los
+ * pidió quitar Confiabilidad (2026-11-18).
  */
 export function SeccionAntecedentes({
   antecedentes,
@@ -53,7 +41,6 @@ export function SeccionAntecedentes({
   onCambioDeHoras,
 }: Props) {
   const a = antecedentes;
-  const vencido = a?.horas_restantes !== undefined && a.horas_restantes < 0;
 
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
@@ -69,8 +56,9 @@ export function SeccionAntecedentes({
           <CampoTexto
             nombre="lecturas.horas"
             label="Horas"
-            helperText="Desde la última intervención"
-            slotProps={{ htmlInput: { inputMode: "decimal" } }}
+            helperText="Solo números. Desde la última intervención"
+            filtro={soloDigitos}
+            slotProps={{ htmlInput: { inputMode: "numeric" } }}
             soloLectura={soloLectura}
             onBlur={onCambioDeHoras}
           />
@@ -113,8 +101,9 @@ export function SeccionAntecedentes({
           <CampoTexto
             nombre="lecturas.emisividad"
             label="Emisividad"
+            required
+            helperText="Por defecto 0,95"
             slotProps={{ htmlInput: { inputMode: "decimal" } }}
-            placeholder="0,95"
             soloLectura={soloLectura}
           />
         </Grid>
@@ -124,49 +113,14 @@ export function SeccionAntecedentes({
         <Alert severity="info">Elija la bomba para ver su ficha, sus piezas y su historial.</Alert>
       ) : (
         <>
-          <Grid container spacing={2} mb={2}>
-            <Grid size={{ xs: 6, md: 3 }}>
-              <Dato etiqueta="Fabricante / modelo" valor={[a.ficha.fabricante, a.ficha.modelo].filter(Boolean).join(" · ")} />
-            </Grid>
-            <Grid size={{ xs: 6, md: 3 }}>
-              <Dato etiqueta="TMEF" valor={num(a.ficha.tmef_hrs, " h")} />
-            </Grid>
-            <Grid size={{ xs: 6, md: 3 }}>
+          <Grid container spacing={2} mb={1}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <Dato
-                etiqueta="Horas restantes"
-                valor={
-                  <Box component="span" sx={{ color: vencido ? "error.main" : undefined }}>
-                    {num(a.horas_restantes, " h")}
-                    {vencido && " (pasó el TMEF)"}
-                  </Box>
-                }
+                etiqueta="Equipo bomba"
+                valor={[a.ficha.fabricante, a.ficha.modelo].filter(Boolean).join(" · ")}
               />
             </Grid>
-            <Grid size={{ xs: 6, md: 3 }}>
-              <Dato etiqueta="Fecha tentativa" valor={formatearDia(a.fecha_tentativa)} />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Dato etiqueta="Servicio / proceso" valor={a.ficha.servicio} />
-            </Grid>
-            <Grid size={{ xs: 6, md: 3 }}>
-              <Dato etiqueta="Bombas pares" valor={a.ficha.pares} />
-            </Grid>
-            <Grid size={{ xs: 6, md: 3 }}>
-              <Dato
-                etiqueta="Informe anterior"
-                valor={
-                  a.informe_anterior ? (
-                    <Link component={NextLink} href={`/dashboard/monitoreo-equipos/${a.informe_anterior.id}`}>
-                      {a.informe_anterior.codigo_interno ?? "Sin código"} ·{" "}
-                      {formatearDia(a.informe_anterior.fecha)}
-                    </Link>
-                  ) : (
-                    "Ninguno emitido"
-                  )
-                }
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <Dato
                 etiqueta="Última intervención"
                 valor={
@@ -182,47 +136,34 @@ export function SeccionAntecedentes({
                 }
               />
             </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <CampoTexto
+                nombre="informe_anterior_url"
+                label="Informe anterior (enlace)"
+                placeholder="https://…"
+                type="url"
+                soloLectura={soloLectura}
+                helperText={
+                  a.informe_anterior ? (
+                    <>
+                      Último emitido en el sistema:{" "}
+                      <Link
+                        component={NextLink}
+                        href={`/dashboard/monitoreo-equipos/${a.informe_anterior.id}`}
+                      >
+                        {a.informe_anterior.codigo_interno ?? "sin código"} ·{" "}
+                        {formatearDia(a.informe_anterior.fecha)}
+                      </Link>
+                    </>
+                  ) : (
+                    "Pegue el enlace al informe anterior"
+                  )
+                }
+              />
+            </Grid>
           </Grid>
 
-          <Box sx={{ overflowX: "auto" }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Pieza</TableCell>
-                  <TableCell>Proveedor</TableCell>
-                  <TableCell>Material</TableCell>
-                  <TableCell align="right">Dureza (HB)</TableCell>
-                  <TableCell align="right">Espesor nom. / prec. (mm)</TableCell>
-                  <TableCell>Instalada</TableCell>
-                  <TableCell align="right">Horas</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {a.componentes.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7}>
-                      <Typography variant="body2" color="text.secondary">
-                        Sin piezas cargadas para esta bomba.
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                )}
-                {a.componentes.map((c) => (
-                  <TableRow key={c.pieza}>
-                    <TableCell>{c.pieza}</TableCell>
-                    <TableCell>{c.proveedor ?? "—"}</TableCell>
-                    <TableCell>{c.material ?? "—"}</TableCell>
-                    <TableCell align="right">{num(c.dureza_hb)}</TableCell>
-                    <TableCell align="right">
-                      {num(c.espesor_nominal_mm)} / {num(c.espesor_precaucion_mm)}
-                    </TableCell>
-                    <TableCell>{formatearDia(c.fecha_instalacion)}</TableCell>
-                    <TableCell align="right">{num(c.horas_trabajo)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Box>
+          <TablaPiezas antecedentes={a} catalogos={catalogos} soloLectura={soloLectura} />
         </>
       )}
     </Paper>

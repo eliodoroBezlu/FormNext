@@ -4,11 +4,14 @@ import { API_BASE_URL } from "../constants";
 import { getAuthHeaders } from "./helpers";
 import type {
   BombaResumen,
+  Coordinador,
   Correlativo,
   EntradaCatalogo,
   FichaBomba,
   FiltrosReportes,
   ImagenSubida,
+  PlantillaMedicion,
+  PlantillaMedicionPayload,
   PlantillaMonitoreo,
   Prellenado,
   ReporteMonitoreo,
@@ -98,8 +101,16 @@ export async function prellenadoMonitoreo(
   tag: string,
   fecha?: string,
   horas?: number,
+  tecnica?: string,
 ): Promise<Resultado<Prellenado>> {
-  return pedir(`/reportes/prellenado/${encodeURIComponent(tag)}${consulta({ fecha, horas })}`);
+  return pedir(
+    `/reportes/prellenado/${encodeURIComponent(tag)}${consulta({ fecha, horas, tecnica })}`,
+  );
+}
+
+/** Supervisores y superintendentes para «Comunicado / coordinado con». */
+export async function listarCoordinadoresMonitoreo(): Promise<Resultado<Coordinador[]>> {
+  return pedir("/coordinadores");
 }
 
 export async function crearReporteMonitoreo(
@@ -195,6 +206,31 @@ export async function fijarCorrelativoMonitoreo(datos: {
   ultimo: number;
 }): Promise<Resultado<Correlativo>> {
   return pedir("/correlativos", { method: "PUT", json: datos });
+}
+
+// ── Plantillas de medición de espesores ───────────────────────────────────
+
+export async function listarPlantillasMedicion(): Promise<Resultado<PlantillaMedicion[]>> {
+  return pedir("/plantillas-medicion");
+}
+
+export async function crearPlantillaMedicion(
+  datos: PlantillaMedicionPayload,
+): Promise<Resultado<PlantillaMedicion>> {
+  return pedir("/plantillas-medicion", { method: "POST", json: datos });
+}
+
+export async function actualizarPlantillaMedicion(
+  id: string,
+  datos: PlantillaMedicionPayload,
+): Promise<Resultado<PlantillaMedicion>> {
+  return pedir(`/plantillas-medicion/${encodeURIComponent(id)}`, { method: "PUT", json: datos });
+}
+
+export async function eliminarPlantillaMedicion(
+  id: string,
+): Promise<Resultado<{ eliminada: true }>> {
+  return pedir(`/plantillas-medicion/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 export async function obtenerPlantillaMonitoreo(): Promise<Resultado<PlantillaMonitoreo>> {

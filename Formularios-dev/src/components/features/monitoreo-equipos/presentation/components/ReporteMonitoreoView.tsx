@@ -82,8 +82,11 @@ export function ReporteMonitoreoView({ id, tagInicial }: { id?: string; tagInici
           reporte={reporte}
           tagInicial={tagInicial}
           antecedentes={r.antecedentes}
+          medicion={r.medicion}
           catalogos={c.catalogos}
           bombas={c.bombas}
+          plantillasMedicion={c.plantillasMedicion}
+          coordinadores={c.coordinadores}
           fotosPorFila={c.fotosPorFila}
           acciones={accionesDelReporte(reporte, user?.username)}
           colorDeResultado={c.colorDeResultado}

@@ -44,8 +44,8 @@ export function PanelBombas() {
             Bombas
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Próximo monitoreo (último reporte emitido + frecuencia de su OT modelo) y fecha
-            tentativa de intervención (por TMEF). Lo vencido arriba.
+            Próximo monitoreo: último reporte emitido + frecuencia de su OT modelo. Lo vencido
+            arriba.
           </Typography>
         </Box>
       </Stack>
@@ -79,8 +79,6 @@ export function PanelBombas() {
               <TableCell>Último reporte</TableCell>
               <TableCell>Resultado</TableCell>
               <TableCell>Próximo monitoreo</TableCell>
-              <TableCell>Fecha tentativa</TableCell>
-              <TableCell align="right">Horas restantes</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -116,17 +114,6 @@ export function PanelBombas() {
                     fecha={s.proximo_monitoreo}
                     dias={s.dias_para_monitoreo}
                   />
-                </TableCell>
-                <TableCell>
-                  <ChipAlerta
-                    alerta={s.alerta_intervencion}
-                    fecha={s.ultimo_reporte?.fecha_tentativa}
-                    dias={s.dias_para_intervencion}
-                    sinDatos={s.ultimo_reporte ? "Sin TMEF u horas" : "—"}
-                  />
-                </TableCell>
-                <TableCell align="right">
-                  {s.ultimo_reporte?.horas_restantes ?? "—"}
                 </TableCell>
               </TableRow>
             ))}

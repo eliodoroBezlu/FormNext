@@ -1,20 +1,25 @@
 "use client";
 
 import { Autocomplete, Box, Grid, Paper, Stack, TextField, Typography } from "@mui/material";
+import { useMemo } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
-import type { ValoresReporte } from "../../domain/formularioReporte";
-import type { BombaResumen, Catalogos } from "../../domain/models/Monitoreo";
+import { soloDigitos, type ValoresReporte } from "../../domain/formularioReporte";
+import type { BombaResumen, Catalogos, PlantillaMedicion } from "../../domain/models/Monitoreo";
 import { CampoCatalogo, CampoTexto, ChipResultado } from "./CamposReporte";
 
 interface Props {
   catalogos: Catalogos;
   bombas: BombaResumen[];
+  /** Sus tags también se reportan, aunque no sean bombas. */
+  plantillasMedicion: PlantillaMedicion[];
+  /** ¿El reporte tiene medición de espesores? Cambia de dónde sale el alcance. */
+  conMedicion: boolean;
   /** El TAG no cambia una vez guardado: un reporte de otra bomba es otro reporte. */
   tagFijo: boolean;
   soloLectura: boolean;
   codigoInterno?: string;
   colorDeResultado: (r?: string) => string | undefined;
-  /** Al elegir TAG o fecha: pedir los antecedentes de la bomba. */
+  /** Al elegir TAG, fecha o técnica: pedir los antecedentes y la plantilla. */
   onCambioDeBomba: () => void;
 }
 
@@ -22,16 +27,31 @@ interface Props {
 export function SeccionCabecera({
   catalogos,
   bombas,
+  plantillasMedicion,
+  conMedicion,
   tagFijo,
   soloLectura,
   codigoInterno,
   colorDeResultado,
   onCambioDeBomba,
 }: Props) {
-  const { control } = useFormContext<ValoresReporte>();
+  const { control, getValues, setValue } = useFormContext<ValoresReporte>();
   const resultado = useWatch({ control, name: "resultado" });
-  // El backend las entrega por urgencia; para elegir, mejor en orden.
-  const tags = bombas.map((b) => b.equipo.codigo).sort();
+  // El backend entrega las bombas por urgencia; para elegir, mejor en orden.
+  const tags = useMemo(
+    () =>
+      [...new Set([...bombas.map((b) => b.equipo.codigo), ...plantillasMedicion.map((p) => p.tag)])].sort(),
+    [bombas, plantillasMedicion],
+  );
+
+  /** Un tag con una sola plantilla trae su técnica, si todavía no se eligió. */
+  const alElegirTag = (tag: string) => {
+    const suyas = plantillasMedicion.filter((p) => p.tag === tag);
+    if (suyas.length === 1 && !getValues("tecnica")) {
+      setValue("tecnica", suyas[0].tecnica, { shouldDirty: true });
+    }
+    onCambioDeBomba();
+  };
 
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
@@ -62,7 +82,7 @@ export function SeccionCabecera({
                   readOnly={soloLectura || tagFijo}
                   onChange={(_, v) => {
                     field.onChange(v ?? "");
-                    onCambioDeBomba();
+                    alElegirTag(v ?? "");
                   }}
                   renderInput={(params) => (
                     <TextField
@@ -73,7 +93,7 @@ export function SeccionCabecera({
                       error={!!fieldState.error}
                       helperText={
                         fieldState.error?.message ??
-                        (bombas.length === 0 ? "No hay bombas cargadas" : undefined)
+                        (tags.length === 0 ? "No hay bombas ni plantillas de medición" : undefined)
                       }
                     />
                   )}
@@ -93,7 +113,14 @@ export function SeccionCabecera({
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <CampoTexto nombre="ot" label="N° OT" soloLectura={soloLectura} />
+          <CampoTexto
+            nombre="ot"
+            label="N° OT"
+            helperText="Solo números"
+            filtro={soloDigitos}
+            slotProps={{ htmlInput: { inputMode: "numeric" } }}
+            soloLectura={soloLectura}
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 8 }}>
           <CampoCatalogo
@@ -101,6 +128,7 @@ export function SeccionCabecera({
             etiqueta="Técnica de monitoreo"
             opciones={catalogos.tecnica}
             soloLectura={soloLectura}
+            onElegir={onCambioDeBomba}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
@@ -113,7 +141,16 @@ export function SeccionCabecera({
           />
         </Grid>
         <Grid size={12}>
-          <CampoTexto nombre="alcance" label="Alcance" multiline minRows={2} soloLectura={soloLectura} />
+          <CampoTexto
+            nombre="alcance"
+            label="Alcance"
+            helperText={
+              conMedicion ? "Qué se mide y para qué" : "Viene de la ficha de la bomba; se puede ajustar"
+            }
+            multiline
+            minRows={2}
+            soloLectura={soloLectura}
+          />
         </Grid>
       </Grid>
     </Paper>

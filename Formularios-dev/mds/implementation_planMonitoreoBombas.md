@@ -28,6 +28,42 @@ Lo que muestran los dos ejemplos (COTEM137 y COTEM009) y el catálogo de termogr
 | Fotos por fila | **Configurable** en la plantilla del tipo de equipo; arranca en 3. |
 | Alcance de la v1 | **Termografía en bombas.** El ultrasonido de `Sheet4` queda para la v2. |
 
+## Retroalimentación de Confiabilidad (2026-11-18), implementada sin commit
+
+Llegó en `reporte.docx` junto con una planilla actualizada (23 bombas, columna «Alcance»).
+
+| Pedido | Cómo quedó |
+|---|---|
+| N° OT: solo números | El campo descarta lo que no es dígito; la API rechaza otra cosa. |
+| Alcance: viene de la planilla | Columna «Alcance» de la hoja Bombas (antes «Servicio / proceso»). El reporte nuevo arranca con ese texto; se puede ajustar. |
+| Horas: solo números | Igual que el N° OT. |
+| Instrumento | Ya salía de la hoja Listas: sin cambios. |
+| Emisividad 0,95 por defecto, obligatoria | Arranca en 0,95; sin ella no se envía a revisión (backend y pantalla). |
+| Anexos si hacen falta más imágenes | Sección «Anexos» con interruptor, hasta 24 imágenes; en el PDF van en la barra ANEXOS, antes de las firmas. |
+| Borrar TMEF | Fuera de la ficha, la planilla, la pantalla y el PDF. **Con él se fueron las horas restantes, la fecha tentativa y la alerta de intervención del panel**, que se calculaban con el TMEF. |
+| Informe anterior: pegar un enlace | Campo de enlace; en el PDF sale como enlace que se abre. Sin enlace, se muestra el último emitido del sistema. |
+| Borrar bombas pares, «Piezas» y tag de horas PI | Fuera del reporte. El tag de PI se sigue guardando en la ficha (para leer las horas de PI más adelante). |
+| Piezas con llenado automático, como la tabla del ejemplo | Tabla editable de las 4 piezas (fecha, proveedor, condición, material, horas): se llena con la ficha de la bomba; lo vacío toma el dato de la ficha y las horas vacías se calculan. Sale siempre en el PDF con las columnas del ejemplo. |
+
+Al aplicar la planilla se quitan de cada bomba las especificaciones retiradas y se ajusta la ficha
+«Bomba» del inventario (fuera TMEF, bombas pares y servicio; entra Alcance).
+
+**Las piezas del reporte pasan a la ficha al emitir** (decidido con el usuario, 2026-11-21;
+`domain/piezas-a-la-ficha.ts`). Solo lo escrito (lo vacío no borra); la misma pieza se actualiza; una
+fecha de instalación nueva retira la pieza anterior y monta una nueva (la historia no se pisa); una
+fecha anterior a la de la pieza montada se ignora; y solo actúa el último emitido de la bomba, para que
+emitir tarde un reporte viejo no pise uno nuevo. Borradores y reportes en revisión no tocan la ficha.
+`registradoPor` de la pieza nueva: «COTEM-0138 · analista».
+
+Para revisar con Confiabilidad (salen como avisos al subir la planilla, no la frenan):
+
+- La hoja Listas dice fabricante «WEIR VULCO S.A.» y la hoja Bombas dice «Warman» en las 23.
+- 420PP558: el tag de PI es «420PP557/HR» (¿copiado de la 557?, y sin `\\PI_SERVER\`).
+- 230PP013: el tag de PI pasó a «230PP013-112/PV», igual que el de la par 230PP012 (¿a propósito?).
+- Las piezas siguen cargadas solo para la 230PP013; el resto se completa en cada reporte.
+
+Muestra: `forms/disenos/monitoreo-bombas/muestras-pdf/Muestra 230PP012 retroalimentacion 18-nov (borrador).pdf`.
+
 ## Estado al 2026-10-16: en pausa, F0–F5 hechas
 
 **Código:** F1 a F5 terminadas, **sin commit** en BackendForm, FormNext ni iam-portal.

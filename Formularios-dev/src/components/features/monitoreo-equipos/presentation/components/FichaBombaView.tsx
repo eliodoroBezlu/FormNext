@@ -100,22 +100,6 @@ export function FichaBombaView({ tag }: { tag: string }) {
                   }
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <Dato
-                  etiqueta="Fecha tentativa de intervención"
-                  valor={
-                    <ChipAlerta
-                      alerta={s.alerta_intervencion}
-                      fecha={s.ultimo_reporte?.fecha_tentativa}
-                      dias={s.dias_para_intervencion}
-                      sinDatos={s.ultimo_reporte ? "Sin TMEF u horas" : "Sin reporte emitido"}
-                    />
-                  }
-                />
-              </Grid>
-              <Grid size={{ xs: 6, md: 2 }}>
-                <Dato etiqueta="TMEF (hrs)" valor={esp["TMEF (hrs)"]} />
-              </Grid>
               <Grid size={{ xs: 6, md: 2 }}>
                 <Dato etiqueta="Frecuencia (días)" valor={esp["Frecuencia (días)"]} />
               </Grid>
@@ -123,10 +107,7 @@ export function FichaBombaView({ tag }: { tag: string }) {
                 <Dato etiqueta="OT modelo" valor={esp["OT modelo"]} />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Dato etiqueta="Servicio / proceso" valor={esp["Servicio / proceso"]} />
-              </Grid>
-              <Grid size={{ xs: 6, md: 3 }}>
-                <Dato etiqueta="Bombas pares" valor={esp["Bombas pares"]} />
+                <Dato etiqueta="Alcance" valor={esp["Alcance"]} />
               </Grid>
               <Grid size={{ xs: 6, md: 3 }}>
                 <Dato etiqueta="Tag de horas en PI" valor={esp["Tag de horas en PI"]} />
@@ -147,13 +128,12 @@ export function FichaBombaView({ tag }: { tag: string }) {
                   <TableCell>Resultado</TableCell>
                   <TableCell>Estado</TableCell>
                   <TableCell>Elaboró / revisó</TableCell>
-                  <TableCell>Fecha tentativa</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {ficha.reportes.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7}>
+                    <TableCell colSpan={6}>
                       <Typography variant="body2" color="text.secondary">
                         Sin reportes todavía.
                       </Typography>
@@ -180,7 +160,6 @@ export function FichaBombaView({ tag }: { tag: string }) {
                       {r.elaboradoPor}
                       {r.revisadoPor ? ` / ${r.revisadoPor}` : ""}
                     </TableCell>
-                    <TableCell>{formatearDia(r.antecedentes?.fecha_tentativa)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

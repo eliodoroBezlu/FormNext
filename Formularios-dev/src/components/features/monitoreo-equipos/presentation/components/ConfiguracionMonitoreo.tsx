@@ -22,12 +22,13 @@ import {
 import { ArrowBack } from "@mui/icons-material";
 import { useConfiguracionMonitoreo } from "../../application/hooks/useConfiguracionMonitoreo";
 import { CargaPlanilla } from "./CargaPlanilla";
+import { PlantillasMedicion } from "./PlantillasMedicion";
 import { formatearDia } from "./CamposReporte";
 
 /** Hasta 6, el tope del backend (`FOTOS_POR_FILA_MAXIMO`). */
 const OPCIONES_FOTOS = [1, 2, 3, 4, 5, 6];
 
-/** Lo que se prepara una vez: bombas, numeración y plantilla. */
+/** Lo que se prepara una vez: bombas, numeración y plantillas. */
 export function ConfiguracionMonitoreo() {
   const c = useConfiguracionMonitoreo();
   const [correlativo, setCorrelativo] = useState({
@@ -180,6 +181,8 @@ export function ConfiguracionMonitoreo() {
             </Paper>
           </Grid>
         </Grid>
+
+        <PlantillasMedicion />
 
         <Paper variant="outlined" sx={{ overflowX: "auto" }}>
           <Typography variant="subtitle1" fontWeight={700} p={2} pb={0}>

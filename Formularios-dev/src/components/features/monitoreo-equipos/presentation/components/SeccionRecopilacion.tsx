@@ -34,13 +34,21 @@ const PROPORCION_GRAFICO = "21.9 / 7.16";
 
 interface Props {
   soloLectura: boolean;
+  /** El gráfico de PI es de las bombas; un reporte de espesores no lo lleva. */
+  conGrafico?: boolean;
   fotosPorFila: number;
   subirImagen: (archivo: File, uso: UsoDeImagen) => Promise<ImagenSubida>;
   onError: (motivos: unknown) => void;
 }
 
 /** RECOPILACIÓN Y TABULACIÓN DE DATOS: fotos con su descripción y el gráfico. */
-export function SeccionRecopilacion({ soloLectura, fotosPorFila, subirImagen, onError }: Props) {
+export function SeccionRecopilacion({
+  soloLectura,
+  conGrafico = true,
+  fotosPorFila,
+  subirImagen,
+  onError,
+}: Props) {
   const { control, setValue } = useFormContext<ValoresReporte>();
   const { fields, append, remove, swap } = useFieldArray({ control, name: "fotos" });
   const fotos = useWatch({ control, name: "fotos" });
@@ -190,6 +198,8 @@ export function SeccionRecopilacion({ soloLectura, fotosPorFila, subirImagen, on
 
       <VistaPreviaFotos fotos={fotos ?? []} fotosPorFila={fotosPorFila} />
 
+      {conGrafico && (
+        <>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mt={3} mb={1}>
         <Typography variant="body2" fontWeight={600}>
           Gráfico (ancho completo)
@@ -251,6 +261,8 @@ export function SeccionRecopilacion({ soloLectura, fotosPorFila, subirImagen, on
             Captura de PI · 21,9 × 7,16 cm
           </Typography>
         </Box>
+      )}
+        </>
       )}
     </Paper>
   );

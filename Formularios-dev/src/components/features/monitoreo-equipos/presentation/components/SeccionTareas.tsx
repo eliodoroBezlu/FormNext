@@ -2,10 +2,17 @@
 
 import { Alert, Button, Grid, IconButton, Paper, Stack, Typography } from "@mui/material";
 import { Add, Delete } from "@mui/icons-material";
-import { get, useFieldArray, useFormContext } from "react-hook-form";
+import { useMemo } from "react";
+import { get, useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { TAREA_VACIA, type ValoresReporte } from "../../domain/formularioReporte";
-import type { Catalogos } from "../../domain/models/Monitoreo";
-import { CampoCatalogo, CampoTexto } from "./CamposReporte";
+import type { Catalogos, Coordinador } from "../../domain/models/Monitoreo";
+import { etiquetaDeSemana, opcionesDeSemana, semanaISO } from "../../domain/semanasDelAnio";
+import { CampoCatalogo, CampoLista, CampoTexto } from "./CamposReporte";
+
+const GRUPO: Record<Coordinador["rol"], string> = {
+  superintendente: "Superintendentes",
+  supervisor: "Supervisores",
+};
 
 /** El formato trae cinco columnas de tareas. */
 const MAX_TAREAS = 5;
@@ -15,12 +22,18 @@ const MAX_TAREAS = 5;
  *
  * Los campos con `*` siguen la regla impresa en el formato: «deben ser
  * llenadas obligatoriamente si existen recomendaciones».
+ *
+ * «Comunicado / coordinado con» ofrece a los supervisores y superintendentes
+ * (se puede escribir otro nombre), y la semana recomendada, las semanas del
+ * año del reporte.
  */
 export function SeccionTareas({
   catalogos,
+  coordinadores,
   soloLectura,
 }: {
   catalogos: Catalogos;
+  coordinadores: Coordinador[];
   soloLectura: boolean;
 }) {
   const {
@@ -29,6 +42,27 @@ export function SeccionTareas({
   } = useFormContext<ValoresReporte>();
   const { fields, append, remove } = useFieldArray({ control, name: "tareas" });
   const errorGeneral = get(errors, "tareas") as { message?: string } | undefined;
+  const fecha = useWatch({ control, name: "fecha" });
+  const semanas = useMemo(() => opcionesDeSemana(fecha), [fecha]);
+  const actual = semanaISO(fecha);
+  const ayudaSemana = actual
+    ? `La fecha del reporte cae en la ${etiquetaDeSemana(
+        actual.semana,
+        actual.anio === Number(fecha.slice(0, 4)) ? undefined : actual.anio,
+      ).toLowerCase()}`
+    : undefined;
+
+  // Ordenados por grupo (lo pide `groupBy`): superintendentes primero.
+  const { nombres, grupoDe } = useMemo(() => {
+    const orden = [...coordinadores].sort(
+      (a, b) => a.rol.localeCompare(b.rol, "es") || a.nombre.localeCompare(b.nombre, "es"),
+    );
+    const grupos = new Map(orden.map((c) => [c.nombre, GRUPO[c.rol]]));
+    return {
+      nombres: [...new Set(orden.map((c) => c.nombre))],
+      grupoDe: (nombre: string) => grupos.get(nombre) ?? "Otro",
+    };
+  }, [coordinadores]);
 
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
@@ -101,16 +135,24 @@ export function SeccionTareas({
                 <CampoTexto nombre={`tareas.${i}.ot`} label="N° de OT" soloLectura={soloLectura} />
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
-                <CampoTexto
+                <CampoLista
                   nombre={`tareas.${i}.comunicado_con`}
-                  label="* Comunicado / coordinado con"
+                  etiqueta="* Comunicado / coordinado con"
+                  opciones={nombres}
+                  agrupar={grupoDe}
+                  libre
+                  helperText={
+                    coordinadores.length === 0 ? "Sin lista del IAM: escriba el nombre" : undefined
+                  }
                   soloLectura={soloLectura}
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
-                <CampoTexto
+                <CampoLista
                   nombre={`tareas.${i}.semana`}
-                  label="Semana recomendada de ejecución"
+                  etiqueta="Semana recomendada de ejecución"
+                  opciones={semanas}
+                  helperText={ayudaSemana}
                   soloLectura={soloLectura}
                 />
               </Grid>

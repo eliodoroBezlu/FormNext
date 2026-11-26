@@ -5,7 +5,12 @@ import {
   monitoreoAdapter,
   motivosDeError,
 } from "../../infrastructure/adapters/monitoreoAdapter";
-import type { BombaResumen, Catalogos } from "../../domain/models/Monitoreo";
+import type {
+  BombaResumen,
+  Catalogos,
+  Coordinador,
+  PlantillaMedicion,
+} from "../../domain/models/Monitoreo";
 
 /** Mientras no se configure, la plantilla arranca en 3 fotos por fila. */
 const FOTOS_POR_FILA_POR_DEFECTO = 3;
@@ -23,10 +28,16 @@ const VACIOS: Catalogos = {
   punto_referencia: [],
 };
 
-/** Las listas del reporte y las bombas, para los selectores. */
+/**
+ * Las listas del reporte, las bombas, las plantillas de medición (sus tags
+ * también se reportan) y los supervisores y superintendentes, para los
+ * selectores.
+ */
 export function useCatalogosMonitoreo() {
   const [catalogos, setCatalogos] = useState<Catalogos>(VACIOS);
   const [bombas, setBombas] = useState<BombaResumen[]>([]);
+  const [plantillasMedicion, setPlantillasMedicion] = useState<PlantillaMedicion[]>([]);
+  const [coordinadores, setCoordinadores] = useState<Coordinador[]>([]);
   const [fotosPorFila, setFotosPorFila] = useState(FOTOS_POR_FILA_POR_DEFECTO);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string[] | null>(null);
@@ -37,13 +48,17 @@ export function useCatalogosMonitoreo() {
         monitoreoAdapter.catalogos(),
         monitoreoAdapter.bombas(),
         monitoreoAdapter.plantilla(),
+        monitoreoAdapter.plantillasMedicion(),
+        monitoreoAdapter.coordinadores(),
       ]),
     [],
   );
-  const aplicar = useCallback(([c, b, p]: Awaited<ReturnType<typeof consultar>>) => {
+  const aplicar = useCallback(([c, b, p, m, k]: Awaited<ReturnType<typeof consultar>>) => {
     setCatalogos(c);
     setBombas(b);
     setFotosPorFila(p.fotos_por_fila);
+    setPlantillasMedicion(m);
+    setCoordinadores(k);
     setError(null);
   }, []);
   const avisarFallo = useCallback((e: unknown) => setError(motivosDeError(e)), []);
@@ -82,5 +97,15 @@ export function useCatalogosMonitoreo() {
     [catalogos.severidad],
   );
 
-  return { catalogos, bombas, fotosPorFila, cargando, error, recargar, colorDeResultado };
+  return {
+    catalogos,
+    bombas,
+    plantillasMedicion,
+    coordinadores,
+    fotosPorFila,
+    cargando,
+    error,
+    recargar,
+    colorDeResultado,
+  };
 }

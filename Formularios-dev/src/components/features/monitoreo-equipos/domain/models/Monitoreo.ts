@@ -45,6 +45,10 @@ export interface LecturasReporte {
   punto_referencia?: string;
   instrumento?: string;
   emisividad?: number;
+  /** Ultrasonido: velocidad del sonido en m/s (5920). */
+  velocidad_ms?: number;
+  /** Ultrasonido: frecuencia del sensor en MHz (7,5). */
+  frecuencia_mhz?: number;
 }
 
 export interface ImagenReporte {
@@ -68,12 +72,25 @@ export interface TareaReporte {
 export interface FichaAntecedentes {
   fabricante?: string;
   modelo?: string;
-  servicio?: string;
-  tmef_hrs?: number;
+  /** El alcance de la bomba: el reporte nuevo arranca con él. */
+  alcance?: string;
+  /** No sale en el reporte: queda para leer las horas de PI cuando se pueda. */
   tag_pi?: string;
-  pares?: string;
   ot_modelo?: string;
   frecuencia_dias?: number;
+}
+
+/**
+ * Una pieza como la completa el analista en el reporte. Lo vacío toma el dato
+ * de la ficha de la bomba; las horas vacías se calculan.
+ */
+export interface PiezaDelReporte {
+  pieza: string;
+  fecha_instalacion?: string;
+  proveedor?: string;
+  condicion_inicial?: string;
+  material?: string;
+  horas_trabajo?: number;
 }
 
 export interface PiezaAntecedentes {
@@ -96,14 +113,82 @@ export interface IntervencionAntecedentes {
   piezas: string[];
 }
 
+// ── Medición de espesores (ultrasonido) ───────────────────────────────────
+
+export interface ZonaDeMedicion {
+  /** «Lado Oeste». Vacío cuando la pieza tiene una sola zona. */
+  nombre: string;
+  anillos: number;
+  puntos: number;
+}
+
+export interface PiezaDeMedicion {
+  nombre: string;
+  zonas: ZonaDeMedicion[];
+  espesor_nominal_mm?: number;
+  /** Por debajo de esto el valor se marca en rojo. */
+  espesor_alerta_mm?: number;
+}
+
+export interface EstructuraDeMedicion {
+  titulo: string;
+  piezas: PiezaDeMedicion[];
+}
+
+/** `[pieza][zona][anillo][punto]`; `null` es «no se midió». */
+export type ValoresDeMedicion = (number | null)[][][][];
+
+export interface DiagramaDeMedicion {
+  archivo: string;
+  descripcion: string;
+  ancho?: number;
+  alto?: number;
+}
+
+/** La grilla con que se mide un tag con una técnica. */
+export interface PlantillaMedicion extends EstructuraDeMedicion {
+  _id: string;
+  tag: string;
+  tecnica: string;
+  diagramas: DiagramaDeMedicion[];
+  actualizadoPor?: string;
+  updatedAt?: string;
+}
+
+/** Lo que se envía al crear o editar una plantilla de medición. */
+export interface PlantillaMedicionPayload extends EstructuraDeMedicion {
+  tag: string;
+  tecnica: string;
+  diagramas: DiagramaDeMedicion[];
+}
+
+/** La medición de un reporte: copia de la grilla y los diagramas, más los valores. */
+export interface MedicionDelReporte {
+  plantilla_id?: string;
+  estructura: EstructuraDeMedicion;
+  diagramas: DiagramaDeMedicion[];
+  valores: ValoresDeMedicion;
+}
+
+export interface MinimoDeZona {
+  pieza: string;
+  zona: string;
+  minimo?: number;
+}
+
 export interface AntecedentesReporte {
   tomados_en: string;
   ficha: FichaAntecedentes;
   componentes: PiezaAntecedentes[];
   ultima_intervencion?: IntervencionAntecedentes;
   informe_anterior?: { id: string; codigo_interno?: string; fecha: string };
-  horas_restantes?: number;
-  fecha_tentativa?: string;
+  /** Los mínimos por zona de la última medición emitida del tag. */
+  medicion_anterior?: {
+    id: string;
+    codigo_interno?: string;
+    fecha: string;
+    minimos: MinimoDeZona[];
+  };
 }
 
 export interface MovimientoReporte {
@@ -121,10 +206,18 @@ export interface ReporteMonitoreo {
   tecnica?: string;
   ot?: string;
   alcance?: string;
+  /** Enlace al informe anterior, pegado por el analista. */
+  informe_anterior_url?: string;
+  /** ANTECEDENTES en texto (reportes con medición de espesores). */
+  antecedentes_texto?: string;
+  piezas?: PiezaDelReporte[];
   lecturas: LecturasReporte;
+  medicion?: MedicionDelReporte;
   descripcion_proceso?: string;
   fotos: ImagenReporte[];
   grafico?: ImagenReporte;
+  /** Imágenes que no entran en la recopilación: van en ANEXOS. */
+  anexos?: ImagenReporte[];
   fotos_por_fila: number;
   analisis?: string;
   recomendaciones: string[];
@@ -149,11 +242,16 @@ export interface ReportePayload {
   tecnica?: string;
   ot?: string;
   alcance?: string;
+  informe_anterior_url?: string;
+  antecedentes_texto?: string;
+  piezas?: PiezaDelReporte[];
   lecturas?: LecturasReporte;
+  medicion_valores?: ValoresDeMedicion;
   descripcion_proceso?: string;
   fotos?: ImagenReporte[];
   /** `null` quita el gráfico. */
   grafico?: ImagenReporte | null;
+  anexos?: ImagenReporte[];
   analisis?: string;
   recomendaciones?: string[];
   tecnica_apoyo?: string;
@@ -171,29 +269,35 @@ export interface FiltrosReportes {
 }
 
 export interface Prellenado {
-  equipo_id: string;
+  /** Falta si el tag no está en el inventario (se habilitó por su plantilla). */
+  equipo_id?: string;
   tag: string;
   antecedentes: AntecedentesReporte;
+  /** La grilla del tag con esa técnica, si la tiene. */
+  plantilla_medicion: PlantillaMedicion | null;
+}
+
+/** Quien puede figurar en «Comunicado / coordinado con» de una tarea. */
+export interface Coordinador {
+  nombre: string;
+  puesto: string;
+  rol: "supervisor" | "superintendente";
 }
 
 export type Alerta = "vencida" | "proxima" | "al_dia" | "sin_datos";
 
-/** Cuándo toca medir y cuándo intervenir, según el último reporte emitido. */
+/** Cuándo toca medir, según el último reporte emitido. */
 export interface SituacionBomba {
   ultimo_reporte?: {
     id: string;
     codigo_interno?: string;
     fecha: string;
     resultado?: string;
-    fecha_tentativa?: string;
-    horas_restantes?: number;
   };
   /** Último reporte emitido + la frecuencia de su OT modelo. */
   proximo_monitoreo?: string;
   dias_para_monitoreo?: number;
-  dias_para_intervencion?: number;
   alerta_monitoreo: Alerta;
-  alerta_intervencion: Alerta;
   alerta: Alerta;
 }
 
@@ -228,7 +332,6 @@ export interface ReporteDeBomba {
   codigo_interno?: string;
   elaboradoPor: string;
   revisadoPor?: string;
-  antecedentes?: { fecha_tentativa?: string; horas_restantes?: number };
 }
 
 export interface FichaBomba {

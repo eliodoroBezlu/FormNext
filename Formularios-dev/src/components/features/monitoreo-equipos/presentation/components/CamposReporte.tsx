@@ -22,12 +22,20 @@ export function formatearDia(iso?: string): string {
  * Marca `data-question-error` en su contenedor (MUI no lleva `aria-invalid`
  * al DOM) para que el envío pueda llevar el foco al primer error, y borra su
  * error en cuanto el usuario escribe.
+ *
+ * `filtro` limpia lo que se escribe antes de guardarlo (p. ej. solo dígitos en
+ * el N° de OT): así lo que no vale ni llega al campo.
  */
 export function CampoTexto({
   nombre,
   soloLectura,
+  filtro,
   ...props
-}: { nombre: Ruta; soloLectura?: boolean } & Omit<TextFieldProps, "name">) {
+}: {
+  nombre: Ruta;
+  soloLectura?: boolean;
+  filtro?: (escrito: string) => string;
+} & Omit<TextFieldProps, "name">) {
   const {
     control,
     clearErrors,
@@ -51,7 +59,7 @@ export function CampoTexto({
               props.onBlur?.(e);
             }}
             onChange={(e) => {
-              field.onChange(e.target.value);
+              field.onChange(filtro ? filtro(e.target.value) : e.target.value);
               if (error) clearErrors(nombre);
             }}
             fullWidth
@@ -76,16 +84,41 @@ export function CampoTexto({
  * mostrando.
  */
 export function CampoCatalogo({
-  nombre,
-  etiqueta,
   opciones,
-  soloLectura,
-  onElegir,
+  ...props
 }: {
   nombre: Ruta;
   etiqueta: string;
   opciones: EntradaCatalogo[];
   soloLectura?: boolean;
+  onElegir?: (valor: string) => void;
+}) {
+  return <CampoLista {...props} opciones={opciones.map((o) => o.valor)} />;
+}
+
+/**
+ * Un valor elegido de una lista de textos. Con `libre` también se puede
+ * escribir otro (p. ej. alguien que no está en la lista de supervisores).
+ * Un valor que el reporte ya tenía y ya no está en la lista se sigue viendo.
+ */
+export function CampoLista({
+  nombre,
+  etiqueta,
+  opciones,
+  soloLectura,
+  libre,
+  agrupar,
+  helperText,
+  onElegir,
+}: {
+  nombre: Ruta;
+  etiqueta: string;
+  opciones: string[];
+  soloLectura?: boolean;
+  libre?: boolean;
+  /** El grupo de cada opción; las opciones tienen que venir ordenadas por grupo. */
+  agrupar?: (opcion: string) => string;
+  helperText?: React.ReactNode;
   onElegir?: (valor: string) => void;
 }) {
   const {
@@ -101,7 +134,7 @@ export function CampoCatalogo({
       control={control}
       render={({ field }) => {
         const valor = (field.value as string) || null;
-        const valores = opciones.map((o) => o.valor);
+        const valores = [...opciones];
         if (valor && !valores.includes(valor)) valores.push(valor);
         return (
           <Box data-question-error={error ? "true" : undefined}>
@@ -109,10 +142,18 @@ export function CampoCatalogo({
               options={valores}
               value={valor}
               readOnly={soloLectura}
+              freeSolo={libre}
+              groupBy={agrupar}
               onChange={(_, v) => {
                 field.onChange(v ?? "");
                 onElegir?.(v ?? "");
                 if (error) clearErrors(nombre);
+              }}
+              onInputChange={(_, v, motivo) => {
+                if (libre && motivo === "input") {
+                  field.onChange(v);
+                  if (error) clearErrors(nombre);
+                }
               }}
               onBlur={field.onBlur}
               renderInput={(params) => (
@@ -122,7 +163,7 @@ export function CampoCatalogo({
                   label={etiqueta}
                   size="small"
                   error={!!error}
-                  helperText={error?.message}
+                  helperText={error?.message ?? helperText}
                 />
               )}
             />

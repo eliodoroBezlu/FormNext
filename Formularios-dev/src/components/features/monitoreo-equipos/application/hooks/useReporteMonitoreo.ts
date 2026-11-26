@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   monitoreoAdapter,
   motivosDeError,
@@ -8,9 +8,20 @@ import {
 import { numero, payloadDesdeValores, type ValoresReporte } from "../../domain/formularioReporte";
 import type {
   AntecedentesReporte,
+  DiagramaDeMedicion,
+  EstructuraDeMedicion,
+  PlantillaMedicion,
   ReporteMonitoreo,
   UsoDeImagen,
 } from "../../domain/models/Monitoreo";
+
+/** La grilla con que se carga el reporte y los diagramas del equipo. */
+export interface MedicionEnPantalla {
+  estructura: EstructuraDeMedicion;
+  diagramas: DiagramaDeMedicion[];
+  /** La técnica de la plantilla: la del reporte, si todavía no tiene. */
+  tecnica?: string;
+}
 
 /**
  * Un reporte: cargarlo, guardarlo y moverlo de estado.
@@ -24,6 +35,8 @@ export function useReporteMonitoreo(id?: string, tagInicial?: string) {
   const [reporte, setReporte] = useState<ReporteMonitoreo | null>(null);
   /** Antecedentes de un reporte que todavía no se guardó (prellenado). */
   const [prellenado, setPrellenado] = useState<AntecedentesReporte | null>(null);
+  /** La plantilla de medición del tag y la técnica elegidos, antes de guardar. */
+  const [plantilla, setPlantilla] = useState<PlantillaMedicion | null>(null);
   const [cargando, setCargando] = useState(!!id);
   const [error, setError] = useState<string[] | null>(null);
 
@@ -58,7 +71,10 @@ export function useReporteMonitoreo(id?: string, tagInicial?: string) {
     monitoreoAdapter
       .prellenado(tagInicial)
       .then((p) => {
-        if (vigente) setPrellenado(p.antecedentes);
+        if (vigente) {
+          setPrellenado(p.antecedentes);
+          setPlantilla(p.plantilla_medicion);
+        }
       })
       .catch((e: unknown) => {
         if (vigente) avisarFallo(e);
@@ -68,19 +84,36 @@ export function useReporteMonitoreo(id?: string, tagInicial?: string) {
     };
   }, [id, tagInicial, avisarFallo]);
 
-  /** Los antecedentes de la bomba para un reporte nuevo, sin guardar nada. */
+  /**
+   * Los antecedentes del equipo y, si el tag y la técnica la tienen, la
+   * plantilla de medición, sin guardar nada.
+   */
   const prellenar = useCallback(
-    async (tag: string, fecha: string, horas: string): Promise<AntecedentesReporte | null> => {
+    async (
+      tag: string,
+      fecha: string,
+      horas: string,
+      tecnica: string,
+    ): Promise<AntecedentesReporte | null> => {
       if (!tag) {
         setPrellenado(null);
+        setPlantilla(null);
         return null;
       }
       try {
-        const p = await monitoreoAdapter.prellenado(tag, fecha || undefined, numero(horas));
+        const p = await monitoreoAdapter.prellenado(
+          tag,
+          fecha || undefined,
+          numero(horas),
+          tecnica,
+        );
         setPrellenado(p.antecedentes);
+        setPlantilla(p.plantilla_medicion);
+        setError(null);
         return p.antecedentes;
       } catch (e) {
         setPrellenado(null);
+        setPlantilla(null);
         setError(motivosDeError(e));
         return null;
       }
@@ -88,17 +121,30 @@ export function useReporteMonitoreo(id?: string, tagInicial?: string) {
     [],
   );
 
+  // La que ya tiene el reporte manda; si no tiene, la de su tag y técnica.
+  const delReporte = reporte?.medicion;
+  const medicion = useMemo<MedicionEnPantalla | null>(() => {
+    if (delReporte) return { estructura: delReporte.estructura, diagramas: delReporte.diagramas };
+    if (!plantilla) return null;
+    return {
+      estructura: { titulo: plantilla.titulo, piezas: plantilla.piezas },
+      diagramas: plantilla.diagramas,
+      tecnica: plantilla.tecnica,
+    };
+  }, [delReporte, plantilla]);
+  const conMedicion = medicion !== null;
+
   /** Crea o actualiza, según si ya existe. */
   const guardar = useCallback(
     async (valores: ValoresReporte): Promise<ReporteMonitoreo> => {
-      const payload = payloadDesdeValores(valores);
+      const payload = payloadDesdeValores(valores, conMedicion);
       const guardado = reporte
         ? await monitoreoAdapter.actualizar(reporte._id, payload)
         : await monitoreoAdapter.crear(payload);
       setReporte(guardado);
       return guardado;
     },
-    [reporte],
+    [reporte, conMedicion],
   );
 
   /** Guarda lo último y lo envía: el revisor recibe lo que se ve en pantalla. */
@@ -137,6 +183,7 @@ export function useReporteMonitoreo(id?: string, tagInicial?: string) {
   return {
     reporte,
     antecedentes: reporte?.antecedentes ?? prellenado,
+    medicion,
     cargando,
     error,
     setError,

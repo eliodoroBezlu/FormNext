@@ -1,8 +1,11 @@
 import {
+  actualizarPlantillaMedicion,
   actualizarReporteMonitoreo,
+  crearPlantillaMedicion,
   crearReporteMonitoreo,
   darDeBajaReporteMonitoreo,
   devolverReporteMonitoreo,
+  eliminarPlantillaMedicion,
   emitirReporteMonitoreo,
   enviarReporteMonitoreo,
   fichaBombaMonitoreo,
@@ -11,7 +14,9 @@ import {
   importarPlanillaBombas,
   listarBombasMonitoreo,
   listarCatalogosMonitoreo,
+  listarCoordinadoresMonitoreo,
   listarCorrelativosMonitoreo,
+  listarPlantillasMedicion,
   listarReportesMonitoreo,
   obtenerPlantillaMonitoreo,
   obtenerReporteMonitoreo,
@@ -24,6 +29,7 @@ import type {
   Catalogos,
   EntradaCatalogo,
   FiltrosReportes,
+  PlantillaMedicionPayload,
   ReportePayload,
   Resultado,
   TipoCatalogo,
@@ -89,8 +95,8 @@ export const urlDelPdf = (id: string): string =>
 export const monitoreoAdapter = {
   reportes: (filtros: FiltrosReportes) => desenvolver(listarReportesMonitoreo(filtros)),
   reporte: (id: string) => desenvolver(obtenerReporteMonitoreo(id)),
-  prellenado: (tag: string, fecha?: string, horas?: number) =>
-    desenvolver(prellenadoMonitoreo(tag, fecha, horas)),
+  prellenado: (tag: string, fecha?: string, horas?: number, tecnica?: string) =>
+    desenvolver(prellenadoMonitoreo(tag, fecha, horas, tecnica || undefined)),
   crear: (payload: ReportePayload) => desenvolver(crearReporteMonitoreo(payload)),
   actualizar: (id: string, payload: ReportePayload) =>
     desenvolver(actualizarReporteMonitoreo(id, payload)),
@@ -128,6 +134,17 @@ export const monitoreoAdapter = {
   correlativos: () => desenvolver(listarCorrelativosMonitoreo()),
   fijarCorrelativo: (datos: { tecnica_codigo: string; anio: number; ultimo: number }) =>
     desenvolver(fijarCorrelativoMonitoreo(datos)),
+  /**
+   * Supervisores y superintendentes. Si el IAM no responde, la lista queda
+   * vacía y el campo se escribe a mano: no debe frenar el reporte.
+   */
+  coordinadores: () => desenvolver(listarCoordinadoresMonitoreo()).catch(() => []),
+
+  plantillasMedicion: () => desenvolver(listarPlantillasMedicion()),
+  guardarPlantillaMedicion: (datos: PlantillaMedicionPayload, id?: string) =>
+    desenvolver(id ? actualizarPlantillaMedicion(id, datos) : crearPlantillaMedicion(datos)),
+  eliminarPlantillaMedicion: (id: string) => desenvolver(eliminarPlantillaMedicion(id)),
+
   plantilla: () => desenvolver(obtenerPlantillaMonitoreo()),
   guardarPlantilla: (fotosPorFila: number) =>
     desenvolver(guardarPlantillaMonitoreo(fotosPorFila)),
