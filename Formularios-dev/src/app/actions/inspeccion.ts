@@ -231,6 +231,7 @@ export async function obtenerSistemasEmergenciaReport(
     if (filtros.mesActual) params.append("mesActual", filtros.mesActual);
     if (filtros.documentCode)
       params.append("documentCode", filtros.documentCode);
+    if (filtros.anio) params.append("anio", filtros.anio);
   }
 
   const queryString = params.toString();

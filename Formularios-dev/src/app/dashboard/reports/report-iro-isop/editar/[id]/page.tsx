@@ -80,7 +80,7 @@ export default function EditarIroIsopPage() {
     try {
       const result = await updateInstance(id, data);
       if (result.success) {
-        // El inspector sigue sus IRO desde «Mis inspecciones»: el listado de
+        // El inspector sigue sus IRO desde la carpeta virtual: el listado de
         // reportes no es para su rol.
         router.push(
           puedeAccederARuta(LISTADO_DE_REPORTES, user?.roles ?? [])

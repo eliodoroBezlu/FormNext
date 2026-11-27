@@ -140,8 +140,8 @@ const serviceItems = [
   },
   {
     id: "Mis inspecciones",
-    title: "Mis inspecciones / area",
-    subtitle: "Mis inspecciones y del area tambien",
+    title: "Carpeta virtual de inspecciones",
+    subtitle: "Por técnico o por área, mes a mes",
     href: "/dashboard/mis-inspecciones",
     color: "#10B981",
     // Misma razón que en «Herramientas»: la ruta ya los admite.

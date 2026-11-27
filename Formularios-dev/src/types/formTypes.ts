@@ -274,6 +274,8 @@ export interface FiltrosInspeccion {
   superintendencia?: string;
   mesActual?: string;
   documentCode?: string;
+  /** Año del formulario (gestión). */
+  anio?: string;
 }
 
 export interface TagConEstado {

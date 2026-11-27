@@ -82,48 +82,6 @@ export interface FormularioInspeccion {
   estado: 'activo' | 'completado' | 'archivado';
 }
 
-export interface AreaStats {
-  area: string;
-  tag: string;
-  responsable: string;
-  ultimaInspeccion: string;
-  cumplimiento: number;
-  estado: string;
-  tendencia: number;
-  totalInspecciones: number;
-  totalTags: number;
-  superintendencia: string;
-  extintoresInspeccionados: number;
-  sistemasPasivosCumplimiento: number;
-  sistemasActivosCumplimiento: number;
-}
-
-export interface TagDetalle {
-  tag: string;
-  tieneInspeccion: boolean;
-  fechaUltimaModificacion?: string;
-  extintoresActivos: number;
-  extintoresInspeccionados: number;
-  pctExtintores: number;
-}
-
-
-export interface DashboardMetricsProps {
-  tagsCount: number;
-  coberturaInspecciones: number;
-  cumplimientoExtintores: number;
-  alertasCriticasCount: number;
-  estadisticasGlobales: AreaStats[];
-}
-
-export interface ChartData {
-  name: string;
-  cumplimiento: number;
-  inspecciones: number;
-  extintores: number;
-  tendencia: number;
-}
-
 export interface Extintor {
   _id: string;
   CodigoExtintor: string;

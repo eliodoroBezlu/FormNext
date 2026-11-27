@@ -58,7 +58,7 @@ export default function FormularioIroIsopPage() {
         title={enAvance ? "Avance guardado" : "¡IRO terminada!"}
         subtitle={
           enAvance
-            ? `«${plantilla?.name}» quedó en borrador. Para seguirla: Mis inspecciones → IRO-ISOP → «Seguir».`
+            ? `«${plantilla?.name}» quedó en borrador. Para seguirla: Carpeta virtual de inspecciones → IRO-ISOP → «Seguir».`
             : `Se registró «${plantilla?.name}» y se generó su plan de acción (o su «sin observaciones»).`
         }
         autoRedirect={true}

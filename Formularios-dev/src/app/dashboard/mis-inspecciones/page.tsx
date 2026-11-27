@@ -47,7 +47,7 @@ export default function MisInspeccionesPage() {
                 color: "text.primary",
               }}
             >
-              Mis Inspecciones
+              Carpeta virtual de inspecciones
             </Typography>
             <Typography variant="body2" sx={{ color: "text.secondary", fontSize: "13px" }}>
               {user.fullName || user.username}
@@ -60,7 +60,10 @@ export default function MisInspeccionesPage() {
       </Box>
 
       {/* List */}
-      <MisInspeccionesView username={user.username} area={user.area} />
+      <MisInspeccionesView
+        usuario={{ username: user.username, nombre: user.fullName || user.username, area: user.area }}
+        area={user.area}
+      />
     </Box>
   );
 }

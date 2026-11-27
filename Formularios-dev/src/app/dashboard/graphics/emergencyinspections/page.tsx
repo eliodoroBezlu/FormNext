@@ -12,12 +12,13 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { useDashboardData } from "./hooks/useDashboardData";
-import { calcularEstadisticasPorArea, calcularDetalleTagsPorArea } from "./utils/dashboardCalculations";
+import { calcularCoberturaMes, EstadoExtintor, ETIQUETA_ESTADO } from "./utils/coberturaMensual";
 import { DashboardHeader } from "./emergencycharts/emergencychartsheader";
 import { DashboardFilters } from "./emergencycharts/emergencychartsfilters";
 import { DashboardCharts } from "./emergencycharts/emergencychartsCharts";
 import { LiveCommandCenter } from "./emergencycharts/emergencychartsLiveCenter";
 import { TagDetailModal } from "./emergencycharts/emergencychartsTagDetailModal";
+import { ListaExtintoresModal, ListaExtintores } from "./emergencycharts/ListaExtintoresModal";
 import { Refresh } from "@mui/icons-material";
 
 // Lista fija de meses (siempre los 12, en orden cronológico) — no se deriva
@@ -56,8 +57,10 @@ const DashboardEmergencyInspections: React.FC = () => {
   // El mes en curso es el valor **inicial**, no algo que haya que sincronizar:
   // se calcula en el inicializador de `useState`, no en un efecto.
   const [filtroMes, setFiltroMes] = useState<string>(mesActualODefecto);
-  const [filtroAño, setFiltroAño] = useState<string>("");
+  // Año en curso por defecto: sin año, un mes mezclaba semestres de años distintos.
+  const [filtroAño, setFiltroAño] = useState<string>(() => String(new Date().getFullYear()));
   const [areaDetalle, setAreaDetalle] = useState<string | null>(null);
+  const [lista, setLista] = useState<ListaExtintores | null>(null);
 
   const {
     tags,
@@ -109,25 +112,20 @@ const DashboardEmergencyInspections: React.FC = () => {
     return [...new Set(filteredTags.map((t) => t.tag))].sort();
   }, [tags, filtroSuperintendencia, filtroAreas, areasDisponibles]);
 
-  // Tags filtrados por Superintendencia/Área — para que las estadísticas por
-  // área (gráficos) solo consideren las áreas del filtro activo, en vez de
-  // mostrar todas las áreas del sistema con 0% cuando hay un filtro puesto.
-  const tagsParaEstadisticas = useMemo(() => {
-    let filtered = tags;
-    if (filtroSuperintendencia) {
-      filtered = filtered.filter((t) => areasDisponibles.includes(t.area));
-    }
-    if (filtroAreas.length > 0) {
-      filtered = filtered.filter((t) => filtroAreas.includes(t.area));
-    }
-    return filtered;
-  }, [tags, filtroSuperintendencia, filtroAreas, areasDisponibles]);
-
   const mesesDisponibles = MESES_DEL_AÑO;
 
-  const añosDisponibles = useMemo(() => {
-    return [...new Set(inspecciones.map((ins) => ins.año.toString()))].sort();
-  }, [inspecciones]);
+  const añosDisponibles = useMemo(
+    () =>
+      [...new Set([...inspecciones.map((ins) => ins.año.toString()), String(new Date().getFullYear())])].sort(
+        (a, b) => Number(b) - Number(a),
+      ),
+    [inspecciones],
+  );
+
+  const superintendenciaDeArea = useMemo(
+    () => new Map(areasActivas.map((a) => [a.nombre, a.superintendencia?.nombre ?? ""])),
+    [areasActivas],
+  );
 
   // Manejadores de cambios para limpiar cascadas dependientes
   const handleSuperintendenciaChange = (val: string) => {
@@ -141,66 +139,43 @@ const DashboardEmergencyInspections: React.FC = () => {
     setFiltroTags([]);
   };
 
-  // 2. Filtrar inspecciones en base a la multiselección y deduplicar por tag
-  const inspeccionesFiltradas = useMemo(() => {
-    const filtradas = inspecciones.filter((inspeccion) => {
-      const cumpleSuperintendencia =
-        !filtroSuperintendencia ||
-        inspeccion.superintendencia === filtroSuperintendencia;
-      const cumpleArea =
-        filtroAreas.length === 0 || filtroAreas.includes(inspeccion.area);
-      const cumpleTag =
-        filtroTags.length === 0 || filtroTags.includes(inspeccion.tag);
-      const cumpleMes = !filtroMes || inspeccion.mesActual === filtroMes;
-      const cumpleAño = !filtroAño || inspeccion.año.toString() === filtroAño;
+  // 2. Cobertura del mes: cada extintor activo del catálogo cruzado con lo inspeccionado ese mes
+  //    (ver utils/coberturaMensual.ts). El alcance sale del catálogo de áreas, no del texto
+  //    guardado en cada formulario.
+  const cobertura = useMemo(() => {
+    const areasAlcance = filtroAreas.length > 0 ? filtroAreas : filtroSuperintendencia ? areasDisponibles : undefined;
+    return calcularCoberturaMes(inspecciones, extintores, tags, filtroMes, Number(filtroAño) || null, {
+      areas: areasAlcance,
+      tags: filtroTags.length > 0 ? filtroTags : undefined,
+    });
+  }, [inspecciones, extintores, tags, filtroMes, filtroAño, filtroAreas, filtroTags, filtroSuperintendencia, areasDisponibles]);
 
-      return (
-        cumpleSuperintendencia &&
-        cumpleArea &&
-        cumpleTag &&
-        cumpleMes &&
-        cumpleAño
-      );
+  const periodo = `${filtroMes} ${filtroAño}`;
+
+  // 3. Detalle del área clickeada (gráfico de barras o tabla de seguimiento)
+  const tagsDelArea = useMemo(
+    () => (areaDetalle ? cobertura.tags.filter((t) => t.area === areaDetalle) : []),
+    [areaDetalle, cobertura.tags],
+  );
+  const fueraDelArea = useMemo(() => {
+    const nombres = new Set(tagsDelArea.map((t) => t.tag));
+    return cobertura.fueraDeCatalogo.filter((f) => nombres.has(f.tag));
+  }, [tagsDelArea, cobertura.fueraDeCatalogo]);
+
+  const verEstado = (estado: EstadoExtintor) =>
+    setLista({
+      titulo: ETIQUETA_ESTADO[estado],
+      periodo,
+      extintores: cobertura.extintores.filter((x) => x.estado === estado),
     });
 
-    // Deduplicar por tag para conservar solo el formulario más reciente de cada tag
-    const uniqueTagsMap = new Map<string, (typeof inspecciones)[0]>();
-    for (const ins of filtradas) {
-      const existing = uniqueTagsMap.get(ins.tag);
-      if (!existing) {
-        uniqueTagsMap.set(ins.tag, ins);
-      } else {
-        const existingDate = new Date(
-          existing.fechaUltimaModificacion,
-        ).getTime();
-        const currentDate = new Date(ins.fechaUltimaModificacion).getTime();
-        if (currentDate > existingDate) {
-          uniqueTagsMap.set(ins.tag, ins);
-        }
-      }
-    }
-
-    return Array.from(uniqueTagsMap.values());
-  }, [
-    inspecciones,
-    filtroSuperintendencia,
-    filtroAreas,
-    filtroTags,
-    filtroMes,
-    filtroAño,
-  ]);
-
-  // 3. Estadísticas basadas en datos filtrados y deduplicados
-  const estadisticasGlobales = useMemo(
-    () => calcularEstadisticasPorArea(inspeccionesFiltradas, tagsParaEstadisticas, extintores),
-    [inspeccionesFiltradas, tagsParaEstadisticas, extintores],
-  );
-
-  // 4. Detalle por tag del área clickeada en cualquiera de los dos gráficos
-  const detalleTagsArea = useMemo(() => {
-    if (!areaDetalle) return [];
-    return calcularDetalleTagsPorArea(areaDetalle, tags, extintores, inspeccionesFiltradas);
-  }, [areaDetalle, tags, extintores, inspeccionesFiltradas]);
+  const verFueraDeCatalogo = () =>
+    setLista({
+      titulo: "Inspeccionados que no cuentan",
+      periodo,
+      extintores: [],
+      fueraDeCatalogo: cobertura.fueraDeCatalogo,
+    });
 
   if (loading) {
     return (
@@ -278,20 +253,17 @@ const DashboardEmergencyInspections: React.FC = () => {
 
       <Grid container spacing={3}>
         <DashboardCharts
-          estadisticasGlobales={estadisticasGlobales}
-          extintores={extintores}
-          inspeccionesFiltradas={inspeccionesFiltradas}
-          filtroMes={filtroMes}
-          filtroSuperintendencia={filtroSuperintendencia}
-          filtroAreas={filtroAreas}
-          filtroTags={filtroTags}
-          areasDeSuperintendencia={areasDisponibles}
+          cobertura={cobertura}
+          onEstadoClick={verEstado}
           onAreaClick={setAreaDetalle}
+          onFueraDeCatalogoClick={verFueraDeCatalogo}
         />
 
         <LiveCommandCenter
-          inspeccionesFiltradas={inspeccionesFiltradas}
-          extintores={extintores}
+          tags={cobertura.tags}
+          periodo={periodo}
+          superintendenciaDe={(area) => superintendenciaDeArea.get(area) ?? ""}
+          onAreaClick={setAreaDetalle}
         />
       </Grid>
 
@@ -312,11 +284,14 @@ const DashboardEmergencyInspections: React.FC = () => {
       />
 
       <TagDetailModal
-        open={!!areaDetalle}
         area={areaDetalle}
-        detalle={detalleTagsArea}
+        periodo={periodo}
+        tags={tagsDelArea}
+        fueraDeCatalogo={fueraDelArea}
         onClose={() => setAreaDetalle(null)}
       />
+
+      <ListaExtintoresModal lista={lista} onClose={() => setLista(null)} />
     </Paper>
   );
 };

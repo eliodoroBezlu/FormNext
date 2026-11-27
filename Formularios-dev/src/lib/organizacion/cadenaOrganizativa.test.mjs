@@ -9,6 +9,10 @@ import {
   valoresDesdeElArea,
   valorDeVerificacion,
   mismoNombre,
+  superintendenciasDelMaestro,
+  areasDelMaestro,
+  superintendenciaDelArea,
+  esDeSuperintendencia,
 } from "./cadenaOrganizativa.ts";
 
 const porArea = indexarCadenas([
@@ -60,4 +64,34 @@ test("el área y la superintendencia de una inspección, la plantilla las nombre
 test("los nombres se comparan sin tildes ni mayúsculas", () => {
   assert.ok(mismoNombre("Flotación ", "FLOTACION"));
   assert.equal(mismoNombre("Filtros", "Flotación"), false);
+});
+
+const maestro = [
+  { area: "Filtros", superintendencia: "Mec. Plta. Flot., Filtros, Taller Gral. y RH", gerencia: null },
+  { area: "Generacion", superintendencia: "Mec. Plta. Flot., Filtros, Taller Gral. y RH", gerencia: null },
+  // El maestro tiene dos «Generacion»: en las listas sale una sola.
+  { area: "Generacion", superintendencia: "Mec. Plta. Flot., Filtros, Taller Gral. y RH", gerencia: null },
+  { area: "Chancado", superintendencia: "Mec. Plta. Chancado, Molienda y Lubricación", gerencia: null },
+  { area: "Sin jefe", superintendencia: null, gerencia: null },
+];
+const indice = indexarCadenas(maestro);
+
+test("listas del maestro para los filtros de los reportes", () => {
+  assert.deepEqual(superintendenciasDelMaestro(maestro), [
+    "Mec. Plta. Chancado, Molienda y Lubricación",
+    "Mec. Plta. Flot., Filtros, Taller Gral. y RH",
+  ]);
+  assert.deepEqual(areasDelMaestro(maestro, "mec. plta. flot., filtros, taller gral. y rh"), ["Filtros", "Generacion"]);
+  assert.equal(areasDelMaestro(maestro).length, 4);
+  assert.equal(superintendenciaDelArea("generación", indice), "Mec. Plta. Flot., Filtros, Taller Gral. y RH");
+  assert.equal(superintendenciaDelArea("Otra", indice), null);
+});
+
+test("una inspección con el nombre viejo de la superintendencia entra por su área", () => {
+  const vieja = { area: "Generacion", superintendencia: "Superintendencia de Mantenimiento - Mec. Planta Flotación, Filtros, Taller General y RH" };
+  assert.ok(esDeSuperintendencia(vieja, "Mec. Plta. Flot., Filtros, Taller Gral. y RH", indice));
+  // El maestro manda aunque el texto guardado diga otra cosa.
+  assert.equal(esDeSuperintendencia({ area: "Chancado", superintendencia: "Mec. Plta. Flot., Filtros, Taller Gral. y RH" }, "Mec. Plta. Flot., Filtros, Taller Gral. y RH", indice), false);
+  // Área que el maestro no conoce: se compara lo guardado.
+  assert.ok(esDeSuperintendencia({ area: "Bodega vieja", superintendencia: "mec. plta. chancado, molienda y lubricacion" }, "Mec. Plta. Chancado, Molienda y Lubricación", indice));
 });

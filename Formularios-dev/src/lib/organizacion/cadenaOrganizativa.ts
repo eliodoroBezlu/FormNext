@@ -128,3 +128,41 @@ export function valorDeVerificacion(
 /** Igualdad de nombres sin mayúsculas, tildes ni espacios de más. */
 export const mismoNombre = (a: string, b: string): boolean =>
   normalizarEtiqueta(a) === normalizarEtiqueta(b);
+
+const ordenar = (nombres: Iterable<string>): string[] =>
+  [...new Set(nombres)].sort((a, b) => a.localeCompare(b, "es"));
+
+/** Superintendencias del maestro, sin repetidos y en orden. */
+export const superintendenciasDelMaestro = (cadenas: readonly CadenaOrganizativa[]): string[] =>
+  ordenar(cadenas.map((c) => c.superintendencia).filter((s): s is string => !!s));
+
+/** Áreas del maestro (solo las de una superintendencia, si se indica), sin repetidos. */
+export const areasDelMaestro = (cadenas: readonly CadenaOrganizativa[], superintendencia?: string): string[] =>
+  ordenar(
+    cadenas
+      .filter((c) => !superintendencia || (c.superintendencia !== null && mismoNombre(c.superintendencia, superintendencia)))
+      .map((c) => c.area),
+  );
+
+/** Superintendencia del área según el maestro; `null` si el maestro no conoce el área. */
+export const superintendenciaDelArea = (
+  area: string,
+  porArea: Map<string, CadenaOrganizativa>,
+): string | null => porArea.get(claveDeArea(area))?.superintendencia ?? null;
+
+/**
+ * Si una inspección es de la superintendencia elegida.
+ *
+ * Manda el maestro: si conoce el área, vale la superintendencia de esa área. La inspección guarda la
+ * superintendencia como texto del día en que se llenó, y muchas tienen un nombre que el maestro ya
+ * cambió («Mec. Planta Flotación…» → «Mec. Plta. Flot.…»); compararla tal cual dejaba los
+ * reportes vacíos. Solo si el maestro no conoce el área se compara el nombre guardado.
+ */
+export const esDeSuperintendencia = (
+  inspeccion: { area: string; superintendencia: string },
+  elegida: string,
+  porArea: Map<string, CadenaOrganizativa>,
+): boolean => {
+  const delMaestro = superintendenciaDelArea(inspeccion.area, porArea);
+  return mismoNombre(delMaestro ?? inspeccion.superintendencia, elegida);
+};

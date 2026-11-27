@@ -28,8 +28,10 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { FormInstance, FormTemplate } from "@/types/formTypes";
 import { getTemplates } from "@/lib/actions/template-actions";
 import {
+  esDeSuperintendencia,
   mismoNombre,
   valorDeVerificacion,
+  type CadenaOrganizativa,
 } from "@/lib/organizacion/cadenaOrganizativa";
 import {
   getInstances,
@@ -40,7 +42,6 @@ import {
   descargarPdfIroIsopCliente,
   descargarZipIroIsopCliente,
 } from "@/lib/actions/client";
-import AutocompleteCustom from "@/components/ui/autocomplete/AutocompleteCustom";
 
 // ✅ Componentes comunes
 import { Can } from "@/components/layout/wrappers/Can";
@@ -52,6 +53,10 @@ import {
 import { ReportActionButtons } from "@/components/features/reports/presentation/components/ReportActionButtons";
 import { BulkDownloadButton } from "@/components/features/reports/presentation/components/BulkDownloadButton";
 import { ReportStateHandler } from "@/components/features/reports/presentation/components/ReportStateHandler";
+import { FiltroAreaSuperintendencia } from "@/components/features/reports/presentation/components/FiltroAreaSuperintendencia";
+import { SuperintendenciaCelda } from "@/components/features/reports/presentation/components/SuperintendenciaCelda";
+import { useMaestroOrganizativo } from "@/components/features/reports/application/hooks/useMaestroOrganizativo";
+import { obtenerMaestroOrganizativo } from "@/components/features/reports/infrastructure/adapters/maestroOrganizativoAdapter";
 
 const ESTADOS_FORMULARIO = [
   { value: "borrador", label: "Borrador", color: "default" as const },
@@ -107,6 +112,7 @@ const aQueryString = (f: FiltrosIroIsop): string => {
 const filtrarEnCliente = (
   datos: FormInstance[],
   f: FiltrosIroIsop,
+  porArea: Map<string, CadenaOrganizativa>,
 ): FormInstance[] => {
   let resultado = datos;
 
@@ -118,11 +124,17 @@ const filtrarEnCliente = (
     );
   }
 
+  // Por el maestro: la inspección guarda la superintendencia como texto del día en que se llenó, y
+  // muchas tienen un nombre que ya cambió (ver `esDeSuperintendencia`).
   if (f.superintendencia) {
     resultado = resultado.filter((i) =>
-      mismoNombre(
-        valorDeVerificacion(i.verificationList, "superintendencia"),
+      esDeSuperintendencia(
+        {
+          area: valorDeVerificacion(i.verificationList, "area"),
+          superintendencia: valorDeVerificacion(i.verificationList, "superintendencia"),
+        },
         f.superintendencia,
+        porArea,
       ),
     );
   }
@@ -142,6 +154,16 @@ const filtrarEnCliente = (
 
   return resultado;
 };
+
+/**
+ * El maestro para filtrar por superintendencia. Se espera aquí (y no al estado del componente) para
+ * que una búsqueda que llega por la URL no filtre antes de tenerlo. Si no carga, se compara el
+ * nombre guardado.
+ */
+const porAreaParaFiltrar = async (superintendencia: string): Promise<Map<string, CadenaOrganizativa>> =>
+  superintendencia
+    ? (await obtenerMaestroOrganizativo().catch(() => null))?.porArea ?? new Map()
+    : new Map();
 
 function ListarInspeccionesIroIsopComponent() {
   const router = useRouter();
@@ -189,6 +211,8 @@ function ListarInspeccionesIroIsopComponent() {
    * haría **dos veces** por cada clic.
    */
   const ultimaBusqueda = useRef<string | null>(null);
+
+  const maestro = useMaestroOrganizativo();
 
   useEffect(() => {
     // La promesa se encadena aquí en vez de llamar a una función `async`: el
@@ -240,7 +264,7 @@ function ListarInspeccionesIroIsopComponent() {
           ? response.data
           : [];
 
-      return filtrarEnCliente(recibidas, f);
+      return filtrarEnCliente(recibidas, f, await porAreaParaFiltrar(f.superintendencia));
     },
     [],
   );
@@ -415,11 +439,12 @@ function ListarInspeccionesIroIsopComponent() {
     {
       key: "superintendencia",
       label: "Superintendencia",
-      render: (row) => {
-        return (
-          valorDeVerificacion(row.verificationList, "superintendencia") || "-"
-        );
-      },
+      render: (row) => (
+        <SuperintendenciaCelda
+          delMaestro={maestro.superintendenciaDe(valorDeVerificacion(row.verificationList, "area"))}
+          guardada={valorDeVerificacion(row.verificationList, "superintendencia")}
+        />
+      ),
     },
     {
       key: "status",
@@ -562,25 +587,17 @@ function ListarInspeccionesIroIsopComponent() {
             />
           </Grid>
 
-          <Grid size={{ xs: 12, md: 3 }}>
-            <AutocompleteCustom
-              dataSource="area"
-              label="Área"
-              placeholder="Seleccione área"
-              value={areaFilter}
-              onChange={(val) => setAreaFilter(val || "")}
-            />
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 2 }}>
-            <AutocompleteCustom
-              dataSource="superintendencia"
-              label="Superintendencia"
-              placeholder="Seleccione..."
-              value={superintendenciaFilter}
-              onChange={(val) => setSuperintendenciaFilter(val || "")}
-            />
-          </Grid>
+          <FiltroAreaSuperintendencia
+            maestro={maestro}
+            area={areaFilter}
+            superintendencia={superintendenciaFilter}
+            onChange={({ area, superintendencia }) => {
+              setAreaFilter(area);
+              setSuperintendenciaFilter(superintendencia);
+            }}
+            tamañoArea={{ xs: 12, md: 3 }}
+            tamañoSuperintendencia={{ xs: 12, md: 5 }}
+          />
 
           <Grid size={{ xs: 12, md: 4 }}>
             <TextField

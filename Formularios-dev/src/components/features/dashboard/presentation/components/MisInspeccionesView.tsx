@@ -1,195 +1,63 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React from "react";
 import {
   Box,
   Typography,
-  Tabs,
-  Tab,
   Accordion,
   AccordionSummary,
   AccordionDetails,
   Chip,
-  TextField,
-  Paper,
   Skeleton,
-  Alert,
   Button,
 } from "@mui/material";
-import { ExpandMore, Assignment, PlayArrow } from "@mui/icons-material";
-import AutocompleteCustom from "@/components/ui/autocomplete/AutocompleteCustom";
+import { ExpandMore, PlayArrow } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
 
 import { FormInstance, InspeccionServiceExport } from "@/types/formTypes";
 import { getArea, getEquipmentIds } from "@/lib/utils/herra-equipos-fields";
 
-import {
-  ReportTable,
-  ReportColumn,
-} from "@/components/features/reports/presentation/components/ReportTable";
+import type { ReportColumn } from "@/components/features/reports/presentation/components/ReportTable";
 import { ReportActionButtons } from "@/components/features/reports/presentation/components/ReportActionButtons";
 
 import { useMisInspecciones } from "../../application/hooks/useMisInspecciones";
 import type { InspectionResponse } from "../../infrastructure/adapters/dashboardAdapter";
-import {
-  FOLDER_FILTER_THRESHOLD,
-  MisInspeccionesViewProps,
-  Vista,
-} from "../../domain/models/dashboardModels";
-import { alpha } from "@mui/material/styles";
+import type { MisInspeccionesViewProps } from "../../domain/models/dashboardModels";
+import type { FilaEmergencia } from "../../domain/models/carpetaVirtual";
+import { CarpetaFiltros } from "./CarpetaFiltros";
+import { CarpetaTable, ChipsDeCodigo, EmptyFolders, KpiCard, ModuloSection } from "./CarpetaPiezas";
 import { MARCA } from "@/styles/marca";
 
 const VIEW_ONLY_ACTIONS = { view: true, pdf: true, edit: false, excel: false, duplicate: false, delete: false };
 
-/**
- * Los identificadores del equipo, uno por etiqueta.
- *
- * Sin códigos se pinta `N/A` en vez de una celda vacía: una celda en blanco se
- * lee como «no cargó», y esto es «no se registró».
- */
-function ChipsDeCodigo({ codigos }: { codigos: string[] }) {
-  if (codigos.length === 0) {
-    return <Chip label="N/A" size="small" variant="outlined" />;
-  }
-  return (
-    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-      {codigos.map((codigo) => (
-        <Chip key={codigo} label={codigo} size="small" variant="outlined" />
-      ))}
-    </Box>
-  );
-}
-
-function KpiCard({ value, label, color }: { value: number; label: string; color: string }) {
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        flex: 1,
-        minWidth: 90,
-        p: 2,
-        borderRadius: 2.5,
-        border: "1px solid",
-        borderColor: color + "30",
-        bgcolor: color + "08",
-        textAlign: "center",
-      }}
-    >
-      <Typography sx={{ fontSize: "28px", fontWeight: 800, color, lineHeight: 1 }}>{value}</Typography>
-      <Typography sx={{ fontSize: "11px", color: "text.secondary", mt: 0.5, fontWeight: 600 }}>
-        {label}
-      </Typography>
-    </Paper>
-  );
-}
-
-/** Tabla de una carpeta — agrega buscador solo si hay suficientes filas. */
-function CarpetaTable<T>({
-  rows,
-  columns,
-  rowKey,
-  getSearchText,
-  emptyMessage,
-}: {
-  rows: T[];
-  columns: ReportColumn<T>[];
-  rowKey: (row: T) => string;
-  getSearchText: (row: T) => string;
-  emptyMessage: string;
-}) {
-  const [busqueda, setBusqueda] = useState("");
-  const necesitaFiltro = rows.length > FOLDER_FILTER_THRESHOLD;
-
-  const filtradas = useMemo(() => {
-    if (!necesitaFiltro || !busqueda.trim()) return rows;
-    const q = busqueda.toLowerCase().trim();
-    return rows.filter((r) => getSearchText(r).toLowerCase().includes(q));
-  }, [rows, busqueda, necesitaFiltro, getSearchText]);
-
-  return (
-    <Box>
-      {necesitaFiltro && (
-        <TextField
-          size="small"
-          fullWidth
-          placeholder="Buscar en esta carpeta..."
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          sx={{ mb: 2 }}
-        />
-      )}
-      <ReportTable
-        columns={columns}
-        rows={filtradas}
-        rowKey={rowKey}
-        emptyMessage={emptyMessage}
-        size="small"
-        defaultRowsPerPage={10}
-      />
-    </Box>
-  );
-}
-
-function ModuloSection({
-  titulo,
-  loading,
-  error,
-  folders,
-}: {
-  titulo: string;
-  loading: boolean;
-  error: string | null;
-  folders: React.ReactNode;
-}) {
-  return (
-    <Box sx={{ mb: 4 }}>
-      <Typography sx={{ fontSize: "15px", fontWeight: 800, color: "primary.main", mb: 1.5 }}>
-        {titulo}
-      </Typography>
-      {loading ? (
-        <Skeleton variant="rounded" height={56} sx={{ borderRadius: 2 }} />
-      ) : error ? (
-        <Alert severity="error" sx={{ borderRadius: 2 }}>
-          {error}
-        </Alert>
-      ) : (
-        folders
-      )}
-    </Box>
-  );
-}
-
-export function MisInspeccionesView({ username, area }: MisInspeccionesViewProps) {
+export function MisInspeccionesView({ usuario, area: areaDelPerfil }: MisInspeccionesViewProps) {
   const router = useRouter();
 
-  /**
-   * Área que se está mirando. Arranca en la de la persona, pero se puede
-   * cambiar.
-   *
-   * Antes esta vista dependía en exclusiva del área del perfil: sin ella, la
-   * pestaña salía deshabilitada y el aviso decía «no se puede mostrar esta
-   * vista», que es un callejón sin salida. Y con un área mal asignada —o
-   * escrita de otra forma que en las inspecciones— la pestaña se veía
-   * habilitada pero salía vacía, que es peor porque parece que no hay trabajo
-   * registrado.
-   *
-   * Elegir el área lo resuelve por los dos lados y además permite mirar otras,
-   * que es lo que hace falta cuando alguien cubre más de un taller.
+  /*
+   * El área arranca en la del perfil pero se puede cambiar (sin área en el perfil, o con una mal
+   * asignada, la vista quedaba vacía y sin salida). El técnico arranca en quien mira y se puede
+   * elegir cualquier otro.
    */
-  const [areaElegida, setAreaElegida] = useState<string | null>(area ?? null);
-
   const {
     vista,
     setVista,
-    herraEquipos,
+    tecnico,
+    setTecnico,
+    tecnicos,
+    nombreTecnico,
+    area,
+    setArea,
+    periodo,
+    setPeriodo,
+    totalHerra,
     loadingHerra,
     errorHerra,
     carpetasHerra,
-    isoInstances,
+    totalIso,
     loadingIso,
     errorIso,
     carpetasIso,
-    emergencia,
+    filasDeEmergencia,
     loadingEmergencia,
     errorEmergencia,
     totalActivo,
@@ -197,7 +65,7 @@ export function MisInspeccionesView({ username, area }: MisInspeccionesViewProps
     downloadHerraEquipoPdf,
     downloadIroIsopPdf,
     downloadEmergenciaPdf,
-  } = useMisInspecciones(username, areaElegida ?? undefined);
+  } = useMisInspecciones(usuario, areaDelPerfil);
 
   const columnasHerra: ReportColumn<InspectionResponse>[] = [
     {
@@ -279,28 +147,32 @@ export function MisInspeccionesView({ username, area }: MisInspeccionesViewProps
   ];
 
   // ── Columnas Sistemas de Emergencia (sin carpetas, lista única) ─────────
-  const columnasEmergencia: ReportColumn<InspeccionServiceExport>[] = [
-    { key: "area", label: "Área", render: (row) => row.area },
-    { key: "tag", label: "TAG", render: (row) => row.tag },
-    { key: "mes", label: "Mes actual", render: (row) => row.mesActual },
+  // Una fila por formulario (tag y semestre), con los meses del periodo que tienen inspección.
+  const columnasEmergencia: ReportColumn<FilaEmergencia<InspeccionServiceExport>>[] = [
+    { key: "area", label: "Área", render: ({ formulario }) => formulario.area },
+    { key: "tag", label: "TAG", render: ({ formulario }) => formulario.tag },
     {
-      key: "fecha",
-      label: "Última modificación",
-      render: (row) =>
-        row.fechaUltimaModificacion
-          ? new Date(row.fechaUltimaModificacion).toLocaleDateString("es-BO")
-          : "N/A",
+      key: "meses",
+      label: "Meses inspeccionados",
+      render: ({ meses }) => (
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+          {meses.map((m) => (
+            <Chip key={m} label={m.charAt(0) + m.slice(1).toLowerCase()} size="small" variant="outlined" />
+          ))}
+        </Box>
+      ),
     },
+    { key: "inspector", label: "Inspector anotado", render: ({ inspectores }) => inspectores.join(", ") || "—" },
     {
       key: "acciones",
       label: "Acciones",
       align: "center",
-      render: (row) => (
+      render: ({ formulario }) => (
         <ReportActionButtons
           onView={() =>
-            router.push(`/dashboard/reports/sistemas-de-emergencia/editar/${row._id}?mode=view`)
+            router.push(`/dashboard/reports/sistemas-de-emergencia/editar/${formulario._id}?mode=view`)
           }
-          onDownloadPdf={() => downloadEmergenciaPdf(row._id)}
+          onDownloadPdf={() => downloadEmergenciaPdf(formulario._id)}
           show={VIEW_ONLY_ACTIONS}
         />
       ),
@@ -309,7 +181,21 @@ export function MisInspeccionesView({ username, area }: MisInspeccionesViewProps
 
   return (
     <Box>
-      {/* KPI Row */}
+      <CarpetaFiltros
+        usuario={usuario}
+        areaDelPerfil={areaDelPerfil}
+        vista={vista}
+        onVista={setVista}
+        tecnico={tecnico}
+        tecnicos={tecnicos}
+        onTecnico={setTecnico}
+        area={area}
+        onArea={setArea}
+        periodo={periodo}
+        onPeriodo={setPeriodo}
+      />
+
+      {/* KPI Row: lo del periodo elegido */}
       <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
         {cargandoAlgo ? (
           [1, 2].map((i) => (
@@ -318,53 +204,12 @@ export function MisInspeccionesView({ username, area }: MisInspeccionesViewProps
         ) : (
           <>
             <KpiCard value={totalActivo} label="Total en esta vista" color={MARCA.acero} />
-            <KpiCard value={herraEquipos.length} label="Herramientas y Equipos" color="#2563eb" />
-            <KpiCard value={isoInstances.length} label="IRO-ISOP" color={MARCA.petroleo} />
-            {vista === "area" && (
-              <KpiCard value={emergencia.length} label="Sistemas de Emergencia" color="#d97706" />
-            )}
+            <KpiCard value={totalHerra} label="Herramientas y Equipos" color="#2563eb" />
+            <KpiCard value={totalIso} label="IRO-ISOP" color={MARCA.petroleo} />
+            <KpiCard value={filasDeEmergencia.length} label="Sistemas de Emergencia" color="#d97706" />
           </>
         )}
       </Box>
-
-      {/* Tabs de vista */}
-      <Tabs
-        value={vista}
-        onChange={(_, v: Vista) => setVista(v)}
-        sx={{ mb: 3, borderBottom: "1px solid", borderColor: "divider" }}
-      >
-        <Tab value="mias" label="Realizadas por mí" />
-        {/*
-          Ya no se deshabilita por no tener área en el perfil: el área se elige
-          abajo. Deshabilitarla dejaba sin salida a quien la tuviera mal puesta.
-        */}
-        <Tab value="area" label="Por área" />
-      </Tabs>
-
-      {vista === "area" && (
-        <Box sx={{ mb: 3, maxWidth: 420 }}>
-          <AutocompleteCustom
-            dataSource="area"
-            label="Área que se muestra"
-            placeholder="Elegí un área"
-            value={areaElegida}
-            onChange={setAreaElegida}
-          />
-          {!areaElegida && (
-            <Alert severity="info" sx={{ mt: 1.5, borderRadius: 2 }}>
-              {area
-                ? "Elegí un área para ver sus inspecciones."
-                : "Tu perfil no tiene un área asignada. Elegí una para ver sus inspecciones."}
-            </Alert>
-          )}
-          {areaElegida && area && areaElegida !== area && (
-            <Alert severity="warning" sx={{ mt: 1.5, borderRadius: 2 }}>
-              Estás viendo <strong>{areaElegida}</strong>, que no es tu área
-              ({area}).
-            </Alert>
-          )}
-        </Box>
-      )}
 
       {/* Herramientas y Equipos */}
       <ModuloSection
@@ -426,45 +271,31 @@ export function MisInspeccionesView({ username, area }: MisInspeccionesViewProps
         }
       />
 
-      {/* Sistemas de Emergencia — solo en la vista por área, sin carpetas.
-          Se mira `areaElegida` y no el área del perfil: si no, al elegir otra
-          área este bloque seguiría mostrando —o escondiendo— según un dato que
-          ya no es el que se está viendo. */}
-      {vista === "area" && areaElegida && (
+      {/* Sistemas de Emergencia — en las dos vistas, sin carpetas. */}
+      {(vista === "tecnico" || area) && (
         <ModuloSection
           titulo="Sistemas de Emergencia"
           loading={loadingEmergencia}
           error={errorEmergencia}
           folders={
-            <CarpetaTable
-              rows={emergencia}
-              columns={columnasEmergencia}
-              rowKey={(row) => row._id}
-              getSearchText={(row) => `${row.area} ${row.tag}`}
-              emptyMessage="Sin inspecciones de sistemas de emergencia en tu área"
-            />
+            <>
+              {vista === "tecnico" && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1.5 }}>
+                  Este formulario no guarda el usuario, solo el nombre que anota el inspector: se muestran
+                  los meses en que ese nombre coincide con {nombreTecnico || tecnico.username}.
+                </Typography>
+              )}
+              <CarpetaTable
+                rows={filasDeEmergencia}
+                columns={columnasEmergencia}
+                rowKey={(fila) => fila.formulario._id}
+                getSearchText={(fila) => `${fila.formulario.area} ${fila.formulario.tag} ${fila.inspectores.join(" ")}`}
+                emptyMessage="Sin inspecciones de sistemas de emergencia en este periodo"
+              />
+            </>
           }
         />
       )}
-    </Box>
-  );
-}
-
-function EmptyFolders() {
-  return (
-    <Box
-      sx={{
-        py: 4,
-        textAlign: "center",
-        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.03),
-        borderRadius: 3,
-        border: (theme) => `1px dashed ${alpha(theme.palette.primary.main, 0.2)}`,
-      }}
-    >
-      <Assignment sx={{ fontSize: 36, color: (theme) => alpha(theme.palette.primary.main, 0.3), mb: 1 }} />
-      <Typography variant="body2" color="text.secondary" fontWeight={600}>
-        No hay inspecciones en esta vista.
-      </Typography>
     </Box>
   );
 }

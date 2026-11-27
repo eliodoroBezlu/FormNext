@@ -223,9 +223,6 @@ export const DashboardFilters = ({
                 onChange={(e) => onAñoChange(e.target.value)}
                 sx={styles.select}
               >
-                <MenuItem value="" sx={styles.menuItem}>
-                  Todos
-                </MenuItem>
                 {años.map((año) => (
                   <MenuItem key={año} value={año} sx={styles.menuItem}>
                     {año}

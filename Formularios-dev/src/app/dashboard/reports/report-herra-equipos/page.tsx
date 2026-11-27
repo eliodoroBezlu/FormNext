@@ -40,7 +40,15 @@ import {
   getArea,
   getEquipmentIds,
 } from "@/lib/utils/herra-equipos-fields";
-import AutocompleteCustom from "@/components/ui/autocomplete/AutocompleteCustom";
+import {
+  esDeSuperintendencia,
+  valorDeVerificacion,
+  type CadenaOrganizativa,
+} from "@/lib/organizacion/cadenaOrganizativa";
+import { FiltroAreaSuperintendencia } from "@/components/features/reports/presentation/components/FiltroAreaSuperintendencia";
+import { SuperintendenciaCelda } from "@/components/features/reports/presentation/components/SuperintendenciaCelda";
+import { useMaestroOrganizativo } from "@/components/features/reports/application/hooks/useMaestroOrganizativo";
+import { obtenerMaestroOrganizativo } from "@/components/features/reports/infrastructure/adapters/maestroOrganizativoAdapter";
 import { InspectionStatusChip } from "@/components/features/herra-equipos/common/InspectionStatusChip";
 import { InspectionStatus } from "@/components/features/herra-equipos/types/IProps";
 
@@ -98,6 +106,7 @@ const getSuperintendenciaOGerencia = (i: InspectionResponse): string => {
 interface FiltrosHerraEquipos {
   templateName: string;
   area: string;
+  superintendencia: string;
   equipmentId: string;
   startDate: string;
   endDate: string;
@@ -109,6 +118,7 @@ const leerFiltrosDeUrl = (
 ): FiltrosHerraEquipos => ({
   templateName: params.get("templateName") || "",
   area: params.get("area") || "",
+  superintendencia: params.get("superintendencia") || "",
   equipmentId: params.get("equipmentId") || "",
   startDate: params.get("startDate") || "",
   endDate: params.get("endDate") || "",
@@ -134,6 +144,7 @@ const aQueryString = (f: FiltrosHerraEquipos): string => {
 const filtrarEnCliente = (
   datos: InspectionResponse[],
   f: FiltrosHerraEquipos,
+  porArea: Map<string, CadenaOrganizativa>,
 ): InspectionResponse[] => {
   let resultado = datos;
 
@@ -146,6 +157,17 @@ const filtrarEnCliente = (
 
   if (f.area.trim()) {
     resultado = resultado.filter((i) => coincideArea(i, f.area));
+  }
+
+  // Por el maestro, a partir del área de la inspección (ver `esDeSuperintendencia`).
+  if (f.superintendencia) {
+    resultado = resultado.filter((i) =>
+      esDeSuperintendencia(
+        { area: getArea(i), superintendencia: valorDeVerificacion(i.verification, "superintendencia") },
+        f.superintendencia,
+        porArea,
+      ),
+    );
   }
 
   if (f.equipmentId.trim()) {
@@ -164,6 +186,16 @@ const filtrarEnCliente = (
 
   return resultado;
 };
+
+/**
+ * El maestro para filtrar por superintendencia. Se espera aquí (y no al estado del componente) para
+ * que una búsqueda que llega por la URL no filtre antes de tenerlo. Si no carga, se compara el
+ * nombre guardado.
+ */
+const porAreaParaFiltrar = async (superintendencia: string): Promise<Map<string, CadenaOrganizativa>> =>
+  superintendencia
+    ? (await obtenerMaestroOrganizativo().catch(() => null))?.porArea ?? new Map()
+    : new Map();
 
 function ListarInspeccionHerraEquiposComponent() {
   const router = useRouter();
@@ -197,6 +229,10 @@ function ListarInspeccionHerraEquiposComponent() {
   const [areaFilter, setAreaFilter] = useState(
     () => searchParams.get("area") || "",
   );
+  const [superintendenciaFilter, setSuperintendenciaFilter] = useState(
+    () => searchParams.get("superintendencia") || "",
+  );
+  const maestro = useMaestroOrganizativo();
   const [equipmentIdFilter, setEquipmentIdFilter] = useState(
     () => searchParams.get("equipmentId") || "",
   );
@@ -254,7 +290,7 @@ function ListarInspeccionHerraEquiposComponent() {
         throw new Error(response.error || "Error desconocido");
       }
 
-      return filtrarEnCliente(response.data, f);
+      return filtrarEnCliente(response.data, f, await porAreaParaFiltrar(f.superintendencia));
     },
     [templates],
   );
@@ -307,6 +343,7 @@ function ListarInspeccionHerraEquiposComponent() {
     const f: FiltrosHerraEquipos = {
       templateName: templateNameFilter,
       area: areaFilter,
+      superintendencia: superintendenciaFilter,
       equipmentId: equipmentIdFilter,
       startDate: startDateFilter,
       endDate: endDateFilter,
@@ -329,6 +366,7 @@ function ListarInspeccionHerraEquiposComponent() {
   }, [
     templateNameFilter,
     areaFilter,
+    superintendenciaFilter,
     equipmentIdFilter,
     startDateFilter,
     endDateFilter,
@@ -425,6 +463,7 @@ function ListarInspeccionHerraEquiposComponent() {
   const limpiarFiltros = () => {
     setTemplateNameFilter("");
     setAreaFilter("");
+    setSuperintendenciaFilter("");
     setEquipmentIdFilter("");
     setStartDateFilter("");
     setEndDateFilter("");
@@ -561,7 +600,15 @@ function ListarInspeccionHerraEquiposComponent() {
     {
       key: "superintendencia",
       label: "Superintendencia/Gerencia",
-      render: (row) => getSuperintendenciaOGerencia(row),
+      render: (row) => {
+        const guardada = getSuperintendenciaOGerencia(row);
+        return (
+          <SuperintendenciaCelda
+            delMaestro={maestro.superintendenciaDe(getArea(row))}
+            guardada={guardada === "N/A" ? "" : guardada}
+          />
+        );
+      },
     },
     { key: "area", label: "Área", render: (row) => getArea(row) },
     {
@@ -674,19 +721,21 @@ function ListarInspeccionHerraEquiposComponent() {
             </FormControl>
           </Grid>
 
-          <Grid size={{ xs: 12, md: 2 }}>
-            {/* El área la escribe el inspector en su formulario, no sale de un
-                catálogo: por eso es un autocompletado abierto y no un select.
-                Las opciones del maestro son sugerencias y la coincidencia es
-                por «contiene» y sin tildes. */}
-            <AutocompleteCustom
-              dataSource="area"
-              label="Área"
-              placeholder="Todas"
-              value={areaFilter || null}
-              onChange={(v) => setAreaFilter(v ?? "")}
-            />
-          </Grid>
+          {/* El área la escribe el inspector en su formulario, no sale de un catálogo: por eso se
+              puede escribir. Las opciones del maestro son sugerencias y la coincidencia es por
+              «contiene» y sin tildes. */}
+          <FiltroAreaSuperintendencia
+            maestro={maestro}
+            area={areaFilter}
+            superintendencia={superintendenciaFilter}
+            onChange={({ area, superintendencia }) => {
+              setAreaFilter(area);
+              setSuperintendenciaFilter(superintendencia);
+            }}
+            areaLibre
+            tamañoArea={{ xs: 12, md: 3 }}
+            tamañoSuperintendencia={{ xs: 12, md: 4 }}
+          />
 
           <Grid size={{ xs: 12, md: 3 }}>
             <TextField

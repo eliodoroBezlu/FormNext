@@ -49,8 +49,6 @@ export function formatActividadLabel(id: string): string {
 }
 
 // Mapa local de colores para el semáforo de tiempo de una actividad.
-// Precedente aceptado: `getColorSemaforo` en
-// `graphics/emergencyinspections/emergencycharts/emergencychartsCharts.tsx`.
 const SEMAFORO_COLORES: Record<string, string> = {
   "Antes del Mes": "#2E7D32",
   "En el Mes": "#1976D2",

@@ -4,10 +4,18 @@ import { Role } from "@/lib/routePermissions";
 
 // ── Mis Inspecciones ────────────────────────────────────────────────────
 
-export type Vista = "mias" | "area";
+export type Vista = "tecnico" | "area";
+
+/** Quien hizo la inspección: usuario (Herramientas, IRO/ISOP) y nombre (Sistemas de Emergencia). */
+export interface Tecnico {
+  username: string;
+  nombre: string;
+  area?: string;
+}
 
 export interface MisInspeccionesViewProps {
-  username: string;
+  /** La persona que mira: es el técnico elegido al entrar. */
+  usuario: Tecnico;
   area?: string;
 }
 

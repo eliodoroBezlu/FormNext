@@ -29,7 +29,6 @@ import {
   descargarZipInspeccionesEmergenciaCliente,
 } from "@/lib/actions/client";
 import {
-  buscarAreas,
   obtenerExtintoresPorArea,
   obtenerSistemasEmergenciaReport,
 } from "@/app/actions/inspeccion";
@@ -47,6 +46,9 @@ import {
 import { ReportActionButtons } from "@/components/features/reports/presentation/components/ReportActionButtons";
 import { BulkDownloadButton } from "@/components/features/reports/presentation/components/BulkDownloadButton";
 import { ReportStateHandler } from "@/components/features/reports/presentation/components/ReportStateHandler";
+import { FiltroAreaSuperintendencia } from "@/components/features/reports/presentation/components/FiltroAreaSuperintendencia";
+import { SuperintendenciaCelda } from "@/components/features/reports/presentation/components/SuperintendenciaCelda";
+import { useMaestroOrganizativo } from "@/components/features/reports/application/hooks/useMaestroOrganizativo";
 
 const MESES = [
   "ENERO",
@@ -61,14 +63,6 @@ const MESES = [
   "OCTUBRE",
   "NOVIEMBRE",
   "DICIEMBRE",
-];
-
-const SUPERINTENDENCIAS = [
-  "Superintendencia de Mantenimiento - Eléctrico e Instrumentación Planta",
-  "Superintendencia de Mantenimiento - Ingeniería de Confiabilidad",
-  "Superintendencia de Mantenimiento - Mec. Plta. Chancado, Molienda y Lubricación",
-  "Superintendencia de Mantenimiento - Mec. Plta. Flot., Filtros, Taller Gral. y RH",
-  "Superintendencia de Mantenimiento - Planificación",
 ];
 
 const ORDEN_MESES = [
@@ -86,7 +80,10 @@ const ORDEN_MESES = [
   "DICIEMBRE",
 ];
 
-const GESTIONES = ["2024", "2025", "2026", "2027", "2028", "2029", "2030"];
+/** Desde el primer año con formularios hasta el actual, el más reciente primero. */
+const GESTIONES = Array.from({ length: new Date().getFullYear() - 2024 + 1 }, (_, i) =>
+  String(new Date().getFullYear() - i),
+);
 
 /** Los filtros del informe, tal y como viajan en la barra de direcciones. */
 interface FiltrosSistemasEmergencia {
@@ -132,8 +129,6 @@ function ListaInspeccionesComponent() {
   const [loading, setLoading] = useState(() =>
     hayAlgunFiltro(leerFiltrosDeUrl(searchParams)),
   );
-  // Arranca en `true`: las áreas se piden nada más montar.
-  const [loadingAreas, setLoadingAreas] = useState(true);
   const [loadingExtintores, setLoadingExtintores] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -168,32 +163,13 @@ function ListaInspeccionesComponent() {
   const ultimaBusqueda = useRef<string | null>(null);
 
   const [extintores, setExtintores] = useState<ExtintorBackend[]>([]);
-  const [areas, setAreas] = useState<string[]>([]);
 
   // ── Permisos ──────────────────────────────────────────────────────────────
   // (Migrados al sistema granular de permisos)
 
-  useEffect(() => {
-    // La promesa se encadena aquí en vez de llamar a una función `async`: el
-    // analizador rastrea dentro de ella y vería su `setLoadingAreas(true)`
-    // como un setState síncrono del efecto.
-    let vigente = true;
-
-    buscarAreas("")
-      .then((areasData) => {
-        if (vigente) setAreas(areasData);
-      })
-      .catch((err: unknown) => {
-        console.error("Error al cargar áreas:", err);
-      })
-      .finally(() => {
-        if (vigente) setLoadingAreas(false);
-      });
-
-    return () => {
-      vigente = false;
-    };
-  }, []);
+  // Maestro Área → Superintendencia: completa la superintendencia al elegir el área y da el nombre
+  // vigente en la tabla. El filtro por superintendencia lo resuelve el backend con el mismo maestro.
+  const maestro = useMaestroOrganizativo();
 
   // ── Búsqueda ──────────────────────────────────────────────────────────────
 
@@ -210,12 +186,9 @@ function ListaInspeccionesComponent() {
       if (f.superintendencia) filtros.superintendencia = f.superintendencia;
       if (f.mes) filtros.mesActual = f.mes;
       if (f.docCode) filtros.documentCode = f.docCode;
+      if (f.gestion) filtros.anio = f.gestion;
 
-      const data = await obtenerSistemasEmergenciaReport(filtros);
-
-      // La gestión (año) no la filtra el backend.
-      const anio = parseInt(f.gestion, 10);
-      return isNaN(anio) ? data : data.filter((i) => i.año === anio);
+      return obtenerSistemasEmergenciaReport(filtros);
     },
     [],
   );
@@ -396,7 +369,16 @@ function ListaInspeccionesComponent() {
       label: "Fecha de Inspección",
       render: (row) => new Date(row.fechaCreacion).toLocaleDateString(),
     },
-    { key: "superintendencia", label: "Superintendencia" },
+    {
+      key: "superintendencia",
+      label: "Superintendencia",
+      render: (row) => (
+        <SuperintendenciaCelda
+          delMaestro={maestro.superintendenciaDe(row.area)}
+          guardada={row.superintendencia}
+        />
+      ),
+    },
     { key: "area", label: "Área" },
     { key: "tag", label: "Tag" },
     { key: "responsableEdificio", label: "Responsable Edificio" },
@@ -492,42 +474,17 @@ function ListaInspeccionesComponent() {
         </Typography>
 
         <Grid container spacing={3}>
-          <Grid size={{ xs: 12, md: 2 }}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Área</InputLabel>
-              <Select
-                value={areaFilter}
-                onChange={(e) => setAreaFilter(e.target.value)}
-                label="Área"
-                disabled={loadingAreas}
-              >
-                <MenuItem value="">Todas</MenuItem>
-                {areas.map((area) => (
-                  <MenuItem key={area} value={area}>
-                    {area}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 3 }}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Superintendencia</InputLabel>
-              <Select
-                value={superintendenciaFilter}
-                onChange={(e) => setSuperintendenciaFilter(e.target.value)}
-                label="Superintendencia"
-              >
-                <MenuItem value="">Todas</MenuItem>
-                {SUPERINTENDENCIAS.map((s) => (
-                  <MenuItem key={s} value={s}>
-                    {s}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
+          <FiltroAreaSuperintendencia
+            maestro={maestro}
+            area={areaFilter}
+            superintendencia={superintendenciaFilter}
+            onChange={({ area, superintendencia }) => {
+              setAreaFilter(area);
+              setSuperintendenciaFilter(superintendencia);
+            }}
+            tamañoArea={{ xs: 12, md: 3 }}
+            tamañoSuperintendencia={{ xs: 12, md: 5 }}
+          />
 
           <Grid size={{ xs: 12, md: 2 }}>
             <FormControl fullWidth size="small">

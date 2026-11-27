@@ -1,14 +1,8 @@
 "use client";
 
 import React, { useMemo } from "react";
-import {
-  Grid,
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  Chip,
-} from "@mui/material";
+import { Grid, Card, CardContent, Typography, Box, Chip, Button, Alert, useTheme } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import {
   ResponsiveContainer,
   BarChart,
@@ -19,422 +13,317 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   Cell,
 } from "recharts";
-import { AreaStats, Extintor, FormularioInspeccion } from "../types/IProps";
+import {
+  CoberturaMes,
+  EstadoExtintor,
+  AreaDelMes,
+  ETIQUETA_ESTADO,
+  COLOR_ESTADO,
+  nivelCobertura,
+} from "../utils/coberturaMensual";
 
-// ─── Paleta de colores semáforo ───────────────────────────────────────────────
-const COLORES_CUMPLIMIENTO: Record<string, string> = {
-  OPTIMO: "#22c55e",
-  ADVERTENCIA: "#f59e0b",
-  CRITICO: "#ef4444",
-};
-
-export const getColorSemaforo = (pct: number): string => {
-  if (pct >= 90) return COLORES_CUMPLIMIENTO.OPTIMO;
-  if (pct >= 60) return COLORES_CUMPLIMIENTO.ADVERTENCIA;
-  return COLORES_CUMPLIMIENTO.CRITICO;
-};
-
-// ─── Tipos ────────────────────────────────────────────────────────────────────
 interface DashboardChartsProps {
-  estadisticasGlobales: AreaStats[];
-  extintores: Extintor[];
-  inspeccionesFiltradas: FormularioInspeccion[];
-  filtroMes: string;
-  filtroSuperintendencia: string;
-  filtroAreas: string[];
-  filtroTags: string[];
-  /** Áreas de la superintendencia seleccionada (todas si no hay ninguna elegida). */
-  areasDeSuperintendencia: string[];
-  /** Click en una barra de cualquiera de los dos gráficos — recibe el nombre completo del área. */
-  onAreaClick?: (area: string) => void;
+  cobertura: CoberturaMes;
+  /** Click en una porción de la torta (o en su botón): lista de extintores en ese estado. */
+  onEstadoClick: (estado: EstadoExtintor) => void;
+  /** Click en una barra: detalle por tag del área. */
+  onAreaClick: (area: string) => void;
+  /** Ver los códigos inspeccionados que no cuentan (dados de baja o sin registro). */
+  onFueraDeCatalogoClick: () => void;
 }
 
+const ESTADOS: EstadoExtintor[] = ["conforme", "con-observacion", "no-inspeccionado"];
 
+const cajaTooltip = {
+  bgcolor: "background.paper",
+  border: "1px solid",
+  borderColor: "divider",
+  borderRadius: 1,
+  p: 1.5,
+  boxShadow: 3,
+  minWidth: 180,
+} as const;
 
-interface ExtintoresConteoPorArea {
+// `type` y no `interface`: Recharts pide datos con índice de texto, y un alias de tipo lo cumple.
+type PorcionTorta = {
+  estado: EstadoExtintor;
   name: string;
   value: number;
-  inspeccionados: number;
-  [key: string]: string | number;
-}
-
-// ─── Tooltip personalizado para cantidad/inspeccionados de extintores ────────
-interface CustomTooltipExtintoresPayloadItem {
-  payload?: {
-    value?: number;
-    inspeccionados?: number;
-  };
-}
-
-const TooltipExtintoresCantidad = ({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean;
-  payload?: CustomTooltipExtintoresPayloadItem[];
-  label?: string;
-}) => {
-  if (!active || !payload || !payload.length) return null;
-
-  const data = payload[0]?.payload;
-  if (!data) return null;
-
-  const cantidad = data.value ?? 0;
-  const inspeccionados = data.inspeccionados ?? 0;
-  const pct = cantidad > 0 ? Math.min(Math.round((inspeccionados / cantidad) * 100), 100) : 0;
-
-  return (
-    <Box
-      sx={{
-        bgcolor: "background.paper",
-        border: "1px solid",
-        borderColor: "divider",
-        borderRadius: 1,
-        p: 1.5,
-        boxShadow: 3,
-        minWidth: 180,
-      }}
-    >
-      <Typography variant="subtitle2" fontWeight="bold" mb={0.5}>
-        {label}
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        🧯 Cantidad: <strong>{cantidad}</strong>
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        ✅ Inspeccionados: <strong>{inspeccionados}</strong>
-      </Typography>
-      <Box
-        mt={0.5}
-        px={1}
-        py={0.25}
-        borderRadius={1}
-        display="inline-block"
-        sx={{ bgcolor: getColorSemaforo(pct), color: "white" }}
-      >
-        <Typography variant="caption" fontWeight="bold">
-          {pct}% cumplimiento
-        </Typography>
-      </Box>
-    </Box>
-  );
 };
 
-// ─── Tooltip personalizado para cobertura (Inspeccionados vs No Inspeccionados) ─
-interface CoberturaGlobalSlice {
-  name: string;
-  value: number;
-  [key: string]: string | number;
-}
-
-interface CustomTooltipCoberturaPayloadItem {
-  payload?: CoberturaGlobalSlice;
-}
-
-const TooltipCobertura = ({
-  active,
-  payload,
-}: {
-  active?: boolean;
-  payload?: CustomTooltipCoberturaPayloadItem[];
-}) => {
-  if (!active || !payload || !payload.length) return null;
-  const data = payload[0]?.payload;
-  if (!data) return null;
-
+const TooltipTorta = ({ active, payload }: { active?: boolean; payload?: { payload?: PorcionTorta }[] }) => {
+  const d = payload?.[0]?.payload;
+  if (!active || !d) return null;
   return (
-    <Box
-      sx={{
-        bgcolor: "background.paper",
-        border: "1px solid",
-        borderColor: "divider",
-        borderRadius: 1,
-        p: 1.5,
-        boxShadow: 3,
-        minWidth: 180,
-      }}
-    >
+    <Box sx={cajaTooltip}>
       <Typography variant="subtitle2" fontWeight="bold">
-        {data.name}: <strong>{data.value}</strong> tag{data.value !== 1 ? "s" : ""}
+        {d.name}: {d.value} extintor{d.value !== 1 ? "es" : ""}
+      </Typography>
+      <Typography variant="caption" color="text.secondary">
+        Clic para ver la lista
       </Typography>
     </Box>
   );
 };
 
-// ─── Componente principal ─────────────────────────────────────────────────────
+const TooltipArea = ({ active, payload }: { active?: boolean; payload?: { payload?: AreaDelMes }[] }) => {
+  const a = payload?.[0]?.payload;
+  if (!active || !a) return null;
+  return (
+    <Box sx={cajaTooltip}>
+      <Typography variant="subtitle2" fontWeight="bold" mb={0.5}>
+        {a.area}
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        Cantidad: <strong>{a.cantidad}</strong>
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        Inspeccionados: <strong>{a.inspeccionados}</strong> ({a.pct} %)
+      </Typography>
+      {a.conObservacion > 0 && (
+        <Typography variant="body2" color="text.secondary">
+          Con observación: <strong>{a.conObservacion}</strong>
+        </Typography>
+      )}
+      <Typography variant="body2" color="text.secondary">
+        Tags inspeccionados: <strong>{a.tagsInspeccionados}/{a.tagsActivos}</strong>
+      </Typography>
+      <Typography variant="caption" color="text.secondary">
+        Clic para ver el detalle por tag
+      </Typography>
+    </Box>
+  );
+};
+
+const Titulo = ({ children, ayuda }: { children: React.ReactNode; ayuda: string }) => (
+  <>
+    <Typography
+      variant="h6"
+      gutterBottom
+      color="primary"
+      fontWeight="bold"
+      sx={{ fontSize: { xs: "1rem", sm: "1.1rem", md: "1.25rem" } }}
+    >
+      {children}
+    </Typography>
+    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+      {ayuda}
+    </Typography>
+  </>
+);
+
 export const DashboardCharts = ({
-  estadisticasGlobales = [],
-  extintores = [],
-  inspeccionesFiltradas = [],
-  filtroMes = "",
-  filtroSuperintendencia = "",
-  filtroAreas = [],
-  filtroTags = [],
-  areasDeSuperintendencia = [],
+  cobertura,
+  onEstadoClick,
   onAreaClick,
+  onFueraDeCatalogoClick,
 }: DashboardChartsProps) => {
-  // ── Gráfico 1: Cobertura de Inspecciones (Inspeccionados vs No Inspeccionados) ─
-  const coberturaPorArea = useMemo(() => {
-    return estadisticasGlobales.map((area) => ({
-      name: area.area.length > 14 ? area.area.substring(0, 14) + "…" : area.area,
-      fullName: area.area,
-      "Cobertura %": area.cumplimiento,
-      MetaTags: area.totalTags,
-      InspeccionadosTags: area.totalInspecciones,
-    }));
-  }, [estadisticasGlobales]);
+  const theme = useTheme();
+  const colorDe = (c: "success" | "warning" | "error") => theme.palette[c].main;
+  const { totales, fueraDeCatalogo } = cobertura;
+  const periodo = `${cobertura.mes}${cobertura.año ? ` ${cobertura.año}` : ""}`;
 
-  const coberturaGlobalPie: CoberturaGlobalSlice[] = useMemo(() => {
-    const totalMeta = coberturaPorArea.reduce((s, a) => s + a.MetaTags, 0);
-    const totalInspeccionado = coberturaPorArea.reduce((s, a) => s + a.InspeccionadosTags, 0);
-    const noInspeccionado = Math.max(totalMeta - totalInspeccionado, 0);
+  const porciones: PorcionTorta[] = useMemo(() => {
+    const cuenta: Record<EstadoExtintor, number> = {
+      conforme: totales.inspeccionados - totales.conObservacion,
+      "con-observacion": totales.conObservacion,
+      "no-inspeccionado": totales.noInspeccionados,
+    };
+    return ESTADOS.map((estado) => ({ estado, name: ETIQUETA_ESTADO[estado], value: cuenta[estado] })).filter(
+      (p) => p.value > 0,
+    );
+  }, [totales]);
 
-    return [
-      { name: "Inspeccionados", value: totalInspeccionado },
-      { name: "No Inspeccionados", value: noInspeccionado },
-    ].filter((item) => item.value > 0);
-  }, [coberturaPorArea]);
-
-  // ── Extintores filtrados según los filtros globales (superintendencia, areas, tags) ──
-  // Nota: los tags no tienen un campo "superintendencia" propio en el
-  // backend — se filtra por pertenencia de área a la superintendencia
-  // seleccionada (areasDeSuperintendencia ya viene resuelta desde el
-  // catálogo canónico de Área/Superintendencia).
-  const extintoresFiltradosGlobal = useMemo(() => {
-    let filtrados = extintores;
-
-    if (filtroSuperintendencia) {
-      filtrados = filtrados.filter((e) =>
-        areasDeSuperintendencia.includes(e.area)
-      );
-    }
-
-    if (filtroAreas.length > 0) {
-      filtrados = filtrados.filter((e) => filtroAreas.includes(e.area));
-    }
-
-    if (filtroTags.length > 0) {
-      filtrados = filtrados.filter((e) => filtroTags.includes(e.tag));
-    }
-
-    return filtrados;
-  }, [extintores, filtroSuperintendencia, filtroAreas, filtroTags, areasDeSuperintendencia]);
-
-  // ── Gráfico 2: Cantidad de Extintores por Área + Inspeccionados (bar chart) ──
-  const extintoresPorAreaConteo: ExtintoresConteoPorArea[] = useMemo(() => {
-    const areasConExtintores = [
-      ...new Set(extintoresFiltradosGlobal.map((e) => e.area)),
-    ].sort();
-
-    return areasConExtintores
-      .map((area) => {
-        const cantidad = extintoresFiltradosGlobal.filter((e) => e.area === area).length;
-
-        const inspeccionesDelArea = inspeccionesFiltradas.filter((ins) => ins.area === area);
-        const inspeccionados = inspeccionesDelArea.reduce((sum, ins) => {
-          const mesParaInspeccion = filtroMes || ins.mesActual;
-          const mesData = ins.meses[mesParaInspeccion];
-          return sum + (mesData?.inspeccionesExtintor?.length ?? 0);
-        }, 0);
-
-        return {
-          name: area,
-          value: cantidad,
-          // Tope al total de extintores del área para visualización consistente.
-          inspeccionados: Math.min(inspeccionados, cantidad),
-        };
-      })
-      .filter((item) => item.value > 0);
-  }, [extintoresFiltradosGlobal, inspeccionesFiltradas, filtroMes]);
-
-  const totalExtintores = extintoresPorAreaConteo.reduce(
-    (s, a) => s + a.value,
-    0,
-  );
-  const totalInspeccionados = extintoresPorAreaConteo.reduce(
-    (s, a) => s + a.inspeccionados,
-    0,
-  );
-  const pctGlobalInspeccionados =
-    totalExtintores > 0
-      ? Math.min(Math.round((totalInspeccionados / totalExtintores) * 100), 100)
-      : 0;
-
-
+  const areas = useMemo(() => cobertura.areas.filter((a) => a.cantidad > 0), [cobertura.areas]);
+  const dadosDeBaja = fueraDeCatalogo.filter((f) => f.motivo === "dado-de-baja").length;
 
   return (
     <>
-      {/* ── Gráfico 1: Cobertura de Inspecciones por Área ─────────────────── */}
+      {fueraDeCatalogo.length > 0 && (
+        <Grid size={{ xs: 12 }}>
+          <Alert
+            severity="warning"
+            action={
+              <Button type="button" color="inherit" size="small" onClick={onFueraDeCatalogoClick}>
+                Ver códigos
+              </Button>
+            }
+          >
+            {fueraDeCatalogo.length} código{fueraDeCatalogo.length !== 1 ? "s" : ""} inspeccionado
+            {fueraDeCatalogo.length !== 1 ? "s" : ""} en {periodo} no cuentan en la cobertura:{" "}
+            {dadosDeBaja > 0 && `${dadosDeBaja} están dados de baja en el catálogo`}
+            {dadosDeBaja > 0 && dadosDeBaja < fueraDeCatalogo.length && " y "}
+            {fueraDeCatalogo.length - dadosDeBaja > 0 && `${fueraDeCatalogo.length - dadosDeBaja} no existen en el catálogo`}.
+          </Alert>
+        </Grid>
+      )}
+
+      {/* ── Torta: extintores por estado ─────────────────────────────────── */}
       <Grid size={{ xs: 12, md: 6 }}>
         <Card sx={{ height: "100%" }}>
           <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-            <Typography
-              variant="h6"
-              gutterBottom
-              color="primary"
-              fontWeight="bold"
-              sx={{ fontSize: { xs: "1rem", sm: "1.1rem", md: "1.25rem" } }}
-            >
-              Cobertura de Inspecciones por Área
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-              Tags de extintores inspeccionados vs. no inspeccionados
-            </Typography>
-            <Box height={320}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={coberturaGlobalPie}
-                    cx="50%"
-                    cy="50%"
-                    dataKey="value"
-                    nameKey="name"
-                    outerRadius={110}
-                    labelLine={false}
-                    label={({ name, percent }) =>
-                      percent && percent > 0.05 ? `${name}: ${(percent * 100).toFixed(0)}%` : ""
-                    }
+            <Titulo ayuda={`Extintores activos del catálogo inspeccionados en ${periodo}`}>Cobertura de extintores</Titulo>
+
+            <Box display="flex" gap={1} mb={1} flexWrap="wrap">
+              <Chip
+                size="small"
+                label={`${totales.pct} % de extintores (${totales.inspeccionados}/${totales.cantidad})`}
+                sx={{
+                  bgcolor: colorDe(nivelCobertura(totales.pct)),
+                  color: theme.palette.getContrastText(colorDe(nivelCobertura(totales.pct))),
+                  fontWeight: 700,
+                }}
+              />
+              <Chip
+                size="small"
+                variant="outlined"
+                label={`Tags inspeccionados: ${totales.tagsInspeccionados}/${totales.tagsActivos} (${totales.pctTags} %)`}
+                sx={{ fontWeight: 600 }}
+              />
+            </Box>
+
+            {totales.cantidad === 0 ? (
+              <Typography variant="body2" color="text.secondary" textAlign="center" py={8}>
+                No hay extintores activos con los filtros elegidos.
+              </Typography>
+            ) : (
+              <Box height={260}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={porciones}
+                      cx="50%"
+                      cy="50%"
+                      dataKey="value"
+                      nameKey="name"
+                      outerRadius={100}
+                      labelLine={false}
+                      label={({ percent }) => (percent && percent > 0.05 ? `${Math.round(percent * 100)} %` : "")}
+                      cursor="pointer"
+                      onClick={(_, index) => {
+                        const p = porciones[index];
+                        if (p) onEstadoClick(p.estado);
+                      }}
+                    >
+                      {porciones.map((p) => (
+                        <Cell
+                          key={p.estado}
+                          fill={colorDe(COLOR_ESTADO[p.estado])}
+                          stroke={theme.palette.background.paper}
+                          strokeWidth={2}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<TooltipTorta />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </Box>
+            )}
+
+            {/* Leyenda que además abre la lista: se puede usar con el teclado. */}
+            <Box display="flex" gap={1} flexWrap="wrap" justifyContent="center" mt={1}>
+              {ESTADOS.map((estado) => {
+                const cuenta = porciones.find((p) => p.estado === estado)?.value ?? 0;
+                const color = colorDe(COLOR_ESTADO[estado]);
+                return (
+                  <Button
+                    key={estado}
+                    type="button"
+                    size="small"
+                    variant="outlined"
+                    disabled={cuenta === 0}
+                    onClick={() => onEstadoClick(estado)}
+                    startIcon={<Box component="span" sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: color }} />}
+                    sx={{ borderColor: alpha(color, 0.5), color: "text.primary", textTransform: "none" }}
                   >
-                    {coberturaGlobalPie.map((entry) => (
-                      <Cell
-                        key={`cell-cobertura-${entry.name}`}
-                        fill={
-                          entry.name === "Inspeccionados"
-                            ? COLORES_CUMPLIMIENTO.OPTIMO
-                            : COLORES_CUMPLIMIENTO.CRITICO
-                        }
-                        stroke="#fff"
-                        strokeWidth={1}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<TooltipCobertura />} />
-                  <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
-                </PieChart>
-              </ResponsiveContainer>
+                    {ETIQUETA_ESTADO[estado]}: {cuenta}
+                  </Button>
+                );
+              })}
             </Box>
           </CardContent>
         </Card>
       </Grid>
 
-      {/* ── Gráfico 2: Cantidad de Extintores por Área ────────────────────── */}
+      {/* ── Barras: cantidad vs. inspeccionados por área ─────────────────── */}
       <Grid size={{ xs: 12, md: 6 }}>
         <Card sx={{ height: "100%" }}>
           <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-            <Typography
-              variant="h6"
-              gutterBottom
-              color="primary"
-              fontWeight="bold"
-              sx={{ fontSize: { xs: "1rem", sm: "1.1rem", md: "1.25rem" } }}
-            >
-              Cantidad de Extintores por Área
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-              Distribución de extintores registrados por área
-            </Typography>
+            <Titulo ayuda={`Extintores activos por área y cuántos se inspeccionaron en ${periodo}`}>
+              Extintores por área
+            </Titulo>
 
-            <Box display="flex" gap={1} mb={1.5} flexWrap="wrap" alignItems="center">
-              <Chip
-                size="small"
-                label={`🧯 Cantidad total: ${totalExtintores} extintores`}
-                sx={{ bgcolor: "#e0f2fe", color: "#0369a1", fontWeight: 600, fontSize: "0.75rem" }}
-              />
-              <Chip
-                size="small"
-                label={`✅ Inspeccionados: ${totalInspeccionados}`}
-                sx={{ bgcolor: "#dcfce7", color: "#15803d", fontWeight: 600, fontSize: "0.75rem" }}
-              />
-              <Chip
-                size="small"
-                label={`${pctGlobalInspeccionados}% global`}
-                sx={{
-                  bgcolor: getColorSemaforo(pctGlobalInspeccionados),
-                  color: "white",
-                  fontWeight: 700,
-                  fontSize: "0.75rem",
-                }}
-              />
+            <Box display="flex" gap={1.5} mb={1} flexWrap="wrap" alignItems="center">
+              <Box display="flex" alignItems="center" gap={0.5}>
+                <Box sx={{ width: 12, height: 12, borderRadius: 0.5, bgcolor: alpha(theme.palette.text.secondary, 0.25) }} />
+                <Typography variant="caption">Cantidad</Typography>
+              </Box>
+              <Typography variant="caption" color="text.secondary">
+                Inspeccionados:
+              </Typography>
+              {(
+                [
+                  ["success", "90 % o más"],
+                  ["warning", "60–89 %"],
+                  ["error", "menos de 60 %"],
+                ] as const
+              ).map(([nivel, texto]) => (
+                <Box key={nivel} display="flex" alignItems="center" gap={0.5}>
+                  <Box sx={{ width: 12, height: 12, borderRadius: 0.5, bgcolor: colorDe(nivel) }} />
+                  <Typography variant="caption">{texto}</Typography>
+                </Box>
+              ))}
             </Box>
 
-            <Box height={280}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={extintoresPorAreaConteo}
-                  margin={{ bottom: 24 }}
-                  barCategoryGap="30%"
-                  barGap={4}
-                >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis
-                    dataKey="name"
-                    angle={-30}
-                    textAnchor="end"
-                    height={60}
-                    fontSize={11}
-                    tick={{ fill: "#6b7280" }}
-                  />
-                  <YAxis
-                    fontSize={11}
-                    allowDecimals={false}
-                    label={{
-                      value: "Extintores",
-                      angle: -90,
-                      position: "insideLeft",
-                      offset: 8,
-                      style: { fontSize: 11, fill: "#9ca3af" },
-                    }}
-                    tick={{ fill: "#6b7280" }}
-                  />
-                  <Tooltip content={<TooltipExtintoresCantidad />} />
-                  <Legend
-                    formatter={(value) =>
-                      value === "value" ? "🧯 Cantidad" : "✅ Inspeccionados"
-                    }
-                    wrapperStyle={{ fontSize: "0.8rem" }}
-                  />
-                  {/* Barra de cantidad total de extintores del área - gris de fondo */}
-                  <Bar
-                    dataKey="value"
-                    name="value"
-                    fill="#e2e8f0"
-                    stroke="#94a3b8"
-                    strokeWidth={1}
-                    radius={[4, 4, 0, 0]}
-                    cursor={onAreaClick ? "pointer" : undefined}
-                    onClick={(entry) => {
-                      const name = (entry as { name?: string } | undefined)?.name;
-                      if (name) onAreaClick?.(name);
-                    }}
-                  />
-                  {/* Barra de inspeccionados - color semáforo según % de cumplimiento */}
-                  <Bar
-                    dataKey="inspeccionados"
-                    name="inspeccionados"
-                    radius={[4, 4, 0, 0]}
-                    cursor={onAreaClick ? "pointer" : undefined}
-                    onClick={(entry) => {
-                      const name = (entry as { name?: string } | undefined)?.name;
-                      if (name) onAreaClick?.(name);
-                    }}
-                  >
-                    {extintoresPorAreaConteo.map((entry, index) => {
-                      const pct =
-                        entry.value > 0
-                          ? Math.round((entry.inspeccionados / entry.value) * 100)
-                          : 0;
-                      return (
-                        <Cell key={`cell-extintores-bar-${index}`} fill={getColorSemaforo(pct)} />
-                      );
-                    })}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </Box>
+            {areas.length === 0 ? (
+              <Typography variant="body2" color="text.secondary" textAlign="center" py={8}>
+                No hay extintores activos con los filtros elegidos.
+              </Typography>
+            ) : (
+              <Box height={300}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={areas} margin={{ bottom: 24 }} barCategoryGap="25%" barGap={2}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
+                    <XAxis
+                      dataKey="area"
+                      angle={-30}
+                      textAnchor="end"
+                      height={70}
+                      interval={0}
+                      fontSize={11}
+                      tick={{ fill: theme.palette.text.secondary }}
+                    />
+                    <YAxis fontSize={11} allowDecimals={false} tick={{ fill: theme.palette.text.secondary }} />
+                    <Tooltip content={<TooltipArea />} cursor={{ fill: theme.palette.action.hover }} />
+                    <Bar
+                      dataKey="cantidad"
+                      fill={alpha(theme.palette.text.secondary, 0.25)}
+                      radius={[4, 4, 0, 0]}
+                      cursor="pointer"
+                      onClick={(_, index) => {
+                        const a = areas[index];
+                        if (a) onAreaClick(a.area);
+                      }}
+                    />
+                    <Bar
+                      dataKey="inspeccionados"
+                      radius={[4, 4, 0, 0]}
+                      cursor="pointer"
+                      onClick={(_, index) => {
+                        const a = areas[index];
+                        if (a) onAreaClick(a.area);
+                      }}
+                    >
+                      {areas.map((a) => (
+                        <Cell key={a.area} fill={colorDe(nivelCobertura(a.pct))} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
+            )}
           </CardContent>
         </Card>
       </Grid>

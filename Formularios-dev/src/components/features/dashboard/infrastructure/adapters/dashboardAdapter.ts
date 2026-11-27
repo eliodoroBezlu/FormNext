@@ -17,6 +17,7 @@ import {
   type GetInstancesFilters,
 } from "@/lib/actions/instance-actions";
 import { obtenerSistemasEmergenciaReport } from "@/app/actions/inspeccion";
+import { obtenerTecnicosConUsuario } from "@/lib/actions/trabajador-actions";
 import {
   descargarPdfHerraEquipoCliente,
   descargarPdfIroIsopCliente,
@@ -38,6 +39,8 @@ export interface RecentActivityFilters {
 
 export interface EmergenciaReportFilters {
   area?: string;
+  /** Año del formulario. */
+  anio?: string;
 }
 
 export const dashboardAdapter = {
@@ -56,7 +59,12 @@ export const dashboardAdapter = {
     return getInstances(filtros);
   },
 
-  /** Reporte de Sistemas de Emergencia por área. */
+  /** Trabajadores con usuario (usuario, nombre y área) para elegir un técnico. */
+  async getTecnicos() {
+    return obtenerTecnicosConUsuario();
+  },
+
+  /** Reporte de Sistemas de Emergencia (por área y año). */
   async getEmergenciaReport(filtros: EmergenciaReportFilters) {
     return obtenerSistemasEmergenciaReport(filtros);
   },

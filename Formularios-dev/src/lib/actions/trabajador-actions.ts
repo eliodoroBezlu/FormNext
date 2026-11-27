@@ -9,6 +9,19 @@ import type {
 import { API_BASE_URL } from "../constants";
 import { getAuthHeaders, handleApiResponse } from "./helpers";
 
+/** Trabajadores activos con usuario: para elegir un técnico en la carpeta virtual. */
+export async function obtenerTecnicosConUsuario(): Promise<
+  { username: string; nombre: string; area: string }[]
+> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/trabajadores/con-usuario`, {
+    method: "GET",
+    headers,
+    cache: "no-store",
+  });
+  return handleApiResponse(response);
+}
+
 /** Supervisores y superintendentes que pueden ser responsables de cierre. */
 export async function obtenerResponsablesDeCierreApi(): Promise<
   {

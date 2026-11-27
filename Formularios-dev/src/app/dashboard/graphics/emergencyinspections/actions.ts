@@ -61,7 +61,9 @@ export async function obtenerDashboardData(): Promise<{
       headers,
       cache: "no-store",
     }),
-    fetch(`${API_BASE_URL}/extintor/`, {
+    // También los dados de baja: así un código inspeccionado que está inactivo se informa como
+    // «dado de baja» y no como «no existe» (el cálculo solo cuenta los activos).
+    fetch(`${API_BASE_URL}/extintor/?incluirDadosDeBaja=true`, {
       method: "GET",
       headers,
       cache: "no-store",
